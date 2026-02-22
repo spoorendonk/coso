@@ -275,32 +275,133 @@ ML-based methods have not yet matched classical OR heuristics on deterministic C
 
 ---
 
-## 5. Implications for the Framework
+## 5. Emerging Directions: Neural and LLM-Based Approaches
 
-### 5.1 Architecture extension
+Worth tracking but not yet ready for production use.
 
-The existing plan's Phase 6 (Graph/Subproblem Support) should be split into two parallel tracks:
+### 5.1 Neural Combinatorial Optimization (NCO)
 
+RL-trained neural solvers (attention/transformer models) that construct or
+improve solutions directly:
+
+| Scale | NCO vs Classical | Status |
+|-------|-----------------|--------|
+| Small (≤100 nodes) | <1% gap to HGS, much faster inference | Competitive |
+| Medium (100–1K) | HGS still dominates with enough compute | Not competitive |
+| Large (1K–100K) | GLOP, SIL outperform HGS in speed+quality | Promising |
+| Very large (1M+) | L2R is the only method that can even run | Only option |
+
+Key methods: POMO, GLOP (divide-and-conquer), SIL (self-improved learning),
+L2R (learn to reduce). Weakness: poor generalization across distributions and
+constraint types, still lags on medium-scale deterministic instances.
+
+### 5.2 LLM-Driven Heuristic Discovery
+
+LLMs used to *design* heuristic operators rather than solve instances directly:
+
+- **FunSearch** (DeepMind, 2024): evolutionary search in program space using LLM
+  as mutation operator. Found new bin-packing heuristics beating known baselines.
+- **EoH** (Evolution of Heuristics, 2024): evolves both natural-language "thoughts"
+  and executable code. Outperforms FunSearch on TSP, CVRP, bin packing.
+- **VRPAgent** (2025): first LLM-based method to advance state-of-the-art on VRPs.
+  Discovers novel destroy/repair operators for ALNS-style search.
+- **EoH-S** (2025): evolves a *set* of complementary heuristics rather than a
+  single best, addressing generalization across diverse instances.
+
+This direction is promising for **automated operator design** — the framework
+should make it easy to plug in new operators, which aligns with the component-
+based architecture below.
+
+---
+
+## 6. Implications for the Framework
+
+### 6.1 Why not ROAR (abstract Problem/Algorithm)?
+
+The initial plan proposed a ROAR-style abstract `Problem`/`Algorithm` interface.
+Looking at what the actual top solvers do, **none of them use this pattern**:
+
+- **HGS-CVRP** (Vidal): explicit design goal is "stay simple, stand-alone, and
+  specialized." No abstract Problem. No abstract Algorithm.
+- **PyVRP**: composable components but no abstract Problem/Algorithm layer.
+- **AILS-II**: purpose-built, no abstract framework.
+
+The ROAR abstraction hurts for three reasons:
+
+1. **Wrong abstraction boundary** — `localSearch()` and `perturb()` are algorithmic
+   concerns, not problem concerns. The problem is "CVRP with 1000 customers."
+   The search strategy is a separate decision.
+
+2. **Virtual dispatch on the hot path** — `evaluate()` gets called millions of
+   times. Routing and scheduling need completely different incremental evaluation.
+   Making this virtual adds overhead for no benefit.
+
+3. **False genericity** — ILS and HGS have fundamentally different structures
+   (single solution vs population, perturbation vs crossover). Forcing them into
+   the same `Algorithm::run()` interface means the interface is either too vague
+   to be useful or too specific to be general.
+
+### 6.2 What actually works: component composition (PyVRP pattern)
+
+PyVRP demonstrates the right architecture. Share **components**, not interfaces:
+
+```cpp
+// 1. Operators are the abstraction (the reusable unit)
+class NodeOperator {
+    virtual Cost evaluate(Node u, Node v, Solution&) = 0;
+};
+class RouteOperator {
+    virtual Cost evaluate(Route& r1, Route& r2, Solution&) = 0;
+};
+// Same relocate/swap works whether called from ILS, HGS, or SA
+
+// 2. Local search engine composes operators (shared by all algorithms)
+class LocalSearch {
+    void addNodeOperator(NodeOperator* op);
+    void addRouteOperator(RouteOperator* op);
+    Solution search(Solution& s);  // run all operators to local optimum
+};
+
+// 3. Each algorithm is its own class — no forced common interface
+class GeneticAlgorithm {
+    GeneticAlgorithm(ProblemData& data, LocalSearch& ls,
+                     Population& pop, Crossover& cx);
+    Result run(StopCriterion& stop);
+};
+
+class IteratedLocalSearch {
+    IteratedLocalSearch(ProblemData& data, LocalSearch& ls,
+                        Perturbation& perturb, AcceptanceCriterion& accept);
+    Result run(StopCriterion& stop);
+};
+
+// 4. Utility components
+class PenaltyManager { ... };    // adaptive penalty weights
+class Population { ... };        // feasible + infeasible subpops, diversity
+class StopCriterion { ... };     // time, iterations, no-improvement
 ```
-Phase 6a: Routing Problems
-  - Graph IR (nodes, arcs, costs)
-  - Route representation (ordered sequence of customers per vehicle)
-  - Route feasibility (capacity, time windows, duration)
-  - Intra-route neighborhoods (2-opt, Or-opt)
-  - Inter-route neighborhoods (relocate, swap, SWAP*, 2-opt*, cross)
-  - Incremental route cost evaluation
-  - Perturbation operators (string removal, random removal, worst removal)
 
-Phase 6b: Scheduling Problems
-  - Disjunctive graph IR (operations, machines, processing times)
-  - Schedule representation (operation sequence per machine)
-  - Feasibility (precedence, resource capacity)
-  - Critical-path neighborhoods (N5 block moves, insertion)
-  - Makespan evaluation via critical path computation
-  - Perturbation operators (random swaps on critical path)
-```
+Key differences from ROAR:
+- **Operators are the abstraction**, not Problem/Algorithm
+- **LocalSearch is a concrete shared component**, not a virtual method on Problem
+- **Each algorithm is its own class** with its own structure
+- **ProblemData is concrete** — distances, demands, time windows — not behind `evaluate()`
 
-### 5.2 Production planning: MIP-based neighborhoods
+### 6.3 Problem-type specialization
+
+Each problem family provides its own concrete types:
+
+| Component | Routing | Scheduling | Lot Sizing |
+|-----------|---------|------------|------------|
+| Solution | Routes (customer sequences) | Schedule (op sequences per machine) | Production plan (setups + quantities) |
+| ProblemData | Distance matrix, demands, TWs | Processing times, precedence | Periods, demands, setup costs |
+| NodeOperators | Relocate, Swap, SWAP* | N5 block swap, insertion | — |
+| RouteOperators | 2-opt*, Cross, SWAP* | — | — |
+| Perturbation | Ruin-and-recreate | Random critical-path swaps | Fix-and-Optimize (MIP subproblem) |
+| Crossover | OX, SREX | POX, JBX | Period-based crossover |
+| Evaluation | Sum of route costs | Critical path length | Setup + holding cost |
+
+### 6.4 Production planning: MIP-based neighborhoods
 
 Production planning (lot sizing) differs from routing and scheduling in that the
 best local search approaches use **MIP subproblems as neighborhoods**:
@@ -320,88 +421,40 @@ best local search approaches use **MIP subproblems as neighborhoods**:
 The state of the art combines **Relax-and-Fix** (construction) + **Fix-and-Optimize**
 (improvement) + **VNS** (diversification), achieving gaps under 1% from optimum.
 
-Fix-and-Optimize is fundamentally LNS where the repair operator is "solve a MIP
-subproblem." This means the ROAR shell can handle it: the `perturb` step unfixes
-a subset of variables, and `localSearch` re-solves the resulting subproblem via the
-existing FJ+LS core or an external MIP solver.
+### 6.5 Priority for implementation
 
-### 5.3 Shared algorithm layer — ROAR first, specialize second
+1. **CVRP data structures** — Solution, ProblemData, Route, distance matrix
+2. **LS operators** — relocate, swap, 2-opt, Or-opt, SWAP*
+3. **LocalSearch engine** — compose operators, run to local optimum
+4. **ILS** — perturbation (ruin-and-recreate) + acceptance + penalty management
+5. **HGS** — population + crossover + education (reuses same LS engine)
+6. **Benchmark on Uchoa X instances** — proves quality
+7. **Extend to VRPTW** — add time window propagation to operators
+8. **Scheduling** — new Solution/ProblemData types, critical-path operators
 
-All three problem families share the same metaheuristic shells. The `Problem`
-interface needs to expose problem-specific operations that the algorithm shell
-calls generically:
+### 6.6 Key design decisions
 
-```cpp
-class Problem {
-public:
-    virtual SolutionHandle initialSolution() = 0;
-    virtual double evaluate(const SolutionHandle& h) const = 0;
-    virtual bool isFeasible(const SolutionHandle& h) const = 0;
+1. **Route representation**: ordered customer sequence per route (not edge
+   variables). This is what all top methods use.
 
-    // Problem-specific operations called by algorithm shell:
-    virtual void localSearch(SolutionHandle& h) = 0;
-    virtual void perturb(SolutionHandle& h, double strength) = 0;
-};
+2. **Incremental evaluation**: precompute cumulative load, distance, and time
+   along each route. Delta evaluation for moves should be O(1) for
+   relocate/swap, O(route length) for 2-opt.
 
-// Works for routing, scheduling, AND production planning
-class IteratedLocalSearch : public Algorithm {
-    void run(Problem& p, double timeLimit, SolutionHandle& best) override {
-        auto s = p.initialSolution();
-        p.localSearch(s);
-        while (withinTimeLimit()) {
-            auto s2 = p.perturb(s);        // problem-specific
-            p.localSearch(s2);              // problem-specific neighborhoods
-            s = accept(s, s2);             // shared acceptance logic
-            updateBest(best, s);
-        }
-    }
-};
+3. **Neighbor lists**: precompute k-nearest neighbors per customer (typically
+   k=20–40) to prune the neighborhood search. Critical for scaling.
 
-class ALNS : public Algorithm {
-    // Multiple destroy/repair operators, adaptive selection
-    // Operators are problem-specific, shell is generic
-};
-```
+4. **Penalized cost**: `cost + α*capacityViolation + β*TWViolation` as the LS
+   objective, with adaptive penalty weights. Allows infeasible intermediate
+   solutions (as in HGS and AILS-II).
 
-The three specializations differ only in what `localSearch` and `perturb` do:
-
-| Method | Routing | Scheduling | Lot Sizing |
-|--------|---------|------------|------------|
-| `localSearch` | relocate, swap, 2-opt, Or-opt, SWAP* | N5 block swap, insertion, critical-path moves | Fix-and-Optimize (MIP subproblem solve) |
-| `perturb` | ruin-and-recreate (string/random/worst removal) | random critical-path swaps | decompose by product/time/resource (unfix variables) |
-| `evaluate` | total route cost (penalized) | makespan (critical path length) | setup + holding cost |
-
-### 5.4 Priority for implementation
-
-Based on the research, the recommended implementation order is:
-
-1. **ROAR shell** — ILS first (covers AILS-II pattern), then ALNS
-2. **CVRP problem** — most benchmarked, clearest evaluation criteria
-3. **Standard LS operators** — relocate, swap, 2-opt, Or-opt, SWAP*
-4. **VRPTW problem** — adds time window propagation
-5. **JSP problem** — validates scheduling track, disjunctive graph neighborhoods
-6. **CLSP problem** — validates MIP-based neighborhoods through same shell
-
-Steps 2–3 test routing. Step 5 tests scheduling. Step 6 tests production planning.
-If the ROAR shell works for all three without modification, the abstraction is right.
-
-### 5.5 Key design decisions
-
-1. **Route representation**: ordered customer sequence per route (not edge variables). This is what all top methods use.
-
-2. **Incremental evaluation**: precompute cumulative load, distance, and time along each route. Delta evaluation for moves should be O(1) for relocate/swap, O(route length) for 2-opt.
-
-3. **Neighbor lists**: precompute k-nearest neighbors per customer (typically k=20–40) to prune the neighborhood search. This is critical for scaling.
-
-4. **Penalized cost**: use `cost + α * capacityViolation + β * timeWindowViolation` as the LS objective, with adaptive penalty weights. This allows infeasible intermediate solutions (as in HGS and AILS-II).
-
-5. **Perturbation**: ruin-and-recreate is the dominant perturbation strategy. Remove a segment of customers (random, worst, related, string removal), then reinsert with greedy/regret heuristic.
-
-6. **MIP-based neighborhoods**: for lot sizing, `localSearch` delegates to a MIP solver on a subproblem. The ROAR shell doesn't need to know — it just calls `localSearch`.
+5. **Perturbation**: ruin-and-recreate is the dominant strategy. Remove a segment
+   of customers (random, worst, related, string removal), then reinsert with
+   greedy/regret heuristic.
 
 ---
 
-## 6. Key References
+## 7. Key References
 
 - Uchoa et al. (2017). *New benchmark instances for the CVRP*. European J. OR 257(3):845–858.
 - Vidal (2022). *Hybrid genetic search for the CVRP: Open-source implementation and SWAP\* neighborhood*. Computers & OR 140:105643.
@@ -417,3 +470,7 @@ If the ROAR shell works for all three without modification, the abstraction is r
 - Seeanner et al. (2013). *Combining VNDS with Fix&Optimize for multi-level lot-sizing and scheduling*. Computers & OR 40(9):2110–2124.
 - Chen et al. (2015). *Fix-and-optimize and VNS for multi-level capacitated lot sizing*. Omega 56:25–36.
 - Muller, Spoorendonk & Pisinger (2012). *A hybrid adaptive large neighborhood search heuristic for lot-sizing with setup times*. European J. OR 218(3):614–633.
+- Wouda et al. (2024). *PyVRP: a high-performance VRP solver package*. INFORMS J. Computing 36(3):615–629.
+- Romera-Paredes et al. (2024). *Mathematical discoveries from program search with large language models*. Nature 625:468–475. (FunSearch)
+- Liu et al. (2024). *Evolution of Heuristics: Towards Efficient Automatic Algorithm Design Using LLM*. ICML 2024.
+- Ye et al. (2025). *VRPAgent: LLM-Driven Discovery of Heuristic Operators for Vehicle Routing Problems*. arXiv:2510.07073.
