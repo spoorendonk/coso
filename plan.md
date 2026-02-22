@@ -357,6 +357,14 @@ automatically:
 | `type_requirement(A, B)` | Co-presence requirements | TypeRequirementResource |
 | `depot_capacity` on depot | Loading dock limits | DepotResourceConstraint |
 | `span_cost` on dimension | Minimize max route span | Global span objective |
+| `skills` on client + vehicle | Skills matching | SkillFilter (precomputed) |
+| `setup` on client | Setup time (location-aware) | DurationResource (skip same loc) |
+| Multiple `tw` per client | Multiple time windows | DurationResource (TW array) |
+| `max_tasks` on vehicle | Max stops per vehicle | TaskCountResource |
+| `speed_factor` on vehicle | Vehicle speed multiplier | Duration scaling |
+| `service_per_type` on client | Type-specific service time | Per-vehicle-type lookup |
+| `cost_matrix` per profile | Separate cost matrix | CostEvaluator (3 matrices) |
+| `unit_task_duration_cost` | Per-task-hour cost | CostEvaluator |
 
 ### Network / Flow
 
@@ -382,6 +390,7 @@ automatically:
 | `optional = true` on operation | Optional operations | Overconstrained scheduling |
 | Sliding-window ratio constraints | Car sequencing | Permutation + window eval |
 | `reservoir` resource with events | Reservoir constraint | Level tracking (refill/empty) |
+| Multiple (machine, duration) per op | Alternative / mode selection | ChangeMode + ReassignMachine |
 
 ### Assignment / Timetabling
 
@@ -550,6 +559,12 @@ multi-tier overtime: define cost as breakpoints `[(x0,y0), (x1,y1), ...]`.
 Evaluated via lookup table in the CostEvaluator. E.g., overtime at 1.5x for
 first 2 hours, 2x beyond.
 
+**Three-matrix cost model.** Per profile, three separate matrices: duration
+(for feasibility/scheduling), distance (for reporting/max-distance), cost (for
+optimization). `cost ≠ distance` when toll roads add cost but not time.
+`cost ≠ duration` when driver wages differ from fuel cost. Per-task-hour cost
+separates time spent serving from time spent traveling.
+
 ### 3.4 Operators
 
 **Binary operators** (operate on pairs of route segments):
@@ -589,6 +604,7 @@ first 2 hours, 2x beyond.
 | WorstRemoval | Remove highest-cost clients |
 | RelatedRemoval | Remove geographically close clients |
 | GreedyRepair | Reinsert at cheapest position |
+| RouteSplit | Split overloaded route across empty vehicles |
 
 ### 3.5 Search control features
 
@@ -624,6 +640,19 @@ constraints (overtime, optional clients) are optimized. Internally this maps to
 the existing penalty framework: hard constraints get very high penalty weights,
 soft constraints get finite weights. The user declares which constraints are
 hard vs. soft; the PenaltyManager handles the rest.
+
+**Conflict-directed move selection.** Focus moves on the earliest/worst conflict
+point rather than random selection. For routing: concentrate operators around
+the highest-violation route segment. For scheduling: target the earliest
+overlapping pair on a machine. Improves convergence by directing search effort
+where it matters most.
+
+**Scheduling-specific perturbation operators.** From CP-SAT's LNS framework:
+- Time-window relaxation: fix tasks before T and after T+W, free the middle
+- Precedence relaxation: keep ordering decisions, free timing
+- Per-resource relaxation: free all tasks on one machine, re-optimize
+- Adaptive difficulty: track acceptance rates per operator, adjust perturbation
+  size (fraction of variables freed) based on success rate
 
 **Guided Local Search (GLS).** Penalizes frequently-used solution features (arcs
 in routing, assignments in scheduling) to escape local optima. Maintains penalty
@@ -940,6 +969,8 @@ src/
       type_incompatibility.h  Hazmat/type conflicts between visits
       type_requirement.h      Co-presence requirements on same vehicle
       depot_resource.h        Shared capacity at depots (loading docks)
+      skill_filter.h          Skills matching (precomputed compatibility)
+      task_count_resource.h   Max tasks per vehicle
     cost_evaluator.h      Fixed + variable + overtime + prize + penalties
     operators/
       exchange.h            Exchange(N,M) for N,M ∈ {0..3}
@@ -983,6 +1014,12 @@ src/
     schedule_operators.h
     mode_selection.h      Multi-mode RCPSP: mode assignment per activity
     car_sequencing.h      Sliding-window ratio constraints on permutation
+    perturbation/
+      time_window_relax.h   Fix before T, free middle, fix after T+W
+      precedence_relax.h    Keep ordering, free timing
+      resource_relax.h      Free all tasks on one machine, re-optimize
+      change_mode.h         Switch activity to different (machine, duration) mode
+      reassign_machine.h    Move task to different machine (FJSP)
 
   assignment/         ← Nurse rostering / timetabling engine
     assignment_data.h     Compiled from AssignmentModel
@@ -1092,7 +1129,16 @@ Engine:
 13. LIFO/FIFO pickup-delivery ordering (physical loading constraints)
 14. Depot resource constraints (shared loading dock capacity)
 15. Global span cost (minimize max route duration across fleet)
-16. Solomon + Gehring-Homberger benchmarks
+16. Skills matching (precomputed compatibility filter)
+17. Setup times (location-aware: skip if same location)
+18. Multiple time windows per client (TW array)
+19. Max tasks per vehicle (TaskCountResource)
+20. Vehicle type-specific service/setup durations
+21. Speed factor per vehicle (duration multiplier)
+22. Separate cost matrix (cost ≠ distance ≠ duration per profile)
+23. Per-task-hour cost
+24. RouteSplit operator (split route across empty vehicles)
+25. Solomon + Gehring-Homberger benchmarks
 
 ### Phase 4b — Multi-trip
 
@@ -1122,7 +1168,11 @@ Engine:
 6. MRCPSP: mode selection (integer variable per activity) + SGS decoding
 7. Optional operations: overconstrained scheduling with medium-priority penalty
 8. Parallel machine scheduling
-9. Taillard + PSPLIB + MMLIB + Guéret-Prins benchmarks
+9. Scheduling-specific perturbation: time-window relax, precedence relax, resource relax
+10. ChangeMode + ReassignMachine operators (FJSP/MRCPSP)
+11. Conflict-directed move selection (target earliest overlap)
+12. Adaptive perturbation difficulty (track acceptance rates)
+13. Taillard + PSPLIB + MMLIB + Guéret-Prins benchmarks
 
 ### Phase 6 — Assignment / timetabling
 
@@ -1352,6 +1402,31 @@ Same pattern: user declares WHAT, solver decides HOW.
     forbidden/required shift sequences (e.g., no Night-Night-Early). Expressive
     and efficient for nurse rostering pattern rules.
 
+40. **Skills matching.** `job.skills ⊆ vehicle.skills`. Precomputed compatibility
+    matrix eliminates infeasible moves before evaluation. Most-requested
+    production routing feature.
+
+41. **Setup times (location-aware).** Setup time applied only on location change.
+    Skip if consecutive jobs at same location. Realistic for parking/docking.
+
+42. **Multiple time windows.** Array of [start,end] per client instead of single
+    TW. "Deliver 9-12 OR 14-17" is standard in last-mile delivery.
+
+43. **Three-matrix cost model.** Per profile: duration (scheduling), distance
+    (reporting), cost (optimization). Toll roads add cost but not time.
+
+44. **Scheduling-specific LNS.** Time-window relaxation, precedence relaxation,
+    per-resource relaxation from CP-SAT. These outperform generic ruin-and-
+    recreate for scheduling because they exploit problem structure.
+
+45. **Conflict-directed move selection.** Focus moves on worst violation point
+    rather than random. Earliest overlapping pair (scheduling), highest-
+    violation segment (routing). Improves convergence.
+
+46. **Adaptive perturbation difficulty.** Track acceptance rates per operator
+    and adjust perturbation size. Successful operators get larger
+    neighborhoods; struggling operators shrink.
+
 ---
 
 ## 9. References
@@ -1395,10 +1470,16 @@ Solver design influence:
 - Hexaly (formerly LocalSolver). Set/list variables, piecewise linear costs,
   bin packing via set-partition, multi-mode RCPSP, open shop, clustered VRP,
   VRP with transshipment, car sequencing. https://www.hexaly.com/
-- Google OR-Tools. RoutingModel dimensions, driver breaks, type incompatibilities,
-  LIFO/FIFO PD, depot resources, GLS, MAB operator selection, global span,
-  portfolio solving, solution finalization, automaton constraint.
+- Google OR-Tools / CP-SAT. RoutingModel dimensions, driver breaks, type
+  incompatibilities, LIFO/FIFO PD, depot resources, GLS, MAB operator selection,
+  global span, portfolio solving, solution finalization, automaton constraint,
+  scheduling LNS neighborhoods (time-window/precedence/resource relaxation),
+  conflict-directed search, adaptive LNS difficulty.
   https://github.com/google/or-tools
+- VROOM. Production C++ VRP: skills matching, location-aware setup times,
+  multiple time windows, max tasks, vehicle type-specific service, speed factor,
+  three-matrix cost model (cost/duration/distance), per-task-hour cost,
+  RouteSplit operator. https://github.com/VROOM-Project/vroom
 
 LLM/Neural:
 - Ye et al. (2025). *VRPAgent: LLM-driven operator discovery*. arXiv.
