@@ -300,12 +300,50 @@ Phase 6b: Scheduling Problems
   - Perturbation operators (random swaps on critical path)
 ```
 
-### 5.2 Shared algorithm layer
+### 5.2 Production planning: MIP-based neighborhoods
 
-Both tracks share the same metaheuristic shells:
+Production planning (lot sizing) differs from routing and scheduling in that the
+best local search approaches use **MIP subproblems as neighborhoods**:
+
+**Fix-and-Optimize (FO)** is the dominant paradigm:
+1. Fix most binary (setup) variables to their current values
+2. Free a subset along one decomposition dimension
+3. Re-optimize that subproblem with a MIP solver
+4. Repeat with different subsets
+
+| Decomposition | What gets re-optimized |
+|---|---|
+| Product | All periods for a subset of products |
+| Time period | All products for a window of periods |
+| Resource | All products sharing a machine/resource |
+
+The state of the art combines **Relax-and-Fix** (construction) + **Fix-and-Optimize**
+(improvement) + **VNS** (diversification), achieving gaps under 1% from optimum.
+
+Fix-and-Optimize is fundamentally LNS where the repair operator is "solve a MIP
+subproblem." This means the ROAR shell can handle it: the `perturb` step unfixes
+a subset of variables, and `localSearch` re-solves the resulting subproblem via the
+existing FJ+LS core or an external MIP solver.
+
+### 5.3 Shared algorithm layer — ROAR first, specialize second
+
+All three problem families share the same metaheuristic shells. The `Problem`
+interface needs to expose problem-specific operations that the algorithm shell
+calls generically:
 
 ```cpp
-// Works for both routing and scheduling
+class Problem {
+public:
+    virtual SolutionHandle initialSolution() = 0;
+    virtual double evaluate(const SolutionHandle& h) const = 0;
+    virtual bool isFeasible(const SolutionHandle& h) const = 0;
+
+    // Problem-specific operations called by algorithm shell:
+    virtual void localSearch(SolutionHandle& h) = 0;
+    virtual void perturb(SolutionHandle& h, double strength) = 0;
+};
+
+// Works for routing, scheduling, AND production planning
 class IteratedLocalSearch : public Algorithm {
     void run(Problem& p, double timeLimit, SolutionHandle& best) override {
         auto s = p.initialSolution();
@@ -325,18 +363,29 @@ class ALNS : public Algorithm {
 };
 ```
 
-### 5.3 Priority for implementation
+The three specializations differ only in what `localSearch` and `perturb` do:
+
+| Method | Routing | Scheduling | Lot Sizing |
+|--------|---------|------------|------------|
+| `localSearch` | relocate, swap, 2-opt, Or-opt, SWAP* | N5 block swap, insertion, critical-path moves | Fix-and-Optimize (MIP subproblem solve) |
+| `perturb` | ruin-and-recreate (string/random/worst removal) | random critical-path swaps | decompose by product/time/resource (unfix variables) |
+| `evaluate` | total route cost (penalized) | makespan (critical path length) | setup + holding cost |
+
+### 5.4 Priority for implementation
 
 Based on the research, the recommended implementation order is:
 
-1. **ILS shell** — covers AILS-II pattern (state of the art for CVRP)
+1. **ROAR shell** — ILS first (covers AILS-II pattern), then ALNS
 2. **CVRP problem** — most benchmarked, clearest evaluation criteria
 3. **Standard LS operators** — relocate, swap, 2-opt, Or-opt, SWAP*
-4. **ALNS shell** — for multi-variant routing and scheduling generality
-5. **VRPTW problem** — adds time window propagation
-6. **JSP problem** — disjunctive graph, critical-path neighborhoods
+4. **VRPTW problem** — adds time window propagation
+5. **JSP problem** — validates scheduling track, disjunctive graph neighborhoods
+6. **CLSP problem** — validates MIP-based neighborhoods through same shell
 
-### 5.4 Key design decisions
+Steps 2–3 test routing. Step 5 tests scheduling. Step 6 tests production planning.
+If the ROAR shell works for all three without modification, the abstraction is right.
+
+### 5.5 Key design decisions
 
 1. **Route representation**: ordered customer sequence per route (not edge variables). This is what all top methods use.
 
@@ -347,6 +396,8 @@ Based on the research, the recommended implementation order is:
 4. **Penalized cost**: use `cost + α * capacityViolation + β * timeWindowViolation` as the LS objective, with adaptive penalty weights. This allows infeasible intermediate solutions (as in HGS and AILS-II).
 
 5. **Perturbation**: ruin-and-recreate is the dominant perturbation strategy. Remove a segment of customers (random, worst, related, string removal), then reinsert with greedy/regret heuristic.
+
+6. **MIP-based neighborhoods**: for lot sizing, `localSearch` delegates to a MIP solver on a subproblem. The ROAR shell doesn't need to know — it just calls `localSearch`.
 
 ---
 
@@ -362,3 +413,7 @@ Based on the research, the recommended implementation order is:
 - Graham et al. (1979). *Optimization and approximation in deterministic sequencing and scheduling*. Annals of Discrete Mathematics 5:287–326.
 - Nowicki & Smutnicki (1996). *A fast taboo search algorithm for the job shop problem*. Management Science 42(6):797–813.
 - CVRPLIB BKS Challenge (2026). https://vrp.galgos.inf.puc-rio.br/index.php/en/bks-challenge
+- Helber & Sahling (2010). *A fix-and-optimize approach for the multi-level capacitated lot sizing problem*. Int. J. Production Economics 123(2):247–256.
+- Seeanner et al. (2013). *Combining VNDS with Fix&Optimize for multi-level lot-sizing and scheduling*. Computers & OR 40(9):2110–2124.
+- Chen et al. (2015). *Fix-and-optimize and VNS for multi-level capacitated lot sizing*. Omega 56:25–36.
+- Muller, Spoorendonk & Pisinger (2012). *A hybrid adaptive large neighborhood search heuristic for lot-sizing with setup times*. European J. OR 218(3):614–633.
