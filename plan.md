@@ -1,58 +1,236 @@
 # primal-rsp — Primal Heuristics for Routing, Scheduling & Production Planning
 
-Standalone C++ library for LP-free primal heuristics on structured combinatorial
-optimization problems: vehicle routing, job shop scheduling, and lot sizing.
+Declarative modeling + LP-free solving for structured combinatorial optimization.
+
+Think MIP modeling (CPLEX/Gurobi) but for routing, scheduling, and planning:
+the user declares **what** the problem is, the solver decides **how** to solve it.
 
 Sibling to `mip-heuristics` (LP-free MIP solvers: FJ, Local-MIP). That repo
-handles generic MIP. This repo handles problems with **exploitable structure** —
-routes, sequences, assignments — where problem-specific local search dominates.
+handles generic MIP (`Ax ≤ b`). This repo handles problems with **exploitable
+structure** — routes, sequences, schedules — where problem-specific local search
+dominates generic approaches by orders of magnitude.
 
 ---
 
-## 1. Design Principles
+## 1. User Experience
 
-### 1.1 Three clean separation layers
+### 1.1 Standard CVRP — declare and solve
 
-The architecture separates three concerns that change for different reasons:
+```cpp
+#include <primal/routing.h>
+
+primal::Model m;
+
+// Structure
+auto depot = m.add_depot(456, 320);
+auto vtype = m.add_vehicle_type(4, {.capacity = 15});
+
+// Customers
+m.add_client(228, 0, {.demand = 1});
+m.add_client(912, 0, {.demand = 1});
+m.add_client(0,   80, {.demand = 3});
+// ...
+
+// Distances auto-computed from coordinates (Euclidean, rounded)
+// Or: m.set_distance(i, j, dist);
+
+// Solve
+auto result = m.solve(primal::TimeLimit(60));
+
+// Use
+std::cout << "Cost: " << result.cost() << "\n";
+for (auto& route : result.routes()) {
+    for (int c : route) std::cout << c << " ";
+    std::cout << "\n";
+}
+```
+
+Or from a CVRPLIB file:
+
+```cpp
+auto result = primal::solve("X-n101-k25.vrp", primal::TimeLimit(60));
+```
+
+**Zero implementation needed.** The solver recognizes: routes + capacity →
+uses LoadSegment, standard operators, ILS/HGS.
+
+### 1.2 VRPTW with heterogeneous fleet — just add parameters
+
+```cpp
+primal::Model m;
+m.add_depot(0, 0, {.tw = {0, 1000}});
+
+// Two vehicle types with different capacities and costs
+m.add_vehicle_type(3, {.capacity = 100, .max_duration = 500});
+m.add_vehicle_type(2, {.capacity = 200, .max_duration = 800, .fixed_cost = 50});
+
+// Clients with time windows
+m.add_client(10, 20, {.demand = 15, .tw = {100, 200}, .service = 10});
+m.add_client(30, 40, {.demand = 25, .tw = {150, 300}, .service = 15});
+m.add_client(50, 60, {.demand = 10, .pickup = 5});  // pickup-delivery
+
+auto result = m.solve(primal::TimeLimit(60));
+```
+
+**Still zero implementation.** The model sees time windows → adds DurationSegment.
+Sees heterogeneous fleet → adds vehicle-type-aware evaluation. The user just
+declares attributes, never touches the engine.
+
+### 1.3 Job shop scheduling — same pattern, different domain
+
+```cpp
+#include <primal/scheduling.h>
+
+primal::ScheduleModel m;
+
+// Jobs with ordered operations
+auto j1 = m.add_job();
+m.add_operation(j1, {.machine = 0, .duration = 3});
+m.add_operation(j1, {.machine = 1, .duration = 2});
+
+auto j2 = m.add_job();
+m.add_operation(j2, {.machine = 1, .duration = 4});
+m.add_operation(j2, {.machine = 0, .duration = 1});
+
+m.minimize_makespan();
+auto result = m.solve(primal::TimeLimit(30));
+```
+
+Or from a standard format:
+
+```cpp
+auto result = primal::solve_jsp("tai20x15.txt", primal::TimeLimit(30));
+```
+
+### 1.4 Lot sizing — MIP substructure, delegates to mip-heuristics
+
+```cpp
+#include <primal/lotsizing.h>
+
+primal::LotSizingModel m;
+auto p1 = m.add_product({.setup_cost = 100, .holding_cost = 2});
+auto p2 = m.add_product({.setup_cost = 150, .holding_cost = 3});
+
+m.add_demand(p1, {.period = 0, .quantity = 50});
+m.add_demand(p1, {.period = 1, .quantity = 30});
+m.add_demand(p2, {.period = 0, .quantity = 40});
+
+m.set_capacity({200, 200, 200});  // per-period capacity
+
+auto result = m.solve(primal::TimeLimit(60));
+```
+
+### 1.5 Custom constraints — extend when needed
+
+For constraints the model doesn't know about, the user provides a penalty function:
+
+```cpp
+primal::Model m;
+// ... standard setup ...
+
+// Custom: each client requires a skill, vehicles have skill sets
+m.add_client_attribute("required_skill", {1, 2, 1, 3, 2, ...});
+m.add_vehicle_attribute("skills", {{1,2}, {2,3}, {1,3}, ...});
+
+// Penalty function: called for each route to compute violation
+m.add_route_penalty("skill_mismatch", [](const auto& route, const auto& data) {
+    int violations = 0;
+    for (int c : route.customers()) {
+        int skill = data.client_attr<int>("required_skill", c);
+        auto& vskills = data.vehicle_attr<std::vector<int>>("skills", route.vehicle());
+        if (std::find(vskills.begin(), vskills.end(), skill) == vskills.end())
+            violations++;
+    }
+    return violations;
+});
+
+auto result = m.solve(primal::TimeLimit(60));
+```
+
+This is **slower** than a native segment (callback overhead on every move
+evaluation). For production use with custom constraints, the user can implement
+a segment type in C++ for full performance. But the lambda approach lets them
+prototype quickly.
+
+---
+
+## 2. What the Model Recognizes (Out of the Box)
+
+The modeling layer maps declared attributes to internal engine components
+automatically:
+
+### Routing
+
+| User declares | Model recognizes | Engine maps to |
+|---|---|---|
+| `demand` + `capacity` | Capacitated VRP | LoadSegment |
+| `tw` + `service` | Time windows | DurationSegment |
+| `max_duration` on vehicle | Max route duration | DurationSegment |
+| Multiple `add_vehicle_type` | Heterogeneous fleet | Vehicle-type-aware eval |
+| Multiple `add_depot` | Multi-depot | Start/end depot per vehicle |
+| `pickup` on client | Pickup-delivery | LoadSegment extension |
+| `required = false` + `prize` | Optional clients | Prize collection |
+| `open = true` on vehicle | Open routes | No return-to-depot |
+
+### Scheduling
+
+| User declares | Model recognizes | Engine maps to |
+|---|---|---|
+| Operations with `machine` + `duration` | Job shop | Disjunctive graph |
+| Same machine order for all jobs | Flow shop | Permutation schedule |
+| `setup_time` between ops | Sequence-dependent setup | Extended evaluation |
+| `due_date` on job | Tardiness | Penalty term |
+| `release_date` on job | Release dates | Feasibility check |
+| Multiple machines per op | Flexible job shop | Assignment + sequencing |
+
+### Lot Sizing
+
+| User declares | Model recognizes | Engine maps to |
+|---|---|---|
+| Products + demands + capacity | CLSP | Fix-and-Optimize |
+| `setup_cost` + `holding_cost` | Setup + inventory | MIP objective |
+| Multi-level BOM | MLCLSP | Multi-level decomposition |
+
+---
+
+## 3. Internal Architecture
+
+The user never sees this. The Model translates their declaration into engine
+components.
+
+### 3.1 Three-layer engine
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Search Control (ILS, HGS, SA, custom)                  │
-│  → How to explore the solution space                    │
-│  → Reusable across problem types                        │
+│  Search Control (ILS, HGS, SA)                          │
 │  → Each algorithm is its own class, no forced interface │
+│  → Reusable across problem types                        │
 ├─────────────────────────────────────────────────────────┤
 │  Move Evaluation (segments + CostEvaluator)             │
-│  → What's the cost impact of a rearrangement            │
-│  → EXTENSIBILITY POINT for new constraints              │
-│  → New constraint = new segment type + penalty term     │
+│  → Extensibility point for new constraints              │
+│  → New constraint = new segment type with merge()       │
 ├─────────────────────────────────────────────────────────┤
 │  Move Topology (operators)                              │
 │  → How nodes/jobs get rearranged                        │
 │  → Reusable across constraint variants                  │
-│  → LLM-TARGETABLE for operator discovery                │
+│  → Clean function signatures for LLM operator discovery │
 └─────────────────────────────────────────────────────────┘
 ```
 
-This separation means:
-- **New constraint** (max duration, pickup-delivery, heterogeneous fleet) →
-  add a segment type + penalty term. Operators unchanged.
-- **New operator** (LLM-discovered destroy/repair, novel move) →
-  add an operator. Segments unchanged.
-- **New algorithm** (custom hybrid, neural-guided search) →
-  add a search controller. Everything else unchanged.
-- **No heuristic is limited by generality** — algorithms use components directly,
-  no virtual dispatch on the hot path.
+- **Operators** describe topology changes (relocate, swap, 2-opt). They don't
+  know about constraints. Reusable across all VRP variants.
+- **Segments** propagate constraint state along routes via `merge()`. Adding a
+  new constraint = adding a segment type. Operators unchanged.
+- **CostEvaluator** sums penalty terms from all active segments. Operators call
+  it to price out moves.
+- **Algorithms** (ILS, HGS) compose operators + local search + penalty management.
+  Each is its own class.
 
-### 1.2 Segment concatenation for extensible evaluation
+### 3.2 Segment concatenation (the extensibility mechanism)
 
-Learned from PyVRP (Wouda et al., IJOC 2024) and UHGS (Vidal et al., 2014):
-
-An operator describes a **topology change** (rearrange nodes). It doesn't know
-about constraints. To evaluate the cost impact, it concatenates **segments**:
+Learned from PyVRP (Wouda et al., 2024) and UHGS (Vidal et al., 2014):
 
 ```cpp
-// Each constraint defines how it propagates along a route segment
 struct LoadSegment {
     int delivery, pickup, load;
     static LoadSegment merge(LoadSegment a, LoadSegment b);
@@ -61,494 +239,215 @@ struct LoadSegment {
 
 struct DurationSegment {
     int duration, time_warp, tw_early, tw_late;
-    static DurationSegment merge(DurationSegment a, DurationSegment b, int edge_duration);
+    static DurationSegment merge(DurationSegment a, DurationSegment b,
+                                  int edge_duration);
     int total_time_warp() const;
 };
-
-// CostEvaluator sums penalties from all active segment types
-struct CostEvaluator {
-    int load_penalty;    // per unit excess load
-    int tw_penalty;      // per unit time warp
-    int dist_penalty;    // per unit excess distance
-
-    int delta_cost(RouteProposal& proposal, Route& old_route) const;
-};
 ```
 
-To add a new constraint (e.g., maximum stops per route, skill-based assignment):
-1. Define a new segment type with a `merge()` operation
-2. Add a penalty weight to `CostEvaluator`
-3. Operators and search algorithms are untouched
+When the Model sees `demand` + `capacity`, it activates `LoadSegment`.
+When it sees `tw`, it activates `DurationSegment`. The user doesn't know
+these exist.
 
-This is how UHGS handles 29 VRP variants with one codebase (Vidal et al., 2014)
-and how PyVRP won DIMACS + EURO-NeurIPS competitions.
+### 3.3 LLM-friendly operator interfaces
 
-### 1.3 No abstract Problem/Algorithm layer
-
-The top solvers (HGS-CVRP, AILS-II, FILO, PyVRP) don't use abstract interfaces.
-They use **component composition**: concrete data structures, pluggable operators,
-shared local search engine.
-
-Why:
-- Virtual dispatch on evaluate/move-scoring kills performance
-- ILS and HGS have fundamentally different structures — a common
-  `Algorithm::run()` is either useless or leaky
-- Each algorithm uses components directly, unconstrained
-
-### 1.4 LLM-friendly operator interfaces
-
-For LLM-driven heuristic discovery (VRPAgent, EoH, FunSearch), operators need
-clean function signatures that an LLM can target:
+For LLM-driven heuristic discovery (VRPAgent, EoH, FunSearch):
 
 ```cpp
-// Perturbation: Solution → Solution (simplest interface for LLM generation)
-using PerturbFn = std::function<Solution(const Solution&, const ProblemData&, RNG&)>;
-
-// Destroy: Solution → partial solution (remove customers)
+// Clean function signatures LLMs can target
 using DestroyFn = std::function<std::vector<int>(Solution&, int count, RNG&)>;
-
-// Repair: partial solution → Solution (reinsert removed customers)
-using RepairFn = std::function<void(Solution&, const std::vector<int>& removed,
-                                     const ProblemData&)>;
+using RepairFn  = std::function<void(Solution&, const std::vector<int>&,
+                                      const ProblemData&)>;
+using PerturbFn = std::function<Solution(const Solution&, const ProblemData&, RNG&)>;
 ```
-
-LLMs generate these functions. The framework evaluates them, scores them, and
-can do evolutionary selection over a population of operator implementations
-(the EoH/VRPAgent pattern).
 
 ---
 
-## 2. Architecture
+## 4. Source Layout
 
 ```
 src/
-  routing/                ← CVRP, VRPTW, and variants
-    problem_data.h            Instance data (distance matrix, demands, TWs)
-    solution.h                Route-based solution representation
-    route.h                   Single route with segment-based evaluation
-    segments/
-      load_segment.h          Capacity tracking + merge
-      duration_segment.h      Time window + duration tracking + merge
-      // future: skill_segment.h, compartment_segment.h, ...
-    cost_evaluator.h          Combines penalties from all segment types
-    operators/
-      node_operator.h         Base for node-level moves (topology only)
-      route_operator.h        Base for route-level moves (topology only)
-      relocate.h              Exchange(N,0)
-      swap.h                  Exchange(N,M)
-      swap_star.h             SWAP* (Vidal)
-      two_opt.h               Intra-route 2-opt
-      or_opt.h                Intra-route Or-opt(1,2,3)
-      cross.h                 2-opt* / tail swap
-    perturbation/
-      destroy.h               Remove operators (random, worst, related, string)
-      repair.h                Insert operators (greedy, regret-k)
-      ruin_recreate.h         Compose destroy + repair
-    local_search.h            Compose operators, run to local optimum
-    penalty_manager.h         Adaptive penalty weights
-    neighbours.h              Precomputed k-nearest neighbor lists
-    cvrplib_reader.h          Parse CVRPLIB instance format
+  model/              ← User-facing modeling API
+    model.h               Routing model (add_depot, add_client, add_vehicle_type)
+    schedule_model.h      Scheduling model (add_job, add_operation)
+    lotsizing_model.h     Lot sizing model
+    instance_reader.h     CVRPLIB, Solomon, Taillard parsers
 
-  search/                 ← Metaheuristic shells (shared across problem types)
+  routing/            ← CVRP/VRPTW engine (internal)
+    problem_data.h        Compiled instance data
+    solution.h            Route-based solution
+    route.h               Route with segment-based evaluation
+    segments/
+      load_segment.h
+      duration_segment.h
+    cost_evaluator.h
+    operators/            Relocate, Swap, SWAP*, 2-opt, Or-opt, Cross
+    perturbation/         Destroy + Repair operators
+    local_search.h
+    penalty_manager.h
+    neighbours.h
+
+  search/             ← Metaheuristic shells
     iterated_local_search.h
     genetic_algorithm.h
-    population.h              Feasible + infeasible subpops, diversity
-    crossover.h               Base + OX, SREX implementations
-    stop_criterion.h          Time, iterations, no-improvement
-    acceptance.h              Late acceptance, SA, convergent
+    population.h
+    crossover.h
+    stop_criterion.h
+    acceptance.h
 
-  scheduling/             ← Job shop, flow shop (Phase 2)
-    schedule_data.h
-    schedule.h                Operation sequences per machine
-    disjunctive_graph.h       Critical path computation
-    operators/
-      block_swap.h            N5 critical-path moves
-      insertion.h             Operation reinsertion
-    local_search.h            Scheduling-specific LS engine
-
-  lotsizing/              ← CLSP with Fix-and-Optimize (Phase 3)
-    ...
+  scheduling/         ← JSP/FSP engine (Phase 5)
+  lotsizing/          ← CLSP engine (Phase 6)
 
   cli/
     main.cpp
 
 tests/
+  model/              ← User-facing tests (the API contract)
   routing/
   search/
-  data/                       Benchmark instances
+  data/
 ```
 
 ---
 
-## 3. Core Types (Routing)
+## 5. Implementation Phases
 
-### 3.1 ProblemData
+### Phase 1 — CVRP end-to-end
 
-```cpp
-struct ProblemData {
-    int num_locations;         // 0 = depot, 1..n = customers
-    int num_vehicles;
-    int vehicle_capacity;
+User can: `m.add_depot(); m.add_client({.demand=...}); m.solve();`
 
-    // Flat distance matrix (integer, scaled)
-    std::vector<int> dist;
-    int distance(int i, int j) const;
-
-    std::vector<int> demand;
-
-    // VRPTW (optional, zeroed if pure CVRP)
-    std::vector<int> tw_early, tw_late, service_time;
-
-    // Precomputed granular neighbourhood
-    std::vector<std::vector<int>> neighbours;
-    void compute_neighbours(int k = 40);
-
-    // Extension point: additional per-customer or per-vehicle attributes
-    // added as new vectors when new constraints are introduced
-};
-```
-
-### 3.2 Route with segment-based evaluation
-
-```cpp
-class Route {
-public:
-    const std::vector<int>& customers() const;  // ordered visit sequence
-
-    // Segment data — one per customer position, enabling O(1) move evaluation
-    // via prefix/suffix concatenation
-    LoadSegment load_between(int start, int end) const;
-    DurationSegment duration_between(int start, int end) const;
-
-    // Aggregate route metrics (from segments)
-    int total_distance() const;
-    int excess_load(int capacity) const;
-    int time_warp() const;
-
-    // Modify
-    void insert(int pos, int customer);
-    void remove(int pos);
-    void recompute_segments(const ProblemData& data);
-
-private:
-    std::vector<int> customers_;
-    std::vector<LoadSegment> load_segments_;       // prefix segments
-    std::vector<DurationSegment> dur_segments_;    // prefix segments
-    int distance_ = 0;
-};
-```
-
-### 3.3 Solution
-
-```cpp
-class Solution {
-public:
-    std::vector<Route> routes;
-
-    int total_distance() const;
-    int total_excess_load() const;
-    int total_time_warp() const;
-    bool is_feasible() const;
-
-    int penalized_cost(const CostEvaluator& eval) const;
-};
-```
-
-### 3.4 Operators (topology only)
-
-Operators describe rearrangements. They use CostEvaluator + segments to
-compute deltas, but the topology logic is constraint-agnostic:
-
-```cpp
-class NodeOperator {
-public:
-    virtual ~NodeOperator() = default;
-
-    // Evaluate best move involving node at position u_pos in route r1
-    // and position v_pos in route r2. Returns cost delta via CostEvaluator.
-    virtual int evaluate(int u_pos, int v_pos,
-                         const Route& r1, const Route& r2,
-                         const CostEvaluator& eval,
-                         const ProblemData& data) = 0;
-
-    virtual void apply(Solution& sol) = 0;
-};
-```
-
-The operator's `evaluate` constructs route proposals (segment concatenations)
-and calls `CostEvaluator::delta_cost()`. The CostEvaluator doesn't know what
-operator called it — it just prices out the proposal.
-
-### 3.5 CostEvaluator
-
-```cpp
-class CostEvaluator {
-public:
-    int load_penalty;       // α — per unit excess load
-    int tw_penalty;         // β — per unit time warp
-    // Future: distance_penalty, stops_penalty, skill_penalty, ...
-
-    // Price out a route proposal vs current route
-    template<bool exact = true>
-    int delta_cost(const RouteProposal& proposal,
-                   const Route& current) const;
-
-    // Price out a two-route proposal (inter-route moves)
-    template<bool exact = true>
-    int delta_cost(const RouteProposal& p1, const Route& r1,
-                   const RouteProposal& p2, const Route& r2) const;
-
-    int penalized_cost(const Route& r) const;
-};
-```
-
-When `exact=false`, delta_cost can exit early if the partial sum is already
-non-improving (≥0). This is a critical optimization — most moves are rejected.
-
-### 3.6 LocalSearch
-
-```cpp
-class LocalSearch {
-public:
-    LocalSearch(const ProblemData& data, const CostEvaluator& eval);
-
-    void add_node_operator(std::unique_ptr<NodeOperator> op);
-    void add_route_operator(std::unique_ptr<RouteOperator> op);
-
-    // Run all operators to local optimum using granular neighbourhood.
-    Solution search(Solution sol);
-
-private:
-    const ProblemData& data_;
-    const CostEvaluator& eval_;
-    std::vector<std::unique_ptr<NodeOperator>> node_ops_;
-    std::vector<std::unique_ptr<RouteOperator>> route_ops_;
-};
-```
-
----
-
-## 4. Search Algorithms
-
-### 4.1 Iterated Local Search
-
-```cpp
-class IteratedLocalSearch {
-public:
-    IteratedLocalSearch(const ProblemData& data,
-                        LocalSearch& ls,
-                        RuinAndRecreate& perturb,
-                        PenaltyManager& penalty,
-                        ILSParams params);
-
-    Solution run(Solution initial, StopCriterion& stop);
-};
-```
-
-### 4.2 Genetic Algorithm (HGS pattern)
-
-```cpp
-class GeneticAlgorithm {
-public:
-    GeneticAlgorithm(const ProblemData& data,
-                     LocalSearch& ls,
-                     Population& pop,
-                     Crossover& cx,
-                     PenaltyManager& penalty,
-                     GAParams params);
-
-    Solution run(std::vector<Solution> initial, StopCriterion& stop);
-};
-```
-
-Both use the same `LocalSearch` engine. No shared base class.
-
----
-
-## 5. Extensibility Scenarios
-
-### 5.1 Adding a new constraint (e.g., max route duration)
-
-1. Define `DistanceSegment` with `merge()` and `excess_distance(int max_dist)`
-2. Add `dist_penalty` to `CostEvaluator`
-3. Store prefix distance segments in `Route`
-4. **Zero operator changes** — operators use CostEvaluator, which now includes
-   the new penalty term automatically
-
-### 5.2 Adding a new operator (e.g., LLM-discovered)
-
-1. Implement `NodeOperator` or `RouteOperator` subclass
-2. Or provide a `PerturbFn` lambda for destroy/repair
-3. Register with `LocalSearch` or `RuinAndRecreate`
-4. **Zero segment/constraint changes**
-
-### 5.3 Adding a new algorithm (e.g., neural-guided search)
-
-1. Write a new class that uses `LocalSearch`, `PenaltyManager`, etc.
-2. No base class to inherit from — just use the components
-3. Can mix with existing components freely
-
-### 5.4 LLM-driven operator evolution
-
-```cpp
-// EoH/VRPAgent pattern: LLM generates destroy functions as code
-class LLMDestroyOperator {
-    std::string source_code;  // the LLM-generated code
-    DestroyFn compiled_fn;    // compiled or interpreted
-
-    std::vector<int> operator()(Solution& sol, int count, RNG& rng) {
-        return compiled_fn(sol, count, rng);
-    }
-};
-
-// Evolutionary loop over a population of LLM-generated operators
-class OperatorEvolver {
-    std::vector<LLMDestroyOperator> population;
-    void evaluate_on_instances(const std::vector<ProblemData>& instances);
-    void evolve(LLM& llm);  // ask LLM to mutate/crossover operator code
-};
-```
-
-The framework's clean operator interface (`DestroyFn`, `RepairFn`, `PerturbFn`)
-makes it natural to plug in LLM-generated functions.
-
-### 5.5 Scheduling — different problem, shared search layer
-
-```cpp
-// Scheduling has its own concrete types
-class ScheduleLocalSearch {
-    void add_operator(std::unique_ptr<ScheduleOperator> op);
-    Schedule search(Schedule s);
-};
-
-// But reuses the same search controllers
-class IteratedLocalSearch<Schedule, ScheduleLocalSearch, SchedulePerturbation> { ... };
-```
-
-Or more likely: scheduling gets its own ILS class that composes scheduling
-components. The search *patterns* are shared (acceptance criteria, stopping,
-population management), even if the classes aren't literally the same.
-
----
-
-## 6. Implementation Phases
-
-### Phase 1 — CVRP Core
-
-The LS engine. 80% of the value.
-
+Engine:
 1. Repo skeleton (CMake, C++23, Catch2)
-2. ProblemData + CVRPLIB parser
-3. LoadSegment with merge()
-4. Route with prefix segment arrays
-5. Solution + CostEvaluator
-6. Operators: Relocate(1,0), Swap(1,1), 2-opt, Or-opt
-7. LocalSearch engine (granular neighbourhood)
-8. Construction heuristic (nearest-neighbour)
-9. ILS (ruin-and-recreate + late acceptance)
-10. Tests: operator correctness, small instance end-to-end
+2. `Model` class with `add_depot`, `add_client`, `add_vehicle_type`, `solve`
+3. CVRPLIB parser
+4. `ProblemData` (compiled from Model)
+5. `LoadSegment` with `merge()`
+6. `Route` with prefix segment arrays
+7. `Solution` + `CostEvaluator`
+8. Operators: Relocate(1,0), Swap(1,1), 2-opt, Or-opt
+9. `LocalSearch` engine (granular neighbourhood)
+10. Construction heuristic (nearest-neighbour or savings)
+11. ILS (ruin-and-recreate + late acceptance)
+12. Tests: model API, operator correctness, small instance end-to-end
 
-### Phase 2 — Benchmark Quality
+### Phase 2 — Benchmark quality
 
 1. SWAP* operator
 2. PenaltyManager (adaptive α)
-3. Benchmark harness on Uchoa X-set, report gaps to BKS
-4. Tuning. Target: <2% average gap, 60s.
+3. Uchoa X-set benchmarks. Target: <2% gap, 60s.
 
 ### Phase 3 — HGS
 
-1. Population (feasible + infeasible subpops, broken pairs diversity)
+1. Population (feasible + infeasible, diversity)
 2. Crossover (SREX)
-3. GeneticAlgorithm class
+3. `GeneticAlgorithm`
 4. Compare ILS vs HGS on X-set
 
-### Phase 4 — VRPTW
+### Phase 4 — VRPTW + rich VRP
 
-1. DurationSegment with merge()
-2. Update Route to carry duration segments
+User can: `m.add_client({.tw = {100,200}, .service = 10}); m.solve();`
+
+Engine:
+1. `DurationSegment` with `merge()`
+2. Route carries duration segments
 3. PenaltyManager adds β (time warp)
-4. Operators: zero changes (they use CostEvaluator)
+4. Heterogeneous fleet, max duration, multiple depots
 5. Solomon + Gehring-Homberger benchmarks
 
 ### Phase 5 — Scheduling
 
-New problem family. Separate concrete types. Search patterns carry over.
+User can: `m.add_job(); m.add_operation(j, {.machine=0, .duration=3});`
 
-### Phase 6 — Lot Sizing
+Engine: separate concrete types, search patterns carry over.
 
-Fix-and-Optimize with mip-heuristics as inner solver.
+### Phase 6 — Lot sizing
+
+User can: `m.add_product({.setup_cost=100}); m.add_demand(p, {.period=0, .qty=50});`
+
+Engine: Fix-and-Optimize with mip-heuristics as inner solver.
+
+### Phase 7 — Custom constraints
+
+User can: `m.add_route_penalty("name", lambda)` for quick prototyping.
+Power user can: implement a C++ segment type for full performance.
 
 ---
 
-## 7. Relationship to mip-heuristics
+## 6. Relationship to mip-heuristics
 
 ```
-mip-heuristics (sibling repo)         primal-rsp (this repo)
+mip-heuristics                        primal-rsp
 ┌──────────────────────────┐          ┌──────────────────────────┐
-│ Generic MIP              │          │ Structured problems      │
 │                          │          │                          │
-│ • FJ solver              │◄─────────│ • Fix-and-Optimize uses  │
-│ • Local-MIP solver       │ Phase 6  │   FJ/Local-MIP as inner  │
-│ • MPS reader             │          │   subproblem solver      │
-│ • Presolve               │          │                          │
-│                          │          │ • Routing: CVRP, VRPTW   │
-│ Vars: generic x_i        │          │ • Scheduling: JSP, FSP   │
-│ Constraints: Ax ≤ b      │          │ • Lot sizing: CLSP       │
-│ Neighborhoods: ±1 per var│          │                          │
-│                          │          │ Neighborhoods: relocate,  │
-│                          │          │   swap, 2-opt, SWAP*, N5 │
+│ User provides:           │          │ User provides:           │
+│   .mps file              │          │   Model declarations     │
+│   (variables, Ax ≤ b)    │          │   (depots, clients,      │
+│                          │          │    vehicles, jobs, ...)   │
+│ Solver decides:          │          │                          │
+│   FJ / Local-MIP         │          │ Solver decides:          │
+│   move scoring           │          │   segments, operators,   │
+│   weight updates         │          │   ILS / HGS, penalties   │
+│                          │          │                          │
+│ Generic: any MIP         │◄─────────│ Structured: RSP          │
+│                          │ Phase 6  │                          │
 └──────────────────────────┘          └──────────────────────────┘
+
+Same pattern: user declares WHAT, solver decides HOW.
 ```
 
 ---
 
-## 8. Key Design Decisions
+## 7. Key Design Decisions
 
-1. **Integer distances** — scale and round. CVRPLIB uses integers. Avoids
-   floating-point in the hot loop. Cache-friendly.
+1. **Model is the product.** The user interacts with `Model`, `ScheduleModel`,
+   `LotSizingModel`. They never see segments, operators, or algorithms.
 
-2. **Granular neighbourhood** — only consider k-nearest (k=40). O(n·k) not O(n²).
+2. **Attribute-driven engine selection.** When the user sets `tw` on a client,
+   the Model activates `DurationSegment` internally. No explicit configuration.
 
-3. **Segment concatenation** — the extensibility mechanism. New constraint =
-   new segment type with merge(). Operators and algorithms untouched.
+3. **Integer arithmetic in the hot path.** Scale and round distances. CVRPLIB
+   uses integers. Avoids floating-point. Cache-friendly.
 
-4. **Penalized cost** — `distance + α·excessLoad + β·timeWarp + ...`. Infeasible
-   intermediate solutions allowed. Adaptive weights.
+4. **Granular neighbourhood.** k-nearest (k=40). O(n·k) not O(n²).
 
-5. **Operator ordering** — cheapest-first: Relocate, Swap, 2-opt, Or-opt, SWAP*.
+5. **Penalized cost.** `distance + α·excessLoad + β·timeWarp + ...` Infeasible
+   intermediate solutions. Adaptive penalty weights.
 
-6. **No ALNS** — ILS and HGS both outperform it. ALNS's adaptive operator
-   selection adds complexity without matching purpose-built search quality.
+6. **Operator ordering.** Cheapest-first: Relocate, Swap, 2-opt, Or-opt, SWAP*.
 
-7. **No abstract Algorithm base** — ILS and HGS are separate classes. A custom
-   algorithm just uses the components directly.
+7. **No ALNS.** ILS and HGS outperform it. ALNS adds complexity without quality.
 
-8. **Clean function signatures for LLM targeting** — `DestroyFn`, `RepairFn`,
-   `PerturbFn` are simple enough for LLM code generation.
+8. **No abstract Algorithm base.** ILS and HGS are separate classes. Custom
+   algorithms use components directly.
+
+9. **Lambda penalties for quick prototyping.** Not as fast as native segments,
+   but lets users add custom constraints without C++.
+
+10. **Clean function signatures for LLM targeting.** `DestroyFn`, `RepairFn`
+    are simple enough for LLM code generation.
 
 ---
 
-## 9. References
+## 8. References
 
 Core methods:
 - Vidal et al. (2014). *A unified solution framework for multi-attribute VRPs*. C&OR.
 - Vidal (2022). *HGS for the CVRP: SWAP\**. C&OR.
 - Wouda et al. (2024). *PyVRP: a high-performance VRP solver package*. IJOC.
 - Máximo et al. (2024). *AILS-II: Adaptive ILS for large-scale CVRP*. IJOC.
-- Accorsi & Vigo (2021). *FILO: Fast and scalable heuristic for large-scale CVRP*. TS.
 
 Benchmarks:
 - Uchoa et al. (2017). *New benchmark instances for the CVRP*. EJOR.
 - CVRPLIB BKS Challenge (2026). https://vrp.galgos.inf.puc-rio.br/
 
 Scheduling:
-- Nowicki & Smutnicki (1996). *A fast taboo search for the job shop problem*. MS.
+- Nowicki & Smutnicki (1996). *A fast taboo search for the job shop*. MS.
 
-Production planning:
-- Helber & Sahling (2010). *Fix-and-optimize for multi-level CLSP*. IJPE.
+Lot sizing:
+- Helber & Sahling (2010). *Fix-and-optimize for CLSP*. IJPE.
 - Muller, Spoorendonk & Pisinger (2012). *Hybrid ALNS for lot-sizing*. EJOR.
 
 LLM/Neural:
-- Ye et al. (2025). *VRPAgent: LLM-driven operator discovery for VRP*. arXiv.
+- Ye et al. (2025). *VRPAgent: LLM-driven operator discovery*. arXiv.
 - Liu et al. (2024). *Evolution of Heuristics (EoH)*. ICML.
 - Romera-Paredes et al. (2024). *FunSearch*. Nature.
