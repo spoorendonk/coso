@@ -7,7 +7,6 @@
 #include "search/stop_criterion.h"
 
 #include <chrono>
-#include <cmath>
 #include <stdexcept>
 
 namespace coso {
@@ -169,10 +168,7 @@ Result RoutingModel::solve(TimeLimit tl)
         builder.add_request(pickup, delivery);
     }
 
-    // Total number of nodes (depots + clients) for matrix indexing.
-    int num_depots  = static_cast<int>(depots_.size());
     int num_clients = static_cast<int>(clients_.size());
-    int n = num_depots + num_clients;
 
     // Add explicit distance entries.
     // The user-facing API uses a node numbering where depot ids and client ids
