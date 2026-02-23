@@ -1149,9 +1149,8 @@ mirror these interfaces 1:1.
 
 ```cpp
 #pragma once
-#include <vector>
 #include <string>
-#include <cstdint>
+#include <vector>
 
 namespace coso {
 
@@ -1173,17 +1172,24 @@ struct TimeLimit {
 };
 
 /// Common result fields shared across all engines.
+/// All fields use underscore-suffixed storage with [[nodiscard]] accessors.
+/// Engine-specific accessors (only populated by the relevant engine):
+///   routing:    routes(), unserved()
+///   scheduling: makespan(), schedule()
+///   assignment: assignments(), day(), unassigned()
+///   packing:    bins(), num_bins()
+///   network:    flows()
 struct Result {
-    bool feasible = false;
-    double cost = 0.0;
-    double elapsed_seconds = 0.0;
-    int iterations = 0;
+    bool   feasible_        = false;
+    double cost_            = 0.0;
+    double elapsed_seconds_ = 0.0;
+    int    iterations_      = 0;
 
-    // Engine-specific accessors (only populated by the relevant engine):
-    // routing:    routes(), unserved()
-    // scheduling: makespan(), schedule()
-    // assignment: assignments(), unassigned()
-    // packing:    bins(), num_bins()
+    [[nodiscard]] bool   feasible()        const noexcept;
+    [[nodiscard]] double cost()            const noexcept;
+    [[nodiscard]] double elapsed_seconds() const noexcept;
+    [[nodiscard]] int    iterations()      const noexcept;
+    // ... plus engine-specific accessors (see src/model/types.h)
 };
 
 } // namespace coso
@@ -1431,7 +1437,7 @@ gets reused by later engines.
 | ID | PR title | Deliverable | Files | Depends on |
 |----|----------|-------------|-------|------------|
 | 1.1 | CMake + CI setup | Project compiles, `ctest` runs (0 tests) | CMakeLists.txt, cmake/, .github/ | — |
-| 1.2 | Shared types header | `types.h` with Coord, TimeWindow, CostParams, Result, TimeLimit | src/model/types.h | — |
+| 1.2 | Shared types header | `types.h` with Coord, TimeWindow, CostParams, Result, TimeLimit | src/model/types.h | Done |
 | 1.3 | Model headers (declarations only) | All 4 model classes declared, compile with no impl | src/model/routing_model.h, schedule_model.h, assignment_model.h, packing_model.h | 1.2 |
 | 1.4 | API contract tests | Tests that exercise model API (compile + link, assert on trivial cases) | tests/model/model_test.cpp | 1.1, 1.3 |
 
