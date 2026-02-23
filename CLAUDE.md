@@ -89,6 +89,18 @@ All code under `primal::` namespace.
 - `docs/ROADMAP.md` — full design plan: modeling interface, architecture, problem catalog, implementation roadmap, design decisions, references
 - `CLAUDE.md` — this file (build/test/workflow instructions for AI assistants)
 
+## Agent Coordination
+
+The roadmap (docs/ROADMAP.md section 7) defines work units with IDs like `2.3`,
+`5.1`, `8.6`. Each work unit maps to a branch name (e.g., `5.3-precedence-resource`).
+
+**Before suggesting or starting any work unit:**
+1. Check open branches: `git branch -a`
+2. Check open PRs: `gh pr list`
+3. Check for running agents on this machine (background tasks, worktrees)
+4. Never start a work unit that another agent has an open branch or PR for
+5. Prefer the lowest-numbered unblocked, unclaimed work unit
+
 ## Fullgate
 
 When the user says **"fullgate"**, run this sequence in order. Each step can also be invoked individually by name:
