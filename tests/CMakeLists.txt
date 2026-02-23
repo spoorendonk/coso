@@ -53,3 +53,29 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME route_test COMMAND route_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Solution tests                                                              #
+# --------------------------------------------------------------------------- #
+
+add_executable(solution_test routing/solution_test.cpp)
+target_link_libraries(solution_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(solution_test)
+else()
+    add_test(NAME solution_test COMMAND solution_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  CostEvaluator tests                                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(cost_evaluator_test routing/cost_evaluator_test.cpp)
+target_link_libraries(cost_evaluator_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(cost_evaluator_test)
+else()
+    add_test(NAME cost_evaluator_test COMMAND cost_evaluator_test)
+endif()
