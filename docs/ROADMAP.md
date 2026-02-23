@@ -1447,7 +1447,7 @@ gets reused by later engines.
 
 | ID | PR title | Deliverable | Files | Depends on |
 |----|----------|-------------|-------|------------|
-| 2.1 | CVRPLIB instance reader | Parse .vrp files into structured data | src/model/instance_reader.{h,cpp}, tests | 1.2 |
+| 2.1 | ~~CVRPLIB instance reader~~ | ~~Parse .vrp files into structured data~~ | ~~src/model/instance_reader.{h,cpp}, tests~~ | ~~1.2~~ |
 | 2.2 | ProblemData (compiled instance) | Distance matrix, client/depot/vehicle attributes from model | src/routing/problem_data.{h,cpp}, tests | Done |
 | 2.3 | Route + LoadResource | Route with prefix/suffix resource arrays, LoadResource with init/merge/excess | src/routing/route.{h,cpp}, src/routing/resources/load_resource.h, tests | 2.2 |
 | 2.4 | Solution + CostEvaluator | Multi-route solution, objective + penalty evaluation | src/routing/solution.{h,cpp}, src/routing/cost_evaluator.{h,cpp}, tests | 2.3 |
