@@ -164,6 +164,25 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Benchmarker harness tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(benchmarker_test search/benchmarker_test.cpp)
+target_link_libraries(benchmarker_test PRIVATE coso Catch2::Catch2WithMain)
+
+# Unit tests (BKS lookup, CSV formatting) always run.
+add_test(NAME benchmarker_test COMMAND benchmarker_test "~[benchmark]")
+
+# Integration tests require downloaded instances; skip gracefully.
+add_test(NAME benchmarker_integration_test
+    COMMAND benchmarker_test "[benchmark]")
+set_tests_properties(benchmarker_integration_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)
+
+# --------------------------------------------------------------------------- #
 #  Routing benchmark tests (require downloaded instances)                       #
 # --------------------------------------------------------------------------- #
 

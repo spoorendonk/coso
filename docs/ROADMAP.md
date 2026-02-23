@@ -1479,7 +1479,7 @@ Deliverable: <2% gap on Uchoa X-set in 60s. Competitive with PyVRP.
 | 3.6 | Operator selector (MAB) | Multi-armed bandit for operator selection | src/search/operator_selector.{h,cpp} | 2.8 |
 | 3.7 | Score corruption detection | Debug assertions verifying incremental vs full recompute | src/search/score_assert.{h,cpp} | 2.4 |
 | 3.8 | Score explanation | Human-readable cost breakdown for debugging | src/search/score_analysis.{h,cpp} | 2.4 |
-| 3.9 | Benchmark harness | Automated benchmark runner with CSV output + gap reporting | src/search/benchmarker.{h,cpp} | 2.11 |
+| 3.9 | Benchmark harness | Automated benchmark runner with CSV output + gap reporting | src/search/benchmarker.{h,cpp} | 2.11 | **done** |
 
 **All of 3.1–3.9 are parallel** — they touch different files. Integrate
 together at the end for benchmark runs.
