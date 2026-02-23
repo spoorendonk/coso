@@ -2,10 +2,10 @@
 
 ## Git Workflow
 
-- **Never commit directly to master.** Always create a feature branch, push, and open a PR.
-- **If user says "commit" while on master**: create a feature branch, commit there, push, and open a PR automatically.
+- **Never commit directly to main.** Always create a feature branch, push, and open a PR.
+- **If user says "commit" while on main**: create a feature branch, commit there, push, and open a PR automatically.
 - **Linear history only.** Merge PRs with squash or rebase (no merge commits).
-- **No force-push to master.**
+- **No force-push to main.**
 
 ## Build
 
@@ -107,7 +107,7 @@ When the user says **"fullgate"**, run this sequence in order. Each step can als
 
 1. **Feature branch** — create one if not already on a feature branch
 2. **Create PR** — if no PR exists for the current branch
-3. **Sync master** — pull latest master and merge into the current feature branch, resolve conflicts
+3. **Sync main** — pull latest main and merge into the current feature branch, resolve conflicts
 4. **Tests** — check if new/updated tests are needed and add them
 5. **Update docs** — update docs/ROADMAP.md, README.md as needed
 6. **Push & update PR**
@@ -115,4 +115,4 @@ When the user says **"fullgate"**, run this sequence in order. Each step can als
 8. **Build** — `cmake --build build -j$(nproc)`
 9. **Test** — `ctest --test-dir build -j$(nproc)`
 10. **Push & update PR** again with any fixes
-11. **Finalize** — if nothing more to do: squash-merge the PR, delete feature branch (local + remote), pull master, switch to master
+11. **Finalize** — if nothing more to do: squash-merge the PR, delete feature branch (local + remote), pull main, switch to main
