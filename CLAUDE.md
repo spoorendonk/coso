@@ -83,6 +83,12 @@ tests/                — Catch2 tests and benchmarks
 
 All code under `primal::` namespace.
 
+## Documentation
+
+- `README.md` — project overview, quick start, build instructions
+- `docs/ROADMAP.md` — full design plan: modeling interface, architecture, problem catalog, implementation roadmap, design decisions, references
+- `CLAUDE.md` — this file (build/test/workflow instructions for AI assistants)
+
 ## Fullgate
 
 When the user says **"fullgate"**, run this sequence in order. Each step can also be invoked individually by name:
@@ -91,7 +97,7 @@ When the user says **"fullgate"**, run this sequence in order. Each step can als
 2. **Create PR** — if no PR exists for the current branch
 3. **Sync master** — pull latest master and merge into the current feature branch, resolve conflicts
 4. **Tests** — check if new/updated tests are needed and add them
-5. **Update docs** — update plan.md, README.md as needed
+5. **Update docs** — update docs/ROADMAP.md, README.md as needed
 6. **Push & update PR**
 7. **Review** — thoroughly review the PR (code quality, correctness, style, tests, performance)
 8. **Build** — `cmake --build build -j$(nproc)`
