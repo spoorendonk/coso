@@ -1,4 +1,4 @@
-# primal-rsp — Primal Heuristics for Routing, Scheduling & Production Planning
+# COSO — Combinatorial Structure-aware Optimization
 
 ## Git Workflow
 
@@ -58,7 +58,7 @@ src/
   assignment/         — Nurse rostering / timetabling engine
   packing/            — Bin packing engine
   search/             — Shared metaheuristic shells (ILS, HGS, tabu, LA)
-  cli/                — CLI tool (primal-solve)
+  cli/                — CLI tool (coso-solve)
 python/               — nanobind Python bindings
 tests/                — Catch2 tests and benchmarks
   model/                User-facing API tests
@@ -72,16 +72,16 @@ tests/                — Catch2 tests and benchmarks
 
 ## Key Types
 
-- `primal::RoutingModel` — Routing model (add_depot, add_client, add_vehicle_type, solve)
-- `primal::ScheduleModel` — Scheduling model (add_job, add_operation, add_machine)
-- `primal::AssignmentModel` — Assignment model (add_employee, add_shift_type)
-- `primal::PackingModel` — Packing model (add_bin_type, add_item)
-- `primal::Result` — Solver result (cost, feasible, routes/schedule/assignments, elapsed)
-- `primal::TimeLimit` — Solver stop criterion
+- `coso::RoutingModel` — Routing model (add_depot, add_client, add_vehicle_type, solve)
+- `coso::ScheduleModel` — Scheduling model (add_job, add_operation, add_machine)
+- `coso::AssignmentModel` — Assignment model (add_employee, add_shift_type)
+- `coso::PackingModel` — Packing model (add_bin_type, add_item)
+- `coso::Result` — Solver result (cost, feasible, routes/schedule/assignments, elapsed)
+- `coso::TimeLimit` — Solver stop criterion
 
 ## Namespace
 
-All code under `primal::` namespace.
+All code under `coso::` namespace.
 
 ## Documentation
 
