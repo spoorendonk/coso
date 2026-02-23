@@ -770,7 +770,44 @@ parallel SGS (RCPSP).
 Pillar moves are powerful for timetabling where groups of entities share values
 (e.g., all lectures in room A move to room B).
 
-### 3.8 LLM-friendly operator interfaces
+### 3.8 CP-as-move-filter for assignment/packing engines
+
+Inspired by JuLS (Amazon): use lightweight constraint propagation to **prune
+infeasible moves before scoring**. The search loop becomes:
+
+```
+Assignment/Packing engine search loop:
+  1. Generate candidate moves (swap, reassign, chain, pillar)
+  2. CP filter: propagate constraints, prune infeasible moves
+  3. Score remaining moves via incremental invariants
+  4. Accept/reject via metaheuristic (tabu + LA)
+```
+
+**Why only assignment/packing, not routing/scheduling?** Route and schedule
+feasibility is already checked in O(1) via resource excess — faster than any CP
+propagator. Assignment problems lack this sequential structure; their constraints
+(forbidden sequences, cardinality, coverage, skill matching) benefit from domain
+filtering.
+
+Propagators are lightweight — not a full CP solver, just constraint-specific
+filters:
+
+| Propagator | Constraint | Effect |
+|---|---|---|
+| ForbiddenSequence | No night→early | Prunes shift assignments that create violations |
+| Cardinality | Min/max employees per shift | Prunes moves that under/overstaff |
+| AllDifferent | No duplicate assignments | Prunes conflicting swaps |
+| SkillCoverage | Required skills per shift | Prunes moves that lose required coverage |
+| BinCapacity | Item fits in bin | Prunes infeasible item-to-bin assignments |
+| Conflict | Incompatible items | Prunes co-placement of conflicting items |
+
+Move filtering rate depends on constraint tightness — nurse rostering with tight
+labor rules can filter 40-60% of candidate moves, avoiding wasted evaluation.
+
+The routing/scheduling engines skip this layer entirely; their resource system
+already provides O(1) feasibility checking which is strictly faster.
+
+### 3.9 LLM-friendly operator interfaces
 
 For LLM-driven heuristic discovery (VRPAgent, EoH, FunSearch):
 
@@ -1427,6 +1464,23 @@ Same pattern: user declares WHAT, solver decides HOW.
     and adjust perturbation size. Successful operators get larger
     neighborhoods; struggling operators shrink.
 
+47. **CP-as-move-filter for assignment/packing.** Lightweight constraint
+    propagation prunes infeasible candidate moves *before* scoring (JuLS
+    pattern). Forbidden-sequence, cardinality, skill-coverage, and conflict
+    propagators filter 40-60% of moves in tightly constrained problems.
+    Routing/scheduling engines skip this — their resource system already
+    provides O(1) feasibility. This is not a full CP solver; just
+    domain-specific propagators integrated into the move evaluation pipeline.
+
+48. **CBLS invariants inform but don't replace resources.** The resource
+    pattern (`init/merge/merge_reverse/excess`) is a specialized CBLS
+    invariant system optimized for O(1) sequential evaluation via
+    prefix/suffix caching. Generic CBLS (Hexaly, OscaR) propagates through
+    an arbitrary DAG at O(depth) per move — strictly slower for sequential
+    problems. Assignment engine uses CBLS-style incremental `delta_assign`
+    evaluation since it lacks sequential structure; routing/scheduling keep
+    the faster resource system.
+
 ---
 
 ## 9. References
@@ -1480,6 +1534,13 @@ Solver design influence:
   multiple time windows, max tasks, vehicle type-specific service, speed factor,
   three-matrix cost model (cost/duration/distance), per-task-hour cost,
   RouteSplit operator. https://github.com/VROOM-Project/vroom
+- JuLS (Amazon). CP-as-move-filter for CBLS: constraint propagation prunes
+  infeasible candidate moves before local search scoring. DAG-based invariants
+  with incremental delta evaluation. https://github.com/amazon-science/JuLS
+- OscaR/CBLS. Academic CBLS framework with sequence variables for routing.
+  Demonstrates that generic CBLS needs domain-specific sequence/list variables
+  to compete on routing — confirming our resource-first approach.
+  https://github.com/cetic/oscar-cbls
 
 LLM/Neural:
 - Ye et al. (2025). *VRPAgent: LLM-driven operator discovery*. arXiv.
