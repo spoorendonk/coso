@@ -133,6 +133,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Operator selector tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(operator_selector_test search/operator_selector_test.cpp)
+target_link_libraries(operator_selector_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(operator_selector_test)
+else()
+    add_test(NAME operator_selector_test COMMAND operator_selector_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Iterated Local Search tests                                                 #
 # --------------------------------------------------------------------------- #
 
