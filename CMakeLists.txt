@@ -66,6 +66,7 @@ add_library(coso STATIC
     src/routing/route.cpp
     src/routing/solution.cpp
     src/routing/cost_evaluator.cpp
+    src/routing/construction.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
