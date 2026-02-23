@@ -1,7 +1,7 @@
-# primal-rsp
+# COSO — Combinatorial Structure-aware Optimization
 
-Declarative modeling + LP-free solving for routing, scheduling, and production
-planning. C++ engine with Python bindings (nanobind).
+Declarative modeling + LP-free solving for combinatorial optimization.
+C++ engine with Python bindings (nanobind).
 
 The user declares **what** the problem is, the solver decides **how** to solve it.
 
@@ -13,35 +13,35 @@ generic approaches by orders of magnitude.
 ## Quick Start
 
 ```cpp
-#include <primal/routing_model.h>
+#include <coso/routing_model.h>
 
-primal::RoutingModel m;
+coso::RoutingModel m;
 auto depot = m.add_depot(456, 320);
 auto vtype = m.add_vehicle_type(4, {.capacity = 15});
 m.add_client(228, 0, {.demand = 1});
 m.add_client(912, 0, {.demand = 1});
 m.add_client(0,   80, {.demand = 3});
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 ```
 
 ```python
-import primal
+import coso
 
-m = primal.RoutingModel()
+m = coso.RoutingModel()
 depot = m.add_depot(456, 320)
 vtype = m.add_vehicle_type(4, capacity=15)
 m.add_client(228, 0, demand=1)
 m.add_client(912, 0, demand=1)
 m.add_client(0, 80, demand=3)
 
-result = m.solve(primal.TimeLimit(60))
+result = m.solve(coso.TimeLimit(60))
 ```
 
 Or from a CVRPLIB file:
 
 ```cpp
-auto result = primal::solve("X-n101-k25.vrp", primal::TimeLimit(60));
+auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 ```
 
 ## Engines

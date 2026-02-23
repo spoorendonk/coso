@@ -1,4 +1,4 @@
-# primal-rsp — Primal Heuristics for Routing, Scheduling & Production Planning
+# COSO — Combinatorial Structure-aware Optimization
 
 Declarative modeling + LP-free solving for structured combinatorial optimization.
 
@@ -17,9 +17,9 @@ problem-specific local search dominates generic approaches by orders of magnitud
 ### 1.1 Standard CVRP — declare and solve
 
 ```cpp
-#include <primal/routing_model.h>
+#include <coso/routing_model.h>
 
-primal::RoutingModel m;
+coso::RoutingModel m;
 
 // Structure
 auto depot = m.add_depot(456, 320);
@@ -35,7 +35,7 @@ m.add_client(0,   80, {.demand = 3});
 // Or: m.set_distance(i, j, dist);
 
 // Solve
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 
 // Use
 std::cout << "Cost: " << result.cost() << "\n";
@@ -48,7 +48,7 @@ for (auto& route : result.routes()) {
 Or from a CVRPLIB file:
 
 ```cpp
-auto result = primal::solve("X-n101-k25.vrp", primal::TimeLimit(60));
+auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 ```
 
 **Zero implementation needed.** The solver recognizes: routes + capacity →
@@ -57,20 +57,20 @@ uses LoadResource, standard operators, ILS/HGS.
 **Python equivalent:**
 
 ```python
-import primal
+import coso
 
-m = primal.RoutingModel()
+m = coso.RoutingModel()
 depot = m.add_depot(456, 320)
 vtype = m.add_vehicle_type(4, capacity=15)
 m.add_client(228, 0, demand=1)
 # ...
-result = m.solve(primal.TimeLimit(60))
+result = m.solve(coso.TimeLimit(60))
 ```
 
 ### 1.2 VRPTW with heterogeneous fleet — just add parameters
 
 ```cpp
-primal::RoutingModel m;
+coso::RoutingModel m;
 m.add_depot(0, 0, {.tw = {0, 1000}});
 
 // Two vehicle types with different capacities and costs
@@ -99,7 +99,7 @@ m.set_profile(0);  // default profile (already set by set_distance)
 m.set_profile_distance(1, i, j, dist);  // profile for heavy vehicles
 m.set_profile_duration(1, i, j, dur);
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 ```
 
 **Still zero implementation.** The RoutingModel sees time windows → adds DurationResource.
@@ -110,7 +110,7 @@ attributes, never touches the engine.
 ### 1.3 Multi-trip with overtime
 
 ```cpp
-primal::RoutingModel m;
+coso::RoutingModel m;
 auto depot = m.add_depot(0, 0, {.tw = {0, 480}});
 
 m.add_vehicle_type(3, {
@@ -125,13 +125,13 @@ m.add_vehicle_type(3, {
 m.add_client(10, 20, {.demand = 40, .tw = {100, 200}, .service = 10});
 // ...
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 ```
 
 ### 1.4 Paired pickup-delivery with time windows
 
 ```cpp
-primal::RoutingModel m;
+coso::RoutingModel m;
 auto depot = m.add_depot(0, 0, {.tw = {0, 1000}});
 m.add_vehicle_type(5, {.capacity = 20});
 
@@ -144,13 +144,13 @@ auto p2 = m.add_pickup(50, 60, {.quantity = 8, .tw = {200, 400}});
 auto d2 = m.add_delivery(70, 80, {.tw = {250, 500}});
 m.add_request(p2, d2);
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 ```
 
 ### 1.5 Optional clients and client groups
 
 ```cpp
-primal::RoutingModel m;
+coso::RoutingModel m;
 // ...
 
 // Optional clients with prizes (Team Orienteering)
@@ -164,7 +164,7 @@ m.add_client(12, 22, {.demand = 5, .group = g1});  // for same customer
 // Release times: client not available until a given time
 m.add_client(30, 40, {.demand = 10, .release_time = 120});
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 ```
 
 ### 1.6 Multi-commodity flow — fractional paths
@@ -173,9 +173,9 @@ For problems where flow can be split across paths (multi-commodity flow, network
 design), the model supports fractional path variables:
 
 ```cpp
-#include <primal/network.h>
+#include <coso/network.h>
 
-primal::NetworkModel m;
+coso::NetworkModel m;
 
 // Nodes and arcs with capacities
 auto n0 = m.add_node();
@@ -192,7 +192,7 @@ m.add_commodity(n1, n2, {.demand = 4});
 // Resources on arcs (optional — for RCMCF)
 m.add_arc_resource("bandwidth", {.arc_data = bw, .global_bound = max_bw});
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 
 // Fractional solution: flow per arc per commodity
 for (auto& [commodity, paths] : result.flows()) {
@@ -208,9 +208,9 @@ constrained shortest paths. For simpler MCF, direct LP or network simplex.
 ### 1.7 Job shop scheduling — same pattern, different domain
 
 ```cpp
-#include <primal/scheduling.h>
+#include <coso/scheduling.h>
 
-primal::ScheduleModel m;
+coso::ScheduleModel m;
 
 // Jobs with ordered operations
 auto j1 = m.add_job();
@@ -222,21 +222,21 @@ m.add_operation(j2, {.machine = 1, .duration = 4});
 m.add_operation(j2, {.machine = 0, .duration = 1});
 
 m.minimize_makespan();
-auto result = m.solve(primal::TimeLimit(30));
+auto result = m.solve(coso::TimeLimit(30));
 ```
 
 Or from a standard format:
 
 ```cpp
-auto result = primal::solve_jsp("tai20x15.txt", primal::TimeLimit(30));
+auto result = coso::solve_jsp("tai20x15.txt", coso::TimeLimit(30));
 ```
 
 ### 1.8 Nurse rostering — assignment with tabu search
 
 ```cpp
-#include <primal/assignment.h>
+#include <coso/assignment.h>
 
-primal::AssignmentModel m;
+coso::AssignmentModel m;
 
 // Shift types
 auto early = m.add_shift_type("Early", {.start = 7, .end = 15});
@@ -257,16 +257,16 @@ m.add_demand(late,  {.min_employees = 1});
 m.add_demand(night, {.min_employees = 1});
 
 // Constraints
-m.add_constraint(primal::MaxConsecutiveShifts(5));
-m.add_constraint(primal::MinRestBetweenShifts(11));  // hours
-m.add_constraint(primal::MaxNightShiftsPerWeek(2));
-m.add_constraint(primal::WeekendBalancing());
+m.add_constraint(coso::MaxConsecutiveShifts(5));
+m.add_constraint(coso::MinRestBetweenShifts(11));  // hours
+m.add_constraint(coso::MaxNightShiftsPerWeek(2));
+m.add_constraint(coso::WeekendBalancing());
 
 // Preferences (soft constraints)
 alice.prefer_off({5, 12, 19, 26});  // Saturdays off
 bob.prefer_shift(early);             // prefers early shifts
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 
 for (int day = 0; day < 28; ++day)
     for (auto& assignment : result.day(day))
@@ -281,9 +281,9 @@ sequences — but the moves are structure-aware, not generic MIP variable flips.
 ### 1.9 Bin packing — items into bins
 
 ```cpp
-#include <primal/packing.h>
+#include <coso/packing.h>
 
-primal::PackingModel m;
+coso::PackingModel m;
 
 // Bin type with capacity
 m.add_bin_type(100, {.capacity = {150, 200}});  // 100 bins, weight + volume
@@ -295,7 +295,7 @@ m.add_item({.size = {20, 30}});
 // ...
 
 m.minimize_bins();
-auto result = m.solve(primal::TimeLimit(30));
+auto result = m.solve(coso::TimeLimit(30));
 
 for (auto& bin : result.bins())
     for (int item : bin) std::cout << item << " ";
@@ -315,9 +315,9 @@ MoveItem (reassign), SwapItems (exchange between bins). Capacity tracked per bin
 ### 1.10 Lot sizing — MIP substructure, delegates to mip-heuristics
 
 ```cpp
-#include <primal/lotsizing.h>
+#include <coso/lotsizing.h>
 
-primal::LotSizingModel m;
+coso::LotSizingModel m;
 auto p1 = m.add_product({.setup_cost = 100, .holding_cost = 2});
 auto p2 = m.add_product({.setup_cost = 150, .holding_cost = 3});
 
@@ -327,7 +327,7 @@ m.add_demand(p2, {.period = 0, .quantity = 40});
 
 m.set_capacity({200, 200, 200});  // per-period capacity
 
-auto result = m.solve(primal::TimeLimit(60));
+auto result = m.solve(coso::TimeLimit(60));
 ```
 
 ---
@@ -706,7 +706,7 @@ absolute exclusions, not penalized violations.
 Critical for scaling to 5000+ node instances where evaluating all neighbours
 is too slow even with granular neighbourhood.
 
-**Score corruption detection.** Debug mode (`PRIMAL_ASSERT_SCORES`) that
+**Score corruption detection.** Debug mode (`COSO_ASSERT_SCORES`) that
 recalculates the full cost from scratch after each move and asserts it matches
 the incremental O(1) evaluation. Catches resource implementation bugs during
 development. Also supports undo-move verification: apply move, undo, assert
@@ -1153,7 +1153,7 @@ mirror these interfaces 1:1.
 #include <string>
 #include <cstdint>
 
-namespace primal {
+namespace coso {
 
 struct Coord { double x, y; };
 
@@ -1186,7 +1186,7 @@ struct Result {
     // packing:    bins(), num_bins()
 };
 
-} // namespace primal
+} // namespace coso
 ```
 
 ### 6.2 Routing model (`src/model/routing_model.h`)
@@ -1195,7 +1195,7 @@ struct Result {
 #pragma once
 #include "types.h"
 
-namespace primal {
+namespace coso {
 
 struct VehicleTypeParams {
     std::vector<int> capacity;     // N dimensions
@@ -1257,7 +1257,7 @@ public:
 // Convenience: solve from CVRPLIB/VRPLIB file
 Result solve(const std::string& instance_path, TimeLimit tl);
 
-} // namespace primal
+} // namespace coso
 ```
 
 ### 6.3 Scheduling model (`src/model/schedule_model.h`)
@@ -1266,7 +1266,7 @@ Result solve(const std::string& instance_path, TimeLimit tl);
 #pragma once
 #include "types.h"
 
-namespace primal {
+namespace coso {
 
 struct MachineParams {
     std::string name;
@@ -1314,7 +1314,7 @@ public:
     Result solve(TimeLimit tl);
 };
 
-} // namespace primal
+} // namespace coso
 ```
 
 ### 6.4 Assignment model (`src/model/assignment_model.h`)
@@ -1323,7 +1323,7 @@ public:
 #pragma once
 #include "types.h"
 
-namespace primal {
+namespace coso {
 
 struct ShiftTypeParams {
     std::string name;
@@ -1375,7 +1375,7 @@ public:
     Result solve(TimeLimit tl);
 };
 
-} // namespace primal
+} // namespace coso
 ```
 
 ### 6.5 Packing model (`src/model/packing_model.h`)
@@ -1384,7 +1384,7 @@ public:
 #pragma once
 #include "types.h"
 
-namespace primal {
+namespace coso {
 
 struct BinTypeParams {
     std::vector<int> capacity;   // N dimensions
@@ -1410,7 +1410,7 @@ public:
     Result solve(TimeLimit tl);
 };
 
-} // namespace primal
+} // namespace coso
 ```
 
 ---
@@ -1450,7 +1450,7 @@ gets reused by later engines.
 | 2.7 | Construction heuristic | Nearest-neighbour + Clarke-Wright savings | src/routing/construction.{h,cpp}, tests | 2.4 |
 | 2.8 | ILS + stop criterion | Ruin-and-recreate + late acceptance, time/iter/no-improve limits | src/search/iterated_local_search.{h,cpp}, src/search/stop_criterion.{h,cpp}, tests | 2.6, 2.7 |
 | 2.9 | RoutingModel implementation | Model → ProblemData → construct → ILS → Result | src/model/routing_model.cpp, tests | 2.2, 2.8 |
-| 2.10 | CLI | `primal-solve instance.vrp --time-limit 60` | src/cli/main.cpp | 2.9 |
+| 2.10 | CLI | `coso-solve instance.vrp --time-limit 60` | src/cli/main.cpp | 2.9 |
 | 2.11 | Benchmark setup + first benchmarks | Download script, X-n101-k25 end-to-end test | tests/data/download_benchmarks.sh, tests/routing/benchmark_test.cpp | 2.1, 2.9 |
 
 **Parallel lanes:**
@@ -1530,14 +1530,14 @@ Deliverable: full-featured routing with time windows, fleet, PD, etc.
 ### Step 6 — Python bindings
 
 ```
-Deliverable: `pip install primal-rsp`, Python API mirrors C++.
+Deliverable: `pip install coso`, Python API mirrors C++.
 Touches only python/ directory — can run parallel with step 5 resources.
 ```
 
 | ID | PR title | Deliverable | Files | Depends on |
 |----|----------|-------------|-------|------------|
 | 6.1 | nanobind + scikit-build-core setup | `pip install -e .` builds extension module | python/bindings.cpp, pyproject.toml, CMakeLists.txt (extend) | 2.9 |
-| 6.2 | RoutingModel Python bindings | `primal.RoutingModel` mirrors C++ API | python/bindings.cpp (routing section) | 2.9 |
+| 6.2 | RoutingModel Python bindings | `coso.RoutingModel` mirrors C++ API | python/bindings.cpp (routing section) | 2.9 |
 | 6.3 | Python test suite | pytest tests for model API + solve + result access | python/tests/ | 6.2 |
 
 ### Step 7 — Scheduling engine
@@ -1666,7 +1666,7 @@ What does NOT get pre-built:
 ## 8. Relationship to mip-heuristics
 
 ```
-mip-heuristics                        primal-rsp
+mip-heuristics                        coso
 ┌──────────────────────────┐          ┌──────────────────────────┐
 │                          │          │                          │
 │ User provides:           │          │ User provides:           │
@@ -1678,7 +1678,7 @@ mip-heuristics                        primal-rsp
 │   move scoring           │          │   resources, operators,  │
 │   weight updates         │          │   ILS / HGS, penalties   │
 │                          │          │                          │
-│ Generic: any MIP         │◄─────────│ Structured: RSP          │
+│ Generic: any MIP         │◄─────────│ Structured: CO           │
 │                          │ Phase 6  │                          │
 └──────────────────────────┘          └──────────────────────────┘
 
@@ -1876,7 +1876,7 @@ Same pattern: user declares WHAT, solver decides HOW.
 50. **Python bindings via nanobind.** C++ is the implementation language;
     Python (nanobind + scikit-build-core) is the primary user interface.
     All model types, Result, and solve() are bound 1:1. `pip install
-    primal-rsp`. Python bindings added after routing engine works (step 6)
+    coso`. Python bindings added after routing engine works (step 6)
     to avoid binding churn during API evolution.
 
 51. **Extract don't abstract.** Build routing first. When building scheduling,
