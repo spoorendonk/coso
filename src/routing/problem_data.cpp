@@ -195,27 +195,24 @@ ProblemData ProblemData::Builder::build(int granular_k) const
     if (k > 0 && pd.num_clients_ > 0) {
         pd.neighbours_.resize(pd.num_clients_ * k);
 
-        // For each client, sort all other nodes by distance (profile 0)
-        // and keep the k closest.
-        std::vector<int> candidates(n);
-        std::iota(candidates.begin(), candidates.end(), 0);
+        // Reusable buffer for sorting candidates (avoids per-client allocation).
+        std::vector<int> sorted_nodes;
+        sorted_nodes.reserve(n - 1);
 
         for (int c = 0; c < pd.num_clients_; ++c) {
             int c_node = pd.num_depots_ + c;
 
-            // Sort candidates by distance from c_node (exclude self).
-            auto cmp = [&](int a, int b) {
-                return pd.dist(0, c_node, a) < pd.dist(0, c_node, b);
-            };
-
-            // Partial sort to get k nearest (excluding self).
-            // We need k+1 elements to account for self being in the list.
-            std::vector<int> sorted_nodes;
-            sorted_nodes.reserve(n - 1);
+            // Build candidate list (all nodes except self).
+            sorted_nodes.clear();
             for (int i = 0; i < n; ++i) {
                 if (i != c_node)
                     sorted_nodes.push_back(i);
             }
+
+            // Sort candidates by distance from c_node (profile 0).
+            auto cmp = [&](int a, int b) {
+                return pd.dist(0, c_node, a) < pd.dist(0, c_node, b);
+            };
 
             if (static_cast<int>(sorted_nodes.size()) > k) {
                 std::partial_sort(sorted_nodes.begin(),

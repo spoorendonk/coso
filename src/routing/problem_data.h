@@ -2,12 +2,10 @@
 
 #include "model/routing_model.h"
 
-#include <algorithm>
 #include <cassert>
-#include <cmath>
-#include <cstdint>
-#include <numeric>
+#include <climits>
 #include <span>
+#include <string>
 #include <vector>
 
 namespace coso {
