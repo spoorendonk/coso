@@ -61,6 +61,7 @@ add_library(coso STATIC
     src/model/schedule_model.cpp
     src/model/assignment_model.cpp
     src/model/packing_model.cpp
+    src/model/instance_reader.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
