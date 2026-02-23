@@ -1,6 +1,7 @@
 #include "routing/local_search.h"
 
 #include "routing/operators/exchange.h"
+#include "routing/operators/swap_star.h"
 
 namespace coso {
 
@@ -21,6 +22,7 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval)
     Exchange11 op11;
     Exchange20 op20;
     SwapTails  op_st;
+    SwapStar   op_ss;
 
     bool improved = true;
     while (improved) {
@@ -54,6 +56,14 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval)
         // Try SwapTails — inter-route 2-opt.
         if (op_st.find_best_move(sol, eval, *data_)) {
             op_st.apply(sol);
+            ++last_num_moves_;
+            improved = true;
+            continue;
+        }
+
+        // Try SWAP* — cross-route swap with best reinsertion.
+        if (op_ss.find_best_move(sol, eval, *data_)) {
+            op_ss.apply(sol);
             ++last_num_moves_;
             improved = true;
             continue;

@@ -107,6 +107,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  SWAP* operator tests                                                        #
+# --------------------------------------------------------------------------- #
+
+add_executable(swap_star_test routing/swap_star_test.cpp)
+target_link_libraries(swap_star_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(swap_star_test)
+else()
+    add_test(NAME swap_star_test COMMAND swap_star_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 
