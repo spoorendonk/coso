@@ -40,3 +40,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME problem_data_test COMMAND problem_data_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Route + LoadResource tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(route_test routing/route_test.cpp)
+target_link_libraries(route_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(route_test)
+else()
+    add_test(NAME route_test COMMAND route_test)
+endif()
