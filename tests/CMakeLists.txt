@@ -107,6 +107,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  SWAP* operator tests                                                        #
+# --------------------------------------------------------------------------- #
+
+add_executable(swap_star_test routing/swap_star_test.cpp)
+target_link_libraries(swap_star_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(swap_star_test)
+else()
+    add_test(NAME swap_star_test COMMAND swap_star_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 
@@ -130,6 +143,71 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(stop_criterion_test)
 else()
     add_test(NAME stop_criterion_test COMMAND stop_criterion_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Penalty manager tests                                                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(penalty_manager_test search/penalty_manager_test.cpp)
+target_link_libraries(penalty_manager_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(penalty_manager_test)
+else()
+    add_test(NAME penalty_manager_test COMMAND penalty_manager_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Operator selector tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(operator_selector_test search/operator_selector_test.cpp)
+target_link_libraries(operator_selector_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(operator_selector_test)
+else()
+    add_test(NAME operator_selector_test COMMAND operator_selector_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Score corruption detection tests                                            #
+# --------------------------------------------------------------------------- #
+
+add_executable(score_assert_test search/score_assert_test.cpp)
+target_link_libraries(score_assert_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(score_assert_test)
+else()
+    add_test(NAME score_assert_test COMMAND score_assert_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Score analysis tests                                                        #
+# --------------------------------------------------------------------------- #
+
+add_executable(score_analysis_test search/score_analysis_test.cpp)
+target_link_libraries(score_analysis_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(score_analysis_test)
+else()
+    add_test(NAME score_analysis_test COMMAND score_analysis_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Guided Local Search tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(gls_test search/gls_test.cpp)
+target_link_libraries(gls_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(gls_test)
+else()
+    add_test(NAME gls_test COMMAND gls_test)
 endif()
 
 # --------------------------------------------------------------------------- #

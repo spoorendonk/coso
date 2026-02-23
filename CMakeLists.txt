@@ -68,9 +68,16 @@ add_library(coso STATIC
     src/routing/cost_evaluator.cpp
     src/routing/construction.cpp
     src/routing/operators/exchange.cpp
+    src/routing/operators/swap_star.cpp
     src/routing/local_search.cpp
+    src/search/acceptance.cpp
     src/search/stop_criterion.cpp
+    src/search/penalty_manager.cpp
     src/search/iterated_local_search.cpp
+    src/search/operator_selector.cpp
+    src/search/score_assert.cpp
+    src/search/score_analysis.cpp
+    src/search/guided_local_search.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
