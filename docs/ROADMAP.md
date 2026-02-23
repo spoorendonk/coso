@@ -1454,7 +1454,7 @@ gets reused by later engines.
 | 2.5 | ~~Exchange operators~~ | ~~Exchange(1,0), (1,1), (2,0), SwapTails with O(1) move eval~~ | ~~src/routing/operators/exchange.{h,cpp}, tests~~ | ~~Done~~ |
 | 2.6 | ~~Local search engine~~ | ~~Granular neighbourhood (k=40), first-improvement descent over operators~~ | ~~src/routing/local_search.{h,cpp}, tests~~ | ~~Done~~ |
 | 2.7 | ~~Construction heuristic~~ | ~~Nearest-neighbour + Clarke-Wright savings~~ | ~~src/routing/construction.{h,cpp}, tests~~ | ~~Done~~ |
-| 2.8 | ILS + stop criterion | Ruin-and-recreate + late acceptance, time/iter/no-improve limits | src/search/iterated_local_search.{h,cpp}, src/search/stop_criterion.{h,cpp}, tests | 2.6, 2.7 |
+| 2.8 | ~~ILS + stop criterion~~ | ~~Ruin-and-recreate + late acceptance, time/iter/no-improve limits~~ | ~~src/search/iterated_local_search.{h,cpp}, src/search/stop_criterion.{h,cpp}, tests~~ | ~~Done~~ |
 | 2.9 | RoutingModel implementation | Model → ProblemData → construct → ILS → Result | src/model/routing_model.cpp, tests | 2.2, 2.8 |
 | 2.10 | CLI | `coso-solve instance.vrp --time-limit 60` | src/cli/main.cpp | 2.9 |
 | 2.11 | Benchmark setup + first benchmarks | Download script, X-n101-k25 end-to-end test | tests/data/download_benchmarks.sh, tests/routing/benchmark_test.cpp | 2.1, 2.9 |
