@@ -1,0 +1,88 @@
+cmake_minimum_required(VERSION 3.25)
+project(coso
+    VERSION 0.1.0
+    DESCRIPTION "Combinatorial Structure-aware Optimization"
+    LANGUAGES CXX
+)
+
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# --------------------------------------------------------------------------- #
+#  Options                                                                     #
+# --------------------------------------------------------------------------- #
+
+option(COSO_BUILD_TESTS   "Build Catch2 unit tests"          ON)
+option(COSO_BUILD_PYTHON  "Build nanobind Python bindings"   OFF)
+option(COSO_USE_TBB       "Enable TBB for parallel solving"  OFF)
+
+# --------------------------------------------------------------------------- #
+#  Dependencies                                                                #
+# --------------------------------------------------------------------------- #
+
+include(FetchContent)
+
+# Catch2 v3.7.1
+if(COSO_BUILD_TESTS)
+    FetchContent_Declare(
+        Catch2
+        GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+        GIT_TAG        v3.7.1
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(Catch2)
+    list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
+endif()
+
+# nanobind (optional Python bindings)
+if(COSO_BUILD_PYTHON)
+    FetchContent_Declare(
+        nanobind
+        GIT_REPOSITORY https://github.com/wjakob/nanobind.git
+        GIT_TAG        v2.4.0
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(nanobind)
+endif()
+
+# TBB (optional, system-installed)
+if(COSO_USE_TBB)
+    find_package(TBB REQUIRED)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Source library (header-only placeholder for now)                             #
+# --------------------------------------------------------------------------- #
+
+add_library(coso INTERFACE)
+target_include_directories(coso INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:include>
+)
+target_compile_features(coso INTERFACE cxx_std_23)
+
+if(COSO_USE_TBB)
+    target_link_libraries(coso INTERFACE TBB::tbb)
+    target_compile_definitions(coso INTERFACE COSO_USE_TBB)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Tests                                                                       #
+# --------------------------------------------------------------------------- #
+
+if(COSO_BUILD_TESTS)
+    enable_testing()
+    include(CTest)
+    include(Catch2WithMain OPTIONAL)
+    add_subdirectory(tests)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Python bindings                                                             #
+# --------------------------------------------------------------------------- #
+
+if(COSO_BUILD_PYTHON)
+    add_subdirectory(python)
+endif()
