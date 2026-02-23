@@ -79,3 +79,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME cost_evaluator_test COMMAND cost_evaluator_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Construction heuristic tests                                                #
+# --------------------------------------------------------------------------- #
+
+add_executable(construction_test routing/construction_test.cpp)
+target_link_libraries(construction_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(construction_test)
+else()
+    add_test(NAME construction_test COMMAND construction_test)
+endif()
