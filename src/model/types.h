@@ -1,6 +1,5 @@
 #pragma once
 
-#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -40,10 +39,15 @@ struct TimeLimit {
 ///   - packing:    bins(), num_bins()
 ///   - network:    flows()
 struct Result {
-    bool   feasible        = false;
-    double cost            = 0.0;
-    double elapsed_seconds = 0.0;
-    int    iterations      = 0;
+    bool   feasible_        = false;
+    double cost_            = 0.0;
+    double elapsed_seconds_ = 0.0;
+    int    iterations_      = 0;
+
+    [[nodiscard]] bool   feasible()        const noexcept { return feasible_; }
+    [[nodiscard]] double cost()            const noexcept { return cost_; }
+    [[nodiscard]] double elapsed_seconds() const noexcept { return elapsed_seconds_; }
+    [[nodiscard]] int    iterations()      const noexcept { return iterations_; }
 
     // -- Routing ---------------------------------------------------------
 
