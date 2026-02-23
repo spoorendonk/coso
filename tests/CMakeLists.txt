@@ -105,3 +105,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME exchange_test COMMAND exchange_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Local search engine tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(local_search_test routing/local_search_test.cpp)
+target_link_libraries(local_search_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(local_search_test)
+else()
+    add_test(NAME local_search_test COMMAND local_search_test)
+endif()
