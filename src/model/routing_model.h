@@ -4,6 +4,7 @@
 
 #include <climits>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace coso {
@@ -114,6 +115,49 @@ public:
 
     /// Solve the routing problem within the given time limit.
     Result solve(TimeLimit tl);
+
+private:
+    // -- Stored depot data ---------------------------------------------------
+    struct DepotEntry {
+        double x = 0.0, y = 0.0;
+        bool has_coord = false;   ///< false when added with explicit id
+        int explicit_id = -1;     ///< node id when added without coordinates
+        DepotParams params;
+    };
+    std::vector<DepotEntry> depots_;
+
+    // -- Stored client data --------------------------------------------------
+    struct ClientEntry {
+        double x = 0.0, y = 0.0;
+        bool has_coord = false;
+        int explicit_id = -1;
+        ClientParams params;
+    };
+    std::vector<ClientEntry> clients_;
+
+    // -- Vehicle types -------------------------------------------------------
+    struct VehicleTypeEntry {
+        int count = 0;
+        VehicleTypeParams params;
+    };
+    std::vector<VehicleTypeEntry> vehicle_types_;
+
+    // -- Pickup-delivery requests --------------------------------------------
+    std::vector<std::pair<int,int>> requests_;
+
+    // -- Client groups -------------------------------------------------------
+    int next_group_id_ = 0;
+
+    // -- Explicit matrix entries ---------------------------------------------
+    struct MatEntry { int profile; int from; int to; int value; };
+    std::vector<MatEntry> dist_entries_;
+    std::vector<MatEntry> dur_entries_;
+    std::vector<MatEntry> cost_entries_;
+    int current_profile_ = 0;
+
+    // -- Warm start ----------------------------------------------------------
+    std::vector<std::vector<int>> initial_routes_;
+    std::vector<int> pinned_;
 };
 
 /// Convenience: solve a CVRPLIB / VRPLIB instance file directly.
