@@ -137,14 +137,100 @@ TEST_CASE("RoutingModel solve returns a Result", "[routing]")
     m.add_vehicle_type(1, {.capacity = {10}});
     m.add_client(1.0, 0.0, {.demand = {1}});
     coso::Result r = m.solve(coso::TimeLimit(1.0));
-    // Stub returns default Result
     REQUIRE(r.cost() >= 0.0);
+    // With a real implementation, the single client should be served.
+    REQUIRE(r.feasible());
+    REQUIRE(r.routes().size() == 1);
+    REQUIRE(r.routes()[0].size() == 1);
+    REQUIRE(r.routes()[0][0] == 0);  // client index 0
+    REQUIRE(r.unserved().empty());
+    REQUIRE(r.elapsed_seconds() > 0.0);
 }
 
 TEST_CASE("Free function solve(instance_path, tl) links", "[routing]")
 {
+    // Nonexistent file should return empty/infeasible result (no crash).
     coso::Result r = coso::solve("nonexistent.vrp", coso::TimeLimit(1.0));
     REQUIRE(r.cost() >= 0.0);
+    REQUIRE_FALSE(r.feasible());
+}
+
+TEST_CASE("RoutingModel solves small CVRP", "[routing][integration]")
+{
+    // Small CVRP instance: 1 depot at origin, 4 clients in a square.
+    // Capacity 10, each client demands 3.  One vehicle of capacity 10
+    // can serve at most 3 clients.  Two vehicles needed.
+    coso::RoutingModel m;
+    m.add_depot(0.0, 0.0);
+    m.add_vehicle_type(2, {.capacity = {10}});
+
+    m.add_client(10.0,  0.0, {.demand = {3}});
+    m.add_client(10.0, 10.0, {.demand = {3}});
+    m.add_client( 0.0, 10.0, {.demand = {3}});
+    m.add_client(20.0,  0.0, {.demand = {3}});
+
+    coso::Result r = m.solve(coso::TimeLimit(2.0));
+
+    REQUIRE(r.feasible());
+    // All 4 clients should be served.
+    int total_served = 0;
+    for (auto const& route : r.routes())
+        total_served += static_cast<int>(route.size());
+    REQUIRE(total_served == 4);
+    REQUIRE(r.unserved().empty());
+    REQUIRE(r.cost() > 0.0);
+    REQUIRE(r.elapsed_seconds() > 0.0);
+    REQUIRE(r.iterations() >= 0);
+}
+
+TEST_CASE("RoutingModel with explicit distances", "[routing][integration]")
+{
+    // 1 depot, 2 clients, explicit distances.
+    coso::RoutingModel m;
+    m.add_depot(0.0, 0.0);
+    m.add_vehicle_type(1, {.capacity = {20}});
+
+    m.add_client(0.0, 0.0, {.demand = {5}});  // client 0
+    m.add_client(0.0, 0.0, {.demand = {5}});  // client 1
+
+    // Node 0 = depot, node 1 = client 0, node 2 = client 1
+    // Set explicit distances (override Euclidean which would all be 0).
+    m.set_distance(0, 1, 10);
+    m.set_distance(1, 0, 10);
+    m.set_distance(0, 2, 20);
+    m.set_distance(2, 0, 20);
+    m.set_distance(1, 2, 15);
+    m.set_distance(2, 1, 15);
+
+    coso::Result r = m.solve(coso::TimeLimit(2.0));
+
+    REQUIRE(r.feasible());
+    // Both clients should be served.
+    int total_served = 0;
+    for (auto const& route : r.routes())
+        total_served += static_cast<int>(route.size());
+    REQUIRE(total_served == 2);
+    REQUIRE(r.cost() > 0.0);
+}
+
+TEST_CASE("RoutingModel no depot returns empty result", "[routing]")
+{
+    coso::RoutingModel m;
+    m.add_vehicle_type(1, {.capacity = {10}});
+    m.add_client(1.0, 0.0, {.demand = {1}});
+    coso::Result r = m.solve(coso::TimeLimit(1.0));
+    // No depot: cannot solve.
+    REQUIRE_FALSE(r.feasible());
+}
+
+TEST_CASE("RoutingModel no vehicle type returns empty result", "[routing]")
+{
+    coso::RoutingModel m;
+    m.add_depot(0.0, 0.0);
+    m.add_client(1.0, 0.0, {.demand = {1}});
+    coso::Result r = m.solve(coso::TimeLimit(1.0));
+    // No vehicles: cannot solve.
+    REQUIRE_FALSE(r.feasible());
 }
 
 // --------------------------------------------------------------------------
