@@ -536,3 +536,409 @@ TEST_CASE("Iterated Exchange11 converges", "[exchange][exchange11][iterate]")
     CHECK(iters < 100);
     CHECK(sol.num_unassigned() == 0);
 }
+
+// ===========================================================================
+//  Larger instance for extended exchange operators
+// ===========================================================================
+
+/// 1 depot at (0,0), 10 clients, 4 vehicles with capacity 30.
+static ProblemData make_large_instance()
+{
+    ProblemData::Builder b;
+    b.add_depot({0.0, 0.0});
+    b.add_vehicle_type(4, {.capacity = {30}});
+
+    b.add_client({10.0, 0.0}, {.demand = {3}});   // 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});   // 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});   // 2
+    b.add_client({40.0, 0.0}, {.demand = {3}});   // 3
+    b.add_client({0.0, 10.0}, {.demand = {2}});   // 4
+    b.add_client({0.0, 20.0}, {.demand = {3}});   // 5
+    b.add_client({0.0, 30.0}, {.demand = {4}});   // 6
+    b.add_client({15.0, 15.0}, {.demand = {6}});  // 7
+    b.add_client({25.0, 5.0}, {.demand = {2}});   // 8
+    b.add_client({5.0, 25.0}, {.demand = {3}});   // 9
+
+    return b.build(0);
+}
+
+/// Helper: verify all clients appear exactly once across all routes.
+static void check_all_clients(Solution const& sol, int num_clients)
+{
+    CHECK(sol.num_unassigned() == 0);
+    std::vector<int> seen(num_clients, 0);
+    for (int r = 0; r < sol.num_routes(); ++r)
+        for (int i = 0; i < sol.route(r).size(); ++i)
+            seen[sol.route(r).client(i)]++;
+    for (int c = 0; c < num_clients; ++c)
+        CHECK(seen[c] == 1);
+}
+
+// ===========================================================================
+//  Exchange(2,1) tests
+// ===========================================================================
+
+TEST_CASE("Exchange21: finds improving move", "[exchange][exchange21]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 1, 4, 5}, {2, 3, 8}, {6, 7, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange21 op;
+    if (op.find_best_move(sol, eval, data)) {
+        CHECK(op.best_delta() < 0);
+        op.apply(sol);
+        int64_t new_cost = sol.cost(eval);
+        CHECK(new_cost < old_cost);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange21: delta matches actual cost change",
+          "[exchange][exchange21]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 1, 4, 5}, {2, 3, 8}, {6, 7, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange21 op;
+    if (op.find_best_move(sol, eval, data)) {
+        int64_t predicted = op.best_delta();
+        op.apply(sol);
+        int64_t actual = sol.cost(eval) - old_cost;
+        CHECK(predicted == actual);
+    }
+}
+
+TEST_CASE("Exchange21: preserves all clients", "[exchange][exchange21]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 1, 4, 5}, {2, 3, 8}, {6, 7, 9}});
+
+    Exchange21 op;
+    if (op.find_best_move(sol, eval, data)) {
+        op.apply(sol);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Iterated Exchange21 converges", "[exchange][exchange21][iterate]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {2, 3, 8}, {7, 9}});
+
+    Exchange21 op;
+    int iters = 0;
+    while (op.find_best_move(sol, eval, data) && iters < 200) {
+        op.apply(sol);
+        ++iters;
+    }
+    CHECK(iters < 200);
+    check_all_clients(sol, data.num_clients());
+}
+
+// ===========================================================================
+//  Exchange(2,2) tests
+// ===========================================================================
+
+TEST_CASE("Exchange22: finds improving move", "[exchange][exchange22]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 1}, {2, 6, 7, 3}, {8, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange22 op;
+    if (op.find_best_move(sol, eval, data)) {
+        CHECK(op.best_delta() < 0);
+        op.apply(sol);
+        int64_t new_cost = sol.cost(eval);
+        CHECK(new_cost < old_cost);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange22: delta matches actual cost change",
+          "[exchange][exchange22]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 1}, {2, 6, 7, 3}, {8, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange22 op;
+    if (op.find_best_move(sol, eval, data)) {
+        int64_t predicted = op.best_delta();
+        op.apply(sol);
+        int64_t actual = sol.cost(eval) - old_cost;
+        CHECK(predicted == actual);
+    }
+}
+
+TEST_CASE("Exchange22: preserves all clients", "[exchange][exchange22]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 1}, {2, 6, 7, 3}, {8, 9}});
+
+    Exchange22 op;
+    if (op.find_best_move(sol, eval, data)) {
+        op.apply(sol);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange22: no move when routes have < 2 clients",
+          "[exchange][exchange22]")
+{
+    auto data = make_test_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0}, {1}, {2}});
+
+    Exchange22 op;
+    CHECK_FALSE(op.find_best_move(sol, eval, data));
+}
+
+// ===========================================================================
+//  Exchange(3,0) tests
+// ===========================================================================
+
+TEST_CASE("Exchange30: finds improving triple relocate",
+          "[exchange][exchange30]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1, 2, 3}, {7, 8, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange30 op;
+    if (op.find_best_move(sol, eval, data)) {
+        CHECK(op.best_delta() < 0);
+        op.apply(sol);
+        int64_t new_cost = sol.cost(eval);
+        CHECK(new_cost < old_cost);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange30: delta matches actual cost change",
+          "[exchange][exchange30]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1, 2, 3}, {7, 8, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange30 op;
+    if (op.find_best_move(sol, eval, data)) {
+        int64_t predicted = op.best_delta();
+        op.apply(sol);
+        int64_t actual = sol.cost(eval) - old_cost;
+        CHECK(predicted == actual);
+    }
+}
+
+TEST_CASE("Exchange30: preserves all clients", "[exchange][exchange30]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1, 2, 3}, {7, 8, 9}});
+
+    Exchange30 op;
+    if (op.find_best_move(sol, eval, data)) {
+        op.apply(sol);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange30: no move when routes have < 3 clients",
+          "[exchange][exchange30]")
+{
+    auto data = make_test_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 1}, {2, 3}, {4, 5}});
+
+    Exchange30 op;
+    CHECK_FALSE(op.find_best_move(sol, eval, data));
+}
+
+TEST_CASE("Iterated Exchange30 converges", "[exchange][exchange30][iterate]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1, 2, 3}, {7, 8, 9}});
+
+    Exchange30 op;
+    int iters = 0;
+    while (op.find_best_move(sol, eval, data) && iters < 200) {
+        op.apply(sol);
+        ++iters;
+    }
+    CHECK(iters < 200);
+    check_all_clients(sol, data.num_clients());
+}
+
+// ===========================================================================
+//  Exchange(3,1) tests
+// ===========================================================================
+
+TEST_CASE("Exchange31: finds improving move", "[exchange][exchange31]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {2, 3, 8}, {7, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange31 op;
+    if (op.find_best_move(sol, eval, data)) {
+        CHECK(op.best_delta() < 0);
+        op.apply(sol);
+        int64_t new_cost = sol.cost(eval);
+        CHECK(new_cost < old_cost);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange31: delta matches actual cost change",
+          "[exchange][exchange31]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {2, 3, 8}, {7, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange31 op;
+    if (op.find_best_move(sol, eval, data)) {
+        int64_t predicted = op.best_delta();
+        op.apply(sol);
+        int64_t actual = sol.cost(eval) - old_cost;
+        CHECK(predicted == actual);
+    }
+}
+
+TEST_CASE("Exchange31: preserves all clients", "[exchange][exchange31]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {2, 3, 8}, {7, 9}});
+
+    Exchange31 op;
+    if (op.find_best_move(sol, eval, data)) {
+        op.apply(sol);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+// ===========================================================================
+//  Exchange(3,2) tests
+// ===========================================================================
+
+TEST_CASE("Exchange32: finds improving move", "[exchange][exchange32]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8}, {9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange32 op;
+    if (op.find_best_move(sol, eval, data)) {
+        CHECK(op.best_delta() < 0);
+        op.apply(sol);
+        int64_t new_cost = sol.cost(eval);
+        CHECK(new_cost < old_cost);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange32: delta matches actual cost change",
+          "[exchange][exchange32]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8}, {9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange32 op;
+    if (op.find_best_move(sol, eval, data)) {
+        int64_t predicted = op.best_delta();
+        op.apply(sol);
+        int64_t actual = sol.cost(eval) - old_cost;
+        CHECK(predicted == actual);
+    }
+}
+
+// ===========================================================================
+//  Exchange(3,3) tests
+// ===========================================================================
+
+TEST_CASE("Exchange33: finds improving move", "[exchange][exchange33]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange33 op;
+    if (op.find_best_move(sol, eval, data)) {
+        CHECK(op.best_delta() < 0);
+        op.apply(sol);
+        int64_t new_cost = sol.cost(eval);
+        CHECK(new_cost < old_cost);
+        check_all_clients(sol, data.num_clients());
+    }
+}
+
+TEST_CASE("Exchange33: delta matches actual cost change",
+          "[exchange][exchange33]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8, 9}});
+    int64_t old_cost = sol.cost(eval);
+
+    Exchange33 op;
+    if (op.find_best_move(sol, eval, data)) {
+        int64_t predicted = op.best_delta();
+        op.apply(sol);
+        int64_t actual = sol.cost(eval) - old_cost;
+        CHECK(predicted == actual);
+    }
+}
+
+TEST_CASE("Exchange33: preserves all clients", "[exchange][exchange33]")
+{
+    auto data = make_large_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8, 9}});
+
+    Exchange33 op;
+    if (op.find_best_move(sol, eval, data)) {
+        op.apply(sol);
+        check_all_clients(sol, data.num_clients());
+    }
+}

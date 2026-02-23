@@ -119,6 +119,132 @@ private:
 };
 
 // ---------------------------------------------------------------------------
+//  Exchange(2,1) — Swap 2 consecutive from A with 1 from B
+// ---------------------------------------------------------------------------
+
+/// Swap two consecutive clients from route A with one client from route B.
+class Exchange21 {
+public:
+    [[nodiscard]] bool find_best_move(Solution const& sol,
+                                      CostEvaluator const& eval,
+                                      ProblemData const& data);
+    void apply(Solution& sol) const;
+    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+
+private:
+    int64_t best_delta_ = 0;
+    int route_a_ = -1;
+    int pos_a_   = -1;
+    int route_b_ = -1;
+    int pos_b_   = -1;
+};
+
+// ---------------------------------------------------------------------------
+//  Exchange(2,2) — Swap 2 consecutive from A with 2 consecutive from B
+// ---------------------------------------------------------------------------
+
+/// Swap two consecutive clients from route A with two consecutive from route B.
+class Exchange22 {
+public:
+    [[nodiscard]] bool find_best_move(Solution const& sol,
+                                      CostEvaluator const& eval,
+                                      ProblemData const& data);
+    void apply(Solution& sol) const;
+    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+
+private:
+    int64_t best_delta_ = 0;
+    int route_a_ = -1;
+    int pos_a_   = -1;
+    int route_b_ = -1;
+    int pos_b_   = -1;
+};
+
+// ---------------------------------------------------------------------------
+//  Exchange(3,0) — Relocate triple (Or-opt-3)
+// ---------------------------------------------------------------------------
+
+/// Relocate three consecutive clients from route A to route B.
+class Exchange30 {
+public:
+    [[nodiscard]] bool find_best_move(Solution const& sol,
+                                      CostEvaluator const& eval,
+                                      ProblemData const& data);
+    void apply(Solution& sol) const;
+    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+
+private:
+    int64_t best_delta_ = 0;
+    int from_route_ = -1;
+    int from_pos_   = -1;
+    int to_route_   = -1;
+    int to_pos_     = -1;
+};
+
+// ---------------------------------------------------------------------------
+//  Exchange(3,1) — Swap 3 from A with 1 from B
+// ---------------------------------------------------------------------------
+
+/// Swap three consecutive clients from route A with one client from route B.
+class Exchange31 {
+public:
+    [[nodiscard]] bool find_best_move(Solution const& sol,
+                                      CostEvaluator const& eval,
+                                      ProblemData const& data);
+    void apply(Solution& sol) const;
+    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+
+private:
+    int64_t best_delta_ = 0;
+    int route_a_ = -1;
+    int pos_a_   = -1;
+    int route_b_ = -1;
+    int pos_b_   = -1;
+};
+
+// ---------------------------------------------------------------------------
+//  Exchange(3,2) — Swap 3 from A with 2 from B
+// ---------------------------------------------------------------------------
+
+/// Swap three consecutive clients from route A with two consecutive from B.
+class Exchange32 {
+public:
+    [[nodiscard]] bool find_best_move(Solution const& sol,
+                                      CostEvaluator const& eval,
+                                      ProblemData const& data);
+    void apply(Solution& sol) const;
+    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+
+private:
+    int64_t best_delta_ = 0;
+    int route_a_ = -1;
+    int pos_a_   = -1;
+    int route_b_ = -1;
+    int pos_b_   = -1;
+};
+
+// ---------------------------------------------------------------------------
+//  Exchange(3,3) — Swap 3 from A with 3 from B
+// ---------------------------------------------------------------------------
+
+/// Swap three consecutive clients from route A with three consecutive from B.
+class Exchange33 {
+public:
+    [[nodiscard]] bool find_best_move(Solution const& sol,
+                                      CostEvaluator const& eval,
+                                      ProblemData const& data);
+    void apply(Solution& sol) const;
+    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+
+private:
+    int64_t best_delta_ = 0;
+    int route_a_ = -1;
+    int pos_a_   = -1;
+    int route_b_ = -1;
+    int pos_b_   = -1;
+};
+
+// ---------------------------------------------------------------------------
 //  SwapTails — swap the tail segments of two routes
 // ---------------------------------------------------------------------------
 
