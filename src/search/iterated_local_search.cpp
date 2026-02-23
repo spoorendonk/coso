@@ -4,9 +4,8 @@
 #include "routing/local_search.h"
 
 #include <algorithm>
-#include <cmath>
 #include <limits>
-#include <numeric>
+#include <unordered_set>
 
 namespace coso {
 
@@ -53,7 +52,7 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval,
         int64_t la_cost = la_list[la_index];
         if (candidate_cost <= la_cost || candidate_cost <= current_cost) {
             current = std::move(candidate);
-            current_cost = current.cost(eval);
+            current_cost = candidate_cost;
         }
 
         // Update late acceptance list.
@@ -138,18 +137,15 @@ std::vector<int> IteratedLocalSearch::ruin_(Solution& sol)
     // Remove them from the solution.
     // We must be careful: removing changes positions.  Process by route,
     // removing in reverse position order to keep indices stable.
+    std::unordered_set<int> to_remove(removed.begin(), removed.end());
+
     for (int v = 0; v < sol.num_routes(); ++v) {
         auto const& route = sol.route(v);
         // Find positions of clients to remove in this route.
         std::vector<int> positions;
         for (int pos = 0; pos < route.size(); ++pos) {
-            int c = route.client(pos);
-            for (int r : removed) {
-                if (c == r) {
-                    positions.push_back(pos);
-                    break;
-                }
-            }
+            if (to_remove.count(route.client(pos)))
+                positions.push_back(pos);
         }
         // Remove in reverse order to keep positions stable.
         std::sort(positions.rbegin(), positions.rend());
