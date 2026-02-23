@@ -64,6 +64,8 @@ add_library(coso STATIC
     src/model/instance_reader.cpp
     src/routing/problem_data.cpp
     src/routing/route.cpp
+    src/routing/solution.cpp
+    src/routing/cost_evaluator.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
