@@ -3,30 +3,14 @@
 #include "routing/resources/load_resource.h"
 
 #include <algorithm>
-#include <numeric>
 #include <vector>
 
 namespace coso::construction {
 
 // ---------------------------------------------------------------------------
-//  Helper: check if adding a client to a route would violate capacity.
+//  Helper: check if a merged load state fits within a vehicle type's capacity.
 // ---------------------------------------------------------------------------
 
-/// Returns true if inserting `client` at the end of `route` keeps load
-/// within the vehicle's capacity (zero excess).
-static bool fits_in_route(Route const& route, int client)
-{
-    // Insert at end (after last client).
-    return route.eval_insert_load(route.size(), client) == 0;
-}
-
-/// Compute the total demand for a client across all load dimensions.
-static LoadResource::State client_load(ProblemData const& data, int client)
-{
-    return LoadResource::init(data, client);
-}
-
-/// Check if a merged load state fits within a vehicle type's capacity.
 static bool load_fits(LoadResource::State const& state,
                       ProblemData::VehicleTypeData const& vt)
 {
@@ -180,35 +164,7 @@ Solution clarke_wright(ProblemData const& data,
                   return a.value > b.value;
               });
 
-    // Step 3: Determine vehicle capacities.
-    // Build a sorted list of vehicle type indices by capacity (largest first)
-    // so we can assign merged routes to the smallest sufficient vehicle.
-    // For simplicity with multiple vehicle types, we track the total capacity
-    // available and merge greedily.
-
-    // Collect all available vehicles: (vtype_index, remaining_count).
-    struct VehiclePool {
-        int vtype;
-        int remaining;
-    };
-    std::vector<VehiclePool> pool;
-    for (int t = 0; t < data.num_vehicle_types(); ++t) {
-        pool.push_back({t, data.vehicle_type(t).count});
-    }
-
-    // Helper: check if a merged load fits in ANY vehicle type.
-    auto can_merge = [&](CWRoute const& a, CWRoute const& b) -> bool {
-        auto merged_load = LoadResource::merge(a.load_state, b.load_state);
-        for (auto const& vp : pool) {
-            if (vp.remaining > 0 || a.vtype == vp.vtype || b.vtype == vp.vtype) {
-                if (load_fits(merged_load, data.vehicle_type(vp.vtype)))
-                    return true;
-            }
-        }
-        return false;
-    };
-
-    // Step 4: Process savings and merge routes.
+    // Step 3: Process savings and merge routes.
     for (auto const& [ci, cj, sval] : savings) {
         int ri = route_of[ci];
         int rj = route_of[cj];
@@ -268,8 +224,8 @@ Solution clarke_wright(ProblemData const& data,
 
         // Find a vehicle type that can handle the merged load.
         bool found_vtype = false;
-        for (auto const& vp : pool) {
-            if (load_fits(merged_load, data.vehicle_type(vp.vtype))) {
+        for (int t = 0; t < data.num_vehicle_types(); ++t) {
+            if (load_fits(merged_load, data.vehicle_type(t))) {
                 found_vtype = true;
                 break;
             }
