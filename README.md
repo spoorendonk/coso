@@ -1,0 +1,77 @@
+# primal-rsp
+
+Declarative modeling + LP-free solving for routing, scheduling, and production
+planning. C++ engine with Python bindings (nanobind).
+
+The user declares **what** the problem is, the solver decides **how** to solve it.
+
+Sibling to [mip-heuristics](https://github.com/simonbs/mip-heuristics) (LP-free
+MIP solvers: FJ, Local-MIP). That repo handles generic MIP. This repo handles
+problems with exploitable structure where problem-specific local search dominates
+generic approaches by orders of magnitude.
+
+## Quick Start
+
+```cpp
+#include <primal/routing_model.h>
+
+primal::RoutingModel m;
+auto depot = m.add_depot(456, 320);
+auto vtype = m.add_vehicle_type(4, {.capacity = 15});
+m.add_client(228, 0, {.demand = 1});
+m.add_client(912, 0, {.demand = 1});
+m.add_client(0,   80, {.demand = 3});
+
+auto result = m.solve(primal::TimeLimit(60));
+```
+
+```python
+import primal
+
+m = primal.RoutingModel()
+depot = m.add_depot(456, 320)
+vtype = m.add_vehicle_type(4, capacity=15)
+m.add_client(228, 0, demand=1)
+m.add_client(912, 0, demand=1)
+m.add_client(0, 80, demand=3)
+
+result = m.solve(primal.TimeLimit(60))
+```
+
+Or from a CVRPLIB file:
+
+```cpp
+auto result = primal::solve("X-n101-k25.vrp", primal::TimeLimit(60));
+```
+
+## Engines
+
+| Engine | Problems | Approach |
+|--------|----------|----------|
+| **Routing** | CVRP, VRPTW, PDPTW, TRSP, fleet, multi-trip, ... | Resources + ILS/HGS |
+| **Scheduling** | JSP, FJSP, RCPSP, flow shop, open shop, ... | Disjunctive graph + tabu |
+| **Assignment** | Nurse rostering, timetabling, employee scheduling | Tabu + LA + VND + CP filter |
+| **Packing** | Bin packing, vector bin packing | Assignment engine + FFD |
+| **Network** | MCF, RCMCF, liner shipping | Column generation / LP |
+| **Lot sizing** | CLSP, MLCLSP | Delegates to mip-heuristics |
+
+## Build
+
+Requires C++23 and CMake 3.25+. TBB is optional (enables multi-threaded solving).
+
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+## Test
+
+```bash
+ctest --test-dir build -j$(nproc)
+```
+
+## Roadmap
+
+See [docs/ROADMAP.md](docs/ROADMAP.md) for the full design plan: modeling
+interface, architecture, problem catalog (50+ problem types), implementation
+steps, and design decisions.
