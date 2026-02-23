@@ -1,4 +1,0 @@
-# Downloaded benchmark instances (not tracked in git).
-# Run download_benchmarks.sh to fetch them.
-*.vrp
-*.sol
