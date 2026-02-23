@@ -16,6 +16,11 @@ IteratedLocalSearch::IteratedLocalSearch(ProblemData const& data,
 {
 }
 
+void IteratedLocalSearch::set_acceptance(AcceptanceCriterion criterion)
+{
+    acceptance_ = std::move(criterion);
+}
+
 Solution IteratedLocalSearch::run(CostEvaluator const& eval,
                                   StopCriterion& stop)
 {
@@ -30,11 +35,11 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval,
     Solution best = current;
     int64_t best_cost = best.cost(eval);
 
-    // Initialize Late Acceptance fitness list.
-    // All entries start at the initial solution cost.
+    // Initialize acceptance criterion (default: LAHC with list length 5000).
     int64_t current_cost = current.cost(eval);
-    std::vector<int64_t> la_list(la_length_, current_cost);
-    int la_index = 0;
+    AcceptanceCriterion acceptance = acceptance_.value_or(
+        AcceptanceCriterion(LateAcceptance(5000)));
+    acceptance.init(current_cost);
 
     // Main ILS loop.
     while (!stop.should_stop()) {
@@ -47,17 +52,14 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval,
 
         int64_t candidate_cost = candidate.cost(eval);
 
-        // Step 5: Late Acceptance criterion.
-        // Accept if candidate cost <= cost from L iterations ago.
-        int64_t la_cost = la_list[la_index];
-        if (candidate_cost <= la_cost || candidate_cost <= current_cost) {
+        // Step 5: Acceptance criterion.
+        if (acceptance.accept(candidate_cost, current_cost)) {
             current = std::move(candidate);
             current_cost = candidate_cost;
         }
 
-        // Update late acceptance list.
-        la_list[la_index] = current_cost;
-        la_index = (la_index + 1) % la_length_;
+        // Advance acceptance state.
+        acceptance.iteration(current_cost);
 
         // Update best.
         if (current_cost < best_cost) {
