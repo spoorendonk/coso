@@ -1438,7 +1438,7 @@ gets reused by later engines.
 |----|----------|-------------|-------|------------|
 | 1.1 | CMake + CI setup | Project compiles, `ctest` runs (0 tests) | CMakeLists.txt, cmake/, .github/ | — |
 | 1.2 | Shared types header | `types.h` with Coord, TimeWindow, CostParams, Result, TimeLimit | src/model/types.h | Done |
-| 1.3 | Model headers (declarations only) | All 4 model classes declared, compile with no impl | src/model/routing_model.h, schedule_model.h, assignment_model.h, packing_model.h | 1.2 |
+| 1.3 | Model headers (declarations only) | All 4 model classes declared, compile with no impl | src/model/routing_model.h, schedule_model.h, assignment_model.h, packing_model.h | Done |
 | 1.4 | API contract tests | Tests that exercise model API (compile + link, assert on trivial cases) | tests/model/model_test.cpp | 1.1, 1.3 |
 
 1.1 and 1.2 are parallel. 1.3 needs 1.2. 1.4 needs 1.1 + 1.3.
