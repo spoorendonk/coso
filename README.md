@@ -5,7 +5,7 @@ C++ engine with Python bindings (nanobind).
 
 The user declares **what** the problem is, the solver decides **how** to solve it.
 
-Sibling to [mip-heuristics](https://github.com/simonbs/mip-heuristics) (LP-free
+Sibling to [mip-heuristics](https://github.com/spoorendonk/mip-heuristics) (LP-free
 MIP solvers: FJ, Local-MIP). That repo handles generic MIP. This repo handles
 problems with exploitable structure where problem-specific local search dominates
 generic approaches by orders of magnitude.
