@@ -3,8 +3,10 @@
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+#include "search/acceptance.h"
 #include "search/stop_criterion.h"
 
+#include <optional>
 #include <random>
 
 namespace coso {
@@ -16,7 +18,7 @@ namespace coso {
 ///   2. Local search to local optimum
 ///   3. Perturb: ruin-and-recreate (remove k clients, reinsert greedily)
 ///   4. Local search again
-///   5. Accept or reject via Late Acceptance Hill Climbing (LAHC)
+///   5. Accept or reject via configurable acceptance criterion
 ///   6. Repeat until stop criterion met
 ///   7. Return best solution found
 ///
@@ -25,10 +27,10 @@ namespace coso {
 ///     neighbours from the solution. k ~ 10-30% of clients (randomized).
 ///   - Recreate: greedily reinsert removed clients at their cheapest position.
 ///
-/// Acceptance — Late Acceptance Hill Climbing (LAHC):
-///   - Maintains a fitness list of length L (default 5000).
-///   - Accepts a new solution if its cost <= the cost stored L iterations ago.
-///   - This allows temporary worsening to escape local optima.
+/// Acceptance — configurable (default: Late Acceptance Hill Climbing):
+///   - LateAcceptance: accepts if cost <= cost from L iterations ago.
+///   - SimulatedAnnealing: accepts worse with probability exp(-delta/T).
+///   - RecordToRecord: accepts if cost <= best + threshold.
 class IteratedLocalSearch {
 public:
     /// Construct an ILS engine for the given problem instance.
@@ -45,8 +47,8 @@ public:
     /// @return The best solution found during the search.
     [[nodiscard]] Solution run(CostEvaluator const& eval, StopCriterion& stop);
 
-    /// Late acceptance list length (default 5000).
-    void set_late_acceptance_length(int length) { la_length_ = length; }
+    /// Set the acceptance criterion. If not called, defaults to LAHC(5000).
+    void set_acceptance(AcceptanceCriterion criterion);
 
     /// Minimum fraction of clients to remove in ruin (default 0.1).
     void set_ruin_fraction_min(double frac) { ruin_frac_min_ = frac; }
@@ -59,7 +61,7 @@ private:
     std::mt19937 rng_;
 
     // Parameters.
-    int la_length_ = 5000;
+    std::optional<AcceptanceCriterion> acceptance_;
     double ruin_frac_min_ = 0.1;
     double ruin_frac_max_ = 0.3;
 

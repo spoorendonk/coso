@@ -4,6 +4,7 @@
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+#include "search/acceptance.h"
 #include "search/iterated_local_search.h"
 #include "search/stop_criterion.h"
 
@@ -173,7 +174,7 @@ TEST_CASE("ILS — custom ruin fraction", "[ils]")
     IteratedLocalSearch ils(data, 42);
     ils.set_ruin_fraction_min(0.2);
     ils.set_ruin_fraction_max(0.5);
-    ils.set_late_acceptance_length(100);
+    ils.set_acceptance(AcceptanceCriterion(LateAcceptance(100)));
 
     StopCriterion stop(0.0, 50, 0);
     Solution best = ils.run(eval, stop);

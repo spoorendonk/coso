@@ -159,6 +159,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Acceptance criteria tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(acceptance_test search/acceptance_test.cpp)
+target_link_libraries(acceptance_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(acceptance_test)
+else()
+    add_test(NAME acceptance_test COMMAND acceptance_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Penalty manager tests                                                       #
 # --------------------------------------------------------------------------- #
 
