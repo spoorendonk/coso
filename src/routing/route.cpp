@@ -131,7 +131,6 @@ int Route::eval_remove_distance(int pos) const
 void Route::update_()
 {
     int n = size();
-    int nd = data_->num_load_dims();
 
     // --- Load prefix ---
     // prefix_[0] = depot state (empty).
