@@ -53,19 +53,24 @@ if(COSO_USE_TBB)
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Source library (header-only placeholder for now)                             #
+#  Source library                                                              #
 # --------------------------------------------------------------------------- #
 
-add_library(coso INTERFACE)
-target_include_directories(coso INTERFACE
+add_library(coso STATIC
+    src/model/routing_model.cpp
+    src/model/schedule_model.cpp
+    src/model/assignment_model.cpp
+    src/model/packing_model.cpp
+)
+target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:include>
 )
-target_compile_features(coso INTERFACE cxx_std_23)
+target_compile_features(coso PUBLIC cxx_std_23)
 
 if(COSO_USE_TBB)
-    target_link_libraries(coso INTERFACE TBB::tbb)
-    target_compile_definitions(coso INTERFACE COSO_USE_TBB)
+    target_link_libraries(coso PUBLIC TBB::tbb)
+    target_compile_definitions(coso PUBLIC COSO_USE_TBB)
 endif()
 
 # --------------------------------------------------------------------------- #
