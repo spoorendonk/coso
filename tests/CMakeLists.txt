@@ -92,3 +92,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME construction_test COMMAND construction_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Exchange operator tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(exchange_test routing/exchange_test.cpp)
+target_link_libraries(exchange_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(exchange_test)
+else()
+    add_test(NAME exchange_test COMMAND exchange_test)
+endif()
