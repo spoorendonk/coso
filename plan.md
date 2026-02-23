@@ -981,13 +981,12 @@ Fix-and-Optimize with FJ/Local-MIP as inner solver is the natural approach.
 
 ```
 src/
-  model/              ← User-facing modeling API
+  model/              ← User-facing modeling API (C++ headers + Python via nanobind)
+    types.h               Shared types (Coord, TimeWindow, CostParams, Result)
     model.h               Routing model (add_depot, add_client, add_vehicle_type)
-    network_model.h       Network/flow model (add_node, add_arc, add_commodity)
     schedule_model.h      Scheduling model (add_job, add_operation)
     assignment_model.h    Assignment model (add_employee, add_shift_type)
     packing_model.h       Packing model (add_bin_type, add_item)
-    lotsizing_model.h     Lot sizing model
     instance_reader.h     CVRPLIB, Solomon, Cordeau, Taillard parsers
 
   routing/            ← CVRP/VRPTW engine (internal)
@@ -1087,198 +1086,514 @@ src/
   cli/
     main.cpp
 
+python/               ← nanobind Python bindings
+  bindings.cpp            Bind all model types + Result + solve()
+  pyproject.toml          scikit-build-core config for pip install
+
 tests/
   model/              ← User-facing tests (the API contract)
   routing/
-  network/
   scheduling/
   assignment/
   packing/
   search/
-  data/
+  data/               ← Benchmark instances (downloaded, not in git)
 ```
 
 ---
 
-## 6. Implementation Phases
+## 6. Preliminary Modeling Interface
 
-### Phase 1 — CVRP end-to-end
+C++ headers defining the public API. No implementation yet — these pin down what
+the user sees before we write any solver code. Python bindings (nanobind) will
+mirror these interfaces 1:1.
 
-User can: `m.add_depot(); m.add_client({.demand=...}); m.solve();`
+### 6.1 Shared types (`src/model/types.h`)
 
-Engine:
-1. Repo skeleton (CMake, C++23, Catch2)
-2. `Model` class with `add_depot`, `add_client`, `add_vehicle_type`, `solve`
-3. CVRPLIB/VRPLIB parser
-4. `ProblemData` (compiled from Model)
-5. `LoadResource` with `init/merge/merge_reverse/excess`
-6. `Route` with prefix resource arrays
-7. `Solution` + `CostEvaluator`
-8. Operators: Exchange(1,0), Exchange(1,1), SwapTails, Exchange(2,0)
-9. `LocalSearch` engine (granular neighbourhood)
-10. Construction heuristic (nearest-neighbour or savings)
-11. ILS (ruin-and-recreate as regular moves + late acceptance)
-12. Warm start: accept initial solution, pin entities
-13. Tests: model API, operator correctness, small instance end-to-end
+```cpp
+#pragma once
+#include <vector>
+#include <string>
+#include <cstdint>
 
-### Phase 2 — Benchmark quality
+namespace primal {
 
-1. SWAP* operator
-2. Exchange(N,M) up to (3,3)
-3. PenaltyManager (adaptive α, strategic oscillation)
-4. Composable acceptors (late acceptance + tabu)
-5. Guided Local Search (GLS: penalize frequent arcs)
-6. Weighted operator selection + multi-armed bandit (adaptive weights)
-7. Accepted count limit + pick-early termination
-8. Move filter interface (user predicates)
-9. Diminished returns termination
-10. Score corruption detection (debug assertion mode)
-11. Score explanation / analysis in result object
-12. Benchmarker (parameter grids, multi-seed, score-over-time tracking)
-13. Uchoa X-set benchmarks. Target: <2% gap, 60s.
+struct Coord { double x, y; };
 
-### Phase 3 — HGS + portfolio
+struct TimeWindow { int start, end; };
 
-1. Population (feasible + infeasible, diversity)
-2. Crossover (SREX)
-3. `GeneticAlgorithm`
-4. Portfolio solving: run ILS + HGS in parallel, shared solution pool
-5. Solution finalization (compact waiting times)
-6. Compare ILS vs HGS vs portfolio on X-set
+struct CostParams {
+    int fixed_cost = 0;
+    int unit_distance_cost = 1;
+    int unit_duration_cost = 0;
+    int per_task_hour_cost = 0;
+};
 
-### Phase 4 — VRPTW + rich VRP
+/// Stop criterion passed to solve().
+struct TimeLimit {
+    double seconds;
+    explicit TimeLimit(double s) : seconds(s) {}
+};
 
-User can: `m.add_client({.tw = {100,200}, .service = 10}); m.solve();`
+/// Common result fields shared across all engines.
+struct Result {
+    bool feasible = false;
+    double cost = 0.0;
+    double elapsed_seconds = 0.0;
+    int iterations = 0;
 
-Engine:
-1. `DurationResource` with `init/merge/merge_reverse/excess`
-2. `DistanceResource` for max route distance
-3. Route carries multiple resource arrays (load + duration + distance)
-4. PenaltyManager adds β (time warp), γ (excess distance)
-5. Heterogeneous fleet: fixed cost, variable costs, routing profiles
-6. Multi-depot, open routes, site-dependent access
-7. Optional clients + prizes, client groups
-8. Release times, overtime
-9. Multi-dimensional load (N capacity dimensions)
-10. Driver breaks (BreakResource: min break duration, max interbreak time)
-11. Visit type incompatibilities (hazmat + food can't share vehicle)
-12. Visit type requirements (co-presence on same vehicle)
-13. LIFO/FIFO pickup-delivery ordering (physical loading constraints)
-14. Depot resource constraints (shared loading dock capacity)
-15. Global span cost (minimize max route duration across fleet)
-16. Skills matching (precomputed compatibility filter)
-17. Setup times (location-aware: skip if same location)
-18. Multiple time windows per client (TW array)
-19. Max tasks per vehicle (TaskCountResource)
-20. Vehicle type-specific service/setup durations
-21. Speed factor per vehicle (duration multiplier)
-22. Separate cost matrix (cost ≠ distance ≠ duration per profile)
-23. Per-task-hour cost
-24. RouteSplit operator (split route across empty vehicles)
-25. Solomon + Gehring-Homberger benchmarks
+    // Engine-specific accessors (only populated by the relevant engine):
+    // routing:    routes(), unserved()
+    // scheduling: makespan(), schedule()
+    // assignment: assignments(), unassigned()
+    // packing:    bins(), num_bins()
+};
 
-### Phase 4b — Multi-trip
+} // namespace primal
+```
 
-1. Reload-aware route structure (depot visits mid-route)
-2. RelocateWithDepot operator
-3. LoadResource reset at reload points
-4. `max_reloads` constraint
+### 6.2 Routing model (`src/model/model.h`)
 
-### Phase 4c — Paired pickup-delivery
+```cpp
+#pragma once
+#include "types.h"
 
-1. `PrecedenceResource` (pickup before delivery on same route)
-2. Pair-aware operators (RelocatePair, SwapPairs)
-3. Subtrip operators (RelocateSubtrip, ExchangeSubtrip)
-4. LIFO/FIFO loading order support
-5. Li-Lim PDPTW benchmarks
+namespace primal {
 
-### Phase 5 — Scheduling
+struct VehicleTypeParams {
+    std::vector<int> capacity;     // N dimensions
+    int max_duration = 0;          // 0 = unlimited
+    int max_distance = 0;
+    int max_tasks = 0;
+    CostParams cost;
+    int profile = 0;               // distance/duration matrix index
+    double speed_factor = 1.0;
+    std::vector<std::string> skills;
+};
 
-User can: `m.add_job(); m.add_operation(j, {.machine=0, .duration=3});`
+struct ClientParams {
+    std::vector<int> demand;       // N dimensions (matches capacity)
+    std::vector<int> pickup;       // backhaul pickup
+    TimeWindow tw = {0, INT_MAX};
+    std::vector<TimeWindow> extra_tw; // additional time windows
+    int service = 0;
+    int release_time = 0;
+    int prize = 0;                 // for optional clients
+    bool required = true;
+    int group = -1;                // client group (-1 = none)
+    std::vector<std::string> skills;
+    int setup_time = 0;
+    int location = -1;             // for location-aware setup: skip if same
+};
 
-Engine:
-1. JSP: disjunctive graph, N5 block moves, tabu search
-2. PFSP: permutation representation, NEH construction, insert/swap operators
-3. FJSP: machine assignment + sequencing
-4. RCPSP: activity list + SGS decoding
-5. OSSP: disjunctive graph without intra-job precedence arcs
-6. MRCPSP: mode selection (integer variable per activity) + SGS decoding
-7. Optional operations: overconstrained scheduling with medium-priority penalty
-8. Parallel machine scheduling
-9. Scheduling-specific perturbation: time-window relax, precedence relax, resource relax
-10. ChangeMode + ReassignMachine operators (FJSP/MRCPSP)
-11. Conflict-directed move selection (target earliest overlap)
-12. Adaptive perturbation difficulty (track acceptance rates)
-13. Taillard + PSPLIB + MMLIB + Guéret-Prins benchmarks
+struct DepotParams {
+    TimeWindow tw = {0, INT_MAX};
+};
 
-### Phase 6 — Assignment / timetabling
+class Model {
+public:
+    int add_depot(double x, double y, DepotParams p = {});
+    int add_depot(int id, DepotParams p = {});  // when using explicit distances
 
-User can: `m.add_employee(...); m.add_shift_type(...); m.solve();`
+    int add_vehicle_type(int count, VehicleTypeParams p = {});
 
-Engine:
-1. `AssignmentModel` class (employees, shifts, constraints, preferences)
-2. `AssignmentData` (compiled from model)
-3. `AssignmentSolution` (employee → shift assignments per day)
-4. Basic operators: ChangeShift, SwapShifts, SwapEmployees
-5. Pillar operators: PillarChange, PillarSwap (move groups)
-6. Construction: First Fit Decreasing, Cheapest Insertion
-7. Constraint evaluation: consecutive shifts, rest hours, weekend balance, skills
-8. Load balancing / fairness constraints (workload distribution)
-9. Automaton constraint (FSM for forbidden shift sequences: N-N-E forbidden)
-10. Hard/soft separation with user-configurable constraint weights
-10. Overconstrained support: unassigned entities with medium penalty
-11. VND: ordered neighbourhood (reassign → swap → pillar) with reset
-12. Tabu search + late acceptance (reuse search control layer)
-13. Non-disruptive replanning (penalty for changes from published schedule)
-14. INRC-II benchmarks
-15. School timetabling (ITC format)
+    int add_client(double x, double y, ClientParams p = {});
+    int add_client(int id, ClientParams p = {});
 
-### Phase 6b — Bin packing
+    // Pickup-delivery pairs
+    void add_pickup_delivery(int pickup, int delivery);
 
-User can: `m.add_bin_type(100, {.capacity = 150}); m.add_item({.size = 30});`
+    // Distance/duration matrices
+    void set_distance(int from, int to, int dist);
+    void set_duration(int from, int to, int dur);
+    void set_profile_distance(int profile, int from, int to, int dist);
+    void set_profile_duration(int profile, int from, int to, int dur);
+    void set_cost_matrix(int profile, int from, int to, int cost);
 
-Engine:
-1. `PackingModel` class (bin types, items, conflicts)
-2. `PackingSolution` (item → bin assignments)
-3. Operators: MoveItem, SwapItems between bins
-4. Per-bin capacity tracking (N dimensions)
-5. Conflict constraint (incompatible item pairs)
-6. First Fit Decreasing construction
-7. Tabu search + late acceptance (reuse search control layer)
-8. BPPLIB benchmarks
+    // Warm start
+    void set_initial_routes(const std::vector<std::vector<int>>& routes);
+    void pin(int client_id);  // lock in current position during re-optimization
 
-### Phase 6c — Lot sizing + network flow
+    Result solve(TimeLimit tl);
+};
 
-1. CLSP/MLCLSP via Fix-and-Optimize with mip-heuristics
-2. NetworkModel for MCF / RCMCF
-3. Fractional path support (LP / column generation)
+// Convenience: solve from CVRPLIB/VRPLIB file
+Result solve(const std::string& instance_path, TimeLimit tl);
 
-### Phase 7 — Advanced search infrastructure
+} // namespace primal
+```
 
-1. Partitioned search (geographic clusters for VRP, department groups for assignment)
-2. Daemon mode / continuous solving (problem change queue, real-time dispatch)
-3. Non-disruptive replanning for routing (penalty for deviations from published)
+### 6.3 Scheduling model (`src/model/schedule_model.h`)
 
-### Phase 8 — Extended routing
+```cpp
+#pragma once
+#include "types.h"
 
-1. CARP (arc routing via transformation)
-2. Electric VRP (BatteryResource + recharging stations)
-3. Time-dependent VRP (time-indexed distance functions)
-4. Period VRP (multi-day solution structure)
-5. Cumulative CVRP (CumulativeCostResource)
-6. Clustered VRP (ClusterResource: finish cluster before leaving)
-7. VRP with Transshipment (multi-echelon routing via depot-customer assignment)
+namespace primal {
 
-### Phase 9 — Extended scheduling + packing
+struct MachineParams {
+    std::string name;
+};
 
-1. Preemptive RCPSP (task splitting into subtasks)
-2. Car sequencing (permutation + sliding-window ratio constraints)
-3. Bin packing with conflicts (BPPC)
-4. Piecewise linear cost functions in CostEvaluator
+struct OperationParams {
+    int machine = -1;                          // -1 = flexible (FJSP)
+    std::vector<int> eligible_machines;        // for FJSP: machine alternatives
+    std::vector<int> durations_per_machine;    // duration on each eligible machine
+    int duration = 0;                          // fixed duration (when machine fixed)
+    bool optional = false;
+};
+
+struct JobParams {
+    std::string name;
+    int release_time = 0;
+    int due_date = INT_MAX;
+    int weight = 1;          // for weighted tardiness
+};
+
+enum class ScheduleObjective {
+    Makespan,                // minimize max completion time
+    TotalWeightedTardiness,  // minimize Σ w_j * max(0, C_j - d_j)
+    TotalFlowTime,           // minimize Σ C_j
+};
+
+class ScheduleModel {
+public:
+    int add_machine(MachineParams p = {});
+    int add_job(JobParams p = {});
+    int add_operation(int job, OperationParams p);
+
+    // Resource constraints (RCPSP)
+    int add_resource(int capacity);
+    void set_resource_usage(int operation, int resource, int amount);
+
+    // Precedence (beyond default intra-job ordering)
+    void add_precedence(int op_before, int op_after);
+
+    void set_objective(ScheduleObjective obj);
+
+    // Warm start
+    void set_initial_schedule(/* operation → (machine, start_time) */);
+
+    Result solve(TimeLimit tl);
+};
+
+} // namespace primal
+```
+
+### 6.4 Assignment model (`src/model/assignment_model.h`)
+
+```cpp
+#pragma once
+#include "types.h"
+
+namespace primal {
+
+struct ShiftTypeParams {
+    std::string name;
+    int start_hour = 0;
+    int end_hour = 8;
+    int duration_hours = 0;  // 0 = computed from start/end
+};
+
+struct EmployeeParams {
+    std::string name;
+    std::vector<std::string> skills;
+    int max_hours_per_week = 40;
+    int max_consecutive_days = 5;
+    int min_rest_hours = 11;
+};
+
+struct DemandParams {
+    int min_employees = 0;
+    int max_employees = INT_MAX;
+    std::string required_skill;  // empty = no skill requirement
+};
+
+class AssignmentModel {
+public:
+    int add_shift_type(ShiftTypeParams p);
+    int add_employee(EmployeeParams p);
+
+    void set_horizon(int days);
+
+    // Demand: day × shift → min/max employees
+    void add_demand(int shift_type, int day, DemandParams p);
+    void add_demand(int shift_type, DemandParams p);  // all days
+
+    // Constraints (built-in)
+    void set_max_consecutive_shifts(int n);
+    void set_min_rest_between_shifts(int hours);
+
+    // Automaton constraint for forbidden/required shift sequences
+    void add_forbidden_sequence(const std::vector<int>& shift_types);
+
+    // Preferences (soft)
+    void add_preference(int employee, int day, int shift_type, int weight);
+    void add_unavailability(int employee, int day);
+
+    // Warm start / replanning
+    void set_published_schedule(/* employee × day → shift */);
+    void set_change_penalty(int penalty);  // cost per deviation from published
+
+    Result solve(TimeLimit tl);
+};
+
+} // namespace primal
+```
+
+### 6.5 Packing model (`src/model/packing_model.h`)
+
+```cpp
+#pragma once
+#include "types.h"
+
+namespace primal {
+
+struct BinTypeParams {
+    std::vector<int> capacity;   // N dimensions
+    int cost = 1;                // cost per bin used
+    int count = 0;               // 0 = unlimited
+};
+
+struct ItemParams {
+    std::vector<int> size;       // N dimensions (matches capacity)
+};
+
+class PackingModel {
+public:
+    int add_bin_type(BinTypeParams p);
+    int add_item(ItemParams p);
+
+    // Constraints
+    void add_conflict(int item_a, int item_b);  // cannot share a bin
+
+    // Objective: minimize total bin cost (default)
+    void minimize_bins();
+
+    Result solve(TimeLimit tl);
+};
+
+} // namespace primal
+```
 
 ---
 
-## 7. Relationship to mip-heuristics
+## 7. Implementation Roadmap
+
+Build-oriented phases. Each produces a working, tested solver for that problem
+type. "Extract don't abstract" — shared infrastructure emerges from routing,
+then gets reused by later engines.
+
+### Step 1 — Repo skeleton + model headers
+
+```
+Deliverable: project compiles, tests run (trivially), model headers exist.
+```
+
+1. CMakeLists.txt (C++23, Catch2, optional TBB, optional nanobind)
+2. CLAUDE.md, README.md
+3. `src/model/types.h` — shared types (Coord, TimeWindow, CostParams, Result)
+4. `src/model/model.h` — routing model header (declarations only)
+5. `src/model/schedule_model.h` — scheduling model header (declarations only)
+6. `src/model/assignment_model.h` — assignment model header (declarations only)
+7. `src/model/packing_model.h` — packing model header (declarations only)
+8. `tests/model/model_test.cpp` — API contract tests (compile-only initially)
+9. CI workflow (GitHub Actions: build + test matrix, TBB on/off)
+
+### Step 2 — CVRP end-to-end
+
+```
+Deliverable: user can solve CVRP instances from Model API or CVRPLIB files.
+```
+
+Build routing engine from model to result:
+
+1. `src/model/model.cpp` — Model implementation, validate + compile to ProblemData
+2. `src/model/instance_reader.h` — CVRPLIB/VRPLIB parser
+3. `src/routing/problem_data.h` — compiled instance (distance matrix, attributes)
+4. `src/routing/solution.h` — route-based solution representation
+5. `src/routing/route.h` — route with prefix/suffix resource arrays
+6. `src/routing/resources/load_resource.h` — capacity (N dimensions)
+7. `src/routing/cost_evaluator.h` — objective + penalty evaluation
+8. `src/routing/operators/exchange.h` — Exchange(1,0), (1,1), (2,0), SwapTails
+9. `src/routing/neighbours.h` — granular neighbourhood (k=40)
+10. `src/routing/local_search.h` — LS engine
+11. `src/routing/construction.h` — nearest-neighbour + savings heuristic
+12. `src/search/iterated_local_search.h` — ILS with ruin-and-recreate + late acceptance
+13. `src/search/stop_criterion.h` — time limit, iteration limit, no-improve
+14. `src/cli/main.cpp` — `primal-solve instance.vrp --time-limit 60`
+15. Tests: resource correctness, operator correctness, small CVRP end-to-end
+16. Download script for CVRPLIB Uchoa X-set
+17. Benchmark test: X-n101-k25 through X-n1001-k43
+
+### Step 3 — Routing benchmark quality
+
+```
+Deliverable: <2% gap on Uchoa X-set in 60s. Competitive with PyVRP.
+```
+
+1. SWAP* operator
+2. Exchange(N,M) up to (3,3)
+3. `src/search/penalty_manager.h` — adaptive α, strategic oscillation
+4. `src/search/acceptance.h` — composable (late acceptance + tabu + SA)
+5. `src/search/guided_local_search.h` — GLS: penalize frequent arcs
+6. `src/search/operator_selector.h` — weighted probability, MAB adaptive
+7. Accepted count limit + pick-early
+8. Move filter interface
+9. Score corruption detection (debug `assert` mode)
+10. Score explanation in Result
+11. Benchmarker (parameter grid, multi-seed, score-over-time)
+12. Uchoa X-set benchmarks with gap tracking
+
+### Step 4 — HGS + portfolio
+
+```
+Deliverable: portfolio solver (ILS + HGS) with shared solution pool.
+```
+
+1. `src/search/population.h` — feasible + infeasible, diversity
+2. `src/search/crossover.h` — SREX
+3. `src/search/genetic_algorithm.h`
+4. `src/search/portfolio.h` — run ILS + HGS in parallel, shared pool
+5. `src/search/solution_finalizer.h` — compact waiting/idle
+6. Compare ILS vs HGS vs portfolio on X-set
+
+### Step 5 — VRPTW + rich VRP
+
+```
+Deliverable: full-featured routing supporting time windows, fleet, PD, etc.
+```
+
+Resources:
+1. `DurationResource` — time windows, release times, overtime
+2. `DistanceResource` — max route distance
+3. `PrecedenceResource` — paired pickup-delivery
+4. `BreakResource` — driver breaks
+5. Type incompatibilities, type requirements, depot resources
+6. `SkillFilter`, `TaskCountResource`
+7. Multi-dimensional load, routing profiles, speed factor
+8. Three-matrix cost model (cost ≠ distance ≠ duration)
+9. Setup times (location-aware), multiple time windows
+
+Operators + features:
+10. Pair-aware operators (RelocatePair, SwapPairs, subtrip)
+11. Multi-trip (RelocateWithDepot, reload points)
+12. RouteSplit operator
+13. Optional clients + prizes
+14. Global span cost
+15. Open routes, multi-depot
+16. Warm start + pinning
+17. Solomon + Gehring-Homberger + Li-Lim benchmarks
+
+### Step 6 — Python bindings
+
+```
+Deliverable: `pip install primal-rsp`, Python API mirrors C++.
+```
+
+1. `python/bindings.cpp` — nanobind module
+2. Bind `Model`, `Result`, `TimeLimit`, `solve()`
+3. Bind `ScheduleModel`, `AssignmentModel`, `PackingModel`
+4. scikit-build-core for pip-installable wheels
+5. Python tests mirroring C++ test suite
+
+### Step 7 — Scheduling engine
+
+```
+Deliverable: solve JSP, FJSP, RCPSP from ScheduleModel API.
+```
+
+1. `src/model/schedule_model.cpp` — validate + compile to schedule data
+2. `src/scheduling/disjunctive_graph.h` — JSP/FJSP/OSSP representation
+3. `src/scheduling/schedule_solution.h`
+4. `src/scheduling/schedule_operators.h` — N5 block moves, insert, swap
+5. `src/scheduling/construction.h` — NEH (flow shop), priority dispatch (RCPSP)
+6. `src/scheduling/mode_selection.h` — MRCPSP mode assignment
+7. Scheduling-specific perturbation: time-window relax, precedence relax, resource relax
+8. Conflict-directed move selection (target earliest overlap)
+9. Reuse search layer: ILS + tabu from routing
+10. Instance parsers: Taillard, PSPLIB, MMLIB, Guéret-Prins
+11. Benchmarks + gap tracking
+12. Bind to Python
+
+### Step 8 — Assignment / timetabling engine
+
+```
+Deliverable: solve nurse rostering, timetabling from AssignmentModel API.
+```
+
+1. `src/model/assignment_model.cpp` — validate + compile
+2. `src/assignment/assignment_data.h` — compiled from model
+3. `src/assignment/assignment_solution.h` — employee × day → shift
+4. Operators: ChangeShift, SwapShifts, SwapEmployees
+5. Pillar operators: PillarChange, PillarSwap
+6. Construction: First Fit Decreasing, Cheapest Insertion
+7. Constraint evaluation with incremental `delta_assign`
+8. Automaton constraint (FSM for forbidden sequences)
+9. CP-as-move-filter: propagators for cardinality, skills, forbidden sequences
+10. VND: ordered neighbourhood (reassign → swap → pillar)
+11. Reuse search layer: tabu + late acceptance
+12. INRC-II benchmarks
+13. Bind to Python
+
+### Step 9 — Bin packing engine
+
+```
+Deliverable: solve bin packing from PackingModel API.
+```
+
+1. `src/model/packing_model.cpp` — validate + compile
+2. `src/packing/packing_solution.h` — item → bin
+3. Operators: MoveItem, SwapItems
+4. Bin capacity tracking (N dimensions)
+5. Conflict constraint, CP move filter
+6. FFD construction
+7. Reuse search layer: tabu + late acceptance
+8. BPPLIB benchmarks
+9. Bind to Python
+
+### Step 10 — Advanced features
+
+```
+Deliverable: production-ready features across all engines.
+```
+
+1. Partitioned search (geographic clusters for VRP, department groups for assignment)
+2. Daemon mode / continuous solving (problem change queue)
+3. Non-disruptive replanning (routing + assignment)
+4. Diminished returns termination
+5. Overconstrained support (unassigned entities with penalty)
+6. Piecewise linear cost functions
+7. Extended routing: CARP, EVRP, TDVRP, period VRP, clustered VRP
+8. Extended scheduling: OSSP, preemptive RCPSP, car sequencing
+9. Lot sizing (CLSP via Fix-and-Optimize delegating to mip-heuristics)
+10. Network flow (MCF/RCMCF)
+
+### On shared infrastructure timing
+
+The "extract don't abstract" principle: build routing (step 2-5), then when
+building scheduling (step 7) extract what's genuinely shared. Don't pre-build
+abstractions for engines that don't exist yet.
+
+What's obviously shared from day one (step 1):
+- `types.h` — Coord, TimeWindow, CostParams, Result, TimeLimit
+- CMake/test infrastructure
+- Model header pattern
+
+What emerges during routing (step 2-4) and gets reused:
+- `search/` — ILS, acceptance criteria, penalty manager, operator selector
+- `search/stop_criterion.h` — time/iteration/no-improve limits
+- Solution pool, TBB parallel infrastructure
+- Score corruption detection, score explanation
+
+What does NOT get pre-built:
+- Abstract "Engine" base class — each engine is different
+- Generic "Move" type — routing moves ≠ scheduling moves ≠ assignment moves
+- Shared "Resource" interface — resources are engine-specific
+
+---
+
+## 8. Relationship to mip-heuristics
 
 ```
 mip-heuristics                        primal-rsp
@@ -1302,7 +1617,7 @@ Same pattern: user declares WHAT, solver decides HOW.
 
 ---
 
-## 8. Key Design Decisions
+## 9. Key Design Decisions
 
 1. **Model is the product.** The user interacts with `Model`, `NetworkModel`,
    `ScheduleModel`, `AssignmentModel`, `PackingModel`, `LotSizingModel`. They
@@ -1481,9 +1796,27 @@ Same pattern: user declares WHAT, solver decides HOW.
     evaluation since it lacks sequential structure; routing/scheduling keep
     the faster resource system.
 
+49. **Typed models, shared infrastructure.** Users pick the model type
+    (`Model`, `ScheduleModel`, `AssignmentModel`, `PackingModel`) making
+    intent explicit. Engines share metaheuristic shells (ILS, tabu, LA),
+    solution pool, cost evaluation, CLI, timing — but solution representations
+    are fundamentally different per engine. No auto-detection of problem type.
+    This is what every successful solver does (OR-Tools, Hexaly internally).
+
+50. **Python bindings via nanobind.** C++ is the implementation language;
+    Python (nanobind + scikit-build-core) is the primary user interface.
+    All model types, Result, and solve() are bound 1:1. `pip install
+    primal-rsp`. Python bindings added after routing engine works (step 6)
+    to avoid binding churn during API evolution.
+
+51. **Extract don't abstract.** Build routing first. When building scheduling,
+    extract what's genuinely shared into `search/`. Don't pre-build abstract
+    Engine/Move/Resource base classes for engines that don't exist yet.
+    Three similar lines > premature abstraction.
+
 ---
 
-## 9. References
+## 10. References
 
 Core methods:
 - Vidal et al. (2014). *A unified solution framework for multi-attribute VRPs*. C&OR.
