@@ -387,6 +387,7 @@ automatically:
 |---|---|---|
 | Arcs + commodities + demands | Multi-commodity flow | Network simplex / CG |
 | Arc resources + bounds | Resource-constrained MCF | Column generation + RCSPP |
+| Ports + vessels + demands + schedules | Liner shipping network design | Routing + scheduling + fleet assignment |
 
 ### Scheduling
 
@@ -412,6 +413,7 @@ automatically:
 | User declares | Model recognizes | Engine maps to |
 |---|---|---|
 | Employees + shifts + constraints | Nurse rostering / employee scheduling | Assignment engine (tabu + VND) |
+| Employees + activities + days | Multi-activity multi-day scheduling | Assignment engine (tabu + VND) |
 | Rooms + timeslots + lectures | School timetabling | Assignment engine (tabu + VND) |
 | Talks + rooms + timeslots | Conference scheduling | Assignment engine (tabu + VND) |
 | Patients + beds + stays | Bed allocation | Assignment engine (tabu + VND) |
@@ -550,11 +552,12 @@ CostEvaluator picks up the new penalty term automatically.
 
 **Dogfooding: built-in resources use the same interface.** LoadResource,
 DurationResource, DistanceResource — all built-in resources are implemented
-through the exact same `init/merge/merge_reverse/excess` interface as user-
-defined resources. There is no privileged internal API. If you wanted to
-reimplement capacity tracking differently, you'd write a new resource file
-with the same interface and swap it in. This ensures the extension mechanism
-is real, not a second-class afterthought.
+through the same `init/merge/merge_reverse/excess` interface as user-defined
+resources. If you wanted to reimplement capacity tracking differently, you'd
+write a new resource file with the same interface and swap it in. Exception:
+if the generic interface introduces measurable overhead for a hot-path
+resource, a specialized fast path is allowed — but this should be the
+exception, not the rule, and the generic interface must still work.
 
 ### 3.3 Cost model
 
@@ -885,8 +888,9 @@ Complete list of target problems with benchmark instance availability.
 
 | # | Problem | Abbrev | Approach | Phase | Benchmarks | Instances | Source |
 |---|---|---|---|---|---|---|---|
-| N1 | Multi-Commodity Flow | MCF | Network simplex / LP | 6+ | SNDlib, Canad | varies | SNDlib |
-| N2 | Resource-Constrained MCF | RCMCF | Column generation + RCSPP | 6+ | — | varies | — |
+| N1 | Multi-Commodity Flow | MCF | Network simplex / LP | 10+ | SNDlib, Canad | varies | SNDlib |
+| N2 | Resource-Constrained MCF | RCMCF | Column generation + RCSPP | 10+ | — | varies | — |
+| N3 | Liner Shipping Network Design | LSNDP | Routing + scheduling + fleet | 10+ | LINERLIB (7 base, 21 variants) | 21 | GitHub/LINERLIB |
 
 These support fractional paths (flow split across routes). Unlike pure VRP where
 each route is an integer path, MCF allows fractional flow on arcs. This is
@@ -915,11 +919,12 @@ is the natural approach.
 
 | # | Problem | Abbrev | Approach | Phase | Benchmarks | Instances | Source |
 |---|---|---|---|---|---|---|---|
-| A1 | Nurse Rostering | NRP | Assignment engine (tabu + LA) | 8 | INRC-I, INRC-II, BCV | 138+ | INRC, schedulingbenchmarks.org |
-| A2 | Employee Scheduling | ESP | Assignment engine (tabu + LA) | 8 | Curtois shift scheduling | 24+ | schedulingbenchmarks.org |
-| A3 | School Timetabling | — | Assignment engine (tabu + LA) | 8+ | ITC-2007, ITC-2019 | varies | ITC |
-| A4 | Conference Scheduling | — | Assignment engine (tabu + LA) | 8+ | — | — | — |
-| A5 | Bed Allocation | BAS | Assignment engine (tabu + LA) | 8+ | Ceschia-Schaerf | 15+ | Papers |
+| A1 | Nurse Rostering | NRP | Assignment engine (tabu + LA) | 8 | INRC-I, INRC-II, BCV, GPost, SINTEF, ORTEC, Ikegami, Montreal | 100+ | INRC, schedulingbenchmarks.org |
+| A2 | Employee Scheduling | ESP | Assignment engine (tabu + LA) | 8 | Curtois shift scheduling (instances 1-24) | 24 | schedulingbenchmarks.org |
+| A3 | Multi-Activity Scheduling | MATSP | Assignment engine (tabu + LA) | 8 | Curtois multi-activity multi-day | 225 | schedulingbenchmarks.org |
+| A4 | School Timetabling | — | Assignment engine (tabu + LA) | 8+ | ITC-2007, ITC-2019 | varies | ITC |
+| A5 | Conference Scheduling | — | Assignment engine (tabu + LA) | 8+ | — | — | — |
+| A6 | Bed Allocation | BAS | Assignment engine (tabu + LA) | 8+ | Ceschia-Schaerf | 15+ | Papers |
 
 ### 4.5 Packing problems
 
@@ -959,14 +964,16 @@ is the natural approach.
 | CARP format | CARP | Later |
 | DIMACS VRP | SDVRP, EVRP, IRP, CARP | Later |
 | ROADEF 2007 | TRSP | Yes (Phase 5) |
-| BCV (schedulingbenchmarks.org) | NRP | Yes (Phase 8) |
+| BCV/XML (schedulingbenchmarks.org) | NRP | Yes (Phase 8) |
 | Curtois shift scheduling | ESP | Yes (Phase 8) |
+| Curtois multi-activity | MATSP | Yes (Phase 8) |
+| LINERLIB | LSNDP | Later |
 
 ### 4.8 What the modeling approach handles well vs. not
 
 **Handles well (resource pattern):** Problems where the solution is a set of
 sequences (routes, job orderings) and constraints can be evaluated by propagating
-state along each sequence. R1–R15, R17, R20, R24–R26, S1–S12.
+state along each sequence. R1–R15, R17, R20, R24–R28, S1–S12.
 
 **Handles with structural changes:** Problems that change the solution
 representation — split delivery (R18: client in multiple routes), paired
@@ -981,12 +988,14 @@ structure, not just new resources.
 inventory routing (R22: multi-period routing + inventory). Decompose into
 subproblems; routing subproblem uses the standard engine.
 
-**Network / fractional:** MCF and RCMCF (N1, N2) support fractional paths.
-Uses LP / column generation rather than local search. Meaningful for network
-design where flow can be split.
+**Network / fractional:** MCF, RCMCF, and liner shipping (N1–N3) support
+fractional paths and network-level design. Liner shipping (N3) is an integrated
+routing + scheduling + fleet assignment problem — routes are cyclic services
+with weekly schedules, combining network design with vehicle deployment.
+Uses LP / column generation rather than local search.
 
 **Assignment / timetabling (structure-aware, not MIP).** Problems like nurse
-rostering, employee scheduling, school timetabling, conference scheduling, and
+rostering, employee scheduling, multi-activity scheduling, timetabling, and
 bed allocation (A1–A5) lack sequential structure but DO have exploitable
 assignment structure. Timefold proves that tabu search + late acceptance with
 problem-specific moves (swap shift, reassign employee, swap employees) works
@@ -1843,10 +1852,12 @@ Same pattern: user declares WHAT, solver decides HOW.
     Three similar lines > premature abstraction.
 
 52. **Resource dogfooding.** Built-in resources (LoadResource, DurationResource,
-    DistanceResource) use the exact same `init/merge/merge_reverse/excess`
-    interface as user-defined resources. No privileged internal API. If you
-    want to reimplement capacity tracking, write a new resource file with the
-    same interface. This guarantees the extension mechanism is real.
+    DistanceResource) use the same `init/merge/merge_reverse/excess` interface
+    as user-defined resources. If you want to reimplement capacity tracking,
+    write a new resource with the same interface. Exception: if the generic
+    interface introduces measurable overhead in a hot-path resource, a
+    specialized fast path is allowed — but this is the exception. Performance
+    trumps purity, but the generic interface must still work.
 
 53. **Technician routing is rich VRP.** TRSP = VRP + skills + time windows +
     team formation + synchronization. Handled by the routing engine with
@@ -1878,8 +1889,9 @@ Benchmarks:
 - FJSPLIB. https://scheduleopt.github.io/benchmarks/fjsplib
 - PSPLIB. https://www.om-db.wi.tum.de/psplib/
 - VFR (flow shop). http://soa.iti.es/problem-instances
-- SchedulingBenchmarks.org (Curtois). Nurse rostering (BCV instances), shift scheduling.
-  https://www.schedulingbenchmarks.org
+- SchedulingBenchmarks.org (Curtois). Nurse rostering (BCV, GPost, SINTEF, ORTEC,
+  Ikegami, Montreal — 100+ instances), shift scheduling (24 instances), multi-activity
+  multi-day scheduling (225 instances). XML format. https://www.schedulingbenchmarks.org
 - ROADEF 2007 (France Telecom). Technician routing & scheduling with skills and teams.
   https://roadef.org/challenge/2007/
 
@@ -1890,6 +1902,13 @@ Technician routing & scheduling:
   telecommunications company*. J. Scheduling 13:393–409.
 - Hashimoto, Boland & Savelsbergh (2018). *Technician routing with stochastic service
   times*. Transportation Science.
+
+Liner shipping:
+- Koza, Desaulniers & Ropke (2020). *Integrated liner shipping network design and
+  scheduling*. Transportation Science 54(2):512–533.
+  https://doi.org/10.1287/trsc.2018.0888
+- LINERLIB. Benchmark suite for liner shipping network design (7 base instances,
+  21 variants). https://github.com/blof/LINERLIB
 
 Scheduling:
 - Nowicki & Smutnicki (1996). *A fast taboo search for the job shop*. MS.
