@@ -144,3 +144,40 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME ils_test COMMAND ils_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  CLI tool tests                                                              #
+# --------------------------------------------------------------------------- #
+
+add_executable(cli_test cli/cli_test.cpp)
+target_link_libraries(cli_test PRIVATE Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(cli_test
+        PROPERTIES ENVIRONMENT "COSO_SOLVE_PATH=$<TARGET_FILE:coso-solve>"
+    )
+else()
+    add_test(NAME cli_test COMMAND cli_test)
+    set_property(TEST cli_test PROPERTY
+        ENVIRONMENT "COSO_SOLVE_PATH=$<TARGET_FILE:coso-solve>"
+    )
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Routing benchmark tests (require downloaded instances)                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(benchmark_test routing/benchmark_test.cpp)
+target_link_libraries(benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(benchmark_test
+        TEST_PREFIX "benchmark/"
+        PROPERTIES ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    )
+else()
+    add_test(NAME benchmark_test COMMAND benchmark_test)
+    set_property(TEST benchmark_test PROPERTY
+        ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    )
+endif()
