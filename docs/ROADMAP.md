@@ -1417,52 +1417,45 @@ public:
 
 ## 7. Implementation Roadmap
 
-Build-oriented steps. Each produces a working, tested solver for that problem
-type. "Extract don't abstract" — shared infrastructure emerges from routing,
-then gets reused by later engines.
+Each **work unit** (e.g., 1.1, 2.3, 5.7) is one PR. When you say "do 2.3",
+that means: create branch `2.3-route-load-resource`, implement it, open a PR.
 
-Steps are organized into **work units** that can be assigned to parallel agents.
-Each work unit touches a specific directory/file set to minimize merge conflicts.
-Dependencies between work units are marked with `←` arrows.
+Work units have explicit file ownership and dependencies. Agents check open
+branches and PRs before claiming a unit.
+
+"Extract don't abstract" — shared infrastructure emerges from routing, then
+gets reused by later engines.
 
 ### Step 1 — Repo skeleton + model headers
 
-```
-Deliverable: project compiles, tests run (trivially), model headers exist.
-Single agent. Foundation for everything else.
-```
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 1.1 | CMake + CI setup | Project compiles, `ctest` runs (0 tests) | CMakeLists.txt, cmake/, .github/ | — |
+| 1.2 | Shared types header | `types.h` with Coord, TimeWindow, CostParams, Result, TimeLimit | src/model/types.h | — |
+| 1.3 | Model headers (declarations only) | All 4 model classes declared, compile with no impl | src/model/routing_model.h, schedule_model.h, assignment_model.h, packing_model.h | 1.2 |
+| 1.4 | API contract tests | Tests that exercise model API (compile + link, assert on trivial cases) | tests/model/model_test.cpp | 1.1, 1.3 |
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 1.1 | CMake + CI | CMakeLists.txt, cmake/, .github/ | — |
-| 1.2 | Shared types | src/model/types.h | — |
-| 1.3 | Model headers | src/model/routing_model.h, schedule_model.h, assignment_model.h, packing_model.h | 1.2 |
-| 1.4 | API contract tests | tests/model/model_test.cpp | 1.3 |
+1.1 and 1.2 are parallel. 1.3 needs 1.2. 1.4 needs 1.1 + 1.3.
 
 ### Step 2 — CVRP end-to-end
 
-```
-Deliverable: user can solve CVRP instances from RoutingModel API or CVRPLIB files.
-```
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 2.1 | CVRPLIB instance reader | Parse .vrp files into structured data | src/model/instance_reader.{h,cpp}, tests | 1.2 |
+| 2.2 | ProblemData (compiled instance) | Distance matrix, client/depot/vehicle attributes from model | src/routing/problem_data.{h,cpp}, tests | 1.2 |
+| 2.3 | Route + LoadResource | Route with prefix/suffix resource arrays, LoadResource with init/merge/excess | src/routing/route.{h,cpp}, src/routing/resources/load_resource.h, tests | 2.2 |
+| 2.4 | Solution + CostEvaluator | Multi-route solution, objective + penalty evaluation | src/routing/solution.{h,cpp}, src/routing/cost_evaluator.{h,cpp}, tests | 2.3 |
+| 2.5 | Exchange operators | Exchange(1,0), (1,1), (2,0), SwapTails with O(1) move eval | src/routing/operators/exchange.{h,cpp}, tests | 2.3, 2.4 |
+| 2.6 | Local search engine | Granular neighbourhood (k=40), steepest descent over operators | src/routing/local_search.{h,cpp}, src/routing/neighbours.{h,cpp}, tests | 2.5 |
+| 2.7 | Construction heuristic | Nearest-neighbour + Clarke-Wright savings | src/routing/construction.{h,cpp}, tests | 2.4 |
+| 2.8 | ILS + stop criterion | Ruin-and-recreate + late acceptance, time/iter/no-improve limits | src/search/iterated_local_search.{h,cpp}, src/search/stop_criterion.{h,cpp}, tests | 2.6, 2.7 |
+| 2.9 | RoutingModel implementation | Model → ProblemData → construct → ILS → Result | src/model/routing_model.cpp, tests | 2.2, 2.8 |
+| 2.10 | CLI | `primal-solve instance.vrp --time-limit 60` | src/cli/main.cpp | 2.9 |
+| 2.11 | Benchmark setup + first benchmarks | Download script, X-n101-k25 end-to-end test | tests/data/download_benchmarks.sh, tests/routing/benchmark_test.cpp | 2.1, 2.9 |
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 2.1 | Instance reader | src/model/instance_reader.{h,cpp} | 1.2 |
-| 2.2 | ProblemData | src/routing/problem_data.{h,cpp} | 1.2 |
-| 2.3 | Route + LoadResource | src/routing/route.{h,cpp}, src/routing/resources/load_resource.h | 2.2 |
-| 2.4 | Solution + CostEvaluator | src/routing/solution.{h,cpp}, src/routing/cost_evaluator.{h,cpp} | 2.3 |
-| 2.5 | Operators | src/routing/operators/exchange.{h,cpp} | 2.3, 2.4 |
-| 2.6 | Local search | src/routing/local_search.{h,cpp}, src/routing/neighbours.{h,cpp} | 2.5 |
-| 2.7 | Construction heuristic | src/routing/construction.{h,cpp} | 2.4 |
-| 2.8 | ILS + stop criterion | src/search/iterated_local_search.{h,cpp}, src/search/stop_criterion.{h,cpp} | 2.6, 2.7 |
-| 2.9 | RoutingModel impl | src/model/routing_model.cpp | 2.2, 2.8 |
-| 2.10 | CLI | src/cli/main.cpp | 2.9 |
-| 2.11 | Benchmark setup | tests/data/download_benchmarks.sh, tests/routing/ | 2.1, 2.9 |
-
-**Parallel lanes in step 2:**
-- Lane A (data): 2.1 → 2.2 → 2.3 → 2.4 → 2.5 → 2.6 → 2.8
-- Lane B (construction): 2.7 (parallel with 2.5/2.6, merges at 2.8)
-- Lane C (integration): 2.9 → 2.10 → 2.11 (after lanes A+B)
+**Parallel lanes:**
+- 2.1 and 2.2 are parallel (both only need 1.2)
+- 2.7 is parallel with 2.5/2.6 (both need 2.4, merge at 2.8)
 
 ### Step 3 — Routing benchmark quality
 
@@ -1470,17 +1463,17 @@ Deliverable: user can solve CVRP instances from RoutingModel API or CVRPLIB file
 Deliverable: <2% gap on Uchoa X-set in 60s. Competitive with PyVRP.
 ```
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 3.1 | SWAP* operator | src/routing/operators/swap_star.{h,cpp} | 2.5 |
-| 3.2 | Exchange(N,M) family | src/routing/operators/exchange.{h,cpp} (extend) | 2.5 |
-| 3.3 | Penalty manager | src/search/penalty_manager.{h,cpp} | 2.8 |
-| 3.4 | Composable acceptors | src/search/acceptance.{h,cpp} | 2.8 |
-| 3.5 | GLS | src/search/guided_local_search.{h,cpp} | 2.6 |
-| 3.6 | Operator selector + MAB | src/search/operator_selector.{h,cpp} | 2.8 |
-| 3.7 | Score corruption detection | src/search/score_assert.{h,cpp} | 2.4 |
-| 3.8 | Score explanation | src/search/score_analysis.{h,cpp} | 2.4 |
-| 3.9 | Benchmarker | src/search/benchmarker.{h,cpp} | 2.11 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 3.1 | SWAP* operator | SWAP* move with O(1) eval via best-insert cache | src/routing/operators/swap_star.{h,cpp} | 2.5 |
+| 3.2 | Extended exchange family | Exchange(N,M) for N,M up to 3 | src/routing/operators/exchange.{h,cpp} (extend) | 2.5 |
+| 3.3 | Adaptive penalty manager | Auto-tune capacity/TW penalty weights per iteration | src/search/penalty_manager.{h,cpp} | 2.8 |
+| 3.4 | Composable acceptance criteria | Late acceptance, simulated annealing, record-to-record | src/search/acceptance.{h,cpp} | 2.8 |
+| 3.5 | Guided local search | GLS with edge penalties for diversification | src/search/guided_local_search.{h,cpp} | 2.6 |
+| 3.6 | Operator selector (MAB) | Multi-armed bandit for operator selection | src/search/operator_selector.{h,cpp} | 2.8 |
+| 3.7 | Score corruption detection | Debug assertions verifying incremental vs full recompute | src/search/score_assert.{h,cpp} | 2.4 |
+| 3.8 | Score explanation | Human-readable cost breakdown for debugging | src/search/score_analysis.{h,cpp} | 2.4 |
+| 3.9 | Benchmark harness | Automated benchmark runner with CSV output + gap reporting | src/search/benchmarker.{h,cpp} | 2.11 |
 
 **All of 3.1–3.9 are parallel** — they touch different files. Integrate
 together at the end for benchmark runs.
@@ -1491,13 +1484,13 @@ together at the end for benchmark runs.
 Deliverable: portfolio solver (ILS + HGS) with shared solution pool.
 ```
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 4.1 | Population + diversity | src/search/population.{h,cpp} | 2.4 |
-| 4.2 | Crossover (SREX) | src/search/crossover.{h,cpp} | 2.4 |
-| 4.3 | Genetic algorithm | src/search/genetic_algorithm.{h,cpp} | 4.1, 4.2, 2.6 |
-| 4.4 | Portfolio solver | src/search/portfolio.{h,cpp} | 4.3, 2.8 |
-| 4.5 | Solution finalizer | src/search/solution_finalizer.{h,cpp} | 2.4 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 4.1 | Population with diversity management | Biased fitness with broken-pairs diversity | src/search/population.{h,cpp} | 2.4 |
+| 4.2 | SREX crossover | Selective route exchange crossover operator | src/search/crossover.{h,cpp} | 2.4 |
+| 4.3 | Genetic algorithm | HGS-style GA: select parents → crossover → educate → insert | src/search/genetic_algorithm.{h,cpp} | 4.1, 4.2, 2.6 |
+| 4.4 | Portfolio solver | ILS + HGS with shared solution pool, TBB parallel | src/search/portfolio.{h,cpp} | 4.3, 2.8 |
+| 4.5 | Solution finalizer | Post-optimization: inter-route moves at zero penalty | src/search/solution_finalizer.{h,cpp} | 2.4 |
 
 4.1, 4.2, 4.5 are parallel. 4.3 merges 4.1+4.2. 4.4 merges everything.
 
@@ -1509,28 +1502,28 @@ Deliverable: full-featured routing with time windows, fleet, PD, etc.
 
 **Resources (all parallel — each is a separate file):**
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 5.1 | DurationResource | src/routing/resources/duration_resource.h | 2.3 |
-| 5.2 | DistanceResource | src/routing/resources/distance_resource.h | 2.3 |
-| 5.3 | PrecedenceResource | src/routing/resources/precedence_resource.h | 2.3 |
-| 5.4 | BreakResource | src/routing/resources/break_resource.h | 2.3 |
-| 5.5 | SkillFilter | src/routing/resources/skill_filter.h | 2.3 |
-| 5.6 | Type incompatibility | src/routing/resources/type_incompatibility.h | 2.3 |
-| 5.7 | Depot resource | src/routing/resources/depot_resource.h | 2.3 |
-| 5.8 | TaskCountResource | src/routing/resources/task_count_resource.h | 2.3 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 5.1 | Duration resource | Time window feasibility with wait/late tracking | src/routing/resources/duration_resource.h | 2.3 |
+| 5.2 | Distance resource | Max distance / max duration per route | src/routing/resources/distance_resource.h | 2.3 |
+| 5.3 | Precedence resource | Pickup-before-delivery within same route | src/routing/resources/precedence_resource.h | 2.3 |
+| 5.4 | Break resource | Scheduled driver breaks within time windows | src/routing/resources/break_resource.h | 2.3 |
+| 5.5 | Skill filter | Vehicle-client compatibility (skills, zones) | src/routing/resources/skill_filter.h | 2.3 |
+| 5.6 | Type incompatibility | Clients that cannot share a route | src/routing/resources/type_incompatibility.h | 2.3 |
+| 5.7 | Depot resource | Multi-depot assignment with open/close times | src/routing/resources/depot_resource.h | 2.3 |
+| 5.8 | Task count resource | Min/max clients per route | src/routing/resources/task_count_resource.h | 2.3 |
 
 **Operators + features (parallel where noted):**
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 5.9 | Pair operators | src/routing/operators/pair_operators.{h,cpp} | 5.3 |
-| 5.10 | Multi-trip | src/routing/operators/relocate_with_depot.{h,cpp} | 2.5 |
-| 5.11 | RouteSplit | src/routing/operators/route_split.{h,cpp} | 2.5 |
-| 5.12 | Optional clients | src/routing/operators/insert_optional.{h,cpp} | 2.5 |
-| 5.13 | Warm start + pinning | src/search/warm_start.{h,cpp} | 2.8 |
-| 5.14 | Instance parsers | src/model/instance_reader.cpp (extend) | 2.1 |
-| 5.15 | VRPTW benchmarks | tests/routing/ (extend) | 5.1, 5.14 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 5.9 | Pair operators | Relocate-pair, swap-pair for pickup-delivery | src/routing/operators/pair_operators.{h,cpp} | 5.3 |
+| 5.10 | Multi-trip support | Relocate-with-depot-insert for multi-trip VRP | src/routing/operators/relocate_with_depot.{h,cpp} | 2.5 |
+| 5.11 | Route split operator | Split long routes at optimal point | src/routing/operators/route_split.{h,cpp} | 2.5 |
+| 5.12 | Optional client handling | Insert/remove operators for optional visits | src/routing/operators/insert_optional.{h,cpp} | 2.5 |
+| 5.13 | Warm start + pinning | Initialize from existing solution, pin fixed clients | src/search/warm_start.{h,cpp} | 2.8 |
+| 5.14 | Rich VRP instance parsers | Solomon, Li-Lim, Gehring-Homberger parsers | src/model/instance_reader.cpp (extend) | 2.1 |
+| 5.15 | VRPTW benchmarks | Solomon C1/R1/RC1 end-to-end gap tests | tests/routing/ (extend) | 5.1, 5.14 |
 
 **5.1–5.8 are all parallel.** 5.9–5.13 are parallel. 5.14 is independent.
 
@@ -1541,11 +1534,11 @@ Deliverable: `pip install primal-rsp`, Python API mirrors C++.
 Touches only python/ directory — can run parallel with step 5 resources.
 ```
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 6.1 | nanobind setup | python/bindings.cpp, pyproject.toml, CMakeLists.txt (extend) | 2.9 |
-| 6.2 | Routing bindings | python/bindings.cpp (routing section) | 2.9 |
-| 6.3 | Python tests | python/tests/ | 6.2 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 6.1 | nanobind + scikit-build-core setup | `pip install -e .` builds extension module | python/bindings.cpp, pyproject.toml, CMakeLists.txt (extend) | 2.9 |
+| 6.2 | RoutingModel Python bindings | `primal.RoutingModel` mirrors C++ API | python/bindings.cpp (routing section) | 2.9 |
+| 6.3 | Python test suite | pytest tests for model API + solve + result access | python/tests/ | 6.2 |
 
 ### Step 7 — Scheduling engine
 
@@ -1555,17 +1548,17 @@ Touches only src/scheduling/ and src/model/schedule_model.cpp — fully parallel
 with step 5 (rich VRP) and step 8 (assignment).
 ```
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 7.1 | ScheduleModel impl | src/model/schedule_model.cpp | 1.3 |
-| 7.2 | Disjunctive graph | src/scheduling/disjunctive_graph.{h,cpp} | — |
-| 7.3 | Schedule solution | src/scheduling/schedule_solution.{h,cpp} | 7.2 |
-| 7.4 | Schedule operators | src/scheduling/schedule_operators.{h,cpp} | 7.3 |
-| 7.5 | Construction (NEH, SGS) | src/scheduling/construction.{h,cpp} | 7.3 |
-| 7.6 | Mode selection | src/scheduling/mode_selection.{h,cpp} | 7.3 |
-| 7.7 | Scheduling perturbation | src/scheduling/perturbation/ | 7.4 |
-| 7.8 | Instance parsers | src/scheduling/parsers/ | 7.1 |
-| 7.9 | Benchmarks | tests/scheduling/ | 7.1, 7.4 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 7.1 | ScheduleModel implementation | Model → compiled instance for scheduling engine | src/model/schedule_model.cpp | 1.3 |
+| 7.2 | Disjunctive graph data structure | DAG with machine cliques, critical path computation | src/scheduling/disjunctive_graph.{h,cpp} | — |
+| 7.3 | Schedule solution representation | Start times, makespan, Gantt-chart output | src/scheduling/schedule_solution.{h,cpp} | 7.2 |
+| 7.4 | Schedule operators | N5/N7 neighbourhood: swap, insert, block moves | src/scheduling/schedule_operators.{h,cpp} | 7.3 |
+| 7.5 | Construction heuristics (NEH, SGS) | Priority-rule SGS for RCPSP, NEH for flow shop | src/scheduling/construction.{h,cpp} | 7.3 |
+| 7.6 | Mode selection for RCPSP | Multi-mode resource assignment with greedy + local search | src/scheduling/mode_selection.{h,cpp} | 7.3 |
+| 7.7 | Scheduling perturbation | Ruin-and-recreate for scheduling (random block removal) | src/scheduling/perturbation/ | 7.4 |
+| 7.8 | Scheduling instance parsers | Taillard, PSPLIB, FJSP parsers | src/scheduling/parsers/ | 7.1 |
+| 7.9 | Scheduling benchmarks | Taillard JSP + PSPLIB RCPSP gap tests | tests/scheduling/ | 7.1, 7.4 |
 
 **7.2, 7.5, 7.6, 7.8 are parallel.** Integration merges at 7.9.
 
@@ -1577,18 +1570,18 @@ Touches only src/assignment/ and src/model/assignment_model.cpp — fully
 parallel with step 7 (scheduling).
 ```
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 8.1 | AssignmentModel impl | src/model/assignment_model.cpp | 1.3 |
-| 8.2 | Assignment data + solution | src/assignment/assignment_data.{h,cpp}, assignment_solution.{h,cpp} | 8.1 |
-| 8.3 | Basic operators | src/assignment/operators/ | 8.2 |
-| 8.4 | Pillar operators | src/assignment/operators/pillar_*.{h,cpp} | 8.2 |
-| 8.5 | Construction (FFD) | src/assignment/construction.{h,cpp} | 8.2 |
-| 8.6 | Constraint evaluation | src/assignment/constraints/ | 8.2 |
-| 8.7 | Automaton constraint | src/assignment/constraints/automaton.{h,cpp} | 8.6 |
-| 8.8 | CP move filter | src/assignment/cp_filter.{h,cpp} | 8.6 |
-| 8.9 | Instance parsers | src/assignment/parsers/ | 8.1 |
-| 8.10 | Benchmarks | tests/assignment/ | 8.3, 8.9 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 8.1 | AssignmentModel implementation | Model → compiled instance for assignment engine | src/model/assignment_model.cpp | 1.3 |
+| 8.2 | Assignment data + solution | Shift/slot matrix, employee-day assignments, cost eval | src/assignment/assignment_data.{h,cpp}, assignment_solution.{h,cpp} | 8.1 |
+| 8.3 | Basic assignment operators | Swap-shift, move-shift, swap-block between employees | src/assignment/operators/ | 8.2 |
+| 8.4 | Pillar operators | Multi-employee column moves (VND-style) | src/assignment/operators/pillar_*.{h,cpp} | 8.2 |
+| 8.5 | Construction heuristic (FFD) | First-fit-decreasing for initial feasible roster | src/assignment/construction.{h,cpp} | 8.2 |
+| 8.6 | Constraint evaluation framework | Incremental soft/hard constraint delta computation | src/assignment/constraints/ | 8.2 |
+| 8.7 | Automaton constraint | DFA-based shift pattern rules (e.g., no 3 nights) | src/assignment/constraints/automaton.{h,cpp} | 8.6 |
+| 8.8 | CP move filter | Constraint propagation to prune infeasible moves | src/assignment/cp_filter.{h,cpp} | 8.6 |
+| 8.9 | Assignment instance parsers | NRP, XML roster format parsers | src/assignment/parsers/ | 8.1 |
+| 8.10 | Assignment benchmarks | schedulingbenchmarks.org NRP gap tests | tests/assignment/ | 8.3, 8.9 |
 
 **8.3, 8.4, 8.5, 8.6, 8.9 are parallel.** 8.7 and 8.8 depend on 8.6.
 
@@ -1599,13 +1592,13 @@ Deliverable: solve bin packing from PackingModel API.
 Touches only src/packing/ — parallel with step 7, 8.
 ```
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 9.1 | PackingModel impl | src/model/packing_model.cpp | 1.3 |
-| 9.2 | Packing solution | src/packing/packing_solution.{h,cpp} | 9.1 |
-| 9.3 | Operators | src/packing/packing_operators.{h,cpp} | 9.2 |
-| 9.4 | Bin capacity tracking | src/packing/bin_capacity.{h,cpp} | 9.2 |
-| 9.5 | Benchmarks | tests/packing/ | 9.3 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 9.1 | PackingModel implementation | Model → compiled instance for packing engine | src/model/packing_model.cpp | 1.3 |
+| 9.2 | Packing solution representation | Bin assignments, load tracking, cost eval | src/packing/packing_solution.{h,cpp} | 9.1 |
+| 9.3 | Packing operators | Move-item, swap-items, split-bin, merge-bin | src/packing/packing_operators.{h,cpp} | 9.2 |
+| 9.4 | Bin capacity tracking | Multi-dimensional capacity with incremental updates | src/packing/bin_capacity.{h,cpp} | 9.2 |
+| 9.5 | Packing benchmarks | Falkenauer, Scholl bin packing gap tests | tests/packing/ | 9.3 |
 
 ### Step 10 — Advanced features
 
@@ -1614,18 +1607,18 @@ Deliverable: production-ready features across all engines.
 Each work unit is independent — max parallelism.
 ```
 
-| ID | Work unit | Files | Depends on |
-|----|-----------|-------|------------|
-| 10.1 | Partitioned search | src/search/partitioned_search.{h,cpp} | 2.6 |
-| 10.2 | Daemon mode | src/search/daemon.{h,cpp} | 2.8 |
-| 10.3 | Replanning (routing) | src/search/warm_start.cpp (extend) | 5.13 |
-| 10.4 | Replanning (assignment) | src/assignment/ (extend) | 8.3 |
-| 10.5 | Overconstrained | src/routing/, src/assignment/ (extend) | 2.4, 8.2 |
-| 10.6 | Piecewise linear costs | src/routing/cost_evaluator.cpp (extend) | 2.4 |
-| 10.7 | Extended routing | src/routing/resources/ (new resources) | 2.3 |
-| 10.8 | Extended scheduling | src/scheduling/ (extend) | 7.4 |
-| 10.9 | Lot sizing | src/lotsizing/ | 1.2 |
-| 10.10 | Network flow | src/network/ | 1.2 |
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 10.1 | Partitioned search | Decompose large instances into sub-problems | src/search/partitioned_search.{h,cpp} | 2.6 |
+| 10.2 | Daemon mode | Continuous solving with dynamic updates | src/search/daemon.{h,cpp} | 2.8 |
+| 10.3 | Routing replanning | Re-optimize with fixed/pinned clients, warm start | src/search/warm_start.cpp (extend) | 5.13 |
+| 10.4 | Assignment replanning | Re-roster with locked shifts and new constraints | src/assignment/ (extend) | 8.3 |
+| 10.5 | Overconstrained handling | Soft violations with cost penalties for infeasible instances | src/routing/, src/assignment/ (extend) | 2.4, 8.2 |
+| 10.6 | Piecewise linear costs | Non-linear distance/duration cost functions | src/routing/cost_evaluator.cpp (extend) | 2.4 |
+| 10.7 | Extended routing resources | Compartments, loading constraints, sync visits | src/routing/resources/ (new resources) | 2.3 |
+| 10.8 | Extended scheduling | Setup times, sequence-dependent setups, calendars | src/scheduling/ (extend) | 7.4 |
+| 10.9 | Lot sizing engine | CLSP/MLCLSP, delegates to mip-heuristics | src/lotsizing/ | 1.2 |
+| 10.10 | Network flow engine | MCF/RCMCF, column generation for liner shipping | src/network/ | 1.2 |
 
 ### Parallelism summary
 
