@@ -527,6 +527,894 @@ void Exchange20::apply(Solution& sol) const
 }
 
 // ===========================================================================
+//  Exchange(2,1) -- Swap pair with single
+// ===========================================================================
+
+bool Exchange21::find_best_move(Solution const& sol,
+                                CostEvaluator const& eval,
+                                ProblemData const& data)
+{
+    best_delta_ = 0;
+    route_a_ = -1;
+
+    auto locations = build_client_locations(sol);
+
+    for (int ra = 0; ra < sol.num_routes(); ++ra) {
+        auto const& route_a = sol.route(ra);
+        if (route_a.size() < 2)
+            continue;
+
+        for (int pa = 0; pa + 1 < route_a.size(); ++pa) {
+            int u1 = route_a.client(pa);
+            int u2 = route_a.client(pa + 1);
+
+            auto try_swap = [&](int rb, int pb) {
+                if (rb == ra)
+                    return;
+
+                auto const& route_b = sol.route(rb);
+                int v = route_b.client(pb);
+
+                // Build new route A: replace pair at pa,pa+1 with single v.
+                std::vector<int> new_a;
+                new_a.reserve(route_a.size() - 1);
+                for (int i = 0; i < route_a.size(); ++i) {
+                    if (i == pa)
+                        new_a.push_back(v);
+                    else if (i == pa + 1)
+                        continue;
+                    else
+                        new_a.push_back(route_a.client(i));
+                }
+
+                // Build new route B: replace single at pb with pair u1,u2.
+                std::vector<int> new_b;
+                new_b.reserve(route_b.size() + 1);
+                for (int i = 0; i < route_b.size(); ++i) {
+                    if (i == pb) {
+                        new_b.push_back(u1);
+                        new_b.push_back(u2);
+                    } else {
+                        new_b.push_back(route_b.client(i));
+                    }
+                }
+
+                Route temp_a(data, route_a.vehicle_type());
+                temp_a.set_clients(std::move(new_a));
+                Route temp_b(data, route_b.vehicle_type());
+                temp_b.set_clients(std::move(new_b));
+
+                int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b)
+                              - eval.route_cost(route_a) - eval.route_cost(route_b);
+
+                if (delta < best_delta_) {
+                    best_delta_ = delta;
+                    route_a_ = ra;
+                    pos_a_   = pa;
+                    route_b_ = rb;
+                    pos_b_   = pb;
+                }
+            };
+
+            if (data.granular_k() > 0) {
+                std::vector<bool> route_seen(sol.num_routes(), false);
+                route_seen[ra] = true;
+                for (int c : {u1, u2}) {
+                    auto nbrs = data.neighbours(c);
+                    for (int nb_node : nbrs) {
+                        if (nb_node < data.num_depots())
+                            continue;
+                        int nb_client = nb_node - data.num_depots();
+                        auto const& loc = locations[nb_client];
+                        if (loc.route < 0 || route_seen[loc.route])
+                            continue;
+                        route_seen[loc.route] = true;
+                        auto const& rb_route = sol.route(loc.route);
+                        for (int pb = 0; pb < rb_route.size(); ++pb)
+                            try_swap(loc.route, pb);
+                    }
+                }
+            } else {
+                for (int rb = 0; rb < sol.num_routes(); ++rb) {
+                    if (rb == ra)
+                        continue;
+                    auto const& route_b = sol.route(rb);
+                    for (int pb = 0; pb < route_b.size(); ++pb)
+                        try_swap(rb, pb);
+                }
+            }
+        }
+    }
+
+    return best_delta_ < 0;
+}
+
+void Exchange21::apply(Solution& sol) const
+{
+    assert(route_a_ >= 0);
+
+    auto const& ra = sol.route(route_a_);
+    auto const& rb = sol.route(route_b_);
+
+    int u1 = ra.client(pos_a_);
+    int u2 = ra.client(pos_a_ + 1);
+    int v  = rb.client(pos_b_);
+
+    std::vector<int> new_a;
+    new_a.reserve(ra.size() - 1);
+    for (int i = 0; i < ra.size(); ++i) {
+        if (i == pos_a_)
+            new_a.push_back(v);
+        else if (i == pos_a_ + 1)
+            continue;
+        else
+            new_a.push_back(ra.client(i));
+    }
+
+    std::vector<int> new_b;
+    new_b.reserve(rb.size() + 1);
+    for (int i = 0; i < rb.size(); ++i) {
+        if (i == pos_b_) {
+            new_b.push_back(u1);
+            new_b.push_back(u2);
+        } else {
+            new_b.push_back(rb.client(i));
+        }
+    }
+
+    sol.set_route_clients(route_a_, {});
+    sol.set_route_clients(route_b_, {});
+    sol.set_route_clients(route_a_, std::move(new_a));
+    sol.set_route_clients(route_b_, std::move(new_b));
+}
+
+// ===========================================================================
+//  Exchange(2,2) -- Swap pair with pair
+// ===========================================================================
+
+bool Exchange22::find_best_move(Solution const& sol,
+                                CostEvaluator const& eval,
+                                ProblemData const& data)
+{
+    best_delta_ = 0;
+    route_a_ = -1;
+
+    auto locations = build_client_locations(sol);
+
+    for (int ra = 0; ra < sol.num_routes(); ++ra) {
+        auto const& route_a = sol.route(ra);
+        if (route_a.size() < 2)
+            continue;
+
+        for (int pa = 0; pa + 1 < route_a.size(); ++pa) {
+            int u1 = route_a.client(pa);
+            int u2 = route_a.client(pa + 1);
+
+            auto try_swap = [&](int rb, int pb) {
+                // Avoid double-counting: only consider rb > ra,
+                // or rb == ra with pb > pa+1 (non-overlapping intra-route).
+                if (rb < ra || (rb == ra && pb <= pa + 1))
+                    return;
+
+                auto const& route_b = sol.route(rb);
+                if (pb + 1 >= route_b.size())
+                    return;
+
+                int v1 = route_b.client(pb);
+                int v2 = route_b.client(pb + 1);
+
+                if (ra == rb) {
+                    // Intra-route: build single new route.
+                    std::vector<int> new_clients;
+                    new_clients.reserve(route_a.size());
+                    for (int i = 0; i < route_a.size(); ++i) {
+                        if (i == pa) new_clients.push_back(v1);
+                        else if (i == pa + 1) new_clients.push_back(v2);
+                        else if (i == pb) new_clients.push_back(u1);
+                        else if (i == pb + 1) new_clients.push_back(u2);
+                        else new_clients.push_back(route_a.client(i));
+                    }
+                    Route temp(data, route_a.vehicle_type());
+                    temp.set_clients(std::move(new_clients));
+                    int64_t delta = eval.route_cost(temp) - eval.route_cost(route_a);
+
+                    if (delta < best_delta_) {
+                        best_delta_ = delta;
+                        route_a_ = ra;
+                        pos_a_   = pa;
+                        route_b_ = rb;
+                        pos_b_   = pb;
+                    }
+                } else {
+                    // Inter-route: replace pair in A with pair from B.
+                    std::vector<int> new_a;
+                    new_a.reserve(route_a.size());
+                    for (int i = 0; i < route_a.size(); ++i) {
+                        if (i == pa) new_a.push_back(v1);
+                        else if (i == pa + 1) new_a.push_back(v2);
+                        else new_a.push_back(route_a.client(i));
+                    }
+                    std::vector<int> new_b;
+                    new_b.reserve(route_b.size());
+                    for (int i = 0; i < route_b.size(); ++i) {
+                        if (i == pb) new_b.push_back(u1);
+                        else if (i == pb + 1) new_b.push_back(u2);
+                        else new_b.push_back(route_b.client(i));
+                    }
+
+                    Route temp_a(data, route_a.vehicle_type());
+                    temp_a.set_clients(std::move(new_a));
+                    Route temp_b(data, route_b.vehicle_type());
+                    temp_b.set_clients(std::move(new_b));
+
+                    int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b)
+                                  - eval.route_cost(route_a) - eval.route_cost(route_b);
+
+                    if (delta < best_delta_) {
+                        best_delta_ = delta;
+                        route_a_ = ra;
+                        pos_a_   = pa;
+                        route_b_ = rb;
+                        pos_b_   = pb;
+                    }
+                }
+            };
+
+            if (data.granular_k() > 0) {
+                std::vector<bool> route_seen(sol.num_routes(), false);
+                for (int c : {u1, u2}) {
+                    auto nbrs = data.neighbours(c);
+                    for (int nb_node : nbrs) {
+                        if (nb_node < data.num_depots())
+                            continue;
+                        int nb_client = nb_node - data.num_depots();
+                        auto const& loc = locations[nb_client];
+                        if (loc.route < 0 || route_seen[loc.route])
+                            continue;
+                        route_seen[loc.route] = true;
+                        auto const& rb_route = sol.route(loc.route);
+                        for (int pb = 0; pb + 1 < rb_route.size(); ++pb)
+                            try_swap(loc.route, pb);
+                    }
+                }
+            } else {
+                for (int rb = ra; rb < sol.num_routes(); ++rb) {
+                    auto const& route_b = sol.route(rb);
+                    int start = (rb == ra) ? pa + 2 : 0;
+                    for (int pb = start; pb + 1 < route_b.size(); ++pb)
+                        try_swap(rb, pb);
+                }
+            }
+        }
+    }
+
+    return best_delta_ < 0;
+}
+
+void Exchange22::apply(Solution& sol) const
+{
+    assert(route_a_ >= 0);
+
+    auto const& ra = sol.route(route_a_);
+    auto const& rb = sol.route(route_b_);
+
+    int u1 = ra.client(pos_a_);
+    int u2 = ra.client(pos_a_ + 1);
+    int v1 = rb.client(pos_b_);
+    int v2 = rb.client(pos_b_ + 1);
+
+    if (route_a_ == route_b_) {
+        std::vector<int> new_clients;
+        new_clients.reserve(ra.size());
+        for (int i = 0; i < ra.size(); ++i) {
+            if (i == pos_a_) new_clients.push_back(v1);
+            else if (i == pos_a_ + 1) new_clients.push_back(v2);
+            else if (i == pos_b_) new_clients.push_back(u1);
+            else if (i == pos_b_ + 1) new_clients.push_back(u2);
+            else new_clients.push_back(ra.client(i));
+        }
+        sol.set_route_clients(route_a_, std::move(new_clients));
+    } else {
+        std::vector<int> new_a, new_b;
+        new_a.reserve(ra.size());
+        new_b.reserve(rb.size());
+        for (int i = 0; i < ra.size(); ++i) {
+            if (i == pos_a_) new_a.push_back(v1);
+            else if (i == pos_a_ + 1) new_a.push_back(v2);
+            else new_a.push_back(ra.client(i));
+        }
+        for (int i = 0; i < rb.size(); ++i) {
+            if (i == pos_b_) new_b.push_back(u1);
+            else if (i == pos_b_ + 1) new_b.push_back(u2);
+            else new_b.push_back(rb.client(i));
+        }
+        sol.set_route_clients(route_a_, {});
+        sol.set_route_clients(route_b_, {});
+        sol.set_route_clients(route_a_, std::move(new_a));
+        sol.set_route_clients(route_b_, std::move(new_b));
+    }
+}
+
+// ===========================================================================
+//  Exchange(3,0) -- Relocate triple (Or-opt-3)
+// ===========================================================================
+
+bool Exchange30::find_best_move(Solution const& sol,
+                                CostEvaluator const& eval,
+                                ProblemData const& data)
+{
+    best_delta_ = 0;
+    from_route_ = -1;
+
+    auto locations = build_client_locations(sol);
+
+    for (int ra = 0; ra < sol.num_routes(); ++ra) {
+        auto const& route_a = sol.route(ra);
+        if (route_a.size() < 3)
+            continue;
+
+        for (int pa = 0; pa + 2 < route_a.size(); ++pa) {
+            int c1 = route_a.client(pa);
+            int c2 = route_a.client(pa + 1);
+            int c3 = route_a.client(pa + 2);
+
+            // Evaluate removal of triple using temporary route.
+            std::vector<int> reduced;
+            reduced.reserve(route_a.size() - 3);
+            for (int i = 0; i < route_a.size(); ++i)
+                if (i < pa || i > pa + 2)
+                    reduced.push_back(route_a.client(i));
+            Route temp_reduced(data, route_a.vehicle_type());
+            temp_reduced.set_clients(std::move(reduced));
+            int64_t remove_delta = eval.route_cost(temp_reduced)
+                                 - eval.route_cost(route_a);
+
+            auto try_route = [&](int rb) {
+                if (rb == ra)
+                    return;
+                auto const& route_b = sol.route(rb);
+                for (int pb = 0; pb <= route_b.size(); ++pb) {
+                    std::vector<int> new_b;
+                    new_b.reserve(route_b.size() + 3);
+                    for (int i = 0; i < pb; ++i)
+                        new_b.push_back(route_b.client(i));
+                    new_b.push_back(c1);
+                    new_b.push_back(c2);
+                    new_b.push_back(c3);
+                    for (int i = pb; i < route_b.size(); ++i)
+                        new_b.push_back(route_b.client(i));
+
+                    Route temp_b(data, route_b.vehicle_type());
+                    temp_b.set_clients(std::move(new_b));
+                    int64_t insert_delta = eval.route_cost(temp_b)
+                                         - eval.route_cost(route_b);
+                    int64_t delta = remove_delta + insert_delta;
+
+                    if (delta < best_delta_) {
+                        best_delta_ = delta;
+                        from_route_ = ra;
+                        from_pos_   = pa;
+                        to_route_   = rb;
+                        to_pos_     = pb;
+                    }
+                }
+            };
+
+            if (data.granular_k() > 0) {
+                std::vector<bool> route_seen(sol.num_routes(), false);
+                route_seen[ra] = true;
+                for (int c : {c1, c2, c3}) {
+                    auto nbrs = data.neighbours(c);
+                    for (int nb_node : nbrs) {
+                        if (nb_node < data.num_depots())
+                            continue;
+                        int nb_client = nb_node - data.num_depots();
+                        auto const& loc = locations[nb_client];
+                        if (loc.route < 0 || route_seen[loc.route])
+                            continue;
+                        route_seen[loc.route] = true;
+                        try_route(loc.route);
+                    }
+                }
+            } else {
+                for (int rb = 0; rb < sol.num_routes(); ++rb)
+                    try_route(rb);
+            }
+        }
+    }
+
+    return best_delta_ < 0;
+}
+
+void Exchange30::apply(Solution& sol) const
+{
+    assert(from_route_ >= 0);
+
+    int c1 = sol.route(from_route_).client(from_pos_);
+    int c2 = sol.route(from_route_).client(from_pos_ + 1);
+    int c3 = sol.route(from_route_).client(from_pos_ + 2);
+
+    sol.remove_client(from_route_, from_pos_ + 2);
+    sol.remove_client(from_route_, from_pos_ + 1);
+    sol.remove_client(from_route_, from_pos_);
+
+    sol.insert_client(to_route_, to_pos_, c1);
+    sol.insert_client(to_route_, to_pos_ + 1, c2);
+    sol.insert_client(to_route_, to_pos_ + 2, c3);
+}
+
+// ===========================================================================
+//  Exchange(3,1) -- Swap triple with single
+// ===========================================================================
+
+bool Exchange31::find_best_move(Solution const& sol,
+                                CostEvaluator const& eval,
+                                ProblemData const& data)
+{
+    best_delta_ = 0;
+    route_a_ = -1;
+
+    auto locations = build_client_locations(sol);
+
+    for (int ra = 0; ra < sol.num_routes(); ++ra) {
+        auto const& route_a = sol.route(ra);
+        if (route_a.size() < 3)
+            continue;
+
+        for (int pa = 0; pa + 2 < route_a.size(); ++pa) {
+            int u1 = route_a.client(pa);
+            int u2 = route_a.client(pa + 1);
+            int u3 = route_a.client(pa + 2);
+
+            auto try_swap = [&](int rb, int pb) {
+                if (rb == ra)
+                    return;
+
+                auto const& route_b = sol.route(rb);
+                int v = route_b.client(pb);
+
+                std::vector<int> new_a;
+                new_a.reserve(route_a.size() - 2);
+                for (int i = 0; i < route_a.size(); ++i) {
+                    if (i == pa) new_a.push_back(v);
+                    else if (i == pa + 1 || i == pa + 2) continue;
+                    else new_a.push_back(route_a.client(i));
+                }
+
+                std::vector<int> new_b;
+                new_b.reserve(route_b.size() + 2);
+                for (int i = 0; i < route_b.size(); ++i) {
+                    if (i == pb) {
+                        new_b.push_back(u1);
+                        new_b.push_back(u2);
+                        new_b.push_back(u3);
+                    } else {
+                        new_b.push_back(route_b.client(i));
+                    }
+                }
+
+                Route temp_a(data, route_a.vehicle_type());
+                temp_a.set_clients(std::move(new_a));
+                Route temp_b(data, route_b.vehicle_type());
+                temp_b.set_clients(std::move(new_b));
+
+                int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b)
+                              - eval.route_cost(route_a) - eval.route_cost(route_b);
+
+                if (delta < best_delta_) {
+                    best_delta_ = delta;
+                    route_a_ = ra;
+                    pos_a_   = pa;
+                    route_b_ = rb;
+                    pos_b_   = pb;
+                }
+            };
+
+            if (data.granular_k() > 0) {
+                std::vector<bool> route_seen(sol.num_routes(), false);
+                route_seen[ra] = true;
+                for (int c : {u1, u2, u3}) {
+                    auto nbrs = data.neighbours(c);
+                    for (int nb_node : nbrs) {
+                        if (nb_node < data.num_depots())
+                            continue;
+                        int nb_client = nb_node - data.num_depots();
+                        auto const& loc = locations[nb_client];
+                        if (loc.route < 0 || route_seen[loc.route])
+                            continue;
+                        route_seen[loc.route] = true;
+                        auto const& rb_route = sol.route(loc.route);
+                        for (int pb = 0; pb < rb_route.size(); ++pb)
+                            try_swap(loc.route, pb);
+                    }
+                }
+            } else {
+                for (int rb = 0; rb < sol.num_routes(); ++rb) {
+                    if (rb == ra) continue;
+                    auto const& route_b = sol.route(rb);
+                    for (int pb = 0; pb < route_b.size(); ++pb)
+                        try_swap(rb, pb);
+                }
+            }
+        }
+    }
+
+    return best_delta_ < 0;
+}
+
+void Exchange31::apply(Solution& sol) const
+{
+    assert(route_a_ >= 0);
+
+    auto const& ra = sol.route(route_a_);
+    auto const& rb = sol.route(route_b_);
+
+    int u1 = ra.client(pos_a_);
+    int u2 = ra.client(pos_a_ + 1);
+    int u3 = ra.client(pos_a_ + 2);
+    int v  = rb.client(pos_b_);
+
+    std::vector<int> new_a;
+    new_a.reserve(ra.size() - 2);
+    for (int i = 0; i < ra.size(); ++i) {
+        if (i == pos_a_) new_a.push_back(v);
+        else if (i == pos_a_ + 1 || i == pos_a_ + 2) continue;
+        else new_a.push_back(ra.client(i));
+    }
+
+    std::vector<int> new_b;
+    new_b.reserve(rb.size() + 2);
+    for (int i = 0; i < rb.size(); ++i) {
+        if (i == pos_b_) {
+            new_b.push_back(u1);
+            new_b.push_back(u2);
+            new_b.push_back(u3);
+        } else {
+            new_b.push_back(rb.client(i));
+        }
+    }
+
+    sol.set_route_clients(route_a_, {});
+    sol.set_route_clients(route_b_, {});
+    sol.set_route_clients(route_a_, std::move(new_a));
+    sol.set_route_clients(route_b_, std::move(new_b));
+}
+
+// ===========================================================================
+//  Exchange(3,2) -- Swap triple with pair
+// ===========================================================================
+
+bool Exchange32::find_best_move(Solution const& sol,
+                                CostEvaluator const& eval,
+                                ProblemData const& data)
+{
+    best_delta_ = 0;
+    route_a_ = -1;
+
+    auto locations = build_client_locations(sol);
+
+    for (int ra = 0; ra < sol.num_routes(); ++ra) {
+        auto const& route_a = sol.route(ra);
+        if (route_a.size() < 3)
+            continue;
+
+        for (int pa = 0; pa + 2 < route_a.size(); ++pa) {
+            int u1 = route_a.client(pa);
+            int u2 = route_a.client(pa + 1);
+            int u3 = route_a.client(pa + 2);
+
+            auto try_swap = [&](int rb, int pb) {
+                if (rb == ra)
+                    return;
+
+                auto const& route_b = sol.route(rb);
+                if (pb + 1 >= route_b.size())
+                    return;
+
+                int v1 = route_b.client(pb);
+                int v2 = route_b.client(pb + 1);
+
+                std::vector<int> new_a;
+                new_a.reserve(route_a.size() - 1);
+                for (int i = 0; i < route_a.size(); ++i) {
+                    if (i == pa) {
+                        new_a.push_back(v1);
+                        new_a.push_back(v2);
+                    } else if (i == pa + 1 || i == pa + 2) {
+                        continue;
+                    } else {
+                        new_a.push_back(route_a.client(i));
+                    }
+                }
+
+                std::vector<int> new_b;
+                new_b.reserve(route_b.size() + 1);
+                for (int i = 0; i < route_b.size(); ++i) {
+                    if (i == pb) {
+                        new_b.push_back(u1);
+                        new_b.push_back(u2);
+                        new_b.push_back(u3);
+                    } else if (i == pb + 1) {
+                        continue;
+                    } else {
+                        new_b.push_back(route_b.client(i));
+                    }
+                }
+
+                Route temp_a(data, route_a.vehicle_type());
+                temp_a.set_clients(std::move(new_a));
+                Route temp_b(data, route_b.vehicle_type());
+                temp_b.set_clients(std::move(new_b));
+
+                int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b)
+                              - eval.route_cost(route_a) - eval.route_cost(route_b);
+
+                if (delta < best_delta_) {
+                    best_delta_ = delta;
+                    route_a_ = ra;
+                    pos_a_   = pa;
+                    route_b_ = rb;
+                    pos_b_   = pb;
+                }
+            };
+
+            if (data.granular_k() > 0) {
+                std::vector<bool> route_seen(sol.num_routes(), false);
+                route_seen[ra] = true;
+                for (int c : {u1, u2, u3}) {
+                    auto nbrs = data.neighbours(c);
+                    for (int nb_node : nbrs) {
+                        if (nb_node < data.num_depots())
+                            continue;
+                        int nb_client = nb_node - data.num_depots();
+                        auto const& loc = locations[nb_client];
+                        if (loc.route < 0 || route_seen[loc.route])
+                            continue;
+                        route_seen[loc.route] = true;
+                        auto const& rb_route = sol.route(loc.route);
+                        for (int pb = 0; pb + 1 < rb_route.size(); ++pb)
+                            try_swap(loc.route, pb);
+                    }
+                }
+            } else {
+                for (int rb = 0; rb < sol.num_routes(); ++rb) {
+                    if (rb == ra) continue;
+                    auto const& route_b = sol.route(rb);
+                    for (int pb = 0; pb + 1 < route_b.size(); ++pb)
+                        try_swap(rb, pb);
+                }
+            }
+        }
+    }
+
+    return best_delta_ < 0;
+}
+
+void Exchange32::apply(Solution& sol) const
+{
+    assert(route_a_ >= 0);
+
+    auto const& ra = sol.route(route_a_);
+    auto const& rb = sol.route(route_b_);
+
+    int u1 = ra.client(pos_a_);
+    int u2 = ra.client(pos_a_ + 1);
+    int u3 = ra.client(pos_a_ + 2);
+    int v1 = rb.client(pos_b_);
+    int v2 = rb.client(pos_b_ + 1);
+
+    std::vector<int> new_a;
+    new_a.reserve(ra.size() - 1);
+    for (int i = 0; i < ra.size(); ++i) {
+        if (i == pos_a_) {
+            new_a.push_back(v1);
+            new_a.push_back(v2);
+        } else if (i == pos_a_ + 1 || i == pos_a_ + 2) {
+            continue;
+        } else {
+            new_a.push_back(ra.client(i));
+        }
+    }
+
+    std::vector<int> new_b;
+    new_b.reserve(rb.size() + 1);
+    for (int i = 0; i < rb.size(); ++i) {
+        if (i == pos_b_) {
+            new_b.push_back(u1);
+            new_b.push_back(u2);
+            new_b.push_back(u3);
+        } else if (i == pos_b_ + 1) {
+            continue;
+        } else {
+            new_b.push_back(rb.client(i));
+        }
+    }
+
+    sol.set_route_clients(route_a_, {});
+    sol.set_route_clients(route_b_, {});
+    sol.set_route_clients(route_a_, std::move(new_a));
+    sol.set_route_clients(route_b_, std::move(new_b));
+}
+
+// ===========================================================================
+//  Exchange(3,3) -- Swap triple with triple
+// ===========================================================================
+
+bool Exchange33::find_best_move(Solution const& sol,
+                                CostEvaluator const& eval,
+                                ProblemData const& data)
+{
+    best_delta_ = 0;
+    route_a_ = -1;
+
+    auto locations = build_client_locations(sol);
+
+    for (int ra = 0; ra < sol.num_routes(); ++ra) {
+        auto const& route_a = sol.route(ra);
+        if (route_a.size() < 3)
+            continue;
+
+        for (int pa = 0; pa + 2 < route_a.size(); ++pa) {
+            int u1 = route_a.client(pa);
+            int u2 = route_a.client(pa + 1);
+            int u3 = route_a.client(pa + 2);
+
+            auto try_swap = [&](int rb, int pb) {
+                // Avoid double-counting.
+                if (rb < ra || (rb == ra && pb <= pa + 2))
+                    return;
+
+                auto const& route_b = sol.route(rb);
+                if (pb + 2 >= route_b.size())
+                    return;
+
+                int v1 = route_b.client(pb);
+                int v2 = route_b.client(pb + 1);
+                int v3 = route_b.client(pb + 2);
+
+                if (ra == rb) {
+                    std::vector<int> new_clients;
+                    new_clients.reserve(route_a.size());
+                    for (int i = 0; i < route_a.size(); ++i) {
+                        if (i == pa) new_clients.push_back(v1);
+                        else if (i == pa + 1) new_clients.push_back(v2);
+                        else if (i == pa + 2) new_clients.push_back(v3);
+                        else if (i == pb) new_clients.push_back(u1);
+                        else if (i == pb + 1) new_clients.push_back(u2);
+                        else if (i == pb + 2) new_clients.push_back(u3);
+                        else new_clients.push_back(route_a.client(i));
+                    }
+                    Route temp(data, route_a.vehicle_type());
+                    temp.set_clients(std::move(new_clients));
+                    int64_t delta = eval.route_cost(temp)
+                                  - eval.route_cost(route_a);
+
+                    if (delta < best_delta_) {
+                        best_delta_ = delta;
+                        route_a_ = ra;
+                        pos_a_   = pa;
+                        route_b_ = rb;
+                        pos_b_   = pb;
+                    }
+                } else {
+                    std::vector<int> new_a, new_b;
+                    new_a.reserve(route_a.size());
+                    new_b.reserve(route_b.size());
+                    for (int i = 0; i < route_a.size(); ++i) {
+                        if (i == pa) new_a.push_back(v1);
+                        else if (i == pa + 1) new_a.push_back(v2);
+                        else if (i == pa + 2) new_a.push_back(v3);
+                        else new_a.push_back(route_a.client(i));
+                    }
+                    for (int i = 0; i < route_b.size(); ++i) {
+                        if (i == pb) new_b.push_back(u1);
+                        else if (i == pb + 1) new_b.push_back(u2);
+                        else if (i == pb + 2) new_b.push_back(u3);
+                        else new_b.push_back(route_b.client(i));
+                    }
+
+                    Route temp_a(data, route_a.vehicle_type());
+                    temp_a.set_clients(std::move(new_a));
+                    Route temp_b(data, route_b.vehicle_type());
+                    temp_b.set_clients(std::move(new_b));
+
+                    int64_t delta = eval.route_cost(temp_a)
+                                  + eval.route_cost(temp_b)
+                                  - eval.route_cost(route_a)
+                                  - eval.route_cost(route_b);
+
+                    if (delta < best_delta_) {
+                        best_delta_ = delta;
+                        route_a_ = ra;
+                        pos_a_   = pa;
+                        route_b_ = rb;
+                        pos_b_   = pb;
+                    }
+                }
+            };
+
+            if (data.granular_k() > 0) {
+                std::vector<bool> route_seen(sol.num_routes(), false);
+                for (int c : {u1, u2, u3}) {
+                    auto nbrs = data.neighbours(c);
+                    for (int nb_node : nbrs) {
+                        if (nb_node < data.num_depots())
+                            continue;
+                        int nb_client = nb_node - data.num_depots();
+                        auto const& loc = locations[nb_client];
+                        if (loc.route < 0 || route_seen[loc.route])
+                            continue;
+                        route_seen[loc.route] = true;
+                        auto const& rb_route = sol.route(loc.route);
+                        for (int pb = 0; pb + 2 < rb_route.size(); ++pb)
+                            try_swap(loc.route, pb);
+                    }
+                }
+            } else {
+                for (int rb = ra; rb < sol.num_routes(); ++rb) {
+                    auto const& route_b = sol.route(rb);
+                    int start = (rb == ra) ? pa + 3 : 0;
+                    for (int pb = start; pb + 2 < route_b.size(); ++pb)
+                        try_swap(rb, pb);
+                }
+            }
+        }
+    }
+
+    return best_delta_ < 0;
+}
+
+void Exchange33::apply(Solution& sol) const
+{
+    assert(route_a_ >= 0);
+
+    auto const& ra = sol.route(route_a_);
+    auto const& rb = sol.route(route_b_);
+
+    int u1 = ra.client(pos_a_);
+    int u2 = ra.client(pos_a_ + 1);
+    int u3 = ra.client(pos_a_ + 2);
+    int v1 = rb.client(pos_b_);
+    int v2 = rb.client(pos_b_ + 1);
+    int v3 = rb.client(pos_b_ + 2);
+
+    if (route_a_ == route_b_) {
+        std::vector<int> new_clients;
+        new_clients.reserve(ra.size());
+        for (int i = 0; i < ra.size(); ++i) {
+            if (i == pos_a_) new_clients.push_back(v1);
+            else if (i == pos_a_ + 1) new_clients.push_back(v2);
+            else if (i == pos_a_ + 2) new_clients.push_back(v3);
+            else if (i == pos_b_) new_clients.push_back(u1);
+            else if (i == pos_b_ + 1) new_clients.push_back(u2);
+            else if (i == pos_b_ + 2) new_clients.push_back(u3);
+            else new_clients.push_back(ra.client(i));
+        }
+        sol.set_route_clients(route_a_, std::move(new_clients));
+    } else {
+        std::vector<int> new_a, new_b;
+        new_a.reserve(ra.size());
+        new_b.reserve(rb.size());
+        for (int i = 0; i < ra.size(); ++i) {
+            if (i == pos_a_) new_a.push_back(v1);
+            else if (i == pos_a_ + 1) new_a.push_back(v2);
+            else if (i == pos_a_ + 2) new_a.push_back(v3);
+            else new_a.push_back(ra.client(i));
+        }
+        for (int i = 0; i < rb.size(); ++i) {
+            if (i == pos_b_) new_b.push_back(u1);
+            else if (i == pos_b_ + 1) new_b.push_back(u2);
+            else if (i == pos_b_ + 2) new_b.push_back(u3);
+            else new_b.push_back(rb.client(i));
+        }
+        sol.set_route_clients(route_a_, {});
+        sol.set_route_clients(route_b_, {});
+        sol.set_route_clients(route_a_, std::move(new_a));
+        sol.set_route_clients(route_b_, std::move(new_b));
+    }
+}
+
+// ===========================================================================
 //  SwapTails
 // ===========================================================================
 

@@ -1472,7 +1472,7 @@ Deliverable: <2% gap on Uchoa X-set in 60s. Competitive with PyVRP.
 | ID | PR title | Deliverable | Files | Depends on |
 |----|----------|-------------|-------|------------|
 | 3.1 | SWAP* operator | SWAP* move with O(1) eval via best-insert cache | src/routing/operators/swap_star.{h,cpp} | 2.5 |
-| 3.2 | Extended exchange family | Exchange(N,M) for N,M up to 3 | src/routing/operators/exchange.{h,cpp} (extend) | 2.5 |
+| 3.2 | Extended exchange family (DONE) | Exchange(N,M) for N,M up to 3 | src/routing/operators/exchange.{h,cpp} (extend) | 2.5 |
 | 3.3 | Adaptive penalty manager | Auto-tune capacity/TW penalty weights per iteration | src/search/penalty_manager.{h,cpp} | 2.8 |
 | 3.4 | Composable acceptance criteria | Late acceptance, simulated annealing, record-to-record | src/search/acceptance.{h,cpp} | 2.8 |
 | 3.5 | Guided local search | GLS with edge penalties for diversification | src/search/guided_local_search.{h,cpp} | 2.6 |
