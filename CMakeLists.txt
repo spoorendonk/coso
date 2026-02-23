@@ -73,6 +73,7 @@ add_library(coso STATIC
     src/search/stop_criterion.cpp
     src/search/iterated_local_search.cpp
     src/search/operator_selector.cpp
+    src/search/penalty_manager.cpp
     src/search/benchmarker.cpp
 )
 target_include_directories(coso PUBLIC

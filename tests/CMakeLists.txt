@@ -159,6 +159,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Penalty manager tests                                                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(penalty_manager_test search/penalty_manager_test.cpp)
+target_link_libraries(penalty_manager_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(penalty_manager_test)
+else()
+    add_test(NAME penalty_manager_test COMMAND penalty_manager_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Iterated Local Search tests                                                 #
 # --------------------------------------------------------------------------- #
 
