@@ -170,14 +170,12 @@ endif()
 add_executable(benchmark_test routing/benchmark_test.cpp)
 target_link_libraries(benchmark_test PRIVATE coso Catch2::Catch2WithMain)
 
-if(COMMAND catch_discover_tests)
-    catch_discover_tests(benchmark_test
-        TEST_PREFIX "benchmark/"
-        PROPERTIES ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
-    )
-else()
-    add_test(NAME benchmark_test COMMAND benchmark_test)
-    set_property(TEST benchmark_test PROPERTY
-        ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
-    )
-endif()
+# Use add_test (not catch_discover_tests) so we can set SKIP_RETURN_CODE.
+# Catch2 returns exit code 4 when all tests are skipped; CTest must treat
+# that as "skipped" rather than "failed".
+add_test(NAME benchmark_test COMMAND benchmark_test)
+set_tests_properties(benchmark_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)

@@ -3,7 +3,6 @@
 #include <array>
 #include <cstdio>
 #include <cstdlib>
-#include <memory>
 #include <string>
 
 namespace {
@@ -17,17 +16,16 @@ struct CmdResult {
 CmdResult run_cmd(const std::string& cmd)
 {
     std::string full_cmd = cmd + " 2>&1";
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(full_cmd.c_str(), "r"), pclose);
-    REQUIRE(pipe);
+    FILE* raw = popen(full_cmd.c_str(), "r");
+    REQUIRE(raw);
 
     std::string output;
     std::array<char, 256> buf;
-    while (fgets(buf.data(), static_cast<int>(buf.size()), pipe.get()) != nullptr) {
+    while (fgets(buf.data(), static_cast<int>(buf.size()), raw) != nullptr) {
         output += buf.data();
     }
 
-    // pclose returns the exit status; extract the actual exit code.
-    int status = pclose(pipe.release());
+    int status = pclose(raw);
     int exit_code = WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 
     return {exit_code, output};
