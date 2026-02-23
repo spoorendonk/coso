@@ -1457,7 +1457,7 @@ gets reused by later engines.
 | 2.8 | ~~ILS + stop criterion~~ | ~~Ruin-and-recreate + late acceptance, time/iter/no-improve limits~~ | ~~src/search/iterated_local_search.{h,cpp}, src/search/stop_criterion.{h,cpp}, tests~~ | ~~Done~~ |
 | 2.9 | ~~RoutingModel implementation~~ | ~~Model → ProblemData → construct → ILS → Result~~ | ~~src/model/routing_model.cpp, tests~~ | ~~Done~~ |
 | 2.10 | CLI | `coso-solve instance.vrp --time-limit 60` | src/cli/main.cpp | 2.9 |
-| 2.11 | Benchmark setup + first benchmarks | Download script, X-n101-k25 end-to-end test | tests/data/download_benchmarks.sh, tests/routing/benchmark_test.cpp | 2.1, 2.9 |
+| 2.11 | ~~Benchmark setup + first benchmarks~~ | ~~Download script, X-n101-k25 end-to-end test~~ | ~~tests/data/download_benchmarks.sh, tests/routing/benchmark_test.cpp~~ | ~~Done~~ |
 
 **Parallel lanes:**
 - 2.1 and 2.2 are parallel (both only need 1.2)
