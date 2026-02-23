@@ -144,3 +144,21 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME ils_test COMMAND ils_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  CLI tool tests                                                              #
+# --------------------------------------------------------------------------- #
+
+add_executable(cli_test cli/cli_test.cpp)
+target_link_libraries(cli_test PRIVATE Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(cli_test
+        PROPERTIES ENVIRONMENT "COSO_SOLVE_PATH=$<TARGET_FILE:coso-solve>"
+    )
+else()
+    add_test(NAME cli_test COMMAND cli_test)
+    set_property(TEST cli_test PROPERTY
+        ENVIRONMENT "COSO_SOLVE_PATH=$<TARGET_FILE:coso-solve>"
+    )
+endif()
