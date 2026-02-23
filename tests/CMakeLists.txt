@@ -14,3 +14,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME model_test COMMAND model_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Routing engine tests                                                        #
+# --------------------------------------------------------------------------- #
+
+add_executable(problem_data_test routing/problem_data_test.cpp)
+target_link_libraries(problem_data_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(problem_data_test)
+else()
+    add_test(NAME problem_data_test COMMAND problem_data_test)
+endif()
