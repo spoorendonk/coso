@@ -118,3 +118,29 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME local_search_test COMMAND local_search_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Stop criterion tests                                                        #
+# --------------------------------------------------------------------------- #
+
+add_executable(stop_criterion_test search/stop_criterion_test.cpp)
+target_link_libraries(stop_criterion_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(stop_criterion_test)
+else()
+    add_test(NAME stop_criterion_test COMMAND stop_criterion_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Iterated Local Search tests                                                 #
+# --------------------------------------------------------------------------- #
+
+add_executable(ils_test search/ils_test.cpp)
+target_link_libraries(ils_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(ils_test)
+else()
+    add_test(NAME ils_test COMMAND ils_test)
+endif()
