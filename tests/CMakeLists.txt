@@ -159,6 +159,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Score corruption detection tests                                            #
+# --------------------------------------------------------------------------- #
+
+add_executable(score_assert_test search/score_assert_test.cpp)
+target_link_libraries(score_assert_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(score_assert_test)
+else()
+    add_test(NAME score_assert_test COMMAND score_assert_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Guided local search tests                                                   #
 # --------------------------------------------------------------------------- #
 
