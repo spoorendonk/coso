@@ -1450,7 +1450,7 @@ gets reused by later engines.
 | 2.1 | ~~CVRPLIB instance reader~~ | ~~Parse .vrp files into structured data~~ | ~~src/model/instance_reader.{h,cpp}, tests~~ | ~~1.2~~ |
 | 2.2 | ProblemData (compiled instance) | Distance matrix, client/depot/vehicle attributes from model | src/routing/problem_data.{h,cpp}, tests | Done |
 | 2.3 | ~~Route + LoadResource~~ | ~~Route with prefix/suffix resource arrays, LoadResource with init/merge/excess~~ | ~~src/routing/route.{h,cpp}, src/routing/resources/load_resource.h, tests~~ | ~~Done~~ |
-| 2.4 | Solution + CostEvaluator | Multi-route solution, objective + penalty evaluation | src/routing/solution.{h,cpp}, src/routing/cost_evaluator.{h,cpp}, tests | 2.3 |
+| 2.4 | ~~Solution + CostEvaluator~~ | ~~Multi-route solution, objective + penalty evaluation~~ | ~~src/routing/solution.{h,cpp}, src/routing/cost_evaluator.{h,cpp}, tests~~ | ~~Done~~ |
 | 2.5 | Exchange operators | Exchange(1,0), (1,1), (2,0), SwapTails with O(1) move eval | src/routing/operators/exchange.{h,cpp}, tests | 2.3, 2.4 |
 | 2.6 | Local search engine | Granular neighbourhood (k=40), steepest descent over operators | src/routing/local_search.{h,cpp}, src/routing/neighbours.{h,cpp}, tests | 2.5 |
 | 2.7 | Construction heuristic | Nearest-neighbour + Clarke-Wright savings | src/routing/construction.{h,cpp}, tests | 2.4 |
