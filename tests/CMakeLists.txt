@@ -159,6 +159,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Guided local search tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(gls_test search/gls_test.cpp)
+target_link_libraries(gls_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(gls_test)
+else()
+    add_test(NAME gls_test COMMAND gls_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Acceptance criteria tests                                                   #
 # --------------------------------------------------------------------------- #
 
