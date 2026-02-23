@@ -40,7 +40,7 @@ Tests skip automatically when instances are missing.
 ```
 src/
   model/              — User-facing modeling API (C++ headers)
-    model.h               Routing model
+    routing_model.h       Routing model
     schedule_model.h      Scheduling model
     assignment_model.h    Assignment model
     packing_model.h       Packing model
@@ -72,7 +72,7 @@ tests/                — Catch2 tests and benchmarks
 
 ## Key Types
 
-- `primal::Model` — Routing model (add_depot, add_client, add_vehicle_type, solve)
+- `primal::RoutingModel` — Routing model (add_depot, add_client, add_vehicle_type, solve)
 - `primal::ScheduleModel` — Scheduling model (add_job, add_operation, add_machine)
 - `primal::AssignmentModel` — Assignment model (add_employee, add_shift_type)
 - `primal::PackingModel` — Packing model (add_bin_type, add_item)

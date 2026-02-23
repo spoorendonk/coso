@@ -17,9 +17,9 @@ problem-specific local search dominates generic approaches by orders of magnitud
 ### 1.1 Standard CVRP — declare and solve
 
 ```cpp
-#include <primal/routing.h>
+#include <primal/routing_model.h>
 
-primal::Model m;
+primal::RoutingModel m;
 
 // Structure
 auto depot = m.add_depot(456, 320);
@@ -54,10 +54,23 @@ auto result = primal::solve("X-n101-k25.vrp", primal::TimeLimit(60));
 **Zero implementation needed.** The solver recognizes: routes + capacity →
 uses LoadResource, standard operators, ILS/HGS.
 
+**Python equivalent:**
+
+```python
+import primal
+
+m = primal.RoutingModel()
+depot = m.add_depot(456, 320)
+vtype = m.add_vehicle_type(4, capacity=15)
+m.add_client(228, 0, demand=1)
+# ...
+result = m.solve(primal.TimeLimit(60))
+```
+
 ### 1.2 VRPTW with heterogeneous fleet — just add parameters
 
 ```cpp
-primal::Model m;
+primal::RoutingModel m;
 m.add_depot(0, 0, {.tw = {0, 1000}});
 
 // Two vehicle types with different capacities and costs
@@ -89,7 +102,7 @@ m.set_profile_duration(1, i, j, dur);
 auto result = m.solve(primal::TimeLimit(60));
 ```
 
-**Still zero implementation.** The model sees time windows → adds DurationResource.
+**Still zero implementation.** The RoutingModel sees time windows → adds DurationResource.
 Sees heterogeneous fleet → adds vehicle-type-aware evaluation. Multiple load
 dimensions → LoadResource tracks all dimensions. The user just declares
 attributes, never touches the engine.
@@ -97,7 +110,7 @@ attributes, never touches the engine.
 ### 1.3 Multi-trip with overtime
 
 ```cpp
-primal::Model m;
+primal::RoutingModel m;
 auto depot = m.add_depot(0, 0, {.tw = {0, 480}});
 
 m.add_vehicle_type(3, {
@@ -118,7 +131,7 @@ auto result = m.solve(primal::TimeLimit(60));
 ### 1.4 Paired pickup-delivery with time windows
 
 ```cpp
-primal::Model m;
+primal::RoutingModel m;
 auto depot = m.add_depot(0, 0, {.tw = {0, 1000}});
 m.add_vehicle_type(5, {.capacity = 20});
 
@@ -137,7 +150,7 @@ auto result = m.solve(primal::TimeLimit(60));
 ### 1.5 Optional clients and client groups
 
 ```cpp
-primal::Model m;
+primal::RoutingModel m;
 // ...
 
 // Optional clients with prizes (Team Orienteering)
@@ -365,6 +378,8 @@ automatically:
 | `service_per_type` on client | Type-specific service time | Per-vehicle-type lookup |
 | `cost_matrix` per profile | Separate cost matrix | CostEvaluator (3 matrices) |
 | `unit_task_duration_cost` | Per-task-hour cost | CostEvaluator |
+| `skills` + `tw` + `teams` | Technician routing & scheduling | SkillFilter + DurationResource + team formation |
+| `synchronization(task, n)` | Synchronized visits | SyncResource (n techs at same time) |
 
 ### Network / Flow
 
@@ -425,7 +440,7 @@ automatically:
 
 ## 3. Internal Architecture
 
-The user never sees this. The Model translates their declaration into engine
+The user never sees this. The model translates their declaration into engine
 components.
 
 ### 3.1 Three-layer engine
@@ -527,11 +542,19 @@ supports asymmetry when needed without burdening simple cases.
 
 1. Defines a `State` struct with the fields needed for propagation
 2. Implements `init()`, `merge()`, `merge_reverse()`, `excess()`
-3. Registers the resource so the Model activates it when relevant attributes
+3. Registers the resource so the model activates it when relevant attributes
    are declared
 
 No changes to operators, local search, algorithms, or other resources. The
 CostEvaluator picks up the new penalty term automatically.
+
+**Dogfooding: built-in resources use the same interface.** LoadResource,
+DurationResource, DistanceResource — all built-in resources are implemented
+through the exact same `init/merge/merge_reverse/excess` interface as user-
+defined resources. There is no privileged internal API. If you wanted to
+reimplement capacity tracking differently, you'd write a new resource file
+with the same interface and swap it in. This ensures the extension mechanism
+is real, not a second-class afterthought.
 
 ### 3.3 Cost model
 
@@ -855,6 +878,8 @@ Complete list of target problems with benchmark instance availability.
 | R24 | Site-Dependent VRP | SDVRPTW | Vehicle access restrictions | 4 | Vidal et al. | varies | PyVRP/Instances |
 | R25 | Clustered VRP | cluVRP | ClusterResource | 8+ | Battarra et al., Expósito | ~300+ | Papers |
 | R26 | VRP with Transshipment | VRPTF | Multi-echelon routing | 8+ | Baldacci et al. | varies | Papers |
+| R27 | Technician Routing & Scheduling | TRSP | Skills + TW + teams | 5 | ROADEF 2007, Solomon-TRSP | 36+ | HAL/ROADEF |
+| R28 | Home Healthcare Routing | HHCRP | Skills + TW + sync | 5+ | Mankowska et al. | varies | Papers |
 
 ### 4.2 Network / flow problems
 
@@ -890,11 +915,11 @@ is the natural approach.
 
 | # | Problem | Abbrev | Approach | Phase | Benchmarks | Instances | Source |
 |---|---|---|---|---|---|---|---|
-| A1 | Nurse Rostering | NRP | Assignment engine (tabu + LA) | 6 | INRC-I, INRC-II | 138+ | INRC |
-| A2 | Employee Scheduling | ESP | Assignment engine (tabu + LA) | 6 | Curtois nurse datasets | 24+ | Scheduling Benchmarks |
-| A3 | School Timetabling | — | Assignment engine (tabu + LA) | 6+ | ITC-2007, ITC-2019 | varies | ITC |
-| A4 | Conference Scheduling | — | Assignment engine (tabu + LA) | 6+ | — | — | — |
-| A5 | Bed Allocation | BAS | Assignment engine (tabu + LA) | 6+ | Ceschia-Schaerf | 15+ | Papers |
+| A1 | Nurse Rostering | NRP | Assignment engine (tabu + LA) | 8 | INRC-I, INRC-II, BCV | 138+ | INRC, schedulingbenchmarks.org |
+| A2 | Employee Scheduling | ESP | Assignment engine (tabu + LA) | 8 | Curtois shift scheduling | 24+ | schedulingbenchmarks.org |
+| A3 | School Timetabling | — | Assignment engine (tabu + LA) | 8+ | ITC-2007, ITC-2019 | varies | ITC |
+| A4 | Conference Scheduling | — | Assignment engine (tabu + LA) | 8+ | — | — | — |
+| A5 | Bed Allocation | BAS | Assignment engine (tabu + LA) | 8+ | Ceschia-Schaerf | 15+ | Papers |
 
 ### 4.5 Packing problems
 
@@ -933,6 +958,9 @@ is the natural approach.
 | CSPLib prob001 | Car sequencing | Later |
 | CARP format | CARP | Later |
 | DIMACS VRP | SDVRP, EVRP, IRP, CARP | Later |
+| ROADEF 2007 | TRSP | Yes (Phase 5) |
+| BCV (schedulingbenchmarks.org) | NRP | Yes (Phase 8) |
+| Curtois shift scheduling | ESP | Yes (Phase 8) |
 
 ### 4.8 What the modeling approach handles well vs. not
 
@@ -983,7 +1011,7 @@ Fix-and-Optimize with FJ/Local-MIP as inner solver is the natural approach.
 src/
   model/              ← User-facing modeling API (C++ headers + Python via nanobind)
     types.h               Shared types (Coord, TimeWindow, CostParams, Result)
-    model.h               Routing model (add_depot, add_client, add_vehicle_type)
+    routing_model.h       Routing model (add_depot, add_client, add_vehicle_type)
     schedule_model.h      Scheduling model (add_job, add_operation)
     assignment_model.h    Assignment model (add_employee, add_shift_type)
     packing_model.h       Packing model (add_bin_type, add_item)
@@ -1152,7 +1180,7 @@ struct Result {
 } // namespace primal
 ```
 
-### 6.2 Routing model (`src/model/model.h`)
+### 6.2 Routing model (`src/model/routing_model.h`)
 
 ```cpp
 #pragma once
@@ -1190,7 +1218,7 @@ struct DepotParams {
     TimeWindow tw = {0, INT_MAX};
 };
 
-class Model {
+class RoutingModel {
 public:
     int add_depot(double x, double y, DepotParams p = {});
     int add_depot(int id, DepotParams p = {});  // when using explicit distances
@@ -1393,7 +1421,7 @@ Deliverable: project compiles, tests run (trivially), model headers exist.
 1. CMakeLists.txt (C++23, Catch2, optional TBB, optional nanobind)
 2. CLAUDE.md, README.md
 3. `src/model/types.h` — shared types (Coord, TimeWindow, CostParams, Result)
-4. `src/model/model.h` — routing model header (declarations only)
+4. `src/model/routing_model.h` — routing model header (declarations only)
 5. `src/model/schedule_model.h` — scheduling model header (declarations only)
 6. `src/model/assignment_model.h` — assignment model header (declarations only)
 7. `src/model/packing_model.h` — packing model header (declarations only)
@@ -1408,7 +1436,7 @@ Deliverable: user can solve CVRP instances from Model API or CVRPLIB files.
 
 Build routing engine from model to result:
 
-1. `src/model/model.cpp` — Model implementation, validate + compile to ProblemData
+1. `src/model/routing_model.cpp` — RoutingModel implementation, validate + compile to ProblemData
 2. `src/model/instance_reader.h` — CVRPLIB/VRPLIB parser
 3. `src/routing/problem_data.h` — compiled instance (distance matrix, attributes)
 4. `src/routing/solution.h` — route-based solution representation
@@ -1492,7 +1520,7 @@ Deliverable: `pip install primal-rsp`, Python API mirrors C++.
 ```
 
 1. `python/bindings.cpp` — nanobind module
-2. Bind `Model`, `Result`, `TimeLimit`, `solve()`
+2. Bind `RoutingModel`, `Result`, `TimeLimit`, `solve()`
 3. Bind `ScheduleModel`, `AssignmentModel`, `PackingModel`
 4. scikit-build-core for pip-installable wheels
 5. Python tests mirroring C++ test suite
@@ -1619,12 +1647,12 @@ Same pattern: user declares WHAT, solver decides HOW.
 
 ## 9. Key Design Decisions
 
-1. **Model is the product.** The user interacts with `Model`, `NetworkModel`,
-   `ScheduleModel`, `AssignmentModel`, `PackingModel`, `LotSizingModel`. They
-   never see resources, operators, or algorithms.
+1. **Model is the product.** The user interacts with `RoutingModel`,
+   `ScheduleModel`, `AssignmentModel`, `PackingModel`. They never see
+   resources, operators, or algorithms.
 
 2. **Attribute-driven engine selection.** When the user sets `tw` on a client,
-   the Model activates `DurationResource` internally. No explicit configuration.
+   the RoutingModel activates `DurationResource` internally. No explicit configuration.
 
 3. **Resources as the extensibility mechanism.** A resource is a function on
    subsequences with an associative composition operator. Each one tracks a
@@ -1797,7 +1825,7 @@ Same pattern: user declares WHAT, solver decides HOW.
     the faster resource system.
 
 49. **Typed models, shared infrastructure.** Users pick the model type
-    (`Model`, `ScheduleModel`, `AssignmentModel`, `PackingModel`) making
+    (`RoutingModel`, `ScheduleModel`, `AssignmentModel`, `PackingModel`) making
     intent explicit. Engines share metaheuristic shells (ILS, tabu, LA),
     solution pool, cost evaluation, CLI, timing — but solution representations
     are fundamentally different per engine. No auto-detection of problem type.
@@ -1813,6 +1841,18 @@ Same pattern: user declares WHAT, solver decides HOW.
     extract what's genuinely shared into `search/`. Don't pre-build abstract
     Engine/Move/Resource base classes for engines that don't exist yet.
     Three similar lines > premature abstraction.
+
+52. **Resource dogfooding.** Built-in resources (LoadResource, DurationResource,
+    DistanceResource) use the exact same `init/merge/merge_reverse/excess`
+    interface as user-defined resources. No privileged internal API. If you
+    want to reimplement capacity tracking, write a new resource file with the
+    same interface. This guarantees the extension mechanism is real.
+
+53. **Technician routing is rich VRP.** TRSP = VRP + skills + time windows +
+    team formation + synchronization. Handled by the routing engine with
+    SkillFilter, DurationResource, and a SyncResource for multi-technician
+    visits. OR-Tools handles this through their RoutingModel dimensions;
+    we handle it through resources. Same problem, same engine.
 
 ---
 
@@ -1838,6 +1878,18 @@ Benchmarks:
 - FJSPLIB. https://scheduleopt.github.io/benchmarks/fjsplib
 - PSPLIB. https://www.om-db.wi.tum.de/psplib/
 - VFR (flow shop). http://soa.iti.es/problem-instances
+- SchedulingBenchmarks.org (Curtois). Nurse rostering (BCV instances), shift scheduling.
+  https://www.schedulingbenchmarks.org
+- ROADEF 2007 (France Telecom). Technician routing & scheduling with skills and teams.
+  https://roadef.org/challenge/2007/
+
+Technician routing & scheduling:
+- Kovacs, Parragh, Doerner & Hartl (2012). *ALNS for service technician routing and
+  scheduling*. J. Scheduling 15:579–600.
+- Cordeau, Laporte, Pasin & Ropke (2010). *Scheduling technicians and tasks in a
+  telecommunications company*. J. Scheduling 13:393–409.
+- Hashimoto, Boland & Savelsbergh (2018). *Technician routing with stochastic service
+  times*. Transportation Science.
 
 Scheduling:
 - Nowicki & Smutnicki (1996). *A fast taboo search for the job shop*. MS.
