@@ -242,6 +242,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Population tests                                                             #
+# --------------------------------------------------------------------------- #
+
+add_executable(population_test search/population_test.cpp)
+target_link_libraries(population_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(population_test)
+else()
+    add_test(NAME population_test COMMAND population_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Benchmarker harness tests                                                   #
 # --------------------------------------------------------------------------- #
 
