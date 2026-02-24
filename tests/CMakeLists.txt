@@ -159,6 +159,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Insert/remove optional client operator tests                                #
+# --------------------------------------------------------------------------- #
+
+add_executable(insert_optional_test routing/insert_optional_test.cpp)
+target_link_libraries(insert_optional_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(insert_optional_test)
+else()
+    add_test(NAME insert_optional_test COMMAND insert_optional_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 
