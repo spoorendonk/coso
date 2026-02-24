@@ -69,6 +69,7 @@ add_library(coso STATIC
     src/routing/construction.cpp
     src/routing/operators/exchange.cpp
     src/routing/operators/swap_star.cpp
+    src/routing/operators/route_split.cpp
     src/routing/operators/insert_optional.cpp
     src/routing/local_search.cpp
     src/search/stop_criterion.cpp
@@ -84,6 +85,7 @@ add_library(coso STATIC
     src/search/solution_finalizer.cpp
     src/search/portfolio.cpp
     src/search/benchmarker.cpp
+    src/search/warm_start.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
