@@ -96,6 +96,7 @@ add_library(coso STATIC
     src/scheduling/disjunctive_graph.cpp
     src/scheduling/schedule_solution.cpp
     src/scheduling/mode_selection.cpp
+    src/scheduling/schedule_operators.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
 )
