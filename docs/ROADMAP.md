@@ -1492,7 +1492,7 @@ Deliverable: portfolio solver (ILS + HGS) with shared solution pool.
 
 | ID | PR title | Deliverable | Files | Depends on |
 |----|----------|-------------|-------|------------|
-| 4.1 | Population with diversity management | Biased fitness with broken-pairs diversity | src/search/population.{h,cpp} | 2.4 |
+| 4.1 | Population with diversity management | Biased fitness with broken-pairs diversity | src/search/population.{h,cpp} | 2.4 | **Done** |
 | 4.2 | SREX crossover | Selective route exchange crossover operator | src/search/crossover.{h,cpp} | 2.4 |
 | 4.3 | Genetic algorithm | HGS-style GA: select parents → crossover → educate → insert | src/search/genetic_algorithm.{h,cpp} | 4.1, 4.2, 2.6 |
 | 4.4 | Portfolio solver | ILS + HGS with shared solution pool, TBB parallel | src/search/portfolio.{h,cpp} | 4.3, 2.8 |

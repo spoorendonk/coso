@@ -76,6 +76,7 @@ add_library(coso STATIC
     src/search/operator_selector.cpp
     src/search/penalty_manager.cpp
     src/search/guided_local_search.cpp
+    src/search/population.cpp
     src/search/score_assert.cpp
     src/search/benchmarker.cpp
 )
