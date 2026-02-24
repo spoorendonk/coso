@@ -673,6 +673,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment constraint framework tests                                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(constraint_test assignment/constraint_test.cpp)
+target_link_libraries(constraint_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(constraint_test)
+else()
+    add_test(NAME constraint_test COMMAND constraint_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
@@ -709,4 +722,17 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(packing_operators_test)
 else()
     add_test(NAME packing_operators_test COMMAND packing_operators_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Schedule operators tests                                                    #
+# --------------------------------------------------------------------------- #
+
+add_executable(schedule_operators_test scheduling/schedule_operators_test.cpp)
+target_link_libraries(schedule_operators_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(schedule_operators_test)
+else()
+    add_test(NAME schedule_operators_test COMMAND schedule_operators_test)
 endif()
