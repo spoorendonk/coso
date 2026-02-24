@@ -530,6 +530,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Warm start replanning tests                                                 #
+# --------------------------------------------------------------------------- #
+
+add_executable(warm_start_replan_test search/warm_start_replan_test.cpp)
+target_link_libraries(warm_start_replan_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(warm_start_replan_test)
+else()
+    add_test(NAME warm_start_replan_test COMMAND warm_start_replan_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Schedule model tests                                                        #
 # --------------------------------------------------------------------------- #
 
