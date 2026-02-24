@@ -972,3 +972,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME network_test COMMAND network_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Lot sizing engine tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(lotsizing_test lotsizing/lotsizing_test.cpp)
+target_link_libraries(lotsizing_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(lotsizing_test)
+else()
+    add_test(NAME lotsizing_test COMMAND lotsizing_test)
+endif()
