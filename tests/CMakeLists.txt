@@ -582,6 +582,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Scheduling parser tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(scheduling_parser_test scheduling/parser_test.cpp)
+target_link_libraries(scheduling_parser_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(scheduling_parser_test)
+else()
+    add_test(NAME scheduling_parser_test COMMAND scheduling_parser_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Assignment model tests                                                      #
 # --------------------------------------------------------------------------- #
 
