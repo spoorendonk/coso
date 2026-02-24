@@ -87,6 +87,7 @@ add_library(coso STATIC
     src/search/solution_finalizer.cpp
     src/search/portfolio.cpp
     src/scheduling/schedule_data.cpp
+    src/scheduling/disjunctive_graph.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
 )
