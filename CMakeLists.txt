@@ -86,6 +86,7 @@ add_library(coso STATIC
     src/search/genetic_algorithm.cpp
     src/search/solution_finalizer.cpp
     src/search/portfolio.cpp
+    src/packing/packing_solution.cpp
     src/scheduling/schedule_data.cpp
     src/scheduling/parsers.cpp
     src/scheduling/disjunctive_graph.cpp

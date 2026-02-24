@@ -569,6 +569,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Scheduling construction heuristic tests                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(scheduling_construction_test scheduling/construction_test.cpp)
+target_link_libraries(scheduling_construction_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(scheduling_construction_test)
+else()
+    add_test(NAME scheduling_construction_test COMMAND scheduling_construction_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Assignment model tests                                                      #
 # --------------------------------------------------------------------------- #
 
@@ -592,4 +605,17 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(packing_model_test)
 else()
     add_test(NAME packing_model_test COMMAND packing_model_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Packing solution tests                                                      #
+# --------------------------------------------------------------------------- #
+
+add_executable(packing_solution_test packing/packing_solution_test.cpp)
+target_link_libraries(packing_solution_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(packing_solution_test)
+else()
+    add_test(NAME packing_solution_test COMMAND packing_solution_test)
 endif()
