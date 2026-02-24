@@ -290,6 +290,23 @@ endif()
 #  Solution finalizer tests                                                    #
 # --------------------------------------------------------------------------- #
 
+# --------------------------------------------------------------------------- #
+#  Genetic algorithm tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(genetic_algorithm_test search/genetic_algorithm_test.cpp)
+target_link_libraries(genetic_algorithm_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(genetic_algorithm_test)
+else()
+    add_test(NAME genetic_algorithm_test COMMAND genetic_algorithm_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Solution finalizer tests                                                    #
+# --------------------------------------------------------------------------- #
+
 add_executable(solution_finalizer_test search/solution_finalizer_test.cpp)
 target_link_libraries(solution_finalizer_test PRIVATE coso Catch2::Catch2WithMain)
 

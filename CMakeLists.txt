@@ -79,6 +79,7 @@ add_library(coso STATIC
     src/search/population.cpp
     src/search/score_assert.cpp
     src/search/crossover.cpp
+    src/search/genetic_algorithm.cpp
     src/search/solution_finalizer.cpp
     src/search/benchmarker.cpp
 )
