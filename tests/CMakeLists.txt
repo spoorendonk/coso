@@ -791,6 +791,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Bin capacity tracker tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(bin_capacity_test packing/bin_capacity_test.cpp)
+target_link_libraries(bin_capacity_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(bin_capacity_test)
+else()
+    add_test(NAME bin_capacity_test COMMAND bin_capacity_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Schedule operators tests                                                    #
 # --------------------------------------------------------------------------- #
 
