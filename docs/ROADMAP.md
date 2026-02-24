@@ -1562,7 +1562,7 @@ with step 5 (rich VRP) and step 8 (assignment).
 | 7.4 | Schedule operators | N5/N7 neighbourhood: swap, insert, block moves | src/scheduling/schedule_operators.{h,cpp} | 7.3 |
 | 7.5 | Construction heuristics (NEH, SGS) | Priority-rule SGS for RCPSP, NEH for flow shop | src/scheduling/construction.{h,cpp} | 7.3 |
 | 7.6 | Mode selection for RCPSP | Multi-mode resource assignment with greedy + local search | src/scheduling/mode_selection.{h,cpp} | 7.3 |
-| 7.7 | Scheduling perturbation | Ruin-and-recreate for scheduling (random block removal) | src/scheduling/perturbation/ | 7.4 |
+| 7.7 | Scheduling perturbation | Ruin-and-recreate for scheduling (random block removal, critical path shake, machine reassignment) | src/scheduling/perturbation.{h,cpp} | 7.4 | **done** |
 | 7.8 | Scheduling instance parsers | Taillard, PSPLIB, FJSP parsers | src/scheduling/parsers/ | 7.1 |
 | 7.9 | Scheduling benchmarks | Taillard JSP + PSPLIB RCPSP gap tests | tests/scheduling/ | 7.1, 7.4 |
 
