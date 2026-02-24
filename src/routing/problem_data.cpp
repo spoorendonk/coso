@@ -34,8 +34,9 @@ int ProblemData::Builder::add_client(Coord coord, ClientParams p)
         .group       = p.group,
         .quantity    = p.quantity,
         .skills      = std::move(p.skills),
-        .setup_time  = p.setup_time,
-        .location    = p.location,
+        .setup_time   = p.setup_time,
+        .location     = p.location,
+        .client_type  = p.client_type,
     });
     return idx;
 }

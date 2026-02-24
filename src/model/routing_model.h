@@ -40,6 +40,7 @@ struct ClientParams {
     std::vector<std::string> skills;
     int setup_time             = 0;
     int location               = -1;     ///< location id for location-aware setup
+    int client_type            = -1;     ///< type id for incompatibility constraints (-1 = none)
 };
 
 /// Parameters for a depot location.
