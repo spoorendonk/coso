@@ -1,9 +1,12 @@
 #pragma once
 
 #include "model/schedule_model.h"
+#include "scheduling/calendar.h"
+#include "scheduling/setup_times.h"
 
 #include <cassert>
 #include <climits>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -78,6 +81,15 @@ public:
         /// Add a precedence constraint (beyond default intra-job ordering).
         void add_precedence(int op_before, int op_after);
 
+        /// Set a sequence-dependent setup time: from_op -> to_op on machine.
+        void set_setup_time(int from_op, int to_op, int machine, int time);
+
+        /// Set a uniform setup time from from_op -> to_op on all machines.
+        void set_setup_time(int from_op, int to_op, int time);
+
+        /// Add an availability window for a machine.
+        void add_machine_available(int machine, int start, int end);
+
         /// Set the scheduling objective.
         void set_objective(ScheduleObjective obj);
 
@@ -108,6 +120,17 @@ public:
         std::vector<Prec> extra_precedences_;
 
         ScheduleObjective objective_ = ScheduleObjective::Makespan;
+
+        /// Setup time entries (deferred until build).
+        struct SetupEntry { int from; int to; int machine; int time; };
+        std::vector<SetupEntry> setup_entries_;
+        bool setup_uniform_ = false;
+        struct SetupUniformEntry { int from; int to; int time; };
+        std::vector<SetupUniformEntry> setup_uniform_entries_;
+
+        /// Calendar entries (deferred until build).
+        struct CalendarEntry { int machine; int start; int end; };
+        std::vector<CalendarEntry> calendar_entries_;
     };
 
     // -------------------------------------------------------------------
@@ -158,6 +181,36 @@ public:
     /// The scheduling objective.
     [[nodiscard]] ScheduleObjective objective() const noexcept { return objective_; }
 
+    /// Whether setup times are defined.
+    [[nodiscard]] bool has_setup_times() const noexcept {
+        return setup_times_.has_value();
+    }
+
+    /// Setup time matrix (only valid if has_setup_times() is true).
+    [[nodiscard]] SetupTimeMatrix const& setup_times() const {
+        assert(setup_times_.has_value());
+        return *setup_times_;
+    }
+
+    /// Setup time from operation `from` to `to` on machine `m`.
+    /// Returns 0 if no setup times are defined.
+    [[nodiscard]] int setup_time(int from, int to, int m) const {
+        if (!setup_times_.has_value())
+            return 0;
+        return setup_times_->setup_time(from, to, m);
+    }
+
+    /// Whether any machine has calendar restrictions.
+    [[nodiscard]] bool has_calendar() const noexcept {
+        return calendar_.has_value();
+    }
+
+    /// Machine calendar (only valid if has_calendar() is true).
+    [[nodiscard]] MachineCalendar const& calendar() const {
+        assert(calendar_.has_value());
+        return *calendar_;
+    }
+
     /// Processing time for operation o on machine m.
     /// Returns INT_MAX if the operation cannot run on that machine.
     [[nodiscard]] int processing_time(int o, int m) const {
@@ -186,6 +239,12 @@ private:
     std::vector<int> resource_usage_;
 
     ScheduleObjective objective_ = ScheduleObjective::Makespan;
+
+    /// Sequence-dependent setup times (nullopt if none).
+    std::optional<SetupTimeMatrix> setup_times_;
+
+    /// Machine calendars (nullopt if none).
+    std::optional<MachineCalendar> calendar_;
 
     // Construction helper — only Builder can create.
     ScheduleData() = default;

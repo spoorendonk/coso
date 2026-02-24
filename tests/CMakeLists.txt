@@ -998,3 +998,29 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME lotsizing_test COMMAND lotsizing_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Setup times tests                                                           #
+# --------------------------------------------------------------------------- #
+
+add_executable(setup_times_test scheduling/setup_times_test.cpp)
+target_link_libraries(setup_times_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(setup_times_test)
+else()
+    add_test(NAME setup_times_test COMMAND setup_times_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Calendar tests                                                              #
+# --------------------------------------------------------------------------- #
+
+add_executable(calendar_test scheduling/calendar_test.cpp)
+target_link_libraries(calendar_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(calendar_test)
+else()
+    add_test(NAME calendar_test COMMAND calendar_test)
+endif()

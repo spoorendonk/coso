@@ -105,6 +105,8 @@ add_library(coso STATIC
     src/scheduling/mode_selection.cpp
     src/scheduling/schedule_operators.cpp
     src/scheduling/perturbation.cpp
+    src/scheduling/setup_times.cpp
+    src/scheduling/calendar.cpp
     src/lotsizing/lotsizing_data.cpp
     src/lotsizing/lotsizing_solution.cpp
     src/lotsizing/lotsizing_operators.cpp
