@@ -647,6 +647,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Pillar operator tests                                                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(pillar_operators_test assignment/pillar_operators_test.cpp)
+target_link_libraries(pillar_operators_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(pillar_operators_test)
+else()
+    add_test(NAME pillar_operators_test COMMAND pillar_operators_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Assignment construction heuristic tests                                     #
 # --------------------------------------------------------------------------- #
 
@@ -686,6 +699,33 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Automaton constraint tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(automaton_test assignment/automaton_test.cpp)
+target_link_libraries(automaton_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(automaton_test)
+else()
+    add_test(NAME automaton_test COMMAND automaton_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Assignment benchmark tests (require downloaded NRP instances)               #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_benchmark_test assignment/assignment_benchmark_test.cpp)
+target_link_libraries(assignment_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+add_test(NAME assignment_benchmark_test COMMAND assignment_benchmark_test)
+set_tests_properties(assignment_benchmark_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
@@ -722,6 +762,32 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(packing_operators_test)
 else()
     add_test(NAME packing_operators_test COMMAND packing_operators_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Packing benchmark tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(packing_benchmark_test packing/packing_benchmark_test.cpp)
+target_link_libraries(packing_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(packing_benchmark_test)
+else()
+    add_test(NAME packing_benchmark_test COMMAND packing_benchmark_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Bin capacity tracker tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(bin_capacity_test packing/bin_capacity_test.cpp)
+target_link_libraries(bin_capacity_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(bin_capacity_test)
+else()
+    add_test(NAME bin_capacity_test COMMAND bin_capacity_test)
 endif()
 
 # --------------------------------------------------------------------------- #
