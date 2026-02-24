@@ -686,6 +686,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment CP filter tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(cp_filter_test assignment/cp_filter_test.cpp)
+target_link_libraries(cp_filter_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(cp_filter_test)
+else()
+    add_test(NAME cp_filter_test COMMAND cp_filter_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
