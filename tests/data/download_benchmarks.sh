@@ -145,4 +145,31 @@ for inst in "${PSPLIB_INSTANCES[@]}"; do
     download_to_dir "${PSPLIB_BASE_URL}/${inst}" "${PSPLIB_DIR}/${inst}"
 done
 
+# ---------------------------------------------------------------------------
+#  NRP (Nurse Rostering) instances from schedulingbenchmarks.org
+# ---------------------------------------------------------------------------
+#
+#  Source: https://www.schedulingbenchmarks.org/nrp/
+#  Instances 1-8 cover small to medium problems (8-30 employees, 2-4 weeks).
+
+NRP_BASE_URL="http://www.schedulingbenchmarks.org/nrp/data"
+NRP_DIR="${SCRIPT_DIR}/nrp"
+mkdir -p "$NRP_DIR"
+
+NRP_INSTANCES=(
+    "Instance1.txt"
+    "Instance2.txt"
+    "Instance3.txt"
+    "Instance4.txt"
+    "Instance5.txt"
+    "Instance6.txt"
+    "Instance7.txt"
+    "Instance8.txt"
+)
+
+echo "Downloading NRP instances to ${NRP_DIR}/ ..."
+for inst in "${NRP_INSTANCES[@]}"; do
+    download_to_dir "${NRP_BASE_URL}/${inst}" "${NRP_DIR}/${inst}"
+done
+
 echo "Done."

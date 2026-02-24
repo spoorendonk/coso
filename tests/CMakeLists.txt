@@ -725,6 +725,20 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment benchmark tests (require downloaded NRP instances)               #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_benchmark_test assignment/assignment_benchmark_test.cpp)
+target_link_libraries(assignment_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+add_test(NAME assignment_benchmark_test COMMAND assignment_benchmark_test)
+set_tests_properties(assignment_benchmark_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
