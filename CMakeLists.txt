@@ -83,6 +83,7 @@ add_library(coso STATIC
     src/search/solution_finalizer.cpp
     src/search/portfolio.cpp
     src/search/benchmarker.cpp
+    src/search/warm_start.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
