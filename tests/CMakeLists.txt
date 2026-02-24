@@ -595,6 +595,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment solution + cost evaluator tests                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_solution_test assignment/assignment_solution_test.cpp)
+target_link_libraries(assignment_solution_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(assignment_solution_test)
+else()
+    add_test(NAME assignment_solution_test COMMAND assignment_solution_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
