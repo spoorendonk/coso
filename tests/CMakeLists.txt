@@ -55,6 +55,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  PrecedenceResource tests                                                    #
+# --------------------------------------------------------------------------- #
+
+add_executable(precedence_resource_test routing/precedence_resource_test.cpp)
+target_link_libraries(precedence_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(precedence_resource_test)
+else()
+    add_test(NAME precedence_resource_test COMMAND precedence_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Solution tests                                                              #
 # --------------------------------------------------------------------------- #
 
