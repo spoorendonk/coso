@@ -42,6 +42,7 @@ public:
         std::vector<std::string> skills;
         int setup_time         = 0;
         int location           = -1;
+        int client_type        = -1;  ///< type id for incompatibility (-1 = none)
     };
 
     struct DepotData {

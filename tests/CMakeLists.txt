@@ -81,6 +81,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Type incompatibility resource tests                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(type_incompatibility_test routing/type_incompatibility_test.cpp)
+target_link_libraries(type_incompatibility_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(type_incompatibility_test)
+else()
+    add_test(NAME type_incompatibility_test COMMAND type_incompatibility_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Solution tests                                                              #
 # --------------------------------------------------------------------------- #
 
