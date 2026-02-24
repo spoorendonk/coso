@@ -1,8 +1,10 @@
 #pragma once
 
+#include "routing/piecewise_cost.h"
 #include "routing/route.h"
 
 #include <cstdint>
+#include <memory>
 
 namespace coso {
 
@@ -43,6 +45,34 @@ public:
     void set_load_penalty(int p)  noexcept { load_penalty_ = p; }
     void set_tw_penalty(int p)    noexcept { tw_penalty_ = p; }
     void set_dist_penalty(int p)  noexcept { dist_penalty_ = p; }
+
+    // -------------------------------------------------------------------
+    //  Piecewise linear cost functions
+    // -------------------------------------------------------------------
+
+    /// Set a piecewise linear function for distance costs.
+    ///
+    /// When set, this replaces the linear `distance * unit_distance_cost`
+    /// computation.  The function maps total route distance to cost.
+    void set_distance_cost_function(PiecewiseLinearFunction func);
+
+    /// Set a piecewise linear function for duration costs.
+    ///
+    /// When set, this replaces the linear `duration * unit_duration_cost`
+    /// computation.  The function maps total route duration to cost.
+    void set_duration_cost_function(PiecewiseLinearFunction func);
+
+    /// Clear the piecewise distance cost function (revert to linear).
+    void clear_distance_cost_function() noexcept;
+
+    /// Clear the piecewise duration cost function (revert to linear).
+    void clear_duration_cost_function() noexcept;
+
+    /// Whether a piecewise distance cost function is set.
+    [[nodiscard]] bool has_distance_cost_function() const noexcept;
+
+    /// Whether a piecewise duration cost function is set.
+    [[nodiscard]] bool has_duration_cost_function() const noexcept;
 
     // -------------------------------------------------------------------
     //  Route-level cost evaluation
@@ -88,6 +118,18 @@ private:
     int load_penalty_;
     int tw_penalty_;
     int dist_penalty_;
+
+    /// Optional piecewise cost functions (nullptr = use linear).
+    std::unique_ptr<PiecewiseLinearFunction> distance_cost_func_;
+    std::unique_ptr<PiecewiseLinearFunction> duration_cost_func_;
+
+    /// Compute distance cost using piecewise or linear evaluation.
+    [[nodiscard]] int64_t distance_cost_(int distance,
+                                         CostParams const& cost) const;
+
+    /// Compute duration cost using piecewise or linear evaluation.
+    [[nodiscard]] int64_t duration_cost_(int duration,
+                                         CostParams const& cost) const;
 };
 
 } // namespace coso
