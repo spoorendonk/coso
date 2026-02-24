@@ -1587,7 +1587,7 @@ parallel with step 7 (scheduling).
 | 8.7 | Automaton constraint | DFA-based shift pattern rules (e.g., no 3 nights) | src/assignment/constraints/automaton.{h,cpp} | 8.6 |
 | 8.8 | CP move filter | Constraint propagation to prune infeasible moves | src/assignment/cp_filter.{h,cpp} | 8.6 |
 | 8.9 | Assignment instance parsers | NRP, XML roster format parsers | src/assignment/parsers/ | 8.1 |
-| 8.10 | Assignment benchmarks | schedulingbenchmarks.org NRP gap tests | tests/assignment/ | 8.3, 8.9 |
+| 8.10 | Assignment benchmarks | schedulingbenchmarks.org NRP gap tests | tests/assignment/ | 8.3, 8.9 | **Done** |
 
 **8.3, 8.4, 8.5, 8.6, 8.9 are parallel.** 8.7 and 8.8 depend on 8.6.
 

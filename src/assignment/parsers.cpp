@@ -108,6 +108,7 @@ AssignmentData parse_nrp(const std::string& content)
     while (std::getline(in, line)) {
         auto trimmed = trim(line);
         if (trimmed.empty()) continue;
+        if (trimmed[0] == '#') continue;  // Skip comment lines.
 
         // Detect section headers.
         if (trimmed.starts_with("SECTION_")) {
@@ -167,9 +168,15 @@ AssignmentData parse_nrp(const std::string& content)
         }
 
         case Section::Staff: {
-            // Format: EmployeeID,MaxShifts=X,MaxTotalMinutes=Y,MinTotalMinutes=Z,
-            //         MaxConsecutiveShifts=A,MinConsecutiveShifts=B,
-            //         MinConsecutiveDaysOff=C,MaxWeekends=D
+            // Two formats are supported:
+            //
+            // Named format (key=value):
+            //   EmployeeID,MaxShifts=X,MaxTotalMinutes=Y,...
+            //
+            // Positional format (schedulingbenchmarks.org):
+            //   EmployeeID,MaxShifts(e.g. D=14),MaxTotalMinutes,MinTotalMinutes,
+            //   MaxConsecutiveShifts,MinConsecutiveShifts,MinConsecutiveDaysOff,
+            //   MaxWeekends
             auto tokens = split(trimmed, ',');
             if (tokens.empty())
                 throw std::runtime_error("NRP parse error: bad STAFF line: " + trimmed);
@@ -177,20 +184,34 @@ AssignmentData parse_nrp(const std::string& content)
             AssignmentData::Employee emp;
             emp.name = tokens[0];
 
-            // Parse key=value pairs.
-            for (size_t i = 1; i < tokens.size(); ++i) {
-                auto eq = tokens[i].find('=');
-                if (eq == std::string::npos) continue;
-                auto key = tokens[i].substr(0, eq);
-                auto val = tokens[i].substr(eq + 1);
+            // Detect positional format: field 2 (index 2) is a plain integer
+            // (MaxTotalMinutes) without '=' prefix.
+            bool positional = (tokens.size() >= 5
+                               && tokens[2].find('=') == std::string::npos);
 
-                if (key == "MaxTotalMinutes") {
-                    int minutes = std::stoi(val);
-                    emp.max_hours_per_week = minutes / 60;
-                } else if (key == "MaxConsecutiveShifts") {
-                    emp.max_consecutive_days = std::stoi(val);
+            if (positional) {
+                // Positional: [0]=ID, [1]=MaxShifts, [2]=MaxTotalMinutes,
+                //             [3]=MinTotalMinutes, [4]=MaxConsecutiveShifts,
+                //             [5]=MinConsecutiveShifts, [6]=MinConsecutiveDaysOff,
+                //             [7]=MaxWeekends
+                int max_total_minutes = std::stoi(tokens[2]);
+                emp.max_hours_per_week = max_total_minutes / 60;
+                emp.max_consecutive_days = std::stoi(tokens[4]);
+            } else {
+                // Named key=value format.
+                for (size_t i = 1; i < tokens.size(); ++i) {
+                    auto eq = tokens[i].find('=');
+                    if (eq == std::string::npos) continue;
+                    auto key = tokens[i].substr(0, eq);
+                    auto val = tokens[i].substr(eq + 1);
+
+                    if (key == "MaxTotalMinutes") {
+                        int minutes = std::stoi(val);
+                        emp.max_hours_per_week = minutes / 60;
+                    } else if (key == "MaxConsecutiveShifts") {
+                        emp.max_consecutive_days = std::stoi(val);
+                    }
                 }
-                // Other keys are noted but not all map to AssignmentData fields.
             }
 
             int emp_idx = static_cast<int>(data.employees.size());
