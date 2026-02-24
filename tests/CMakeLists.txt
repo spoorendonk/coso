@@ -345,3 +345,16 @@ set_tests_properties(benchmark_test PROPERTIES
     SKIP_RETURN_CODE 4
     LABELS "benchmark"
 )
+
+# --------------------------------------------------------------------------- #
+#  Warm start + pinning tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(warm_start_test search/warm_start_test.cpp)
+target_link_libraries(warm_start_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(warm_start_test)
+else()
+    add_test(NAME warm_start_test COMMAND warm_start_test)
+endif()
