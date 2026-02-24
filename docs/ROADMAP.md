@@ -1512,7 +1512,7 @@ Deliverable: full-featured routing with time windows, fleet, PD, etc.
 |----|----------|-------------|-------|------------|
 | 5.1 | Duration resource | Time window feasibility with wait/late tracking | src/routing/resources/duration_resource.h | 2.3 |
 | 5.2 | Distance resource | Max distance / max duration per route | src/routing/resources/distance_resource.h | 2.3 |
-| 5.3 | Precedence resource | Pickup-before-delivery within same route | src/routing/resources/precedence_resource.h | 2.3 |
+| 5.3 | Precedence resource | Pickup-before-delivery within same route (done) | src/routing/resources/precedence_resource.h | 2.3 |
 | 5.4 | Break resource | Scheduled driver breaks within time windows | src/routing/resources/break_resource.h | 2.3 |
 | 5.5 | Skill filter | Vehicle-client compatibility (skills, zones) | src/routing/resources/skill_filter.h | 2.3 |
 | 5.6 | Type incompatibility | Clients that cannot share a route | src/routing/resources/type_incompatibility.h | 2.3 |
