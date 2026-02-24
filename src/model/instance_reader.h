@@ -3,8 +3,10 @@
 #include "types.h"
 
 #include <cmath>
+#include <istream>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace coso {
@@ -31,16 +33,17 @@ enum class EdgeWeightFormat {
     LOWER_DIAG_COL,    ///< Lower-triangular with diagonal, col-by-col
 };
 
-/// Parsed data from a CVRPLIB .vrp file.
+/// Parsed data from a VRP instance file.
 ///
-/// Contains all fields that can appear in a .vrp file: metadata, coordinates,
-/// demands, depot indices, vehicle capacity, and optionally an explicit
-/// distance matrix.
+/// Contains all fields that can appear in a .vrp file or Solomon/Li-Lim
+/// format: metadata, coordinates, demands, depot indices, vehicle capacity,
+/// time windows, service times, pickup-delivery pairs, and optionally an
+/// explicit distance matrix.
 struct VrpInstance {
     // -- Metadata --
     std::string name;
     std::string comment;
-    std::string type;                               ///< e.g. "CVRP", "TSP"
+    std::string type;                               ///< e.g. "CVRP", "VRPTW", "PDPTW"
     int dimension       = 0;                        ///< Number of nodes
     int capacity        = 0;                        ///< Vehicle capacity
     int vehicles        = 0;                        ///< Min vehicles (0 = unset)
@@ -53,6 +56,14 @@ struct VrpInstance {
     std::vector<Coord> coords;                      ///< Node coordinates
     std::vector<int> demands;                       ///< Node demands
     std::vector<int> depot_ids;                     ///< Depot node indices (0-based)
+
+    // -- Time windows (Solomon/VRPTW format) --
+    std::vector<TimeWindow> time_windows;           ///< Per-node time windows
+    std::vector<int> service_times;                 ///< Per-node service durations
+
+    // -- Pickup-delivery pairs (Li-Lim/PDPTW format) --
+    /// Each pair is (pickup_index, delivery_index), 0-based.
+    std::vector<std::pair<int, int>> pickup_delivery_pairs;
 
     // -- Explicit distance matrix (only for EXPLICIT edge weight type) --
     /// Row-major n x n matrix. distances[i * dimension + j] = dist(i, j).
@@ -67,19 +78,28 @@ struct VrpInstance {
     [[nodiscard]] int dist(int i, int j) const;
 };
 
+/// Read a Solomon VRPTW instance from the given path.
+[[nodiscard]] VrpInstance read_solomon(const std::string& path);
+
+/// Parse a Solomon VRPTW instance from a string.
+[[nodiscard]] VrpInstance parse_solomon(const std::string& content);
+
+/// Read a Solomon VRPTW instance from a stream.
+[[nodiscard]] VrpInstance read_solomon(std::istream& input);
+
+/// Read a Li-Lim PDPTW instance from the given path.
+[[nodiscard]] VrpInstance read_lilim(const std::string& path);
+
+/// Parse a Li-Lim PDPTW instance from a string.
+[[nodiscard]] VrpInstance parse_lilim(const std::string& content);
+
+/// Read a Li-Lim PDPTW instance from a stream.
+[[nodiscard]] VrpInstance read_lilim(std::istream& input);
+
 /// Read a CVRPLIB .vrp file from the given path.
-///
-/// Supports the standard CVRPLIB format with sections:
-///   NAME, COMMENT, TYPE, DIMENSION, CAPACITY, EDGE_WEIGHT_TYPE,
-///   EDGE_WEIGHT_FORMAT, NODE_COORD_SECTION, DEMAND_SECTION,
-///   DEPOT_SECTION, EDGE_WEIGHT_SECTION, EOF.
-///
-/// Throws std::runtime_error on parse failure or missing required sections.
 [[nodiscard]] VrpInstance read_vrp(const std::string& path);
 
 /// Parse a CVRPLIB .vrp instance from a string (useful for testing).
-///
-/// Same format as read_vrp but reads from a string instead of a file.
 [[nodiscard]] VrpInstance parse_vrp(const std::string& content);
 
 } // namespace coso
