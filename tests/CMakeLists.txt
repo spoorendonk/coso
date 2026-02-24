@@ -751,6 +751,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Packing benchmark tests (Falkenauer/Scholl gap tests)                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(packing_benchmark_test packing/packing_benchmark_test.cpp)
+target_link_libraries(packing_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(packing_benchmark_test)
+else()
+    add_test(NAME packing_benchmark_test COMMAND packing_benchmark_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Schedule operators tests                                                    #
 # --------------------------------------------------------------------------- #
 
