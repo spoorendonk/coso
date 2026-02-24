@@ -66,6 +66,7 @@ add_library(coso STATIC
     src/routing/route.cpp
     src/routing/solution.cpp
     src/routing/cost_evaluator.cpp
+    src/routing/piecewise_cost.cpp
     src/routing/construction.cpp
     src/routing/operators/exchange.cpp
     src/routing/operators/swap_star.cpp
@@ -90,6 +91,7 @@ add_library(coso STATIC
     src/packing/packing_operators.cpp
     src/packing/bin_capacity.cpp
     src/assignment/construction.cpp
+    src/assignment/replanning.cpp
     src/assignment/parsers.cpp
     src/assignment/constraints/constraint.cpp
     src/assignment/constraints/automaton.cpp
@@ -103,6 +105,13 @@ add_library(coso STATIC
     src/scheduling/perturbation.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
+    src/search/daemon.cpp
+    src/search/partitioned_search.cpp
+    src/network/network_data.cpp
+    src/network/network_solution.cpp
+    src/network/mcf_solver.cpp
+    src/network/construction.cpp
+    src/network/network_operators.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
