@@ -90,6 +90,8 @@ add_library(coso STATIC
     src/packing/packing_solution.cpp
     src/packing/packing_operators.cpp
     src/packing/bin_capacity.cpp
+    src/routing/overconstrained.cpp
+    src/assignment/overconstrained.cpp
     src/assignment/construction.cpp
     src/assignment/replanning.cpp
     src/assignment/parsers.cpp
