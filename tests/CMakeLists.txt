@@ -751,6 +751,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Scheduling perturbation tests                                               #
+# --------------------------------------------------------------------------- #
+
+add_executable(perturbation_test scheduling/perturbation_test.cpp)
+target_link_libraries(perturbation_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(perturbation_test)
+else()
+    add_test(NAME perturbation_test COMMAND perturbation_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Scheduling benchmark tests (Taillard JSP + PSPLIB RCPSP)                   #
 # --------------------------------------------------------------------------- #
 
