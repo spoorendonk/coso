@@ -541,3 +541,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME assignment_model_test COMMAND assignment_model_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Packing model tests                                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(packing_model_test packing/packing_model_test.cpp)
+target_link_libraries(packing_model_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(packing_model_test)
+else()
+    add_test(NAME packing_model_test COMMAND packing_model_test)
+endif()
