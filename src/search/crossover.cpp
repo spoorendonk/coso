@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cassert>
 #include <climits>
-#include <numeric>
 #include <vector>
 
 namespace coso {
