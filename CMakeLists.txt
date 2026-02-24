@@ -81,6 +81,7 @@ add_library(coso STATIC
     src/search/crossover.cpp
     src/search/genetic_algorithm.cpp
     src/search/solution_finalizer.cpp
+    src/search/portfolio.cpp
     src/search/benchmarker.cpp
 )
 target_include_directories(coso PUBLIC

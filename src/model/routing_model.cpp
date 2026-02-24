@@ -3,7 +3,7 @@
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
-#include "search/iterated_local_search.h"
+#include "search/portfolio.h"
 #include "search/stop_criterion.h"
 
 #include <chrono>
@@ -194,14 +194,14 @@ Result RoutingModel::solve(TimeLimit tl)
     ProblemData data = builder.build(granular_k);
 
     // -----------------------------------------------------------------------
-    //  Run ILS
+    //  Run portfolio solver (ILS + GA + finalizer)
     // -----------------------------------------------------------------------
 
     CostEvaluator eval;  // default penalty weights
     StopCriterion stop(tl.seconds);
 
-    IteratedLocalSearch ils(data);
-    Solution best = ils.run(eval, stop);
+    PortfolioSolver solver(data);
+    Solution best = solver.run(eval, stop);
 
     // -----------------------------------------------------------------------
     //  Convert Solution to Result

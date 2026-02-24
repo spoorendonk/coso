@@ -317,6 +317,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Portfolio solver tests                                                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(portfolio_test search/portfolio_test.cpp)
+target_link_libraries(portfolio_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(portfolio_test)
+else()
+    add_test(NAME portfolio_test COMMAND portfolio_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Routing benchmark tests (require downloaded instances)                       #
 # --------------------------------------------------------------------------- #
 
