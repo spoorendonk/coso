@@ -699,6 +699,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Automaton constraint tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(automaton_test assignment/automaton_test.cpp)
+target_link_libraries(automaton_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(automaton_test)
+else()
+    add_test(NAME automaton_test COMMAND automaton_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
