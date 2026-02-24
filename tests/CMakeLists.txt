@@ -686,6 +686,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment CP filter tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(cp_filter_test assignment/cp_filter_test.cpp)
+target_link_libraries(cp_filter_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(cp_filter_test)
+else()
+    add_test(NAME cp_filter_test COMMAND cp_filter_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
@@ -749,3 +762,17 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME perturbation_test COMMAND perturbation_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Scheduling benchmark tests (Taillard JSP + PSPLIB RCPSP)                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(scheduling_benchmark_test scheduling/scheduling_benchmark_test.cpp)
+target_link_libraries(scheduling_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+add_test(NAME scheduling_benchmark_test COMMAND scheduling_benchmark_test)
+set_tests_properties(scheduling_benchmark_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)

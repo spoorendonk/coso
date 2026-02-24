@@ -1554,17 +1554,17 @@ Touches only src/scheduling/ and src/model/schedule_model.cpp — fully parallel
 with step 5 (rich VRP) and step 8 (assignment).
 ```
 
-| ID | PR title | Deliverable | Files | Depends on |
-|----|----------|-------------|-------|------------|
-| 7.1 | ScheduleModel implementation | Model → compiled instance for scheduling engine | src/model/schedule_model.cpp | 1.3 |
-| 7.2 | Disjunctive graph data structure | DAG with machine cliques, critical path computation | src/scheduling/disjunctive_graph.{h,cpp} | — |
-| 7.3 | Schedule solution representation | Start times, makespan, Gantt-chart output | src/scheduling/schedule_solution.{h,cpp} | 7.2 |
-| 7.4 | Schedule operators | N5/N7 neighbourhood: swap, insert, block moves | src/scheduling/schedule_operators.{h,cpp} | 7.3 |
-| 7.5 | Construction heuristics (NEH, SGS) | Priority-rule SGS for RCPSP, NEH for flow shop | src/scheduling/construction.{h,cpp} | 7.3 |
-| 7.6 | Mode selection for RCPSP | Multi-mode resource assignment with greedy + local search | src/scheduling/mode_selection.{h,cpp} | 7.3 |
+| ID | PR title | Deliverable | Files | Depends on | Status |
+|----|----------|-------------|-------|------------|--------|
+| 7.1 | ScheduleModel implementation | Model → compiled instance for scheduling engine | src/model/schedule_model.cpp | 1.3 | **done** |
+| 7.2 | Disjunctive graph data structure | DAG with machine cliques, critical path computation | src/scheduling/disjunctive_graph.{h,cpp} | — | **done** |
+| 7.3 | Schedule solution representation | Start times, makespan, Gantt-chart output | src/scheduling/schedule_solution.{h,cpp} | 7.2 | **done** |
+| 7.4 | Schedule operators | N5/N7 neighbourhood: swap, insert, block moves | src/scheduling/schedule_operators.{h,cpp} | 7.3 | **done** |
+| 7.5 | Construction heuristics (NEH, SGS) | Priority-rule SGS for RCPSP, NEH for flow shop | src/scheduling/construction.{h,cpp} | 7.3 | **done** |
+| 7.6 | Mode selection for RCPSP | Multi-mode resource assignment with greedy + local search | src/scheduling/mode_selection.{h,cpp} | 7.3 | **done** |
 | 7.7 | Scheduling perturbation | Ruin-and-recreate for scheduling (random block removal, critical path shake, machine reassignment) | src/scheduling/perturbation.{h,cpp} | 7.4 | **done** |
-| 7.8 | Scheduling instance parsers | Taillard, PSPLIB, FJSP parsers | src/scheduling/parsers/ | 7.1 |
-| 7.9 | Scheduling benchmarks | Taillard JSP + PSPLIB RCPSP gap tests | tests/scheduling/ | 7.1, 7.4 |
+| 7.8 | Scheduling instance parsers | Taillard, PSPLIB, FJSP parsers | src/scheduling/parsers/ | 7.1 | **done** |
+| 7.9 | Scheduling benchmarks | Taillard JSP + PSPLIB RCPSP gap tests | tests/scheduling/ | 7.1, 7.4 | **done** |
 
 **7.2, 7.5, 7.6, 7.8 are parallel.** Integration merges at 7.9.
 
