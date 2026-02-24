@@ -63,6 +63,23 @@ void ScheduleData::Builder::add_precedence(int op_before, int op_after)
     extra_precedences_.push_back({op_before, op_after});
 }
 
+void ScheduleData::Builder::set_setup_time(int from_op, int to_op,
+                                            int machine, int time)
+{
+    setup_entries_.push_back({from_op, to_op, machine, time});
+}
+
+void ScheduleData::Builder::set_setup_time(int from_op, int to_op, int time)
+{
+    setup_uniform_entries_.push_back({from_op, to_op, time});
+}
+
+void ScheduleData::Builder::add_machine_available(int machine, int start,
+                                                   int end)
+{
+    calendar_entries_.push_back({machine, start, end});
+}
+
 void ScheduleData::Builder::set_objective(ScheduleObjective obj)
 {
     objective_ = obj;
@@ -165,6 +182,24 @@ ScheduleData ScheduleData::Builder::build() const
             if (r < num_resources)
                 data.resource_usage_[o * num_resources + r] = resource_usage_[o][r];
         }
+    }
+
+    // Setup times (if any were specified).
+    if (!setup_entries_.empty() || !setup_uniform_entries_.empty()) {
+        SetupTimeMatrix stm(num_operations, num_machines);
+        for (auto const& e : setup_uniform_entries_)
+            stm.set(e.from, e.to, e.time);
+        for (auto const& e : setup_entries_)
+            stm.set(e.from, e.to, e.machine, e.time);
+        data.setup_times_ = std::move(stm);
+    }
+
+    // Machine calendars (if any were specified).
+    if (!calendar_entries_.empty()) {
+        MachineCalendar cal(num_machines);
+        for (auto const& e : calendar_entries_)
+            cal.add_available(e.machine, e.start, e.end);
+        data.calendar_ = std::move(cal);
     }
 
     return data;
