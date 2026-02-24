@@ -159,6 +159,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Piecewise linear cost tests                                                 #
+# --------------------------------------------------------------------------- #
+
+add_executable(piecewise_cost_test routing/piecewise_cost_test.cpp)
+target_link_libraries(piecewise_cost_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(piecewise_cost_test)
+else()
+    add_test(NAME piecewise_cost_test COMMAND piecewise_cost_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Construction heuristic tests                                                #
 # --------------------------------------------------------------------------- #
 

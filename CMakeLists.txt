@@ -66,6 +66,7 @@ add_library(coso STATIC
     src/routing/route.cpp
     src/routing/solution.cpp
     src/routing/cost_evaluator.cpp
+    src/routing/piecewise_cost.cpp
     src/routing/construction.cpp
     src/routing/operators/exchange.cpp
     src/routing/operators/swap_star.cpp
