@@ -172,6 +172,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Distance resource tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(distance_resource_test routing/distance_resource_test.cpp)
+target_link_libraries(distance_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(distance_resource_test)
+else()
+    add_test(NAME distance_resource_test COMMAND distance_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 

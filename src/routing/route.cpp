@@ -124,6 +124,36 @@ int Route::eval_remove_distance(int pos) const
     return new_cost - old_cost;
 }
 
+int Route::eval_insert_dist_excess(int pos, int client) const
+{
+    assert(pos >= 0 && pos <= size());
+
+    int profile = data_->vehicle_type(vehicle_type_).profile;
+    auto client_state = DistanceResource::init(*data_, client);
+    auto const& left  = dist_prefix(pos - 1);  // depot -> ... -> c[pos-1]
+    auto const& right = dist_suffix(pos);       // c[pos] -> ... -> depot
+
+    // Full route: depot -> ... -> c[pos-1] -> new_client -> c[pos] -> ... -> depot
+    auto merged_left = DistanceResource::merge(left, client_state, *data_, profile);
+    auto full        = DistanceResource::merge(merged_left, right, *data_, profile);
+
+    return DistanceResource::excess(full, data_->vehicle_type(vehicle_type_));
+}
+
+int Route::eval_remove_dist_excess(int pos) const
+{
+    assert(pos >= 0 && pos < size());
+
+    int profile = data_->vehicle_type(vehicle_type_).profile;
+    auto const& left  = dist_prefix(pos - 1);   // depot -> ... -> c[pos-1]
+    auto const& right = dist_suffix(pos + 1);    // c[pos+1] -> ... -> depot
+
+    // Full route: depot -> ... -> c[pos-1] -> c[pos+1] -> ... -> depot
+    auto full = DistanceResource::merge(left, right, *data_, profile);
+
+    return DistanceResource::excess(full, data_->vehicle_type(vehicle_type_));
+}
+
 // ---------------------------------------------------------------------------
 //  Internal: update prefix/suffix arrays
 // ---------------------------------------------------------------------------
@@ -162,19 +192,50 @@ void Route::update_()
         load_excess_ = 0;
     }
 
-    // --- Distance ---
+    // --- Distance resource prefix/suffix ---
     int profile = data_->vehicle_type(vehicle_type_).profile;
-    distance_ = 0;
+
+    // prefix_[0] = depot state.
+    // prefix_[i+1] = merge(prefix_[i], init(client[i]))
+    //   This captures: depot -> c0 -> ... -> c[i]
+    dist_prefix_.resize(n + 1);
+    dist_prefix_[0] = DistanceResource::init_depot(depot_);
+
+    for (int i = 0; i < n; ++i) {
+        auto client_state = DistanceResource::init(*data_, clients_[i]);
+        dist_prefix_[i + 1] = DistanceResource::merge(
+            dist_prefix_[i], client_state, *data_, profile);
+    }
+
+    // suffix_[n] = depot state.
+    // suffix_[i] = merge(init(client[i]), suffix_[i+1])
+    //   This captures: c[i] -> ... -> c[n-1] -> depot
+    dist_suffix_.resize(n + 1);
+    dist_suffix_[n] = DistanceResource::init_depot(depot_);
+
+    for (int i = n - 1; i >= 0; --i) {
+        auto client_state = DistanceResource::init(*data_, clients_[i]);
+        dist_suffix_[i] = DistanceResource::merge(
+            client_state, dist_suffix_[i + 1], *data_, profile);
+    }
+
+    // --- Distance, duration, and distance excess ---
     if (n > 0) {
-        // depot -> first client
-        distance_ += data_->dist(profile, depot_, node_(clients_[0]));
-        // client-to-client edges
-        for (int i = 0; i + 1 < n; ++i) {
-            distance_ += data_->dist(profile, node_(clients_[i]),
-                                     node_(clients_[i + 1]));
-        }
-        // last client -> depot
-        distance_ += data_->dist(profile, node_(clients_[n - 1]), depot_);
+        // Full route: merge prefix (depot -> all clients) with depot return.
+        // prefix_[n] has first=depot, last=c[n-1].
+        // Merging with depot adds the c[n-1] -> depot edge.
+        auto full_state = DistanceResource::merge(
+            dist_prefix_[n],
+            DistanceResource::init_depot(depot_),
+            *data_, profile);
+        distance_ = full_state.distance;
+        duration_ = full_state.duration;
+        dist_excess_ = DistanceResource::excess(
+            full_state, data_->vehicle_type(vehicle_type_));
+    } else {
+        distance_ = 0;
+        duration_ = 0;
+        dist_excess_ = 0;
     }
 }
 
