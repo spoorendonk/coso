@@ -2,6 +2,7 @@
 
 #include "routing/problem_data.h"
 #include "routing/resources/distance_resource.h"
+#include "routing/resources/duration_resource.h"
 #include "routing/resources/load_resource.h"
 
 #include <cassert>
@@ -111,6 +112,28 @@ public:
     /// Cumulative duration of this route (travel + service, depot->clients->depot).
     [[nodiscard]] int duration() const noexcept { return duration_; }
 
+    /// Duration resource prefix state at position pos.
+    /// prefix(i) is the merged state for depot -> clients [0..i].
+    /// prefix(-1) is the depot state (before any client).
+    [[nodiscard]] DurationResource::State const& dur_prefix(int pos) const {
+        assert(pos >= -1 && pos < size());
+        return dur_prefix_[pos + 1];
+    }
+
+    /// Duration resource suffix state at position pos.
+    /// suffix(i) is the merged state for clients [i..n-1] -> depot.
+    /// suffix(n) is the depot state (after all clients).
+    [[nodiscard]] DurationResource::State const& dur_suffix(int pos) const {
+        assert(pos >= 0 && pos <= size());
+        return dur_suffix_[pos];
+    }
+
+    /// Total time warp (TW violation) for this route.
+    [[nodiscard]] int time_warp() const noexcept { return time_warp_; }
+
+    /// Whether the route satisfies all time window constraints.
+    [[nodiscard]] bool tw_feasible() const noexcept { return time_warp_ == 0; }
+
     // -------------------------------------------------------------------
     //  Modification + resource update
     // -------------------------------------------------------------------
@@ -162,6 +185,14 @@ public:
     /// Does NOT modify the route. O(1) using prefix/suffix arrays.
     [[nodiscard]] int eval_remove_dist_excess(int pos) const;
 
+    /// Evaluate time warp if a client were inserted at position pos.
+    /// Does NOT modify the route. O(1) using prefix/suffix arrays.
+    [[nodiscard]] int eval_insert_time_warp(int pos, int client) const;
+
+    /// Evaluate time warp if the client at position pos were removed.
+    /// Does NOT modify the route. O(1) using prefix/suffix arrays.
+    [[nodiscard]] int eval_remove_time_warp(int pos) const;
+
 private:
     ProblemData const* data_;
     int vehicle_type_;
@@ -181,8 +212,13 @@ private:
     std::vector<DistanceResource::State> dist_prefix_;
     std::vector<DistanceResource::State> dist_suffix_;
 
+    // Prefix/suffix arrays for duration resource (time windows).
+    std::vector<DurationResource::State> dur_prefix_;
+    std::vector<DurationResource::State> dur_suffix_;
+
     int load_excess_ = 0;
     int dist_excess_ = 0;
+    int time_warp_   = 0;
     int distance_    = 0;
     int duration_    = 0;
 

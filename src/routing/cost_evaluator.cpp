@@ -47,6 +47,9 @@ int64_t CostEvaluator::route_penalty(Route const& route) const
     // Load excess penalty.
     pen += static_cast<int64_t>(route.load_excess()) * load_penalty_;
 
+    // Time warp penalty.
+    pen += static_cast<int64_t>(route.time_warp()) * tw_penalty_;
+
     return pen;
 }
 
@@ -83,6 +86,11 @@ int64_t CostEvaluator::eval_insert_cost(Route const& route,
     int old_excess = route.load_excess();
     delta += static_cast<int64_t>(new_excess - old_excess) * load_penalty_;
 
+    // Time warp penalty delta.
+    int new_tw = route.eval_insert_time_warp(pos, client);
+    int old_tw = route.time_warp();
+    delta += static_cast<int64_t>(new_tw - old_tw) * tw_penalty_;
+
     return delta;
 }
 
@@ -108,6 +116,11 @@ int64_t CostEvaluator::eval_remove_cost(Route const& route, int pos) const
     int new_excess = route.eval_remove_load(pos);
     int old_excess = route.load_excess();
     delta += static_cast<int64_t>(new_excess - old_excess) * load_penalty_;
+
+    // Time warp penalty delta.
+    int new_tw = route.eval_remove_time_warp(pos);
+    int old_tw = route.time_warp();
+    delta += static_cast<int64_t>(new_tw - old_tw) * tw_penalty_;
 
     return delta;
 }
