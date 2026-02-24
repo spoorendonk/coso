@@ -92,6 +92,7 @@ add_library(coso STATIC
     src/assignment/construction.cpp
     src/assignment/parsers.cpp
     src/assignment/constraints/constraint.cpp
+    src/assignment/constraints/automaton.cpp
     src/scheduling/parsers.cpp
     src/scheduling/schedule_data.cpp
     src/scheduling/construction.cpp
@@ -99,6 +100,7 @@ add_library(coso STATIC
     src/scheduling/schedule_solution.cpp
     src/scheduling/mode_selection.cpp
     src/scheduling/schedule_operators.cpp
+    src/scheduling/perturbation.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
 )

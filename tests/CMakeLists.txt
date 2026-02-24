@@ -647,6 +647,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Pillar operator tests                                                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(pillar_operators_test assignment/pillar_operators_test.cpp)
+target_link_libraries(pillar_operators_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(pillar_operators_test)
+else()
+    add_test(NAME pillar_operators_test COMMAND pillar_operators_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Assignment construction heuristic tests                                     #
 # --------------------------------------------------------------------------- #
 
@@ -683,6 +696,32 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(constraint_test)
 else()
     add_test(NAME constraint_test COMMAND constraint_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Assignment CP filter tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(cp_filter_test assignment/cp_filter_test.cpp)
+target_link_libraries(cp_filter_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(cp_filter_test)
+else()
+    add_test(NAME cp_filter_test COMMAND cp_filter_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Automaton constraint tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(automaton_test assignment/automaton_test.cpp)
+target_link_libraries(automaton_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(automaton_test)
+else()
+    add_test(NAME automaton_test COMMAND automaton_test)
 endif()
 
 # --------------------------------------------------------------------------- #
@@ -725,6 +764,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Packing benchmark tests (Falkenauer/Scholl gap tests)                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(packing_benchmark_test packing/packing_benchmark_test.cpp)
+target_link_libraries(packing_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(packing_benchmark_test)
+else()
+    add_test(NAME packing_benchmark_test COMMAND packing_benchmark_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Bin capacity tracker tests                                                  #
 # --------------------------------------------------------------------------- #
 
@@ -749,3 +801,30 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME schedule_operators_test COMMAND schedule_operators_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Scheduling perturbation tests                                               #
+# --------------------------------------------------------------------------- #
+
+add_executable(perturbation_test scheduling/perturbation_test.cpp)
+target_link_libraries(perturbation_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(perturbation_test)
+else()
+    add_test(NAME perturbation_test COMMAND perturbation_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Scheduling benchmark tests (Taillard JSP + PSPLIB RCPSP)                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(scheduling_benchmark_test scheduling/scheduling_benchmark_test.cpp)
+target_link_libraries(scheduling_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+add_test(NAME scheduling_benchmark_test COMMAND scheduling_benchmark_test)
+set_tests_properties(scheduling_benchmark_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)
