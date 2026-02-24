@@ -90,6 +90,7 @@ add_library(coso STATIC
     src/packing/packing_operators.cpp
     src/packing/bin_capacity.cpp
     src/assignment/construction.cpp
+    src/assignment/replanning.cpp
     src/assignment/parsers.cpp
     src/assignment/constraints/constraint.cpp
     src/assignment/constraints/automaton.cpp
@@ -103,6 +104,8 @@ add_library(coso STATIC
     src/scheduling/perturbation.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
+    src/search/daemon.cpp
+    src/search/partitioned_search.cpp
     src/network/network_data.cpp
     src/network/network_solution.cpp
     src/network/mcf_solver.cpp

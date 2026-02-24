@@ -276,6 +276,45 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Compartment resource tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(compartment_resource_test routing/compartment_resource_test.cpp)
+target_link_libraries(compartment_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(compartment_resource_test)
+else()
+    add_test(NAME compartment_resource_test COMMAND compartment_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Sync resource tests                                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(sync_resource_test routing/sync_resource_test.cpp)
+target_link_libraries(sync_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(sync_resource_test)
+else()
+    add_test(NAME sync_resource_test COMMAND sync_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Loading resource tests                                                      #
+# --------------------------------------------------------------------------- #
+
+add_executable(loading_resource_test routing/loading_resource_test.cpp)
+target_link_libraries(loading_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(loading_resource_test)
+else()
+    add_test(NAME loading_resource_test COMMAND loading_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 
@@ -739,6 +778,19 @@ set_tests_properties(assignment_benchmark_test PROPERTIES
 )
 
 # --------------------------------------------------------------------------- #
+#  Assignment replanning tests                                                 #
+# --------------------------------------------------------------------------- #
+
+add_executable(replanning_test assignment/replanning_test.cpp)
+target_link_libraries(replanning_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(replanning_test)
+else()
+    add_test(NAME replanning_test COMMAND replanning_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
@@ -842,6 +894,32 @@ set_tests_properties(scheduling_benchmark_test PROPERTIES
     SKIP_RETURN_CODE 4
     LABELS "benchmark"
 )
+
+# --------------------------------------------------------------------------- #
+#  Daemon mode tests                                                           #
+# --------------------------------------------------------------------------- #
+
+add_executable(daemon_test search/daemon_test.cpp)
+target_link_libraries(daemon_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(daemon_test)
+else()
+    add_test(NAME daemon_test COMMAND daemon_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Partitioned search tests                                                    #
+# --------------------------------------------------------------------------- #
+
+add_executable(partitioned_search_test search/partitioned_search_test.cpp)
+target_link_libraries(partitioned_search_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(partitioned_search_test)
+else()
+    add_test(NAME partitioned_search_test COMMAND partitioned_search_test)
+endif()
 
 # --------------------------------------------------------------------------- #
 #  Network flow engine tests                                                   #
