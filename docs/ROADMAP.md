@@ -1580,7 +1580,7 @@ parallel with step 7 (scheduling).
 |----|----------|-------------|-------|------------|
 | 8.1 | AssignmentModel implementation | Model → compiled instance for assignment engine | src/model/assignment_model.cpp | 1.3 |
 | 8.2 | Assignment data + solution | Shift/slot matrix, employee-day assignments, cost eval | src/assignment/assignment_data.{h,cpp}, assignment_solution.{h,cpp} | 8.1 |
-| 8.3 | Basic assignment operators | Swap-shift, move-shift, swap-block between employees | src/assignment/operators/ | 8.2 |
+| 8.3 | Basic assignment operators | Swap-shift, move-shift, swap-block between employees | src/assignment/operators/ | 8.2 | **Done** |
 | 8.4 | Pillar operators | Multi-employee column moves (VND-style) | src/assignment/operators/pillar_*.{h,cpp} | 8.2 |
 | 8.5 | Construction heuristic (FFD) | First-fit-decreasing for initial feasible roster | src/assignment/construction.{h,cpp} | 8.2 |
 | 8.6 | Constraint evaluation framework | Incremental soft/hard constraint delta computation | src/assignment/constraints/ | 8.2 |

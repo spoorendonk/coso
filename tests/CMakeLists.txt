@@ -634,6 +634,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment operator tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_operators_test assignment/assignment_operators_test.cpp)
+target_link_libraries(assignment_operators_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(assignment_operators_test)
+else()
+    add_test(NAME assignment_operators_test COMMAND assignment_operators_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
