@@ -276,6 +276,45 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Compartment resource tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(compartment_resource_test routing/compartment_resource_test.cpp)
+target_link_libraries(compartment_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(compartment_resource_test)
+else()
+    add_test(NAME compartment_resource_test COMMAND compartment_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Sync resource tests                                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(sync_resource_test routing/sync_resource_test.cpp)
+target_link_libraries(sync_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(sync_resource_test)
+else()
+    add_test(NAME sync_resource_test COMMAND sync_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Loading resource tests                                                      #
+# --------------------------------------------------------------------------- #
+
+add_executable(loading_resource_test routing/loading_resource_test.cpp)
+target_link_libraries(loading_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(loading_resource_test)
+else()
+    add_test(NAME loading_resource_test COMMAND loading_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 
