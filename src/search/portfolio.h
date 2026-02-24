@@ -12,17 +12,18 @@ namespace coso {
 /// Portfolio solver: runs multiple search strategies and combines results.
 ///
 /// Sequential mode (default):
-///   1. Run ILS for a fraction of the time budget.
-///   2. Seed GA's population with the ILS best solution.
-///   3. Run GA (HGS) for the remaining time budget.
-///   4. Apply SolutionFinalizer to the overall best solution.
-///   5. Return the best feasible solution found.
+///   1. Run ILS for a fixed iteration budget (fast local search phase).
+///   2. Run GA (HGS) for the remaining time/iteration budget.
+///   3. Keep the best solution found across both strategies.
+///   4. Apply SolutionFinalizer to polish and guarantee feasibility.
+///   5. Return the finalized best solution.
 ///
-/// The time budget is split between ILS and GA.  By default, ILS gets 40%
-/// and GA gets 60%, since GA benefits more from search time (population
-/// diversity + crossover need iterations to converge).
+/// ILS converges quickly to a good local optimum.  GA then uses
+/// population-based search with crossover to explore beyond ILS's
+/// local optimum for the remaining budget.
 ///
-/// Future: parallel mode with TBB, running ILS and HGS concurrently.
+/// Future: parallel mode with TBB, running ILS and HGS concurrently;
+/// seeding GA population with ILS best solution.
 class PortfolioSolver {
 public:
     /// Construct a portfolio solver for the given problem instance.
@@ -39,15 +40,9 @@ public:
     /// Set the random seed (passed to both ILS and GA).
     void set_seed(uint64_t seed);
 
-    /// Set the fraction of time allocated to ILS (default: 0.4).
-    /// The remaining fraction goes to GA.
-    /// Must be in (0, 1).
-    void set_ils_fraction(double frac);
-
 private:
     ProblemData const* data_;
     uint64_t seed_ = 42;
-    double ils_fraction_ = 0.4;
 };
 
 } // namespace coso

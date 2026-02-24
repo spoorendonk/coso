@@ -63,7 +63,6 @@ TEST_CASE("PortfolioSolver: constructs without error",
 
     // Configuration should not crash.
     solver.set_seed(123);
-    solver.set_ils_fraction(0.3);
 }
 
 // =========================================================================== //
@@ -213,19 +212,18 @@ TEST_CASE("PortfolioSolver: result is always finalized (feasible, locally optima
 }
 
 // =========================================================================== //
-//  ILS fraction configuration                                                  //
+//  Medium instance with iteration budget                                       //
 // =========================================================================== //
 
-TEST_CASE("PortfolioSolver: custom ILS fraction works",
+TEST_CASE("PortfolioSolver: works on medium instance with iteration budget",
           "[search][portfolio]")
 {
-    auto data = make_small_instance();
+    auto data = make_medium_instance();
     CostEvaluator eval;
     StopCriterion stop(0.0, 100, 0);
 
     PortfolioSolver solver(data);
     solver.set_seed(42);
-    solver.set_ils_fraction(0.2);  // Give ILS less time, GA more.
 
     auto sol = solver.run(eval, stop);
 

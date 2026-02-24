@@ -17,12 +17,6 @@ void PortfolioSolver::set_seed(uint64_t seed)
     seed_ = seed;
 }
 
-void PortfolioSolver::set_ils_fraction(double frac)
-{
-    assert(frac > 0.0 && frac < 1.0);
-    ils_fraction_ = frac;
-}
-
 Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop)
 {
     // Phase 1: Run ILS with a limited iteration budget.
