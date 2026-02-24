@@ -660,6 +660,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment parser tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_parser_test assignment/parser_test.cpp)
+target_link_libraries(assignment_parser_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(assignment_parser_test)
+else()
+    add_test(NAME assignment_parser_test COMMAND assignment_parser_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
