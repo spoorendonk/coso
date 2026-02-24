@@ -105,6 +105,7 @@ add_library(coso STATIC
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
     src/search/daemon.cpp
+    src/search/partitioned_search.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>

@@ -868,3 +868,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME daemon_test COMMAND daemon_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Partitioned search tests                                                    #
+# --------------------------------------------------------------------------- #
+
+add_executable(partitioned_search_test search/partitioned_search_test.cpp)
+target_link_libraries(partitioned_search_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(partitioned_search_test)
+else()
+    add_test(NAME partitioned_search_test COMMAND partitioned_search_test)
+endif()
