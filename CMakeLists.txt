@@ -72,6 +72,7 @@ add_library(coso STATIC
     src/routing/operators/route_split.cpp
     src/routing/operators/insert_optional.cpp
     src/routing/operators/pair_operators.cpp
+    src/routing/operators/relocate_with_depot.cpp
     src/routing/local_search.cpp
     src/search/stop_criterion.cpp
     src/search/acceptance.cpp

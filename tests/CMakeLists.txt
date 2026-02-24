@@ -237,6 +237,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  RelocateWithDepot operator tests                                            #
+# --------------------------------------------------------------------------- #
+
+add_executable(relocate_with_depot_test routing/relocate_with_depot_test.cpp)
+target_link_libraries(relocate_with_depot_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(relocate_with_depot_test)
+else()
+    add_test(NAME relocate_with_depot_test COMMAND relocate_with_depot_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Distance resource tests                                                     #
 # --------------------------------------------------------------------------- #
 
