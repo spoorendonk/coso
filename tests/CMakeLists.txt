@@ -543,6 +543,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Disjunctive graph tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(disjunctive_graph_test scheduling/disjunctive_graph_test.cpp)
+target_link_libraries(disjunctive_graph_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(disjunctive_graph_test)
+else()
+    add_test(NAME disjunctive_graph_test COMMAND disjunctive_graph_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Assignment model tests                                                      #
 # --------------------------------------------------------------------------- #
 
