@@ -2,6 +2,7 @@
 
 #include "types.h"
 
+#include <utility>
 #include <vector>
 
 namespace coso {
@@ -44,6 +45,33 @@ public:
 
     /// Solve the packing problem within the given time limit.
     Result solve(TimeLimit tl);
+
+    // -- Accessors -----------------------------------------------------------
+
+    [[nodiscard]] int num_bin_types() const noexcept {
+        return static_cast<int>(bin_types_.size());
+    }
+    [[nodiscard]] int num_items() const noexcept {
+        return static_cast<int>(items_.size());
+    }
+    [[nodiscard]] int num_dimensions() const noexcept { return num_dims_; }
+
+    [[nodiscard]] BinTypeParams const& bin_type(int b) const {
+        return bin_types_[b];
+    }
+    [[nodiscard]] ItemParams const& item(int i) const {
+        return items_[i];
+    }
+    [[nodiscard]] auto const& conflicts() const noexcept {
+        return conflicts_;
+    }
+
+private:
+    std::vector<BinTypeParams> bin_types_;
+    std::vector<ItemParams>    items_;
+    std::vector<std::pair<int,int>> conflicts_;
+    int num_dims_ = 0;
+    bool minimize_bins_ = false;
 };
 
 } // namespace coso
