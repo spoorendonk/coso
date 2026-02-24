@@ -1,6 +1,7 @@
 #pragma once
 
 #include "routing/problem_data.h"
+#include "routing/resources/distance_resource.h"
 #include "routing/resources/load_resource.h"
 
 #include <cassert>
@@ -83,6 +84,33 @@ public:
     /// Total distance of this route (depot -> clients -> depot).
     [[nodiscard]] int distance() const noexcept { return distance_; }
 
+    /// Distance resource prefix state at position pos.
+    /// prefix(i) is the merged state for depot -> clients [0..i].
+    /// prefix(-1) is the depot state (before any client).
+    [[nodiscard]] DistanceResource::State const& dist_prefix(int pos) const {
+        assert(pos >= -1 && pos < size());
+        return dist_prefix_[pos + 1];
+    }
+
+    /// Distance resource suffix state at position pos.
+    /// suffix(i) is the merged state for clients [i..n-1] -> depot.
+    /// suffix(n) is the depot state (after all clients).
+    [[nodiscard]] DistanceResource::State const& dist_suffix(int pos) const {
+        assert(pos >= 0 && pos <= size());
+        return dist_suffix_[pos];
+    }
+
+    /// Total distance/duration excess for this route.
+    [[nodiscard]] int dist_excess() const noexcept { return dist_excess_; }
+
+    /// Whether the route satisfies max_distance and max_duration constraints.
+    [[nodiscard]] bool dist_feasible() const noexcept {
+        return dist_excess_ == 0;
+    }
+
+    /// Cumulative duration of this route (travel + service, depot->clients->depot).
+    [[nodiscard]] int duration() const noexcept { return duration_; }
+
     // -------------------------------------------------------------------
     //  Modification + resource update
     // -------------------------------------------------------------------
@@ -126,6 +154,14 @@ public:
     /// Returns the change in total route distance (can be negative).
     [[nodiscard]] int eval_remove_distance(int pos) const;
 
+    /// Evaluate distance/duration excess if a client were inserted at pos.
+    /// Does NOT modify the route. O(1) using prefix/suffix arrays.
+    [[nodiscard]] int eval_insert_dist_excess(int pos, int client) const;
+
+    /// Evaluate distance/duration excess if the client at pos were removed.
+    /// Does NOT modify the route. O(1) using prefix/suffix arrays.
+    [[nodiscard]] int eval_remove_dist_excess(int pos) const;
+
 private:
     ProblemData const* data_;
     int vehicle_type_;
@@ -139,8 +175,16 @@ private:
     std::vector<LoadResource::State> load_prefix_;
     std::vector<LoadResource::State> load_suffix_;
 
+    // Prefix/suffix arrays for distance resource.
+    // prefix_[0] = depot, prefix_[i+1] = merge(prefix_[i], client[i])
+    // suffix_[i] = merge(client[i], suffix_[i+1]), suffix_[n] = depot
+    std::vector<DistanceResource::State> dist_prefix_;
+    std::vector<DistanceResource::State> dist_suffix_;
+
     int load_excess_ = 0;
+    int dist_excess_ = 0;
     int distance_    = 0;
+    int duration_    = 0;
 
     /// Recompute all prefix/suffix arrays and cached values.
     void update_();
