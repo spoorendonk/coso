@@ -528,3 +528,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME warm_start_test COMMAND warm_start_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Schedule model tests                                                        #
+# --------------------------------------------------------------------------- #
+
+add_executable(schedule_model_test scheduling/schedule_model_test.cpp)
+target_link_libraries(schedule_model_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(schedule_model_test)
+else()
+    add_test(NAME schedule_model_test COMMAND schedule_model_test)
+endif()
