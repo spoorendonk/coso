@@ -224,6 +224,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Pair operators (pickup-delivery) tests                                      #
+# --------------------------------------------------------------------------- #
+
+add_executable(pair_operators_test routing/pair_operators_test.cpp)
+target_link_libraries(pair_operators_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(pair_operators_test)
+else()
+    add_test(NAME pair_operators_test COMMAND pair_operators_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Distance resource tests                                                     #
 # --------------------------------------------------------------------------- #
 
