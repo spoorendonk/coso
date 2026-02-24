@@ -490,6 +490,20 @@ set_tests_properties(benchmark_test PROPERTIES
 )
 
 # --------------------------------------------------------------------------- #
+#  VRPTW benchmark tests (require downloaded Solomon instances)                #
+# --------------------------------------------------------------------------- #
+
+add_executable(vrptw_benchmark_test routing/vrptw_benchmark_test.cpp)
+target_link_libraries(vrptw_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+add_test(NAME vrptw_benchmark_test COMMAND vrptw_benchmark_test)
+set_tests_properties(vrptw_benchmark_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)
+
+# --------------------------------------------------------------------------- #
 #  Warm start + pinning tests                                                  #
 # --------------------------------------------------------------------------- #
 
