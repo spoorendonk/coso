@@ -69,6 +69,7 @@ add_library(coso STATIC
     src/routing/construction.cpp
     src/routing/operators/exchange.cpp
     src/routing/operators/swap_star.cpp
+    src/routing/operators/route_split.cpp
     src/routing/local_search.cpp
     src/search/stop_criterion.cpp
     src/search/acceptance.cpp

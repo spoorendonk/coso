@@ -120,6 +120,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Route split operator tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(route_split_test routing/route_split_test.cpp)
+target_link_libraries(route_split_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(route_split_test)
+else()
+    add_test(NAME route_split_test COMMAND route_split_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 
