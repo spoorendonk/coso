@@ -647,6 +647,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Assignment construction heuristic tests                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_construction_test assignment/construction_test.cpp)
+target_link_libraries(assignment_construction_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(assignment_construction_test)
+else()
+    add_test(NAME assignment_construction_test COMMAND assignment_construction_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Packing model tests                                                         #
 # --------------------------------------------------------------------------- #
 
