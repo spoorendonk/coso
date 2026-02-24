@@ -556,6 +556,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Schedule solution tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(schedule_solution_test scheduling/schedule_solution_test.cpp)
+target_link_libraries(schedule_solution_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(schedule_solution_test)
+else()
+    add_test(NAME schedule_solution_test COMMAND schedule_solution_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Assignment model tests                                                      #
 # --------------------------------------------------------------------------- #
 

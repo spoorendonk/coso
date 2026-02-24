@@ -87,7 +87,9 @@ add_library(coso STATIC
     src/search/solution_finalizer.cpp
     src/search/portfolio.cpp
     src/scheduling/schedule_data.cpp
+    src/scheduling/parsers.cpp
     src/scheduling/disjunctive_graph.cpp
+    src/scheduling/schedule_solution.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
 )
@@ -96,6 +98,11 @@ target_include_directories(coso PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 target_compile_features(coso PUBLIC cxx_std_23)
+
+# When building Python bindings, the static lib must be PIC-compatible.
+if(COSO_BUILD_PYTHON)
+    set_target_properties(coso PROPERTIES POSITION_INDEPENDENT_CODE ON)
+endif()
 
 if(COSO_USE_TBB)
     target_link_libraries(coso PUBLIC TBB::tbb)
