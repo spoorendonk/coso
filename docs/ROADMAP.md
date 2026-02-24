@@ -1524,7 +1524,7 @@ Deliverable: full-featured routing with time windows, fleet, PD, etc.
 | ID | PR title | Deliverable | Files | Depends on |
 |----|----------|-------------|-------|------------|
 | 5.9 | Pair operators | Relocate-pair, swap-pair for pickup-delivery | src/routing/operators/pair_operators.{h,cpp} | 5.3 |
-| 5.10 | Multi-trip support | Relocate-with-depot-insert for multi-trip VRP | src/routing/operators/relocate_with_depot.{h,cpp} | 2.5 |
+| 5.10 | Multi-trip support | Relocate-with-depot-insert for multi-trip VRP | src/routing/operators/relocate_with_depot.{h,cpp} | 2.5 | **Done** (PR #37) |
 | 5.11 | Route split operator | Split long routes at optimal point | src/routing/operators/route_split.{h,cpp} | 2.5 |
 | 5.12 | Optional client handling | Insert/remove operators for optional visits | src/routing/operators/insert_optional.{h,cpp} | 2.5 |
 | 5.13 | Warm start + pinning | Initialize from existing solution, pin fixed clients | src/search/warm_start.{h,cpp} | 2.8 |
