@@ -78,6 +78,7 @@ add_library(coso STATIC
     src/search/guided_local_search.cpp
     src/search/population.cpp
     src/search/score_assert.cpp
+    src/search/crossover.cpp
     src/search/solution_finalizer.cpp
     src/search/benchmarker.cpp
 )

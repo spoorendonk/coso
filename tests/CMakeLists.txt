@@ -274,6 +274,19 @@ set_tests_properties(benchmarker_integration_test PROPERTIES
 )
 
 # --------------------------------------------------------------------------- #
+#  SREX crossover tests                                                        #
+# --------------------------------------------------------------------------- #
+
+add_executable(crossover_test search/crossover_test.cpp)
+target_link_libraries(crossover_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(crossover_test)
+else()
+    add_test(NAME crossover_test COMMAND crossover_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Solution finalizer tests                                                    #
 # --------------------------------------------------------------------------- #
 
