@@ -55,6 +55,7 @@ public:
         std::vector<int> capacity;
         int max_duration         = 0;       ///< 0 = unlimited
         int max_distance         = 0;       ///< 0 = unlimited
+        int min_tasks            = 0;       ///< 0 = no minimum
         int max_tasks            = 0;       ///< 0 = unlimited
         int max_overtime         = 0;
         int unit_overtime_cost   = 0;

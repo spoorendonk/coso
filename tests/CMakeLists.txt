@@ -94,6 +94,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  BreakResource tests                                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(break_resource_test routing/break_resource_test.cpp)
+target_link_libraries(break_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(break_resource_test)
+else()
+    add_test(NAME break_resource_test COMMAND break_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Solution tests                                                              #
 # --------------------------------------------------------------------------- #
 
@@ -195,6 +208,19 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(distance_resource_test)
 else()
     add_test(NAME distance_resource_test COMMAND distance_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Task count resource tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(task_count_resource_test routing/task_count_resource_test.cpp)
+target_link_libraries(task_count_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(task_count_resource_test)
+else()
+    add_test(NAME task_count_resource_test COMMAND task_count_resource_test)
 endif()
 
 # --------------------------------------------------------------------------- #
