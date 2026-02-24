@@ -68,6 +68,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  SkillFilter tests                                                           #
+# --------------------------------------------------------------------------- #
+
+add_executable(skill_filter_test routing/skill_filter_test.cpp)
+target_link_libraries(skill_filter_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(skill_filter_test)
+else()
+    add_test(NAME skill_filter_test COMMAND skill_filter_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Solution tests                                                              #
 # --------------------------------------------------------------------------- #
 
@@ -130,6 +143,19 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(swap_star_test)
 else()
     add_test(NAME swap_star_test COMMAND swap_star_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Route split operator tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(route_split_test routing/route_split_test.cpp)
+target_link_libraries(route_split_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(route_split_test)
+else()
+    add_test(NAME route_split_test COMMAND route_split_test)
 endif()
 
 # --------------------------------------------------------------------------- #
@@ -358,3 +384,16 @@ set_tests_properties(benchmark_test PROPERTIES
     SKIP_RETURN_CODE 4
     LABELS "benchmark"
 )
+
+# --------------------------------------------------------------------------- #
+#  Warm start + pinning tests                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(warm_start_test search/warm_start_test.cpp)
+target_link_libraries(warm_start_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(warm_start_test)
+else()
+    add_test(NAME warm_start_test COMMAND warm_start_test)
+endif()
