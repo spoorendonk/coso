@@ -1618,7 +1618,7 @@ Each work unit is independent — max parallelism.
 | 10.1 | Partitioned search | Decompose large instances into sub-problems | src/search/partitioned_search.{h,cpp} | 2.6 |
 | 10.2 | Daemon mode | Continuous solving with dynamic updates | src/search/daemon.{h,cpp} | 2.8 |
 | 10.3 | Routing replanning | Re-optimize with fixed/pinned clients, warm start | src/search/warm_start.cpp (extend) | 5.13 |
-| 10.4 | Assignment replanning | Re-roster with locked shifts and new constraints | src/assignment/ (extend) | 8.3 |
+| 10.4 | Assignment replanning | Re-roster with locked shifts and new constraints | src/assignment/ (extend) | Done |
 | 10.5 | Overconstrained handling | Soft violations with cost penalties for infeasible instances | src/routing/, src/assignment/ (extend) | 2.4, 8.2 |
 | 10.6 | Piecewise linear costs | Non-linear distance/duration cost functions | src/routing/cost_evaluator.cpp (extend) | 2.4 |
 | 10.7 | Extended routing resources | Compartments, loading constraints, sync visits | src/routing/resources/ (new resources) | 2.3 |
