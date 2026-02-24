@@ -2,7 +2,6 @@
 
 #include "routing/problem_data.h"
 
-#include <algorithm>
 #include <cassert>
 
 namespace coso {
