@@ -2,6 +2,7 @@
 
 #include "routing/problem_data.h"
 
+#include <bit>
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -136,7 +137,7 @@ struct SkillFilter {
         assert(vtype >= 0
                && vtype < static_cast<int>(sd.vehicle_mask.size()));
         uint64_t missing = state.required & ~sd.vehicle_mask[vtype];
-        return popcount_(missing);
+        return std::popcount(missing);
     }
 
     /// Convenience: check whether a vehicle type can serve this route.
@@ -146,20 +147,6 @@ struct SkillFilter {
         return excess(state, sd, vtype) == 0;
     }
 
-private:
-    /// Portable popcount for uint64_t.
-    [[nodiscard]] static int popcount_(uint64_t x) noexcept {
-        // Use compiler builtin when available.
-#if defined(__GNUC__) || defined(__clang__)
-        return __builtin_popcountll(x);
-#else
-        // Fallback: Hamming weight via bit tricks.
-        x = x - ((x >> 1) & 0x5555555555555555ULL);
-        x = (x & 0x3333333333333333ULL) + ((x >> 2) & 0x3333333333333333ULL);
-        x = (x + (x >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-        return static_cast<int>((x * 0x0101010101010101ULL) >> 56);
-#endif
-    }
 };
 
 } // namespace coso
