@@ -1512,10 +1512,10 @@ Deliverable: full-featured routing with time windows, fleet, PD, etc.
 |----|----------|-------------|-------|------------|
 | 5.1 | Duration resource | Time window feasibility with wait/late tracking | src/routing/resources/duration_resource.h | 2.3 |
 | 5.2 | Distance resource | Max distance / max duration per route | src/routing/resources/distance_resource.h | 2.3 |
-| 5.3 | Precedence resource | Pickup-before-delivery within same route (done) | src/routing/resources/precedence_resource.h | 2.3 |
+| 5.3 | Precedence resource | Pickup-before-delivery within same route | src/routing/resources/precedence_resource.h | 2.3 |
 | 5.4 | Break resource | Scheduled driver breaks within time windows | src/routing/resources/break_resource.h | 2.3 |
 | 5.5 | Skill filter | Vehicle-client compatibility (skills, zones) | src/routing/resources/skill_filter.h | 2.3 |
-| 5.6 | Type incompatibility | Clients that cannot share a route | src/routing/resources/type_incompatibility.h | 2.3 | **Done** |
+| 5.6 | Type incompatibility | Clients that cannot share a route | src/routing/resources/type_incompatibility.h | 2.3 |
 | 5.7 | Depot resource | Multi-depot assignment with open/close times | src/routing/resources/depot_resource.h | 2.3 |
 | 5.8 | Task count resource | Min/max clients per route | src/routing/resources/task_count_resource.h | 2.3 |
 
@@ -1526,7 +1526,7 @@ Deliverable: full-featured routing with time windows, fleet, PD, etc.
 | 5.9 | Pair operators | Relocate-pair, swap-pair for pickup-delivery | src/routing/operators/pair_operators.{h,cpp} | 5.3 |
 | 5.10 | Multi-trip support | Relocate-with-depot-insert for multi-trip VRP | src/routing/operators/relocate_with_depot.{h,cpp} | 2.5 |
 | 5.11 | Route split operator | Split long routes at optimal point | src/routing/operators/route_split.{h,cpp} | 2.5 | **Done** |
-| 5.12 | Optional client handling | Insert/remove operators for optional visits | src/routing/operators/insert_optional.{h,cpp} | 2.5 | **Done** |
+| 5.12 | Optional client handling | Insert/remove operators for optional visits | src/routing/operators/insert_optional.{h,cpp} | 2.5 |
 | 5.13 | **Warm start + pinning** | **Initialize from existing solution, pin fixed clients** | **src/search/warm_start.{h,cpp}** | **2.8** |
 | 5.14 | Rich VRP instance parsers | Solomon, Li-Lim, Gehring-Homberger parsers | src/model/instance_reader.cpp (extend) | 2.1 |
 | 5.15 | VRPTW benchmarks | Solomon C1/R1/RC1 end-to-end gap tests | tests/routing/ (extend) | 5.1, 5.14 |
