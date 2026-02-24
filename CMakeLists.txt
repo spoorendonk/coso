@@ -77,6 +77,7 @@ add_library(coso STATIC
     src/search/penalty_manager.cpp
     src/search/guided_local_search.cpp
     src/search/score_assert.cpp
+    src/search/solution_finalizer.cpp
     src/search/benchmarker.cpp
 )
 target_include_directories(coso PUBLIC

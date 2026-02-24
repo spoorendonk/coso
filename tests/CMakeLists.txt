@@ -261,6 +261,19 @@ set_tests_properties(benchmarker_integration_test PROPERTIES
 )
 
 # --------------------------------------------------------------------------- #
+#  Solution finalizer tests                                                    #
+# --------------------------------------------------------------------------- #
+
+add_executable(solution_finalizer_test search/solution_finalizer_test.cpp)
+target_link_libraries(solution_finalizer_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(solution_finalizer_test)
+else()
+    add_test(NAME solution_finalizer_test COMMAND solution_finalizer_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Routing benchmark tests (require downloaded instances)                       #
 # --------------------------------------------------------------------------- #
 
