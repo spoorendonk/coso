@@ -124,6 +124,52 @@ int Route::eval_remove_distance(int pos) const
     return new_cost - old_cost;
 }
 
+int Route::eval_insert_time_warp(int pos, int client) const
+{
+    assert(pos >= 0 && pos <= size());
+
+    // The TW merge is not associative, so we cannot use suffix arrays for O(1)
+    // evaluation.  Instead, reuse the prefix up to pos-1 (O(1)) and then scan
+    // forward through the remaining clients (O(n - pos)).
+    int profile = data_->vehicle_type(vehicle_type_).profile;
+    auto state = dur_prefix(pos - 1);
+
+    // Merge with the inserted client.
+    auto cs = DurationResource::init(*data_, client, node_(client));
+    state = DurationResource::merge(state, cs, *data_, profile);
+
+    // Continue with existing clients from pos onward.
+    for (int i = pos; i < size(); ++i) {
+        auto ci = DurationResource::init(*data_, clients_[i], node_(clients_[i]));
+        state = DurationResource::merge(state, ci, *data_, profile);
+    }
+
+    // Merge with depot return.
+    auto depot_end = DurationResource::init_depot(*data_, depot_);
+    state = DurationResource::merge(state, depot_end, *data_, profile);
+
+    return DurationResource::time_warp(state);
+}
+
+int Route::eval_remove_time_warp(int pos) const
+{
+    assert(pos >= 0 && pos < size());
+
+    int profile = data_->vehicle_type(vehicle_type_).profile;
+    auto state = dur_prefix(pos - 1);
+
+    // Skip the removed client; continue from pos+1 onward.
+    for (int i = pos + 1; i < size(); ++i) {
+        auto ci = DurationResource::init(*data_, clients_[i], node_(clients_[i]));
+        state = DurationResource::merge(state, ci, *data_, profile);
+    }
+
+    auto depot_end = DurationResource::init_depot(*data_, depot_);
+    state = DurationResource::merge(state, depot_end, *data_, profile);
+
+    return DurationResource::time_warp(state);
+}
+
 int Route::eval_insert_dist_excess(int pos, int client) const
 {
     assert(pos >= 0 && pos <= size());
@@ -192,8 +238,40 @@ void Route::update_()
         load_excess_ = 0;
     }
 
-    // --- Distance resource prefix/suffix ---
+    // --- Duration resource prefix/suffix ---
     int profile = data_->vehicle_type(vehicle_type_).profile;
+
+    dur_prefix_.resize(n + 1);
+    dur_prefix_[0] = DurationResource::init_depot(*data_, depot_);
+
+    for (int i = 0; i < n; ++i) {
+        int cnode = node_(clients_[i]);
+        auto cstate = DurationResource::init(*data_, clients_[i], cnode);
+        dur_prefix_[i + 1] = DurationResource::merge(
+            dur_prefix_[i], cstate, *data_, profile);
+    }
+
+    dur_suffix_.resize(n + 1);
+    dur_suffix_[n] = DurationResource::init_depot(*data_, depot_);
+
+    for (int i = n - 1; i >= 0; --i) {
+        int cnode = node_(clients_[i]);
+        auto cstate = DurationResource::init(*data_, clients_[i], cnode);
+        dur_suffix_[i] = DurationResource::merge(
+            cstate, dur_suffix_[i + 1], *data_, profile);
+    }
+
+    // --- Time warp ---
+    if (n > 0) {
+        auto depot_end = DurationResource::init_depot(*data_, depot_);
+        auto full_dur = DurationResource::merge(
+            dur_prefix_[n], depot_end, *data_, profile);
+        time_warp_ = DurationResource::time_warp(full_dur);
+    } else {
+        time_warp_ = 0;
+    }
+
+    // --- Distance resource prefix/suffix ---
 
     // prefix_[0] = depot state.
     // prefix_[i+1] = merge(prefix_[i], init(client[i]))

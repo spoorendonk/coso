@@ -55,6 +55,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  DurationResource tests                                                      #
+# --------------------------------------------------------------------------- #
+
+add_executable(duration_resource_test routing/duration_resource_test.cpp)
+target_link_libraries(duration_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(duration_resource_test)
+else()
+    add_test(NAME duration_resource_test COMMAND duration_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  PrecedenceResource tests                                                    #
 # --------------------------------------------------------------------------- #
 
