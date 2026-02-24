@@ -684,3 +684,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME packing_solution_test COMMAND packing_solution_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Packing operators tests                                                     #
+# --------------------------------------------------------------------------- #
+
+add_executable(packing_operators_test packing/packing_operators_test.cpp)
+target_link_libraries(packing_operators_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(packing_operators_test)
+else()
+    add_test(NAME packing_operators_test COMMAND packing_operators_test)
+endif()
