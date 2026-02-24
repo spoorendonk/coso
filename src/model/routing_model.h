@@ -14,6 +14,7 @@ struct VehicleTypeParams {
     std::vector<int> capacity;           ///< N load dimensions
     int max_duration          = 0;       ///< 0 = unlimited
     int max_distance          = 0;       ///< 0 = unlimited
+    int min_tasks             = 0;       ///< 0 = no minimum
     int max_tasks             = 0;       ///< 0 = unlimited
     int max_overtime          = 0;       ///< allowed overtime beyond max_duration
     int unit_overtime_cost    = 0;       ///< cost per unit of overtime

@@ -50,6 +50,7 @@ int ProblemData::Builder::add_vehicle_type(int count, VehicleTypeParams p)
         .capacity           = std::move(p.capacity),
         .max_duration       = p.max_duration,
         .max_distance       = p.max_distance,
+        .min_tasks          = p.min_tasks,
         .max_tasks          = p.max_tasks,
         .max_overtime       = p.max_overtime,
         .unit_overtime_cost = p.unit_overtime_cost,

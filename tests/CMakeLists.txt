@@ -211,6 +211,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Task count resource tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(task_count_resource_test routing/task_count_resource_test.cpp)
+target_link_libraries(task_count_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(task_count_resource_test)
+else()
+    add_test(NAME task_count_resource_test COMMAND task_count_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 

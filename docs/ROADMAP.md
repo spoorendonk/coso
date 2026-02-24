@@ -1517,7 +1517,7 @@ Deliverable: full-featured routing with time windows, fleet, PD, etc.
 | 5.5 | Skill filter | Vehicle-client compatibility (skills, zones) | src/routing/resources/skill_filter.h | 2.3 |
 | 5.6 | Type incompatibility | Clients that cannot share a route | src/routing/resources/type_incompatibility.h | 2.3 |
 | 5.7 | Depot resource | Multi-depot assignment with open/close times | src/routing/resources/depot_resource.h | 2.3 |
-| 5.8 | Task count resource | Min/max clients per route | src/routing/resources/task_count_resource.h | 2.3 |
+| 5.8 | Task count resource | Min/max clients per route | src/routing/resources/task_count_resource.h | 2.3 | **Done** |
 
 **Operators + features (parallel where noted):**
 
