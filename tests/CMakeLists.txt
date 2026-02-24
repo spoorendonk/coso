@@ -242,6 +242,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Population tests                                                             #
+# --------------------------------------------------------------------------- #
+
+add_executable(population_test search/population_test.cpp)
+target_link_libraries(population_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(population_test)
+else()
+    add_test(NAME population_test COMMAND population_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Benchmarker harness tests                                                   #
 # --------------------------------------------------------------------------- #
 
@@ -271,6 +284,19 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(crossover_test)
 else()
     add_test(NAME crossover_test COMMAND crossover_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Solution finalizer tests                                                    #
+# --------------------------------------------------------------------------- #
+
+add_executable(solution_finalizer_test search/solution_finalizer_test.cpp)
+target_link_libraries(solution_finalizer_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(solution_finalizer_test)
+else()
+    add_test(NAME solution_finalizer_test COMMAND solution_finalizer_test)
 endif()
 
 # --------------------------------------------------------------------------- #
