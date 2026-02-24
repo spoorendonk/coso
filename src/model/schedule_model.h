@@ -82,6 +82,42 @@ public:
 
     /// Solve the scheduling problem within the given time limit.
     Result solve(TimeLimit tl);
+
+private:
+    // -- Stored machine data -------------------------------------------------
+    std::vector<MachineParams> machines_;
+
+    // -- Stored job data -----------------------------------------------------
+    std::vector<JobParams> jobs_;
+
+    // -- Stored operation data -----------------------------------------------
+    struct OperationEntry {
+        int job = -1;
+        OperationParams params;
+    };
+    std::vector<OperationEntry> operations_;
+
+    // -- Job → operations mapping --------------------------------------------
+    std::vector<std::vector<int>> job_operations_;
+
+    // -- Resources (RCPSP) ---------------------------------------------------
+    std::vector<int> resource_capacities_;
+
+    /// Per-operation resource usage: resource_usage_[op][res] = amount.
+    std::vector<std::vector<int>> resource_usage_;
+
+    // -- Additional precedence constraints -----------------------------------
+    struct Precedence {
+        int before;
+        int after;
+    };
+    std::vector<Precedence> extra_precedences_;
+
+    // -- Objective -----------------------------------------------------------
+    ScheduleObjective objective_ = ScheduleObjective::Makespan;
+
+    // -- Warm start ----------------------------------------------------------
+    std::vector<std::pair<int, int>> initial_schedule_;
 };
 
 /// Convenience: solve a JSP instance file (Taillard format) directly.

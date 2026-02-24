@@ -86,6 +86,7 @@ add_library(coso STATIC
     src/search/genetic_algorithm.cpp
     src/search/solution_finalizer.cpp
     src/search/portfolio.cpp
+    src/scheduling/schedule_data.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
 )
