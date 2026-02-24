@@ -91,6 +91,7 @@ add_library(coso STATIC
     src/assignment/construction.cpp
     src/assignment/parsers.cpp
     src/assignment/constraints/constraint.cpp
+    src/assignment/constraints/automaton.cpp
     src/scheduling/parsers.cpp
     src/scheduling/schedule_data.cpp
     src/scheduling/construction.cpp
