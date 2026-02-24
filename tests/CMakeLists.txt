@@ -276,6 +276,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Routing overconstrained handling tests                                      #
+# --------------------------------------------------------------------------- #
+
+add_executable(routing_overconstrained_test routing/overconstrained_test.cpp)
+target_link_libraries(routing_overconstrained_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(routing_overconstrained_test)
+else()
+    add_test(NAME routing_overconstrained_test COMMAND routing_overconstrained_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Local search engine tests                                                   #
 # --------------------------------------------------------------------------- #
 
@@ -722,6 +735,19 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(automaton_test)
 else()
     add_test(NAME automaton_test COMMAND automaton_test)
+endif()
+
+# --------------------------------------------------------------------------- #
+#  Assignment overconstrained handling tests                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_overconstrained_test assignment/overconstrained_test.cpp)
+target_link_libraries(assignment_overconstrained_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(assignment_overconstrained_test)
+else()
+    add_test(NAME assignment_overconstrained_test COMMAND assignment_overconstrained_test)
 endif()
 
 # --------------------------------------------------------------------------- #
