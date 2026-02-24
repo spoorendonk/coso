@@ -120,6 +120,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  DepotResource tests                                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(depot_resource_test routing/depot_resource_test.cpp)
+target_link_libraries(depot_resource_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(depot_resource_test)
+else()
+    add_test(NAME depot_resource_test COMMAND depot_resource_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Solution tests                                                              #
 # --------------------------------------------------------------------------- #
 
