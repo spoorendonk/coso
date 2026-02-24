@@ -1615,7 +1615,7 @@ Each work unit is independent — max parallelism.
 
 | ID | PR title | Deliverable | Files | Depends on |
 |----|----------|-------------|-------|------------|
-| 10.1 | Partitioned search | Decompose large instances into sub-problems | src/search/partitioned_search.{h,cpp} | 2.6 |
+| 10.1 | Partitioned search | Decompose large instances into sub-problems | src/search/partitioned_search.{h,cpp} | 2.6 | **Done** |
 | 10.2 | Daemon mode | Continuous solving with dynamic updates | src/search/daemon.{h,cpp} | 2.8 |
 | 10.3 | Routing replanning | Re-optimize with fixed/pinned clients, warm start | src/search/warm_start.cpp (extend) | 5.13 |
 | 10.4 | Assignment replanning | Re-roster with locked shifts and new constraints | src/assignment/ (extend) | 8.3 |
