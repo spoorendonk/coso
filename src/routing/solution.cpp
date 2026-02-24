@@ -95,14 +95,18 @@ void Solution::set_route_clients(int vehicle, std::vector<int> clients)
 {
     assert(vehicle >= 0 && vehicle < num_routes());
 
-    // Unmark old clients in this route.
+    // Unmark old clients in this route (skip DEPOT_VISIT markers).
     auto const& old_route = routes_[vehicle];
     for (int i = 0; i < old_route.size(); ++i) {
-        assigned_[old_route.client(i)] = false;
+        int c = old_route.client(i);
+        if (c != DEPOT_VISIT)
+            assigned_[c] = false;
     }
 
-    // Mark new clients as assigned.
+    // Mark new clients as assigned (skip DEPOT_VISIT markers).
     for (int c : clients) {
+        if (c == DEPOT_VISIT)
+            continue;
         assert(c >= 0 && c < data_->num_clients());
         assigned_[c] = true;
     }
@@ -135,8 +139,12 @@ void Solution::remove_client(int vehicle, int pos)
 
     int client = routes_[vehicle].client(pos);
     routes_[vehicle].remove(pos);
-    assigned_[client] = false;
-    unassigned_.push_back(client);
+
+    // DEPOT_VISIT markers are not real clients -- don't track assignment.
+    if (client != DEPOT_VISIT) {
+        assigned_[client] = false;
+        unassigned_.push_back(client);
+    }
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 #include "routing/cost_evaluator.h"
+#include "routing/route.h"  // for DEPOT_VISIT
 
 namespace coso {
 
@@ -32,8 +33,12 @@ int64_t CostEvaluator::route_objective(Route const& route) const
     obj += cost.fixed_cost;
 
     // Prize credits for served clients (subtract from cost).
+    // Skip DEPOT_VISIT markers (sentinel value -1) in multi-trip routes.
     for (int i = 0; i < route.size(); ++i) {
-        auto const& client = route.data().client(route.client(i));
+        int c = route.client(i);
+        if (c == DEPOT_VISIT)
+            continue;
+        auto const& client = route.data().client(c);
         obj -= client.prize;
     }
 

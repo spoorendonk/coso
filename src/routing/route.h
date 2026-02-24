@@ -9,6 +9,14 @@
 
 namespace coso {
 
+/// Sentinel value representing a depot visit within a route's client sequence.
+///
+/// In multi-trip VRP a vehicle can return to the depot mid-route to reload.
+/// Place DEPOT_VISIT markers in the route's client list to encode sub-trips.
+/// For example, [c0, c1, DEPOT_VISIT, c2, c3] means the vehicle serves c0
+/// and c1, returns to depot (reload), then serves c2 and c3.
+inline constexpr int DEPOT_VISIT = -1;
+
 /// A route: an ordered sequence of clients served by one vehicle.
 ///
 /// Maintains prefix and suffix resource arrays for O(1) move evaluation.
