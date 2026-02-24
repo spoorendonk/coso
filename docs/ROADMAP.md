@@ -1620,7 +1620,7 @@ Each work unit is independent — max parallelism.
 | 10.3 | Routing replanning | Re-optimize with fixed/pinned clients, warm start | src/search/warm_start.cpp (extend) | 5.13 |
 | 10.4 | Assignment replanning | Re-roster with locked shifts and new constraints | src/assignment/ (extend) | Done |
 | 10.5 | Overconstrained handling | Soft violations with cost penalties for infeasible instances | src/routing/, src/assignment/ (extend) | 2.4, 8.2 |
-| 10.6 | Piecewise linear costs | Non-linear distance/duration cost functions | src/routing/cost_evaluator.cpp (extend) | 2.4 |
+| 10.6 | Piecewise linear costs | Non-linear distance/duration cost functions | src/routing/cost_evaluator.cpp (extend) | 2.4 | **Done** |
 | 10.7 | Extended routing resources | Compartments, loading constraints, sync visits | src/routing/resources/ (new resources) | 2.3 | **Done** |
 | 10.8 | Extended scheduling | Setup times, sequence-dependent setups, calendars | src/scheduling/ (extend) | 7.4 |
 | 10.9 | Lot sizing engine | CLSP/MLCLSP, delegates to mip-heuristics | src/lotsizing/ | 1.2 |
