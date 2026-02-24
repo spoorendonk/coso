@@ -55,6 +55,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  SkillFilter tests                                                           #
+# --------------------------------------------------------------------------- #
+
+add_executable(skill_filter_test routing/skill_filter_test.cpp)
+target_link_libraries(skill_filter_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(skill_filter_test)
+else()
+    add_test(NAME skill_filter_test COMMAND skill_filter_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Solution tests                                                              #
 # --------------------------------------------------------------------------- #
 
