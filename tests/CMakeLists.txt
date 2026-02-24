@@ -933,3 +933,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME partitioned_search_test COMMAND partitioned_search_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Network flow engine tests                                                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(network_test network/network_test.cpp)
+target_link_libraries(network_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(network_test)
+else()
+    add_test(NAME network_test COMMAND network_test)
+endif()

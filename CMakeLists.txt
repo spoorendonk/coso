@@ -107,6 +107,11 @@ add_library(coso STATIC
     src/search/warm_start.cpp
     src/search/daemon.cpp
     src/search/partitioned_search.cpp
+    src/network/network_data.cpp
+    src/network/network_solution.cpp
+    src/network/mcf_solver.cpp
+    src/network/construction.cpp
+    src/network/network_operators.cpp
 )
 target_include_directories(coso PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
