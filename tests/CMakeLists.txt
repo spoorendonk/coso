@@ -528,3 +528,16 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME warm_start_test COMMAND warm_start_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Assignment model tests                                                      #
+# --------------------------------------------------------------------------- #
+
+add_executable(assignment_model_test assignment/assignment_model_test.cpp)
+target_link_libraries(assignment_model_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(assignment_model_test)
+else()
+    add_test(NAME assignment_model_test COMMAND assignment_model_test)
+endif()
