@@ -647,6 +647,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Pillar operator tests                                                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(pillar_operators_test assignment/pillar_operators_test.cpp)
+target_link_libraries(pillar_operators_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(pillar_operators_test)
+else()
+    add_test(NAME pillar_operators_test COMMAND pillar_operators_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Assignment construction heuristic tests                                     #
 # --------------------------------------------------------------------------- #
 
