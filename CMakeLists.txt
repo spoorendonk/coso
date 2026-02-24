@@ -103,6 +103,7 @@ add_library(coso STATIC
     src/scheduling/perturbation.cpp
     src/search/benchmarker.cpp
     src/search/warm_start.cpp
+    src/search/daemon.cpp
     src/search/partitioned_search.cpp
 )
 target_include_directories(coso PUBLIC

@@ -844,6 +844,19 @@ set_tests_properties(scheduling_benchmark_test PROPERTIES
 )
 
 # --------------------------------------------------------------------------- #
+#  Daemon mode tests                                                           #
+# --------------------------------------------------------------------------- #
+
+add_executable(daemon_test search/daemon_test.cpp)
+target_link_libraries(daemon_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(daemon_test)
+else()
+    add_test(NAME daemon_test COMMAND daemon_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Partitioned search tests                                                    #
 # --------------------------------------------------------------------------- #
 
