@@ -1496,7 +1496,7 @@ Deliverable: portfolio solver (ILS + HGS) with shared solution pool.
 | 4.2 | SREX crossover | Selective route exchange crossover operator | src/search/crossover.{h,cpp} | 2.4 |
 | 4.3 | Genetic algorithm | HGS-style GA: select parents → crossover → educate → insert | src/search/genetic_algorithm.{h,cpp} | 4.1, 4.2, 2.6 |
 | 4.4 | Portfolio solver | ILS + HGS with shared solution pool, TBB parallel | src/search/portfolio.{h,cpp} | 4.3, 2.8 |
-| 4.5 | Solution finalizer | Post-optimization: inter-route moves at zero penalty | src/search/solution_finalizer.{h,cpp} | 2.4 |
+| 4.5 | Solution finalizer | Post-optimization: inter-route moves at zero penalty | src/search/solution_finalizer.{h,cpp} | 2.4 | **done** |
 
 4.1, 4.2, 4.5 are parallel. 4.3 merges 4.1+4.2. 4.4 merges everything.
 
