@@ -736,3 +736,17 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME schedule_operators_test COMMAND schedule_operators_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  Scheduling benchmark tests (Taillard JSP + PSPLIB RCPSP)                   #
+# --------------------------------------------------------------------------- #
+
+add_executable(scheduling_benchmark_test scheduling/scheduling_benchmark_test.cpp)
+target_link_libraries(scheduling_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+
+add_test(NAME scheduling_benchmark_test COMMAND scheduling_benchmark_test)
+set_tests_properties(scheduling_benchmark_test PROPERTIES
+    ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
+    SKIP_RETURN_CODE 4
+    LABELS "benchmark"
+)
