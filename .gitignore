@@ -4,3 +4,10 @@ compile_commands.json
 .cache/
 *.so
 *.pyd
+
+# Benchmark instances (downloaded, not in git)
+tests/data/*.vrp
+tests/data/*.txt
+tests/data/taillard/
+tests/data/psplib/
+tests/data/nrp/
