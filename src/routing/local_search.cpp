@@ -65,8 +65,10 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval,
             continue;
         }
 
-        // Try SWAP* — cross-route swap with best reinsertion.
-        if (op_ss.find_best_move(sol, eval, *data_)) {
+        // SWAP* is significantly more expensive than the other operators.
+        // Under a stop criterion, skip it to avoid consuming the remaining
+        // budget in a single neighbourhood scan.
+        if (!stop && op_ss.find_best_move(sol, eval, *data_)) {
             op_ss.apply(sol);
             ++last_num_moves_;
             improved = true;

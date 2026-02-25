@@ -44,8 +44,12 @@ public:
     ///
     /// @param eval  Cost evaluator (defines objective + penalties).
     /// @param stop  Stop criterion (modified: iteration/improvement called).
+    /// @param outer_stop  Optional global stop criterion to enforce in
+    ///                    addition to the local ILS stop budget.
     /// @return The best solution found during the search.
-    [[nodiscard]] Solution run(CostEvaluator const& eval, StopCriterion& stop);
+    [[nodiscard]] Solution run(CostEvaluator const& eval,
+                               StopCriterion& stop,
+                               StopCriterion* outer_stop = nullptr);
 
     /// Set the acceptance criterion. If not called, defaults to LAHC(5000).
     void set_acceptance(AcceptanceCriterion criterion);
