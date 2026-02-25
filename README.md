@@ -74,6 +74,6 @@ ctest --test-dir build -j$(nproc)
 
 ## Roadmap
 
-See [docs/ROADMAP.md](docs/ROADMAP.md) for the full design plan: modeling
+See [docs/roadmap.md](docs/roadmap.md) for the full design plan: modeling
 interface, architecture, problem catalog (50+ problem types), implementation
 steps, and design decisions.
