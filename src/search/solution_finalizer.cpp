@@ -1,6 +1,7 @@
 #include "search/solution_finalizer.h"
 
 #include "routing/cost_evaluator.h"
+#include "search/stop_criterion.h"
 
 #include <limits>
 
@@ -11,7 +12,7 @@ SolutionFinalizer::SolutionFinalizer(ProblemData const& data)
 {
 }
 
-void SolutionFinalizer::finalize(Solution& sol)
+void SolutionFinalizer::finalize(Solution& sol, StopCriterion* stop)
 {
     // Very high penalty weights make any constraint violation prohibitively
     // expensive, so local search will only accept feasible moves.
@@ -21,16 +22,16 @@ void SolutionFinalizer::finalize(Solution& sol)
     // Phase 1: run local search with high penalties.  If the solution is
     // already feasible this may still improve distance via inter-route moves
     // that were not worthwhile under the lower penalties used during search.
-    ls_.run(sol, eval);
+    ls_.run(sol, eval, stop);
 
     // Phase 2: if the solution is still infeasible, repair by removing
     // excess clients from overloaded routes.
-    if (!sol.feasible()) {
+    if (!sol.feasible() && !(stop && stop->should_stop())) {
         repair_infeasible_(sol);
 
         // Phase 3: run local search again — the removed clients freed
         // capacity, so new improving moves may exist.
-        ls_.run(sol, eval);
+        ls_.run(sol, eval, stop);
     }
 }
 

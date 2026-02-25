@@ -5,6 +5,7 @@
 #include "routing/local_search.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+#include "search/stop_criterion.h"
 
 #include <algorithm>
 #include <vector>
@@ -320,4 +321,54 @@ TEST_CASE("LocalSearch: reports iteration and move counts",
     CHECK(ls.last_num_iters() >= 1);
     // Number of moves should be <= number of iterations.
     CHECK(ls.last_num_moves() <= ls.last_num_iters());
+}
+
+// ===========================================================================
+//  Stop criterion tests
+// ===========================================================================
+
+TEST_CASE("LocalSearch: respects stop criterion",
+          "[localsearch][stop]")
+{
+    auto data = make_clustered_instance();
+    CostEvaluator eval(100);
+
+    // Badly mixed solution that will need many moves to fix.
+    auto sol = make_solution(data, {
+        {0, 6, 2, 8},
+        {1, 7, 3, 9},
+        {4, 10, 5, 11},
+    });
+
+    // Run without stop criterion to get baseline.
+    auto sol_full = sol;
+    LocalSearch ls(data);
+    ls.run(sol_full, eval);
+    int full_iters = ls.last_num_iters();
+
+    // Run with an already-expired stop criterion (max 1 iteration, already used).
+    auto sol_stopped = sol;
+    StopCriterion stop(0.0, 1, 0);
+    stop.iteration();  // iter_ == 1 >= max_iter_ == 1 → should_stop() == true
+    ls.run(sol_stopped, eval, &stop);
+
+    // The stopped run should have done no iterations (stop checked at top).
+    CHECK(ls.last_num_iters() == 0);
+    CHECK(ls.last_num_moves() == 0);
+}
+
+TEST_CASE("LocalSearch: nullptr stop criterion runs to completion",
+          "[localsearch][stop]")
+{
+    auto data = make_small_instance();
+    CostEvaluator eval(100);
+
+    auto sol = make_solution(data, {{2, 4, 0, 5, 1, 3}});
+
+    LocalSearch ls(data);
+    ls.run(sol, eval, nullptr);  // explicit nullptr
+
+    // Should still converge normally.
+    CHECK(ls.last_num_iters() >= 1);
+    check_all_clients_assigned(sol, data);
 }

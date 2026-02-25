@@ -6,6 +6,8 @@
 
 namespace coso {
 
+class StopCriterion;
+
 /// Local search engine for routing problems.
 ///
 /// Iteratively applies improving moves until a local optimum is reached.
@@ -28,7 +30,8 @@ public:
     ///
     /// Modifies sol in place.  On return, no single Exchange10, Exchange11,
     /// Exchange20, or SwapTails move can improve the penalized cost.
-    void run(Solution& sol, CostEvaluator const& eval);
+    void run(Solution& sol, CostEvaluator const& eval,
+             StopCriterion* stop = nullptr);
 
     /// Number of improving moves applied in the last run() call.
     [[nodiscard]] int last_num_moves() const noexcept { return last_num_moves_; }

@@ -6,6 +6,8 @@
 
 namespace coso {
 
+class StopCriterion;
+
 /// Post-optimization step that runs after the main search.
 ///
 /// The finalizer:
@@ -27,7 +29,7 @@ public:
     ///
     /// On return the solution is feasible (load_feasible on every route)
     /// and locally optimal with respect to the high-penalty cost evaluator.
-    void finalize(Solution& sol);
+    void finalize(Solution& sol, StopCriterion* stop = nullptr);
 
 private:
     ProblemData const* data_;

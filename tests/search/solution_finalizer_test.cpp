@@ -4,6 +4,7 @@
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 #include "search/solution_finalizer.h"
+#include "search/stop_criterion.h"
 
 #include <vector>
 
@@ -154,5 +155,40 @@ TEST_CASE("SolutionFinalizer: result is locally optimal under high penalty",
     int dist_before = sol.total_distance();
     fin.finalize(sol);
     CHECK(sol.total_distance() == dist_before);
+    CHECK(sol.feasible());
+}
+
+// ===========================================================================
+//  Stop criterion tests
+// ===========================================================================
+
+TEST_CASE("SolutionFinalizer: respects stop criterion",
+          "[finalizer][stop]")
+{
+    auto data = make_small_instance();
+    auto sol = make_solution(data, {{2, 3}, {0, 4}, {1, 5}});
+    int dist_before = sol.total_distance();
+
+    // Create an already-expired stop criterion (max 1 iteration, already used).
+    StopCriterion stop(0.0, 1, 0);
+    stop.iteration();  // iter_ == 1 >= max_iter_ == 1 → should_stop() == true
+
+    SolutionFinalizer fin(data);
+    fin.finalize(sol, &stop);
+
+    // With an expired stop, the finalizer should not modify the solution
+    // (local search exits immediately).
+    CHECK(sol.total_distance() == dist_before);
+}
+
+TEST_CASE("SolutionFinalizer: nullptr stop runs to completion",
+          "[finalizer][stop]")
+{
+    auto data = make_small_instance();
+    auto sol = make_solution(data, {{2, 3}, {0, 4}, {1, 5}});
+
+    SolutionFinalizer fin(data);
+    fin.finalize(sol, nullptr);
+
     CHECK(sol.feasible());
 }
