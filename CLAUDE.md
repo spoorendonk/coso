@@ -35,7 +35,7 @@ tests/                — Catch2 tests and benchmarks per engine
 docs/                 — Design plan, benchmarks
 ```
 
-See `docs/ROADMAP.md` for full design plan: modeling interface, architecture, problem catalog,
+See `docs/roadmap.md` for full design plan: modeling interface, architecture, problem catalog,
 implementation roadmap with work units, design decisions, and references.
 
 ## Key Types
@@ -101,7 +101,7 @@ When the user says **"fullgate"**, run this sequence:
 2. **PR** — create draft PR if none exists
 3. **Sync** — pull latest main, merge into feature branch, resolve conflicts
 4. **Tests** — add or update tests as needed
-5. **Docs** — update docs/ROADMAP.md, README.md as needed
+5. **Docs** — update docs/roadmap.md, README.md as needed
 6. **Push** — push branch, update PR description
 7. **Review** — self-review: correctness, style, tests, performance
 8. **Build** — `cmake --build build -j$(nproc)`
