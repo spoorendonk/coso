@@ -10,8 +10,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# CVRPLIB base URL (Uchoa et al. X instances).
-CVRP_BASE_URL="http://vrp.atd-lab.inf.puc-rio.br/media/com_vrp/instances/Vrp-Set-X"
+# CVRPLIB base URL (Uchoa et al. X instances, via VROOM-Project GitHub mirror).
+CVRP_BASE_URL="https://raw.githubusercontent.com/VROOM-Project/vroom-scripts/master/benchmarks/CVRP/X"
 
 # CVRP instances to download.
 CVRP_INSTANCES=(
@@ -22,8 +22,8 @@ CVRP_INSTANCES=(
     "X-n125-k30.vrp"
 )
 
-# Solomon VRPTW instances (from the Sintef TOP website).
-SOLOMON_BASE_URL="https://www.sintef.no/globalassets/project/top/vrptw/solomon"
+# Solomon VRPTW instances (via VROOM-Project GitHub mirror).
+SOLOMON_BASE_URL="https://raw.githubusercontent.com/VROOM-Project/vroom-scripts/master/benchmarks/VRPTW/solomon"
 SOLOMON_INSTANCES=(
     "C101.txt"
     "C102.txt"
@@ -45,9 +45,17 @@ download() {
 
     echo "  [download] ${file} ..."
     if command -v curl &>/dev/null; then
-        curl -fsSL -o "$dest" "${url}/${file}"
+        curl -fsSL -o "$dest" "${url}/${file}" 2>/dev/null || {
+            echo "  [warn] failed to download ${file}"
+            rm -f "$dest"
+            return 0
+        }
     elif command -v wget &>/dev/null; then
-        wget -q -O "$dest" "${url}/${file}"
+        wget -q -O "$dest" "${url}/${file}" 2>/dev/null || {
+            echo "  [warn] failed to download ${file}"
+            rm -f "$dest"
+            return 0
+        }
     else
         echo "ERROR: neither curl nor wget found" >&2
         exit 1
@@ -71,7 +79,7 @@ done
 #  Source: http://jobshop.jjvh.nl/  (Taillard format)
 #  Mirror: https://raw.githubusercontent.com/tamy0612/JSPLIB/main/instances
 
-TAILLARD_BASE_URL="https://raw.githubusercontent.com/tamy0612/JSPLIB/main/instances"
+TAILLARD_BASE_URL="https://raw.githubusercontent.com/tamy0612/JSPLIB/master/instances"
 TAILLARD_DIR="${SCRIPT_DIR}/taillard"
 mkdir -p "$TAILLARD_DIR"
 
