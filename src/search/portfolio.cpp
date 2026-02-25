@@ -61,7 +61,7 @@ Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop)
     // SolutionFinalizer runs local search with very high penalties to
     // polish the solution and repair any remaining infeasibilities.
     SolutionFinalizer finalizer(*data_);
-    finalizer.finalize(best);
+    finalizer.finalize(best, &stop);
 
     return best;
 }

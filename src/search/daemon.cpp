@@ -136,7 +136,7 @@ void Daemon::solver_loop_(CostEvaluator const& eval, StopCriterion& stop)
         std::lock_guard lock(solution_mutex_);
         if (best_solution_.has_value()) {
             SolutionFinalizer finalizer(current_data);
-            finalizer.finalize(*best_solution_);
+            finalizer.finalize(*best_solution_, &stop);
         }
     }
 

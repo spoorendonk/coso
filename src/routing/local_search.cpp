@@ -2,6 +2,7 @@
 
 #include "routing/operators/exchange.h"
 #include "routing/operators/swap_star.h"
+#include "search/stop_criterion.h"
 
 namespace coso {
 
@@ -10,7 +11,8 @@ LocalSearch::LocalSearch(ProblemData const& data)
 {
 }
 
-void LocalSearch::run(Solution& sol, CostEvaluator const& eval)
+void LocalSearch::run(Solution& sol, CostEvaluator const& eval,
+                      StopCriterion* stop)
 {
     last_num_moves_ = 0;
     last_num_iters_ = 0;
@@ -26,6 +28,8 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval)
 
     bool improved = true;
     while (improved) {
+        if (stop && stop->should_stop())
+            break;
         improved = false;
         ++last_num_iters_;
 
