@@ -22,14 +22,20 @@ void IteratedLocalSearch::set_acceptance(AcceptanceCriterion criterion)
 }
 
 Solution IteratedLocalSearch::run(CostEvaluator const& eval,
-                                  StopCriterion& stop)
+                                  StopCriterion& stop,
+                                  StopCriterion* outer_stop)
 {
+    auto should_stop = [&]() {
+        return stop.should_stop()
+            || (outer_stop && outer_stop->should_stop());
+    };
+
     // Step 1: Construct initial solution.
     Solution current = construction::clarke_wright(*data_, eval);
 
     // Step 2: Local search to local optimum.
     LocalSearch ls(*data_);
-    ls.run(current, eval);
+    ls.run(current, eval, &stop);
 
     // Track the best solution found.
     Solution best = current;
@@ -42,13 +48,13 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval,
     acceptance.init(current_cost);
 
     // Main ILS loop.
-    while (!stop.should_stop()) {
+    while (!should_stop()) {
         // Step 3: Perturb (ruin-and-recreate).
         Solution candidate = current;
         perturb_(candidate, eval);
 
         // Step 4: Local search.
-        ls.run(candidate, eval);
+        ls.run(candidate, eval, &stop);
 
         int64_t candidate_cost = candidate.cost(eval);
 

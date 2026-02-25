@@ -41,7 +41,7 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
             : construction::clarke_wright(*data_, pen_eval);
 
         // Educate: run local search to a local optimum.
-        ls.run(sol, pen_eval);
+        ls.run(sol, pen_eval, &stop);
 
         // Register feasibility and update penalties.
         penalties.register_solution(sol.feasible());
@@ -61,7 +61,7 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
         if (pop.size() < 2) {
             // This should not happen after initialization, but handle it.
             auto sol = construction::nearest_neighbour(*data_, pen_eval);
-            ls.run(sol, pen_eval);
+            ls.run(sol, pen_eval, &stop);
             penalties.register_solution(sol.feasible());
             pen_eval = penalties.cost_evaluator();
             pop.add(std::move(sol), pen_eval);
@@ -78,7 +78,7 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
                                         rng_);
 
         // c. Educate: run local search on offspring.
-        ls.run(offspring, pen_eval);
+        ls.run(offspring, pen_eval, &stop);
 
         // d. Register feasibility and update penalty weights.
         penalties.register_solution(offspring.feasible());

@@ -19,21 +19,20 @@ void PortfolioSolver::set_seed(uint64_t seed)
 
 Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop)
 {
-    // Phase 1: Run ILS with a limited iteration budget.
+    // Phase 1: Run ILS as a short warm-start phase.
     //
-    // ILS converges quickly to a good local optimum.  We give it a fixed
-    // iteration budget (500 iterations) so it acts as a fast initialization
-    // phase.  If the parent stop criterion triggers earlier (e.g. short
-    // time limit), ILS will still respect it via its own sub-stop.
+    // ILS converges quickly to a good local optimum.  We bound it by both
+    // iterations and a small wall-clock budget so GA/finalization still get
+    // time, especially for short solve limits used in benchmarks.
     //
-    // We use a sub-stop with an iteration limit rather than a time-based
-    // split because StopCriterion does not expose its time limit.
-    constexpr int kIlsIterations = 500;
+    // Keep ILS strictly short; GA handles the remaining budget.
+    constexpr int kIlsIterations = 100;
+    constexpr double kIlsTimeLimitS = 1.0;
 
     IteratedLocalSearch ils(*data_, static_cast<unsigned int>(seed_));
-    StopCriterion ils_stop(0.0, kIlsIterations, 0);
+    StopCriterion ils_stop(kIlsTimeLimitS, kIlsIterations, 0);
 
-    Solution best = ils.run(eval, ils_stop);
+    Solution best = ils.run(eval, ils_stop, &stop);
     int64_t best_cost = best.cost(eval);
 
     // Phase 2: Run GA (HGS) for the remaining budget.
@@ -61,7 +60,14 @@ Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop)
     // SolutionFinalizer runs local search with very high penalties to
     // polish the solution and repair any remaining infeasibilities.
     SolutionFinalizer finalizer(*data_);
-    finalizer.finalize(best, &stop);
+    if (!stop.should_stop()) {
+        finalizer.finalize(best, &stop);
+    } else {
+        // If the global budget is exhausted, still give finalization a short
+        // rescue window so it can reduce obvious infeasibilities.
+        StopCriterion rescue_stop(0.5);
+        finalizer.finalize(best, &rescue_stop);
+    }
 
     return best;
 }

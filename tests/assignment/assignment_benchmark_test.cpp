@@ -103,7 +103,12 @@ static void run_nrp_benchmark(
     CHECK(data.horizon == expected_horizon_days);
     REQUIRE(data.num_shift_types() > 0);
 
-    coso::AssignmentCostEvaluator evaluator(data);
+    // NRP COVER lines encode under/over staffing penalties.
+    // The benchmark instances in tests/data/nrp use under=100, over=1.
+    coso::AssignmentCostEvaluator::Weights weights;
+    weights.understaffing = 100;
+    weights.overstaffing = 1;
+    coso::AssignmentCostEvaluator evaluator(data, weights);
 
     // Construct initial solution using FFD.
     auto sol = coso::construct_ffd(data, evaluator);
