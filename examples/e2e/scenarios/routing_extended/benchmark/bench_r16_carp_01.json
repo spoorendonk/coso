@@ -1,0 +1,11 @@
+{
+  "id": "bench_r16_carp_01",
+  "model": "routing",
+  "variant": "R16",
+  "profile": "benchmark",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.10
+  },
+  "checks": ["nonnegative_cost", "deterministic_work"]
+}

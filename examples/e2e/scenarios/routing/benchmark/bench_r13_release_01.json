@@ -1,0 +1,11 @@
+{
+  "id": "bench_r13_release_01",
+  "model": "routing",
+  "variant": "R13",
+  "profile": "benchmark",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.10
+  },
+  "checks": ["nonnegative_cost", "deterministic_work"]
+}

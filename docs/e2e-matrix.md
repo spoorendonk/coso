@@ -14,34 +14,34 @@ Status legend:
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| R1 | Capacitated VRP | CVRP | `smoke_r1_cvrp_01`, `bench_r1_cvrp_01` | 14.1 | 14.1 | TBD | planned |
-| R2 | VRP with Time Windows | VRPTW | `smoke_r2_vrptw_01`, `bench_r2_vrptw_01` | 14.1 | 14.1 | TBD | planned |
-| R3 | Heterogeneous Fleet VRP | HFVRP | `smoke_r3_hfvrp_01`, `bench_r3_hfvrp_01` | 14.1 | 14.1 | TBD | planned |
-| R4 | Multi-Depot VRP | MDVRP | `smoke_r4_mdvrp_01`, `bench_r4_mdvrp_01` | 14.1 | 14.1 | TBD | planned |
-| R5 | Open VRP | OVRP | `smoke_r5_ovrp_01`, `bench_r5_ovrp_01` | 14.1 | 14.1 | TBD | planned |
-| R6 | VRP Simultaneous PD | VRPSPD | `smoke_r6_vrpspd_01`, `bench_r6_vrpspd_01` | 14.1 | 14.1 | TBD | planned |
-| R7 | VRP with Backhauls | VRPB | `smoke_r7_vrpb_01`, `bench_r7_vrpb_01` | 14.1 | 14.1 | TBD | planned |
-| R8 | Team Orienteering | TOP | `smoke_r8_top_01`, `bench_r8_top_01` | 14.1 | 14.1 | TBD | planned |
-| R9 | Multi-dim Capacity | MDCVRP | `smoke_r9_mdcvrp_01`, `bench_r9_mdcvrp_01` | 14.1 | 14.1 | TBD | planned |
-| R10 | Routing Profiles | - | `smoke_r10_profiles_01`, `bench_r10_profiles_01` | 14.1 | 14.1 | TBD | planned |
-| R11 | Client Groups | GVRP | `smoke_r11_gvrp_01`, `bench_r11_gvrp_01` | 14.1 | 14.1 | TBD | planned |
-| R12 | Multi-trip VRP | MTVRP | `smoke_r12_mtvrp_01`, `bench_r12_mtvrp_01` | 14.1 | 14.1 | TBD | planned |
-| R13 | Release Times | - | `smoke_r13_release_01`, `bench_r13_release_01` | 14.1 | 14.1 | TBD | planned |
-| R14 | Overtime | - | `smoke_r14_overtime_01`, `bench_r14_overtime_01` | 14.1 | 14.1 | TBD | planned |
-| R15 | Paired Pickup-Delivery TW | PDPTW | `smoke_r15_pdptw_01`, `bench_r15_pdptw_01` | 14.1 | 14.1 | TBD | planned |
-| R16 | Capacitated Arc Routing | CARP | `smoke_r16_carp_01`, `bench_r16_carp_01` | 14.2 | 14.2 | TBD | planned |
-| R17 | Cumulative CVRP | CCVRP | `smoke_r17_ccvrp_01`, `bench_r17_ccvrp_01` | 14.2 | 14.2 | TBD | planned |
-| R18 | Split Delivery VRP | SDVRP | `smoke_r18_sdvrp_01`, `bench_r18_sdvrp_01` | 14.2 | 14.2 | TBD | planned |
-| R19 | Time-Dependent VRP | TDVRP | `smoke_r19_tdvrp_01`, `bench_r19_tdvrp_01` | 14.2 | 14.2 | TBD | planned |
-| R20 | Electric VRP | EVRP | `smoke_r20_evrp_01`, `bench_r20_evrp_01` | 14.2 | 14.2 | TBD | planned |
-| R21 | Period VRP | PVRP | `smoke_r21_pvrp_01`, `bench_r21_pvrp_01` | 14.2 | 14.2 | TBD | planned |
-| R22 | Inventory Routing | IRP | `smoke_r22_irp_01`, `bench_r22_irp_01` | 14.2 | 14.2 | TBD | planned |
-| R23 | Location-Routing | LRP | `smoke_r23_lrp_01`, `bench_r23_lrp_01` | 14.2 | 14.2 | TBD | planned |
-| R24 | Site-Dependent VRP | SDVRPTW | `smoke_r24_sdvrptw_01`, `bench_r24_sdvrptw_01` | 14.2 | 14.2 | TBD | planned |
-| R25 | Clustered VRP | cluVRP | `smoke_r25_cluvrp_01`, `bench_r25_cluvrp_01` | 14.2 | 14.2 | TBD | planned |
-| R26 | VRP with Transshipment | VRPTF | `smoke_r26_vrptf_01`, `bench_r26_vrptf_01` | 14.2 | 14.2 | TBD | planned |
-| R27 | Technician Routing & Scheduling | TRSP | `smoke_r27_trsp_01`, `bench_r27_trsp_01` | 14.2 | 14.2 | TBD | planned |
-| R28 | Home Healthcare Routing | HHCRP | `smoke_r28_hhcrp_01`, `bench_r28_hhcrp_01` | 14.2 | 14.2 | TBD | planned |
+| R1 | Capacitated VRP | CVRP | `smoke_r1_cvrp_01`, `bench_r1_cvrp_01` | 14.1 | 14.1 | TBD | done |
+| R2 | VRP with Time Windows | VRPTW | `smoke_r2_vrptw_01`, `bench_r2_vrptw_01` | 14.1 | 14.1 | TBD | done |
+| R3 | Heterogeneous Fleet VRP | HFVRP | `smoke_r3_hfvrp_01`, `bench_r3_hfvrp_01` | 14.1 | 14.1 | TBD | done |
+| R4 | Multi-Depot VRP | MDVRP | `smoke_r4_mdvrp_01`, `bench_r4_mdvrp_01` | 14.1 | 14.1 | TBD | done |
+| R5 | Open VRP | OVRP | `smoke_r5_ovrp_01`, `bench_r5_ovrp_01` | 14.1 | 14.1 | TBD | done |
+| R6 | VRP Simultaneous PD | VRPSPD | `smoke_r6_vrpspd_01`, `bench_r6_vrpspd_01` | 14.1 | 14.1 | TBD | done |
+| R7 | VRP with Backhauls | VRPB | `smoke_r7_vrpb_01`, `bench_r7_vrpb_01` | 14.1 | 14.1 | TBD | done |
+| R8 | Team Orienteering | TOP | `smoke_r8_top_01`, `bench_r8_top_01` | 14.1 | 14.1 | TBD | done |
+| R9 | Multi-dim Capacity | MDCVRP | `smoke_r9_mdcvrp_01`, `bench_r9_mdcvrp_01` | 14.1 | 14.1 | TBD | done |
+| R10 | Routing Profiles | - | `smoke_r10_profiles_01`, `bench_r10_profiles_01` | 14.1 | 14.1 | TBD | done |
+| R11 | Client Groups | GVRP | `smoke_r11_gvrp_01`, `bench_r11_gvrp_01` | 14.1 | 14.1 | TBD | done |
+| R12 | Multi-trip VRP | MTVRP | `smoke_r12_mtvrp_01`, `bench_r12_mtvrp_01` | 14.1 | 14.1 | TBD | done |
+| R13 | Release Times | - | `smoke_r13_release_01`, `bench_r13_release_01` | 14.1 | 14.1 | TBD | done |
+| R14 | Overtime | - | `smoke_r14_overtime_01`, `bench_r14_overtime_01` | 14.1 | 14.1 | TBD | done |
+| R15 | Paired Pickup-Delivery TW | PDPTW | `smoke_r15_pdptw_01`, `bench_r15_pdptw_01` | 14.1 | 14.1 | TBD | done |
+| R16 | Capacitated Arc Routing | CARP | `smoke_r16_carp_01`, `bench_r16_carp_01` | 14.2 | 14.2 | TBD | done |
+| R17 | Cumulative CVRP | CCVRP | `smoke_r17_ccvrp_01`, `bench_r17_ccvrp_01` | 14.2 | 14.2 | TBD | done |
+| R18 | Split Delivery VRP | SDVRP | `smoke_r18_sdvrp_01`, `bench_r18_sdvrp_01` | 14.2 | 14.2 | TBD | done |
+| R19 | Time-Dependent VRP | TDVRP | `smoke_r19_tdvrp_01`, `bench_r19_tdvrp_01` | 14.2 | 14.2 | TBD | done |
+| R20 | Electric VRP | EVRP | `smoke_r20_evrp_01`, `bench_r20_evrp_01` | 14.2 | 14.2 | TBD | done |
+| R21 | Period VRP | PVRP | `smoke_r21_pvrp_01`, `bench_r21_pvrp_01` | 14.2 | 14.2 | TBD | done |
+| R22 | Inventory Routing | IRP | `smoke_r22_irp_01`, `bench_r22_irp_01` | 14.2 | 14.2 | TBD | done |
+| R23 | Location-Routing | LRP | `smoke_r23_lrp_01`, `bench_r23_lrp_01` | 14.2 | 14.2 | TBD | done |
+| R24 | Site-Dependent VRP | SDVRPTW | `smoke_r24_sdvrptw_01`, `bench_r24_sdvrptw_01` | 14.2 | 14.2 | TBD | done |
+| R25 | Clustered VRP | cluVRP | `smoke_r25_cluvrp_01`, `bench_r25_cluvrp_01` | 14.2 | 14.2 | TBD | done |
+| R26 | VRP with Transshipment | VRPTF | `smoke_r26_vrptf_01`, `bench_r26_vrptf_01` | 14.2 | 14.2 | TBD | done |
+| R27 | Technician Routing & Scheduling | TRSP | `smoke_r27_trsp_01`, `bench_r27_trsp_01` | 14.2 | 14.2 | TBD | done |
+| R28 | Home Healthcare Routing | HHCRP | `smoke_r28_hhcrp_01`, `bench_r28_hhcrp_01` | 14.2 | 14.2 | TBD | done |
 
 ## Network (`N`)
 

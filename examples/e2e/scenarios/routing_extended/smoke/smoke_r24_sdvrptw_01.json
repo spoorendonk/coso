@@ -1,0 +1,11 @@
+{
+  "id": "smoke_r24_sdvrptw_01",
+  "model": "routing",
+  "variant": "R24",
+  "profile": "smoke",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.05
+  },
+  "checks": ["feasible", "nonnegative_cost", "deterministic_work"]
+}
