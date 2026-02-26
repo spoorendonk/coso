@@ -133,7 +133,7 @@ TEST_CASE("PackingModel: conflict validation", "[packing][model]")
 //  Solve returns a result
 // ---------------------------------------------------------------------------
 
-TEST_CASE("PackingModel: solve returns stub result", "[packing][model]")
+TEST_CASE("PackingModel: solve returns baseline packed result", "[packing][model]")
 {
     PackingModel model;
     model.add_bin_type({.capacity = {100}});
@@ -143,8 +143,9 @@ TEST_CASE("PackingModel: solve returns stub result", "[packing][model]")
 
     Result result = model.solve(TimeLimit(1.0));
 
-    // Stub solver returns feasible_=false.
-    REQUIRE_FALSE(result.feasible());
+    REQUIRE(result.feasible());
+    REQUIRE(result.num_bins() >= 1);
+    REQUIRE(result.unassigned().empty());
     REQUIRE(result.elapsed_seconds() >= 0.0);
 }
 
@@ -328,7 +329,8 @@ TEST_CASE("PackingModel: simple 1D instance end-to-end", "[packing][model]")
     //     L2 = max(4, 2+2) = 4
     REQUIRE(data.l2_lower_bound() == 4);
 
-    // Solve (stub returns infeasible).
+    // Solve with baseline constructive/local-search path.
     Result result = model.solve(TimeLimit(1.0));
-    REQUIRE_FALSE(result.feasible());
+    REQUIRE(result.feasible());
+    REQUIRE(result.num_bins() >= data.continuous_lower_bound());
 }
