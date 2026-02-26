@@ -986,6 +986,15 @@ else()
     add_test(NAME network_test COMMAND network_test)
 endif()
 
+add_executable(network_model_test network/network_model_test.cpp)
+target_link_libraries(network_model_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(network_model_test)
+else()
+    add_test(NAME network_model_test COMMAND network_model_test)
+endif()
+
 # --------------------------------------------------------------------------- #
 #  Lot sizing engine tests                                                     #
 # --------------------------------------------------------------------------- #
