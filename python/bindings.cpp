@@ -2,7 +2,11 @@
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 
+#include <climits>
+
 #include "model/routing_model.h"
+#include "model/network_model.h"
+#include "model/lotsizing_model.h"
 #include "model/types.h"
 
 namespace nb = nanobind;
@@ -61,6 +65,11 @@ NB_MODULE(_coso, m) {
 
     // -- Result ---------------------------------------------------------------
 
+    nb::class_<coso::Result::PathFlow>(m, "PathFlow")
+        .def(nb::init<>())
+        .def_rw("path", &coso::Result::PathFlow::path)
+        .def_rw("flow", &coso::Result::PathFlow::flow);
+
     nb::class_<coso::Result>(m, "Result")
         .def_prop_ro("feasible",        &coso::Result::feasible)
         .def_prop_ro("cost",            &coso::Result::cost)
@@ -70,6 +79,9 @@ NB_MODULE(_coso, m) {
         .def_prop_ro("work_units",      &coso::Result::work_units)
         .def_prop_ro("routes",          &coso::Result::routes)
         .def_prop_ro("unserved",        &coso::Result::unserved)
+        .def_prop_ro("flows",           &coso::Result::flows)
+        .def_prop_ro("production",      &coso::Result::production)
+        .def_prop_ro("inventory",       &coso::Result::inventory)
         .def("__repr__", [](const coso::Result& r) {
             return "Result(feasible=" + std::string(r.feasible() ? "True" : "False") +
                    ", cost=" + std::to_string(r.cost()) +
@@ -199,4 +211,38 @@ NB_MODULE(_coso, m) {
     m.def("solve_instance", &coso::solve,
           "instance_path"_a, "time_limit"_a,
           "Solve a CVRPLIB/VRPLIB instance file directly.");
+
+    // -- NetworkModel ---------------------------------------------------------
+
+    nb::class_<coso::NetworkModel>(m, "NetworkModel")
+        .def(nb::init<>())
+        .def("add_node", &coso::NetworkModel::add_node,
+             "supply"_a = 0, "name"_a = "")
+        .def("add_arc", &coso::NetworkModel::add_arc,
+             "tail"_a, "head"_a, "cost"_a = 0,
+             "lower_cap"_a = 0, "upper_cap"_a = INT_MAX)
+        .def("add_resource", &coso::NetworkModel::add_resource,
+             "name"_a = "", "upper_bound"_a = INT_MAX)
+        .def("set_resource_usage", &coso::NetworkModel::set_resource_usage,
+             "arc"_a, "resource"_a, "amount"_a)
+        .def("solve", &coso::NetworkModel::solve,
+             "time_limit"_a);
+
+    // -- LotSizingModel -------------------------------------------------------
+
+    nb::class_<coso::LotSizingModel>(m, "LotSizingModel")
+        .def(nb::init<>())
+        .def("set_num_periods", &coso::LotSizingModel::set_num_periods,
+             "periods"_a)
+        .def("add_product", &coso::LotSizingModel::add_product,
+             "setup_cost"_a, "setup_time"_a,
+             "unit_production_cost"_a, "holding_cost"_a)
+        .def("set_demand", &coso::LotSizingModel::set_demand,
+             "product"_a, "period"_a, "demand"_a)
+        .def("set_capacity", &coso::LotSizingModel::set_capacity,
+             "period"_a, "capacity"_a)
+        .def("add_bom", &coso::LotSizingModel::add_bom,
+             "parent"_a, "child"_a, "quantity"_a = 1.0)
+        .def("solve", &coso::LotSizingModel::solve,
+             "time_limit"_a);
 }
