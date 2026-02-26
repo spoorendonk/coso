@@ -1,0 +1,14 @@
+{
+  "id": "bench_r15_pdptw_parser_lilim_01",
+  "model": "routing",
+  "variant": "R15",
+  "profile": "benchmark",
+  "input_format": "lilim",
+  "input_file": "tests/data/RC101.txt",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.10
+  },
+  "checks": ["nonnegative_cost", "deterministic_work"],
+  "tags": ["parser", "lilim"]
+}

@@ -94,6 +94,16 @@ Status legend:
 | P1 | Capacitated Lot Sizing | CLSP | `smoke_p1_clsp_01`, `bench_p1_clsp_01` | 14.7 | 14.7 | TBD | done |
 | P2 | Multi-Level CLSP | MLCLSP | `smoke_p2_mlclsp_01`, `bench_p2_mlclsp_01` | 14.7 | 14.7 | TBD | done |
 
+## Parser / Format (`14.8`)
+
+| Scenario ID | Source format | Linked variant | Pack lane | Owner | Status |
+|---|---|---|---|---|---|
+| `smoke_r1_cvrp_parser_vrplib_01`, `bench_r1_cvrp_parser_vrplib_01` | CVRPLIB | R1 | 14.8 | TBD | done |
+| `smoke_r2_vrptw_parser_solomon_01`, `bench_r2_vrptw_parser_solomon_01` | Solomon | R2 | 14.8 | TBD | done |
+| `smoke_r15_pdptw_parser_lilim_01`, `bench_r15_pdptw_parser_lilim_01` | Li-Lim style | R15 | 14.8 | TBD | done |
+| `smoke_s1_jsp_parser_taillard_01`, `bench_s1_jsp_parser_taillard_01` | Taillard | S1 | 14.8 | TBD | done |
+| `smoke_a1_nrp_parser_inrc_01`, `bench_a1_nrp_parser_inrc_01` | INRC-style | A1 | 14.8 | TBD | done |
+
 ## Coordination Rules
 
 - One row update per PR: claim by setting `Owner` and `Status=in_progress`.

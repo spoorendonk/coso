@@ -1,0 +1,14 @@
+{
+  "id": "smoke_s1_jsp_parser_taillard_01",
+  "model": "schedule",
+  "variant": "S1",
+  "profile": "smoke",
+  "input_format": "taillard",
+  "input_file": "tests/data/taillard/ta01.txt",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.05
+  },
+  "checks": ["feasible", "nonnegative_cost", "deterministic_work"],
+  "tags": ["parser", "taillard"]
+}

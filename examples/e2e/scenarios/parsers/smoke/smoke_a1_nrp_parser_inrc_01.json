@@ -1,0 +1,14 @@
+{
+  "id": "smoke_a1_nrp_parser_inrc_01",
+  "model": "assignment",
+  "variant": "A1",
+  "profile": "smoke",
+  "input_format": "inrc",
+  "input_file": "tests/data/nrp/Instance1.txt",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.05
+  },
+  "checks": ["feasible", "nonnegative_cost", "deterministic_work"],
+  "tags": ["parser", "inrc"]
+}
