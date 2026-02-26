@@ -1062,3 +1062,30 @@ add_test(
             ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/benchmark
 )
 set_tests_properties(e2e_benchmark PROPERTIES LABELS "e2e-benchmark;benchmark")
+
+# --------------------------------------------------------------------------- #
+#  Deterministic E2E perf gate tooling tests                                  #
+# --------------------------------------------------------------------------- #
+
+add_test(
+    NAME e2e_perf_gate_pass
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
+            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
+            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_ok
+            --max-median-ratio 1.10
+)
+set_tests_properties(e2e_perf_gate_pass PROPERTIES LABELS "e2e-benchmark;perf-gate")
+
+add_test(
+    NAME e2e_perf_gate_regression_detected
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
+            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
+            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_regress
+            --max-median-ratio 1.10
+)
+set_tests_properties(
+    e2e_perf_gate_regression_detected
+    PROPERTIES
+        WILL_FAIL TRUE
+        LABELS "e2e-benchmark;perf-gate"
+)
