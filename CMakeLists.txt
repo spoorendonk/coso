@@ -150,7 +150,10 @@ target_link_libraries(coso-solve PRIVATE coso)
 #  E2E runner                                                                  #
 # --------------------------------------------------------------------------- #
 
-add_executable(e2e_runner examples/e2e/e2e_runner.cpp)
+add_executable(e2e_runner
+    examples/e2e/e2e_runner.cpp
+    examples/e2e/checks.cpp
+)
 target_link_libraries(e2e_runner PRIVATE coso)
 
 # --------------------------------------------------------------------------- #
