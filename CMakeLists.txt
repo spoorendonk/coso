@@ -147,6 +147,13 @@ add_executable(coso-solve src/cli/main.cpp)
 target_link_libraries(coso-solve PRIVATE coso)
 
 # --------------------------------------------------------------------------- #
+#  E2E runner                                                                  #
+# --------------------------------------------------------------------------- #
+
+add_executable(e2e_runner examples/e2e/e2e_runner.cpp)
+target_link_libraries(e2e_runner PRIVATE coso)
+
+# --------------------------------------------------------------------------- #
 #  Tests                                                                       #
 # --------------------------------------------------------------------------- #
 
