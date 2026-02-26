@@ -78,6 +78,18 @@ m.add_arc(s, t, /*cost=*/2, /*lower=*/0, /*upper=*/5);
 auto r = m.solve(coso::TimeLimit(10));
 ```
 
+## Canonical E2E Examples
+
+One runnable C++ example per model family is available in
+`examples/canonical/`:
+
+- `examples/canonical/routing_example.cpp`
+- `examples/canonical/network_example.cpp`
+- `examples/canonical/lotsizing_example.cpp`
+- `examples/canonical/schedule_example.cpp`
+- `examples/canonical/assignment_example.cpp`
+- `examples/canonical/packing_example.cpp`
+
 ## Build
 
 Requires C++23 and CMake 3.25+. TBB is optional (enables multi-threaded solving).
