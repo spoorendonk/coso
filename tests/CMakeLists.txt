@@ -1042,3 +1042,23 @@ if(COMMAND catch_discover_tests)
 else()
     add_test(NAME calendar_test COMMAND calendar_test)
 endif()
+
+# --------------------------------------------------------------------------- #
+#  E2E integration packs                                                       #
+# --------------------------------------------------------------------------- #
+
+add_test(
+    NAME e2e_smoke
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/e2e/run_pack.sh
+            $<TARGET_FILE:e2e_runner>
+            ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/smoke
+)
+set_tests_properties(e2e_smoke PROPERTIES LABELS "e2e-smoke")
+
+add_test(
+    NAME e2e_benchmark
+    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/e2e/run_pack.sh
+            $<TARGET_FILE:e2e_runner>
+            ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/benchmark
+)
+set_tests_properties(e2e_benchmark PROPERTIES LABELS "e2e-benchmark;benchmark")
