@@ -54,8 +54,29 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 | **Scheduling** | JSP, FJSP, RCPSP, flow shop, open shop, ... | Disjunctive graph + tabu |
 | **Assignment** | Nurse rostering, timetabling, employee scheduling | Tabu + LA + VND + CP filter |
 | **Packing** | Bin packing, vector bin packing | Assignment engine + FFD |
-| **Network** | MCF, RCMCF, liner shipping | Column generation / LP |
-| **Lot sizing** | CLSP, MLCLSP | Delegates to mip-heuristics |
+| **Network** | MCF, RCMCF, liner shipping | MCF + network local search |
+| **Lot sizing** | CLSP, MLCLSP | Constructive + lot-sizing operators |
+
+## Public Model APIs
+
+All engines are available through typed model APIs in C++ and Python:
+
+- `RoutingModel`
+- `NetworkModel`
+- `LotSizingModel`
+- `ScheduleModel`
+- `AssignmentModel`
+- `PackingModel`
+
+Example (`NetworkModel`):
+
+```cpp
+coso::NetworkModel m;
+int s = m.add_node(5, "source");
+int t = m.add_node(-5, "sink");
+m.add_arc(s, t, /*cost=*/2, /*lower=*/0, /*upper=*/5);
+auto r = m.solve(coso::TimeLimit(10));
+```
 
 ## Build
 
