@@ -1,6 +1,9 @@
 #pragma once
 
+#include "common/work_units.h"
+
 #include <chrono>
+#include <cstdint>
 #include <limits>
 
 namespace coso {
@@ -27,6 +30,12 @@ public:
     /// @param max_no_improve  Maximum iterations without improvement (0 = no limit).
     StopCriterion(double time_limit_s, int max_iter, int max_no_improve);
 
+    /// Attach an external deterministic work counter and optional max ticks.
+    ///
+    /// @param work            Shared work counter (nullptr disables work checks).
+    /// @param max_work_ticks  Maximum ticks before stopping (0 = no limit).
+    void set_work_limit(WorkUnits const* work, uint64_t max_work_ticks);
+
     /// Check whether any stopping condition has been met.
     [[nodiscard]] bool should_stop() const;
 
@@ -47,6 +56,16 @@ public:
     /// Elapsed wall-clock time in seconds since construction.
     [[nodiscard]] double elapsed() const;
 
+    /// Deterministic work consumed (0 if no work counter is attached).
+    [[nodiscard]] uint64_t work_ticks() const noexcept;
+    [[nodiscard]] double work_units() const noexcept;
+    [[nodiscard]] bool has_work_limit() const noexcept {
+        return work_ && max_work_ticks_ > 0;
+    }
+    [[nodiscard]] uint64_t max_work_ticks() const noexcept {
+        return max_work_ticks_;
+    }
+
 private:
     using Clock = std::chrono::steady_clock;
 
@@ -54,6 +73,8 @@ private:
     double time_limit_s_;
     int max_iter_;
     int max_no_improve_;
+    uint64_t max_work_ticks_ = 0;
+    WorkUnits const* work_ = nullptr;
 
     int iter_ = 0;
     int last_improve_iter_ = 0;

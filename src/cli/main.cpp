@@ -11,6 +11,7 @@ namespace {
 struct Options {
     std::string instance_path;
     double time_limit = 30.0;
+    double work_limit = 0.0;
     bool verbose = false;
 };
 
@@ -26,6 +27,7 @@ void print_usage(const char* prog)
               << "\n"
               << "Options:\n"
               << "  --time-limit <sec>    Solver time limit in seconds (default: 30)\n"
+              << "  --work-limit <units>  Deterministic work limit (default: 0 = off)\n"
               << "  -v, --verbose         Print route details\n"
               << "  -h, --help            Show this help message\n";
 }
@@ -55,6 +57,25 @@ bool parse_args(int argc, char* argv[], Options& opts)
             }
             if (opts.time_limit <= 0.0) {
                 std::cerr << "Error: time limit must be positive\n";
+                return false;
+            }
+            continue;
+        }
+
+        if (arg == "--work-limit") {
+            if (i + 1 >= argc) {
+                std::cerr << "Error: --work-limit requires a value\n";
+                return false;
+            }
+            ++i;
+            try {
+                opts.work_limit = std::stod(argv[i]);
+            } catch (...) {
+                std::cerr << "Error: invalid work limit: " << argv[i] << "\n";
+                return false;
+            }
+            if (opts.work_limit < 0.0) {
+                std::cerr << "Error: work limit must be non-negative\n";
                 return false;
             }
             continue;
@@ -101,11 +122,15 @@ int main(int argc, char* argv[])
 
     std::cout << "Instance: " << opts.instance_path << "\n";
     std::cout << "Time limit: " << opts.time_limit << "s\n";
+    if (opts.work_limit > 0.0) {
+        std::cout << "Work limit: " << opts.work_limit << "\n";
+    }
     std::cout << "Solving...\n" << std::flush;
 
     coso::Result result;
     try {
-        result = coso::solve(opts.instance_path, coso::TimeLimit(opts.time_limit));
+        result = coso::solve(opts.instance_path,
+                             coso::TimeLimit(opts.time_limit, opts.work_limit));
     } catch (std::exception const& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
@@ -120,6 +145,9 @@ int main(int argc, char* argv[])
     std::cout << "Elapsed:  " << std::fixed << std::setprecision(2)
               << result.elapsed_seconds() << "s\n";
     std::cout << "Iters:    " << result.iterations() << "\n";
+    std::cout << "Work:     " << std::fixed << std::setprecision(2)
+              << result.work_units() << " (" << result.work_ticks()
+              << " ticks)\n";
 
     if (!result.unserved().empty()) {
         std::cout << "Unserved: " << result.unserved().size() << " clients\n";

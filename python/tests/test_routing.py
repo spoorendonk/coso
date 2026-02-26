@@ -51,11 +51,14 @@ class TestTimeLimit:
     def test_constructor(self):
         tl = coso.TimeLimit(30.0)
         assert tl.seconds == 30.0
+        assert tl.work_units == 0.0
 
     def test_readwrite(self):
         tl = coso.TimeLimit(1.0)
         tl.seconds = 60.0
+        tl.work_units = 12.5
         assert tl.seconds == 60.0
+        assert tl.work_units == 12.5
 
     def test_repr(self):
         tl = coso.TimeLimit(5.0)
@@ -108,6 +111,8 @@ class TestResult:
         assert isinstance(r.cost, (int, float))
         assert isinstance(r.elapsed_seconds, (int, float))
         assert isinstance(r.iterations, int)
+        assert isinstance(r.work_ticks, int)
+        assert isinstance(r.work_units, (int, float))
         assert isinstance(r.routes, list)
         assert isinstance(r.unserved, list)
 

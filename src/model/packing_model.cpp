@@ -1,4 +1,6 @@
 #include "model/packing_model.h"
+#include "common/work_units.h"
+#include "search/stop_criterion.h"
 
 #include <chrono>
 #include <stdexcept>
@@ -65,6 +67,21 @@ void PackingModel::minimize_bins()
 Result PackingModel::solve(TimeLimit tl)
 {
     auto wall_start = std::chrono::steady_clock::now();
+    WorkUnits work;
+    StopCriterion stop(tl.seconds);
+    stop.set_work_limit(&work, WorkUnits::ticks_from_units(tl.work_units));
+    work.count(static_cast<uint64_t>(bin_types_.size())
+             + static_cast<uint64_t>(items_.size())
+             + static_cast<uint64_t>(conflicts_.size()));
+    if (stop.should_stop()) {
+        Result result;
+        result.work_ticks_ = work.ticks();
+        result.work_units_ = work.units();
+        auto wall_end = std::chrono::steady_clock::now();
+        result.elapsed_seconds_ = std::chrono::duration<double>(
+            wall_end - wall_start).count();
+        return result;
+    }
 
     // Validate: need at least one bin type and one item.
     if (bin_types_.empty() || items_.empty()) {
@@ -77,6 +94,8 @@ Result PackingModel::solve(TimeLimit tl)
     result.feasible_ = false;
     result.cost_ = 0.0;
     result.iterations_ = 0;
+    result.work_ticks_ = work.ticks();
+    result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
     result.elapsed_seconds_ = std::chrono::duration<double>(

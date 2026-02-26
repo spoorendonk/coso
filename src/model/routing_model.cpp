@@ -1,4 +1,5 @@
 #include "model/routing_model.h"
+#include "common/work_units.h"
 #include "model/instance_reader.h"
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
@@ -134,6 +135,7 @@ void RoutingModel::pin(int client_id)
 Result RoutingModel::solve(TimeLimit tl)
 {
     auto wall_start = std::chrono::steady_clock::now();
+    WorkUnits work;
 
     // Validate: need at least one depot and one vehicle type.
     if (depots_.empty() || vehicle_types_.empty()) {
@@ -192,6 +194,7 @@ Result RoutingModel::solve(TimeLimit tl)
     // Build with default granularity.
     int granular_k = std::min(40, std::max(0, num_clients - 1));
     ProblemData data = builder.build(granular_k);
+    data.set_work_units(&work);
 
     // -----------------------------------------------------------------------
     //  Run portfolio solver (ILS + GA + finalizer)
@@ -199,6 +202,7 @@ Result RoutingModel::solve(TimeLimit tl)
 
     CostEvaluator eval;  // default penalty weights
     StopCriterion stop(tl.seconds);
+    stop.set_work_limit(&work, WorkUnits::ticks_from_units(tl.work_units));
 
     PortfolioSolver solver(data);
     Solution best = solver.run(eval, stop);
@@ -231,6 +235,8 @@ Result RoutingModel::solve(TimeLimit tl)
     }
 
     result.iterations_ = stop.iterations();
+    result.work_ticks_ = work.ticks();
+    result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
     result.elapsed_seconds_ = std::chrono::duration<double>(

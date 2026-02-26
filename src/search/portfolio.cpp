@@ -62,7 +62,7 @@ Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop)
     SolutionFinalizer finalizer(*data_);
     if (!stop.should_stop()) {
         finalizer.finalize(best, &stop);
-    } else {
+    } else if (!stop.has_work_limit()) {
         // If the global budget is exhausted, still give finalization a short
         // rescue window so it can reduce obvious infeasibilities.
         StopCriterion rescue_stop(0.5);

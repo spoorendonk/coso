@@ -75,13 +75,13 @@ TEST_CASE("to_csv produces correct header and rows", "[benchmarker]")
     auto csv = coso::Benchmarker::to_csv(results);
 
     // Check header.
-    CHECK(csv.find("instance,bks,cost,gap_pct,elapsed_s,feasible,num_routes\n")
+    CHECK(csv.find("instance,bks,cost,gap_pct,elapsed_s,work_units,work_ticks,feasible,num_routes\n")
           == 0);
 
     // Check data rows are present.
-    CHECK(csv.find("test1.vrp,1000,1050,5.00,1.234,true,3\n")
+    CHECK(csv.find("test1.vrp,1000,1050,5.00,1.234,0.000,0,true,3\n")
           != std::string::npos);
-    CHECK(csv.find("test2.vrp,2000,2200,10.00,2.567,false,5\n")
+    CHECK(csv.find("test2.vrp,2000,2200,10.00,2.567,0.000,0,false,5\n")
           != std::string::npos);
 }
 
@@ -89,7 +89,7 @@ TEST_CASE("to_csv handles empty results", "[benchmarker]")
 {
     std::vector<coso::BenchmarkResult> results;
     auto csv = coso::Benchmarker::to_csv(results);
-    CHECK(csv == "instance,bks,cost,gap_pct,elapsed_s,feasible,num_routes\n");
+    CHECK(csv == "instance,bks,cost,gap_pct,elapsed_s,work_units,work_ticks,feasible,num_routes\n");
 }
 
 // ---------------------------------------------------------------------------
