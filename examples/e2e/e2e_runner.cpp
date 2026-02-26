@@ -1,3 +1,4 @@
+#include "checks.h"
 #include "model/assignment_model.h"
 #include "model/lotsizing_model.h"
 #include "model/network_model.h"
@@ -6,6 +7,7 @@
 #include "model/schedule_model.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
@@ -16,7 +18,6 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <vector>
 
 namespace {
 
@@ -183,48 +184,39 @@ int main(int argc, char** argv)
 
     try {
         Scenario scenario = parse_scenario(argv[1]);
-        coso::Result r1 = solve_once(scenario);
-
-        bool pass = true;
-        bool check_feasible = true;
-        bool check_nonnegative_cost = true;
-        bool check_deterministic = true;
-
-        if (scenario.checks.contains("feasible")) {
-            check_feasible = r1.feasible();
-            pass = pass && check_feasible;
-        }
-        if (scenario.checks.contains("nonnegative_cost")) {
-            check_nonnegative_cost = (r1.cost() >= 0.0);
-            pass = pass && check_nonnegative_cost;
-        }
-        if (scenario.checks.contains("deterministic_work")) {
-            coso::Result r2 = solve_once(scenario);
-            check_deterministic =
-                (r1.work_ticks() == r2.work_ticks())
-                && (r1.work_units() == r2.work_units());
-            pass = pass && check_deterministic;
-        }
+        coso::e2e::Evaluation const eval =
+            coso::e2e::evaluate_checks(scenario.checks,
+                                       [&scenario]() { return solve_once(scenario); });
 
         std::cout << "{\n"
                   << "  \"scenario_id\": \"" << scenario.id << "\",\n"
                   << "  \"model\": \"" << scenario.model << "\",\n"
-                  << "  \"pass\": " << bool_json(pass) << ",\n"
+                  << "  \"pass\": " << bool_json(eval.checks.pass) << ",\n"
                   << "  \"result\": {\n"
-                  << "    \"feasible\": " << bool_json(r1.feasible()) << ",\n"
-                  << "    \"cost\": " << r1.cost() << ",\n"
-                  << "    \"work_ticks\": " << r1.work_ticks() << ",\n"
-                  << "    \"work_units\": " << r1.work_units() << ",\n"
-                  << "    \"elapsed_seconds\": " << r1.elapsed_seconds() << "\n"
+                  << "    \"feasible\": " << bool_json(eval.result.feasible()) << ",\n"
+                  << "    \"cost\": " << eval.result.cost() << ",\n"
+                  << "    \"work_ticks\": " << eval.result.work_ticks() << ",\n"
+                  << "    \"work_units\": " << eval.result.work_units() << ",\n"
+                  << "    \"elapsed_seconds\": " << eval.result.elapsed_seconds() << "\n"
                   << "  },\n"
                   << "  \"checks\": {\n"
-                  << "    \"feasible\": " << bool_json(check_feasible) << ",\n"
-                  << "    \"nonnegative_cost\": " << bool_json(check_nonnegative_cost) << ",\n"
-                  << "    \"deterministic_work\": " << bool_json(check_deterministic) << "\n"
-                  << "  }\n"
+                  << "    \"feasible\": " << bool_json(eval.checks.feasible) << ",\n"
+                  << "    \"nonnegative_cost\": " << bool_json(eval.checks.nonnegative_cost)
+                  << ",\n"
+                  << "    \"deterministic_work\": "
+                  << bool_json(eval.checks.deterministic_work) << "\n"
+                  << "  },\n"
+                  << "  \"errors\": [";
+        for (std::size_t i = 0; i < eval.checks.errors.size(); ++i) {
+            if (i > 0) {
+                std::cout << ", ";
+            }
+            std::cout << "\"" << eval.checks.errors[i] << "\"";
+        }
+        std::cout << "]\n"
                   << "}\n";
 
-        return pass ? 0 : 2;
+        return eval.checks.pass ? 0 : 2;
     } catch (std::exception const& e) {
         std::cerr << "e2e_runner error: " << e.what() << "\n";
         return 1;
