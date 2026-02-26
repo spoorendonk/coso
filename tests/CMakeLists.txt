@@ -1153,3 +1153,13 @@ add_e2e_pack_tests(scheduling scheduling)
 add_e2e_pack_tests(assignment assignment)
 add_e2e_pack_tests(packing packing)
 add_e2e_pack_tests(lotsizing lotsizing)
+
+add_test(
+    NAME e2e_quarantine_audit
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/e2e/check_quarantine_sla.py
+            --file ${CMAKE_SOURCE_DIR}/tests/e2e/quarantine.csv
+)
+set_tests_properties(
+    e2e_quarantine_audit
+    PROPERTIES LABELS "e2e-smoke;quarantine-audit"
+)

@@ -1,0 +1,3 @@
+scenario_id,owner,sla_due,reason
+# Example:
+# smoke_r2_vrptw_01,alice,2026-03-15,nondeterministic under sanitizer build
