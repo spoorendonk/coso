@@ -554,3 +554,86 @@ TEST_CASE("PackingModel solve returns a Result", "[packing]")
     REQUIRE(r.work_ticks() > 0);
     REQUIRE(r.work_units() > 0.0);
 }
+
+TEST_CASE("Deterministic stop parity across model APIs", "[model][work_units]")
+{
+    SECTION("ScheduleModel") {
+        coso::ScheduleModel m;
+        m.add_machine();
+        int j0 = m.add_job();
+        int j1 = m.add_job();
+        m.add_operation(j0, {.machine = 0, .duration = 3});
+        m.add_operation(j1, {.machine = 0, .duration = 2});
+
+        auto r1 = m.solve(coso::TimeLimit(1.0, 0.05));
+        auto r2 = m.solve(coso::TimeLimit(1.0, 0.05));
+
+        REQUIRE(r1.work_ticks() > 0);
+        REQUIRE(r1.work_ticks() == r2.work_ticks());
+        REQUIRE(r1.work_units() == r2.work_units());
+    }
+
+    SECTION("AssignmentModel") {
+        coso::AssignmentModel m;
+        int day = m.add_shift_type({.name = "Day"});
+        m.add_employee({.name = "Alice"});
+        m.add_employee({.name = "Bob"});
+        m.set_horizon(4);
+        m.add_demand(day, {.min_employees = 1, .max_employees = 1});
+
+        auto r1 = m.solve(coso::TimeLimit(1.0, 0.05));
+        auto r2 = m.solve(coso::TimeLimit(1.0, 0.05));
+
+        REQUIRE(r1.work_ticks() > 0);
+        REQUIRE(r1.work_ticks() == r2.work_ticks());
+        REQUIRE(r1.work_units() == r2.work_units());
+    }
+
+    SECTION("PackingModel") {
+        coso::PackingModel m;
+        m.add_bin_type({.capacity = {10}});
+        m.add_item({.size = {6}});
+        m.add_item({.size = {4}});
+        m.add_item({.size = {3}});
+
+        auto r1 = m.solve(coso::TimeLimit(1.0, 0.05));
+        auto r2 = m.solve(coso::TimeLimit(1.0, 0.05));
+
+        REQUIRE(r1.work_ticks() > 0);
+        REQUIRE(r1.work_ticks() == r2.work_ticks());
+        REQUIRE(r1.work_units() == r2.work_units());
+    }
+
+    SECTION("NetworkModel") {
+        coso::NetworkModel m;
+        int s = m.add_node(5, "s");
+        int t = m.add_node(-5, "t");
+        m.add_arc(s, t, 2, 0, 5);
+
+        auto r1 = m.solve(coso::TimeLimit(1.0, 0.05));
+        auto r2 = m.solve(coso::TimeLimit(1.0, 0.05));
+
+        REQUIRE(r1.work_ticks() > 0);
+        REQUIRE(r1.work_ticks() == r2.work_ticks());
+        REQUIRE(r1.work_units() == r2.work_units());
+    }
+
+    SECTION("LotSizingModel") {
+        coso::LotSizingModel m;
+        m.set_num_periods(3);
+        int p = m.add_product(100.0, 2.0, 1.0, 2.0);
+        m.set_demand(p, 0, 10.0);
+        m.set_demand(p, 1, 15.0);
+        m.set_demand(p, 2, 20.0);
+        m.set_capacity(0, 80.0);
+        m.set_capacity(1, 80.0);
+        m.set_capacity(2, 80.0);
+
+        auto r1 = m.solve(coso::TimeLimit(1.0, 0.05));
+        auto r2 = m.solve(coso::TimeLimit(1.0, 0.05));
+
+        REQUIRE(r1.work_ticks() > 0);
+        REQUIRE(r1.work_ticks() == r2.work_ticks());
+        REQUIRE(r1.work_units() == r2.work_units());
+    }
+}
