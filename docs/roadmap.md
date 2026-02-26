@@ -1626,6 +1626,117 @@ Each work unit is independent — max parallelism.
 | 10.9 | Lot sizing engine | CLSP/MLCLSP, delegates to mip-heuristics | src/lotsizing/ | 1.2 | **Done** |
 | 10.10 | Network flow engine | MCF/RCMCF, column generation for liner shipping | src/network/ | 1.2 | **Done** |
 
+### Step 11 — E2E matrix + harness (new foundation)
+
+```
+Deliverable: one executable E2E framework that can run scenario files and
+validate correctness invariants across all model families.
+This is mandatory before claiming "all roadmap variants covered".
+```
+
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 11.1 | Variant coverage matrix | `docs/e2e-matrix.md`: every roadmap variant (R/N/S/A/K/P) mapped to one or more scenario IDs, status, and owning work unit | docs/e2e-matrix.md | 4.x catalog |
+| 11.2 | Scenario schema | JSON schema for E2E scenarios (model type, inputs, expected checks, deterministic limits) | examples/e2e/schema.json | 11.1 |
+| 11.3 | Unified E2E runner | `e2e_runner` builds model from scenario, solves, emits normalized JSON result | examples/e2e/e2e_runner.cpp | 11.2 |
+| 11.4 | Invariant check library | Shared checks: feasibility, capacity, TW, precedence, flow conservation, assignment completeness, packing validity | examples/e2e/checks.* | 11.3 |
+| 11.5 | CTest integration | `e2e-smoke` and `e2e-benchmark` labels + helper scripts | tests/e2e/, tests/CMakeLists.txt | 11.3 |
+| 11.6 | Baseline smoke pack | One tiny deterministic scenario per model family currently public | examples/e2e/scenarios/smoke/*.json | 11.4, 11.5 |
+| 11.7 | Deterministic perf gate tooling | Compare candidate vs baseline on `work_units` (median ratio gate) | tests/perf/e2e_check_regression.py | 11.5 |
+
+### Step 12 — Public model API completion (missing model surface)
+
+```
+Deliverable: all roadmap model families have public model APIs comparable to
+Routing/Scheduling/Assignment/Packing, with typed Result access.
+Hard truth: without this, "all models E2E" is impossible.
+```
+
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 12.1 | NetworkModel public API | `src/model/network_model.{h,cpp}` + `Result::flows()` integration + C++ tests | src/model/, tests/model/, tests/network/ | 10.10 |
+| 12.2 | LotSizingModel public API | `src/model/lotsizing_model.{h,cpp}` delegating to lotsizing engine / mip-heuristics bridge | src/model/, src/lotsizing/, tests/lotsizing/ | 10.9 |
+| 12.3 | Python exposure for new models | Python bindings and pytest coverage for Network/LotSizing APIs | python/bindings.cpp, python/tests/ | 12.1, 12.2 |
+| 12.4 | Model registry/docs alignment | README + roadmap + examples reflect complete public model surface | README.md, docs/roadmap.md | 12.1, 12.2 |
+
+### Step 13 — Solve path completion for currently stubbed models
+
+```
+Deliverable: ScheduleModel, AssignmentModel, PackingModel solve methods produce
+real solutions on baseline benchmark classes (not stubs).
+```
+
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 13.1 | Schedule solve baseline | Real solve path for JSP/FJSP/RCPSP with objective + Result population | src/model/schedule_model.cpp, src/scheduling/ | 7.x |
+| 13.2 | Assignment solve baseline | Real solve path for NRP/ESP/MATSP baseline constraints/operators | src/model/assignment_model.cpp, src/assignment/ | 8.x |
+| 13.3 | Packing solve baseline | Real solve path for BPP/VBP/BPPC with move/swap/merge loop | src/model/packing_model.cpp, src/packing/ | 9.x |
+| 13.4 | Cross-model deterministic stop parity | Ensure time/work stop semantics are consistent across all model solve paths | src/model/*, tests/model/ | 13.1-13.3 |
+
+### Step 14 — Variant E2E scenario packs (roadmap coverage execution)
+
+```
+Deliverable: scenario packs that correspond directly to roadmap variants.
+Each work unit adds scenario files + expected checks + CTest registration.
+```
+
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 14.1 | Routing core pack | CVRP, VRPTW, heterogeneous fleet, pickup-delivery, optional/groups, multi-trip, profiles | examples/e2e/scenarios/routing/ | 11.6, 13.1-13.3 |
+| 14.2 | Routing extended pack | Skills, sync, breaks, compartments/loading, task-count, type incompatibility | examples/e2e/scenarios/routing_extended/ | 14.1 |
+| 14.3 | Network pack | MCF, RCMCF, liner shipping small instances | examples/e2e/scenarios/network/ | 12.1 |
+| 14.4 | Scheduling pack | JSP, FJSP, RCPSP, parallel machine baselines | examples/e2e/scenarios/scheduling/ | 13.1 |
+| 14.5 | Assignment pack | NRP, employee scheduling, multi-activity scheduling baselines | examples/e2e/scenarios/assignment/ | 13.2 |
+| 14.6 | Packing pack | BPP, VBP, BPPC baselines | examples/e2e/scenarios/packing/ | 13.3 |
+| 14.7 | Production pack | CLSP, MLCLSP delegated flow | examples/e2e/scenarios/lotsizing/ | 12.2 |
+| 14.8 | Format/parser pack | CVRPLIB, Solomon, Li-Lim, Taillard, PSPLIB, NRP parser-driven E2E cases | examples/e2e/scenarios/parsers/ | 14.1-14.7 |
+
+### Step 15 — CI gates + regression policy
+
+```
+Deliverable: CI enforces e2e-smoke correctness and deterministic perf trend.
+```
+
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 15.1 | Required smoke gate | `e2e-smoke` required in CI for PRs | .github/workflows/* | 11.5, 14.x baseline packs |
+| 15.2 | Nightly benchmark gate | `e2e-benchmark` nightly run with artifact retention | .github/workflows/* | 11.7, 14.x |
+| 15.3 | Deterministic perf thresholds | Per-pack `work_units` regression thresholds + fail policy | tests/perf/, docs/ | 15.2 |
+| 15.4 | Flake quarantine process | Label/quarantine mechanism for unstable scenarios with owner + SLA | docs/testing.md, workflow scripts | 15.1 |
+
+### Step 16 — Documentation + operator handoff protocol
+
+```
+Deliverable: agents can pick work units safely and produce consistent E2E PRs.
+```
+
+| ID | PR title | Deliverable | Files | Depends on |
+|----|----------|-------------|-------|------------|
+| 16.1 | E2E contribution guide | How to add scenarios, expected checks, deterministic limits, and labels | docs/e2e-contributing.md | 11.x |
+| 16.2 | Variant ownership board | Per-variant owner + status dashboard linked from roadmap | docs/e2e-matrix.md (ownership fields) | 11.1 |
+| 16.3 | PR template for E2E units | Required evidence: scenario IDs, checks, work-unit deltas, ctest labels | .github/pull_request_template.md | 15.1 |
+| 16.4 | Canonical examples refresh | One polished end-to-end example per model family in README/examples | README.md, examples/ | 14.x |
+
+### Step 11–16 parallelism and sequencing
+
+```
+Required sequence:
+  11.x foundation → 12.x API completion + 13.x solve completion → 14.x packs
+  → 15.x CI gates → 16.x docs/handoff hardening.
+
+Hard truth:
+  "All models + all roadmap variants E2E" cannot be delivered in one PR because
+  some model APIs are missing and several solve paths are still stubs.
+```
+
+**Parallel-safe lanes:**
+- `11.1` can run in parallel with `12.1/12.2`.
+- `12.1` (network API) and `12.2` (lotsizing API) are parallel.
+- `13.1`, `13.2`, `13.3` are parallel (different directories/teams).
+- `14.3`, `14.4`, `14.5`, `14.6`, `14.7` are parallel once corresponding 12/13 deps are green.
+- `15.2` can start before all `14.x` are complete (nightly on available packs).
+- `16.x` can be incremental throughout but must be finalized after `15.1`.
+
 ### Parallelism summary
 
 ```
@@ -1639,6 +1750,12 @@ Step 7: parallel with steps 5, 8, 9 (only touches src/scheduling/)
 Step 8: parallel with steps 5, 7, 9 (only touches src/assignment/)
 Step 9: parallel with steps 7, 8 (only touches src/packing/)
 Step 10: all 10 work units parallel
+Step 11: 11.1/11.2/11.5 parallelizable after schema + runner landing
+Step 12: 12.1 and 12.2 parallel; 12.3 after both
+Step 13: 13.1/13.2/13.3 parallel; 13.4 after all three
+Step 14: model-family packs parallel by dependency lane
+Step 15: 15.1 first, 15.2/15.3 parallel, 15.4 independent
+Step 16: mostly parallel documentation hardening
 ```
 
 **Agent coordination rule**: before starting work, check open branches and PRs.
