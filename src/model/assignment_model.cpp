@@ -1,5 +1,7 @@
 #include "model/assignment_model.h"
 #include "assignment/assignment_data.h"
+#include "common/work_units.h"
+#include "search/stop_criterion.h"
 
 #include <chrono>
 #include <climits>
@@ -266,11 +268,35 @@ void AssignmentModel::set_change_penalty(int penalty)
 Result AssignmentModel::solve(TimeLimit tl)
 {
     auto wall_start = std::chrono::steady_clock::now();
+    WorkUnits work;
+    StopCriterion stop(tl.seconds);
+    stop.set_work_limit(&work, WorkUnits::ticks_from_units(tl.work_units));
 
     auto& bd = get_data(this);
+    work.count(static_cast<uint64_t>(bd.shift_types.size())
+             + static_cast<uint64_t>(bd.employees.size())
+             + static_cast<uint64_t>(bd.demands.size())
+             + static_cast<uint64_t>(bd.demands_all.size())
+             + static_cast<uint64_t>(bd.forbidden_sequences.size())
+             + static_cast<uint64_t>(bd.preferences.size())
+             + static_cast<uint64_t>(bd.unavailabilities.size())
+             + 1);
+    if (stop.should_stop()) {
+        Result result;
+        result.work_ticks_ = work.ticks();
+        result.work_units_ = work.units();
+        auto wall_end = std::chrono::steady_clock::now();
+        result.elapsed_seconds_ =
+            std::chrono::duration<double>(wall_end - wall_start).count();
+        remove_data(this);
+        return result;
+    }
 
     // Compile the builder data into an AssignmentData instance.
     AssignmentData data = compile(bd);
+    work.count(static_cast<uint64_t>(data.num_employees())
+             + static_cast<uint64_t>(data.num_shift_types())
+             + static_cast<uint64_t>(data.horizon));
 
     // Clean up builder data for this model instance.
     remove_data(this);
@@ -288,6 +314,8 @@ Result AssignmentModel::solve(TimeLimit tl)
     Result result;
     result.feasible_ = false;
     result.cost_     = 0.0;
+    result.work_ticks_ = work.ticks();
+    result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
     result.elapsed_seconds_ =

@@ -17,6 +17,13 @@ StopCriterion::StopCriterion(double time_limit_s,
 {
 }
 
+void StopCriterion::set_work_limit(WorkUnits const* work,
+                                   uint64_t max_work_ticks)
+{
+    work_ = work;
+    max_work_ticks_ = max_work_ticks;
+}
+
 bool StopCriterion::should_stop() const
 {
     // Time limit.
@@ -29,6 +36,10 @@ bool StopCriterion::should_stop() const
 
     // Max iterations without improvement.
     if (max_no_improve_ > 0 && (iter_ - last_improve_iter_) >= max_no_improve_)
+        return true;
+
+    // Deterministic work limit.
+    if (work_ && max_work_ticks_ > 0 && work_->ticks() >= max_work_ticks_)
         return true;
 
     return false;
@@ -49,6 +60,16 @@ double StopCriterion::elapsed() const
     auto now = Clock::now();
     std::chrono::duration<double> diff = now - start_;
     return diff.count();
+}
+
+uint64_t StopCriterion::work_ticks() const noexcept
+{
+    return work_ ? work_->ticks() : 0;
+}
+
+double StopCriterion::work_units() const noexcept
+{
+    return work_ ? work_->units() : 0.0;
 }
 
 } // namespace coso

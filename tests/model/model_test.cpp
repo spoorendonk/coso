@@ -24,6 +24,8 @@ TEST_CASE("Result default-constructs to infeasible with zero cost", "[types]")
     REQUIRE(r.cost() == 0.0);
     REQUIRE(r.elapsed_seconds() == 0.0);
     REQUIRE(r.iterations() == 0);
+    REQUIRE(r.work_ticks() == 0);
+    REQUIRE(r.work_units() == 0.0);
     REQUIRE(r.routes().empty());
     REQUIRE(r.unserved().empty());
     REQUIRE(r.schedule().empty());
@@ -145,6 +147,8 @@ TEST_CASE("RoutingModel solve returns a Result", "[routing]")
     REQUIRE(r.routes()[0][0] == 0);  // client index 0
     REQUIRE(r.unserved().empty());
     REQUIRE(r.elapsed_seconds() > 0.0);
+    REQUIRE(r.work_ticks() > 0);
+    REQUIRE(r.work_units() > 0.0);
 }
 
 TEST_CASE("Free function solve(instance_path, tl) links", "[routing]")
@@ -211,6 +215,24 @@ TEST_CASE("RoutingModel with explicit distances", "[routing][integration]")
         total_served += static_cast<int>(route.size());
     REQUIRE(total_served == 2);
     REQUIRE(r.cost() > 0.0);
+}
+
+TEST_CASE("RoutingModel deterministic work units with work limit", "[routing][work_units]")
+{
+    coso::RoutingModel m;
+    m.add_depot(0.0, 0.0);
+    m.add_vehicle_type(2, {.capacity = {10}});
+    m.add_client(10.0, 0.0, {.demand = {3}});
+    m.add_client(10.0, 10.0, {.demand = {3}});
+    m.add_client(0.0, 10.0, {.demand = {3}});
+    m.add_client(20.0, 0.0, {.demand = {3}});
+
+    coso::Result r1 = m.solve(coso::TimeLimit(0.0, 0.05));
+    coso::Result r2 = m.solve(coso::TimeLimit(0.0, 0.05));
+
+    REQUIRE(r1.work_ticks() > 0);
+    REQUIRE(r1.work_ticks() == r2.work_ticks());
+    REQUIRE(r1.work_units() == r2.work_units());
 }
 
 TEST_CASE("RoutingModel no depot returns empty result", "[routing]")
@@ -314,6 +336,8 @@ TEST_CASE("ScheduleModel solve returns a Result", "[scheduling]")
     m.add_operation(j, {.machine = 0, .duration = 10});
     coso::Result r = m.solve(coso::TimeLimit(1.0));
     REQUIRE(r.cost() >= 0.0);
+    REQUIRE(r.work_ticks() > 0);
+    REQUIRE(r.work_units() > 0.0);
 }
 
 TEST_CASE("Free function solve_jsp links", "[scheduling]")
@@ -385,6 +409,8 @@ TEST_CASE("AssignmentModel solve returns a Result", "[assignment]")
     m.set_horizon(7);
     coso::Result r = m.solve(coso::TimeLimit(1.0));
     REQUIRE(r.cost() >= 0.0);
+    REQUIRE(r.work_ticks() > 0);
+    REQUIRE(r.work_units() > 0.0);
 }
 
 // --------------------------------------------------------------------------
@@ -433,4 +459,6 @@ TEST_CASE("PackingModel solve returns a Result", "[packing]")
     m.add_item({.size = {40}});
     coso::Result r = m.solve(coso::TimeLimit(1.0));
     REQUIRE(r.cost() >= 0.0);
+    REQUIRE(r.work_ticks() > 0);
+    REQUIRE(r.work_units() > 0.0);
 }

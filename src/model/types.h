@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -26,7 +27,8 @@ struct CostParams {
 /// Stop criterion passed to solve().
 struct TimeLimit {
     double seconds;
-    explicit TimeLimit(double s) : seconds(s) {}
+    double work_units = 0.0;  ///< 0.0 = no deterministic work limit
+    explicit TimeLimit(double s, double wu = 0.0) : seconds(s), work_units(wu) {}
 };
 
 /// Common result fields shared across all engines.
@@ -43,11 +45,15 @@ struct Result {
     double cost_            = 0.0;
     double elapsed_seconds_ = 0.0;
     int    iterations_      = 0;
+    uint64_t work_ticks_    = 0;
+    double work_units_      = 0.0;
 
     [[nodiscard]] bool   feasible()        const noexcept { return feasible_; }
     [[nodiscard]] double cost()            const noexcept { return cost_; }
     [[nodiscard]] double elapsed_seconds() const noexcept { return elapsed_seconds_; }
     [[nodiscard]] int    iterations()      const noexcept { return iterations_; }
+    [[nodiscard]] uint64_t work_ticks()    const noexcept { return work_ticks_; }
+    [[nodiscard]] double work_units()      const noexcept { return work_units_; }
 
     // -- Routing ---------------------------------------------------------
 

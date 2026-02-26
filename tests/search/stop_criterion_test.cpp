@@ -94,6 +94,22 @@ TEST_CASE("StopCriterion — no criteria active", "[stop_criterion]")
     CHECK_FALSE(stop.should_stop());
 }
 
+TEST_CASE("StopCriterion — deterministic work limit", "[stop_criterion]")
+{
+    StopCriterion stop(0.0, 0, 0);
+    WorkUnits work;
+    stop.set_work_limit(&work, 10);
+
+    CHECK_FALSE(stop.should_stop());
+    work.count(9);
+    CHECK_FALSE(stop.should_stop());
+
+    work.count(1);
+    CHECK(stop.should_stop());
+    CHECK(stop.work_ticks() == 10);
+    CHECK(stop.work_units() > 0.0);
+}
+
 TEST_CASE("StopCriterion — elapsed time increases", "[stop_criterion]")
 {
     StopCriterion stop(10.0);

@@ -1,4 +1,6 @@
 #include "model/schedule_model.h"
+#include "common/work_units.h"
+#include "search/stop_criterion.h"
 #include "scheduling/schedule_data.h"
 
 #include <chrono>
@@ -100,9 +102,12 @@ void ScheduleModel::set_initial_schedule(
 //  solve()
 // ---------------------------------------------------------------------------
 
-Result ScheduleModel::solve(TimeLimit /*tl*/)
+Result ScheduleModel::solve(TimeLimit tl)
 {
     auto wall_start = std::chrono::steady_clock::now();
+    WorkUnits work;
+    StopCriterion stop(tl.seconds);
+    stop.set_work_limit(&work, WorkUnits::ticks_from_units(tl.work_units));
 
     // Validate: need at least one machine and one job.
     if (machines_.empty() || jobs_.empty()) {
@@ -115,33 +120,50 @@ Result ScheduleModel::solve(TimeLimit /*tl*/)
 
     ScheduleData::Builder builder;
 
-    for (auto const& m : machines_)
+    for (auto const& m : machines_) {
         builder.add_machine(m);
+        work.count(1);
+    }
 
-    for (auto const& j : jobs_)
+    for (auto const& j : jobs_) {
         builder.add_job(j);
+        work.count(1);
+    }
 
-    for (auto const& op : operations_)
+    for (auto const& op : operations_) {
         builder.add_operation(op.job, op.params);
+        work.count(2);
+    }
 
-    for (int r = 0; r < static_cast<int>(resource_capacities_.size()); ++r)
+    for (int r = 0; r < static_cast<int>(resource_capacities_.size()); ++r) {
         builder.add_resource(resource_capacities_[r]);
+        work.count(1);
+    }
 
     // Set resource usage.
     for (int o = 0; o < static_cast<int>(resource_usage_.size()); ++o) {
         for (int r = 0; r < static_cast<int>(resource_usage_[o].size()); ++r) {
-            if (resource_usage_[o][r] != 0)
+            work.count(1);
+            if (resource_usage_[o][r] != 0) {
                 builder.set_resource_usage(o, r, resource_usage_[o][r]);
+                work.count(1);
+            }
         }
     }
 
     // Extra precedences.
-    for (auto const& p : extra_precedences_)
+    for (auto const& p : extra_precedences_) {
         builder.add_precedence(p.before, p.after);
+        work.count(1);
+    }
 
     builder.set_objective(objective_);
+    work.count(1);
 
     [[maybe_unused]] ScheduleData data = builder.build();
+    work.count(static_cast<uint64_t>(data.num_operations())
+             + static_cast<uint64_t>(data.num_machines()));
+    (void)stop.should_stop();
 
     // -----------------------------------------------------------------------
     //  Stub: no solver yet (comes in work unit 7.4+).
@@ -150,6 +172,8 @@ Result ScheduleModel::solve(TimeLimit /*tl*/)
 
     Result result;
     result.feasible_ = false;
+    result.work_ticks_ = work.ticks();
+    result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
     result.elapsed_seconds_ = std::chrono::duration<double>(
@@ -165,7 +189,10 @@ Result ScheduleModel::solve(TimeLimit /*tl*/)
 Result solve_jsp(const std::string& /*instance_path*/, TimeLimit /*tl*/)
 {
     // Stub: JSP file reader will come in a later work unit.
-    return {};
+    Result result;
+    result.work_ticks_ = 0;
+    result.work_units_ = 0.0;
+    return result;
 }
 
 } // namespace coso

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/work_units.h"
 #include "model/routing_model.h"
 
 #include <cassert>
@@ -139,6 +140,9 @@ public:
     [[nodiscard]] int num_profiles()      const noexcept { return num_profiles_; }
     [[nodiscard]] int num_load_dims()     const noexcept { return num_load_dims_; }
 
+    /// Attach a deterministic work counter used by matrix accessors.
+    void set_work_units(WorkUnits* work_units) noexcept { work_units_ = work_units; }
+
     /// Client data for client index c (0-based among clients).
     [[nodiscard]] ClientData const& client(int c) const {
         assert(c >= 0 && c < num_clients_);
@@ -168,6 +172,7 @@ public:
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
+        if (work_units_) work_units_->count(1);
         return dist_matrices_[profile * n * n + from * n + to];
     }
 
@@ -181,6 +186,7 @@ public:
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
+        if (work_units_) work_units_->count(1);
         return dur_matrices_[profile * n * n + from * n + to];
     }
 
@@ -195,6 +201,7 @@ public:
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
+        if (work_units_) work_units_->count(1);
         return cost_matrices_[profile * n * n + from * n + to];
     }
 
@@ -252,6 +259,7 @@ private:
 
     // Flat neighbour lists: client c's neighbours at [c * granular_k_ .. (c+1)*granular_k_).
     std::vector<int> neighbours_;
+    WorkUnits* work_units_ = nullptr;
 
     // Construction helper — only Builder can create.
     ProblemData() = default;

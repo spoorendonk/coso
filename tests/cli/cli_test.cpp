@@ -51,6 +51,7 @@ TEST_CASE("CLI: --help prints usage", "[cli]")
     CHECK(r.exit_code == 0);
     CHECK(r.output.find("Usage:") != std::string::npos);
     CHECK(r.output.find("--time-limit") != std::string::npos);
+    CHECK(r.output.find("--work-limit") != std::string::npos);
     CHECK(r.output.find("--verbose") != std::string::npos);
 }
 
@@ -86,6 +87,13 @@ TEST_CASE("CLI: invalid time limit", "[cli]")
 TEST_CASE("CLI: negative time limit", "[cli]")
 {
     auto r = run_cmd(coso_solve_path() + " foo.vrp --time-limit -5");
+    CHECK(r.exit_code == 1);
+    CHECK(r.output.find("Error:") != std::string::npos);
+}
+
+TEST_CASE("CLI: negative work limit", "[cli]")
+{
+    auto r = run_cmd(coso_solve_path() + " foo.vrp --work-limit -1");
     CHECK(r.exit_code == 1);
     CHECK(r.output.find("Error:") != std::string::npos);
 }

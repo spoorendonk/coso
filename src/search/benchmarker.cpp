@@ -26,6 +26,8 @@ BenchmarkResult Benchmarker::run_instance(std::string const& path, int bks)
 
     res.cost = static_cast<int64_t>(result.cost());
     res.elapsed_s = result.elapsed_seconds();
+    res.work_units = result.work_units();
+    res.work_ticks = result.work_ticks();
     res.feasible = result.feasible();
     res.num_routes = static_cast<int>(result.routes().size());
 
@@ -68,7 +70,7 @@ Benchmarker::to_csv(std::vector<BenchmarkResult> const& results)
     std::ostringstream ss;
     ss << std::fixed;
 
-    ss << "instance,bks,cost,gap_pct,elapsed_s,feasible,num_routes\n";
+    ss << "instance,bks,cost,gap_pct,elapsed_s,work_units,work_ticks,feasible,num_routes\n";
 
     for (auto const& r : results) {
         ss << r.instance << ","
@@ -76,6 +78,8 @@ Benchmarker::to_csv(std::vector<BenchmarkResult> const& results)
            << r.cost << ","
            << std::setprecision(2) << r.gap_pct << ","
            << std::setprecision(3) << r.elapsed_s << ","
+           << std::setprecision(3) << r.work_units << ","
+           << r.work_ticks << ","
            << (r.feasible ? "true" : "false") << ","
            << r.num_routes << "\n";
     }

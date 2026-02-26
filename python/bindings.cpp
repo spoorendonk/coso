@@ -15,10 +15,12 @@ NB_MODULE(_coso, m) {
     // -- TimeLimit ------------------------------------------------------------
 
     nb::class_<coso::TimeLimit>(m, "TimeLimit")
-        .def(nb::init<double>(), "seconds"_a)
+        .def(nb::init<double, double>(), "seconds"_a, "work_units"_a = 0.0)
         .def_rw("seconds", &coso::TimeLimit::seconds)
+        .def_rw("work_units", &coso::TimeLimit::work_units)
         .def("__repr__", [](const coso::TimeLimit& tl) {
-            return "TimeLimit(seconds=" + std::to_string(tl.seconds) + ")";
+            return "TimeLimit(seconds=" + std::to_string(tl.seconds) +
+                   ", work_units=" + std::to_string(tl.work_units) + ")";
         });
 
     // -- Coord ----------------------------------------------------------------
@@ -64,13 +66,16 @@ NB_MODULE(_coso, m) {
         .def_prop_ro("cost",            &coso::Result::cost)
         .def_prop_ro("elapsed_seconds", &coso::Result::elapsed_seconds)
         .def_prop_ro("iterations",      &coso::Result::iterations)
+        .def_prop_ro("work_ticks",      &coso::Result::work_ticks)
+        .def_prop_ro("work_units",      &coso::Result::work_units)
         .def_prop_ro("routes",          &coso::Result::routes)
         .def_prop_ro("unserved",        &coso::Result::unserved)
         .def("__repr__", [](const coso::Result& r) {
             return "Result(feasible=" + std::string(r.feasible() ? "True" : "False") +
                    ", cost=" + std::to_string(r.cost()) +
                    ", routes=" + std::to_string(r.routes().size()) +
-                   ", elapsed=" + std::to_string(r.elapsed_seconds()) + "s)";
+                   ", elapsed=" + std::to_string(r.elapsed_seconds()) + "s" +
+                   ", work=" + std::to_string(r.work_units()) + ")";
         });
 
     // -- VehicleTypeParams ----------------------------------------------------
