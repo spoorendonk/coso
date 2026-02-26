@@ -1,8 +1,16 @@
 #include "model/assignment_model.h"
 #include "assignment/assignment_data.h"
+#include "assignment/assignment_solution.h"
 #include "common/work_units.h"
 #include "search/stop_criterion.h"
+#include "assignment/construction.h"
+#include "assignment/cost_evaluator.h"
+#include "assignment/operators/shift_move.h"
+#include "assignment/operators/shift_swap.h"
+#include "assignment/operators/block_swap.h"
+#include "assignment/operators/pillar_move.h"
 
+#include <algorithm>
 #include <chrono>
 #include <climits>
 #include <map>
@@ -307,13 +315,103 @@ Result AssignmentModel::solve(TimeLimit tl)
         return {};  // cannot solve without employees/shifts/horizon
     }
 
-    // TODO(8.x): Plug in actual assignment solver here.
-    // For now, return a stub result indicating the problem was compiled
-    // but not solved.
+    AssignmentCostEvaluator evaluator(data);
+    AssignmentSolution greedy = construct_greedy(data, evaluator);
+    work.count(static_cast<uint64_t>(data.horizon)
+             * static_cast<uint64_t>(std::max(1, data.num_shift_types())));
+
+    auto best_schedule = greedy.schedule();
+
+    if (!stop.should_stop()) {
+        AssignmentSolution alt = construct_ffd(data, evaluator);
+        work.count(static_cast<uint64_t>(data.horizon)
+                 * static_cast<uint64_t>(std::max(1, data.num_employees())));
+        if (alt.cost() < greedy.cost()) {
+            best_schedule = alt.schedule();
+        }
+    }
+
+    AssignmentSolution best(data, evaluator);
+    for (int e = 0; e < data.num_employees(); ++e) {
+        for (int d = 0; d < data.horizon; ++d) {
+            int s = best_schedule[e][d];
+            if (s >= 0) {
+                best.assign(e, d, s);
+            }
+        }
+    }
+
+    int iterations = 0;
+    ShiftMove shift_move;
+    ShiftSwap shift_swap;
+    BlockSwap block_swap;
+
+    while (!stop.should_stop()) {
+        bool improved = false;
+
+        if (shift_move.find_best_move(best)) {
+            shift_move.apply(best);
+            improved = true;
+            work.count(3);
+        }
+        if (!stop.should_stop() && shift_swap.find_best_move(best)) {
+            shift_swap.apply(best);
+            improved = true;
+            work.count(3);
+        }
+        if (!stop.should_stop() && block_swap.find_best_move(best)) {
+            block_swap.apply(best);
+            improved = true;
+            work.count(3);
+        }
+        if (!stop.should_stop()) {
+            int delta = pillar_vnd(best, 4, 2);
+            if (delta < 0) {
+                improved = true;
+                work.count(3);
+            }
+        }
+
+        if (!improved) {
+            break;
+        }
+        ++iterations;
+        work.count(1);
+    }
 
     Result result;
-    result.feasible_ = false;
-    result.cost_     = 0.0;
+    result.feasible_ = best.is_feasible();
+    result.cost_ = static_cast<double>(best.cost());
+    result.iterations_ = iterations;
+    result.assignments_.assign(static_cast<size_t>(data.horizon), {});
+    for (int d = 0; d < data.horizon; ++d) {
+        for (int e = 0; e < data.num_employees(); ++e) {
+            int s = best.get(e, d);
+            if (s < 0) continue;
+            result.assignments_[d].push_back(Result::Assignment{
+                .employee = e,
+                .shift = s,
+                .employee_name = data.employees[e].name,
+                .shift_name = data.shift_types[s].name,
+            });
+        }
+    }
+
+    // Track unmet minimum demand entries as encoded keys (shift,day).
+    int const ns = data.num_shift_types();
+    for (int s = 0; s < ns; ++s) {
+        for (int d = 0; d < data.horizon; ++d) {
+            auto dem = data.get_demand(s, d);
+            int count = 0;
+            for (auto const& a : result.assignments_[d]) {
+                if (a.shift == s) ++count;
+            }
+            if (count < dem.min_employees) {
+                result.unassigned_.push_back(AssignmentData::demand_key(s, d));
+            }
+        }
+    }
+
     result.work_ticks_ = work.ticks();
     result.work_units_ = work.units();
 
