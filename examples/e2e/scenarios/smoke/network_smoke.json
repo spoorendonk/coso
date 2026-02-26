@@ -1,0 +1,11 @@
+{
+  "id": "smoke_network_foundation",
+  "model": "network",
+  "variant": "N1",
+  "profile": "smoke",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.05
+  },
+  "checks": ["feasible", "nonnegative_cost", "deterministic_work"]
+}
