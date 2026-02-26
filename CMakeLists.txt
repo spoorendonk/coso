@@ -58,6 +58,7 @@ endif()
 
 add_library(coso STATIC
     src/model/routing_model.cpp
+    src/model/network_model.cpp
     src/model/schedule_model.cpp
     src/model/assignment_model.cpp
     src/model/packing_model.cpp

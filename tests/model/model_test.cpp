@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <model/routing_model.h>
+#include <model/network_model.h>
 #include <model/schedule_model.h>
 #include <model/assignment_model.h>
 #include <model/packing_model.h>
@@ -253,6 +254,51 @@ TEST_CASE("RoutingModel no vehicle type returns empty result", "[routing]")
     coso::Result r = m.solve(coso::TimeLimit(1.0));
     // No vehicles: cannot solve.
     REQUIRE_FALSE(r.feasible());
+}
+
+// --------------------------------------------------------------------------
+//  NetworkModel
+// --------------------------------------------------------------------------
+
+TEST_CASE("NetworkModel can be default-constructed", "[network]")
+{
+    coso::NetworkModel m;
+    (void)m;
+}
+
+TEST_CASE("NetworkModel add nodes, arcs, and resources", "[network]")
+{
+    coso::NetworkModel m;
+    int src = m.add_node(5, "src");
+    int mid = m.add_node(0, "mid");
+    int dst = m.add_node(-5, "dst");
+    REQUIRE(src == 0);
+    REQUIRE(mid == 1);
+    REQUIRE(dst == 2);
+
+    int a0 = m.add_arc(src, mid, 1, 0, 5);
+    int a1 = m.add_arc(mid, dst, 1, 0, 5);
+    REQUIRE(a0 == 0);
+    REQUIRE(a1 == 1);
+
+    int r = m.add_resource("time", 100);
+    REQUIRE(r == 0);
+    m.set_resource_usage(a0, r, 3);
+}
+
+TEST_CASE("NetworkModel solve returns flow result", "[network]")
+{
+    coso::NetworkModel m;
+    int src = m.add_node(5, "src");
+    int dst = m.add_node(-5, "dst");
+    m.add_arc(src, dst, 2, 0, 5);
+
+    coso::Result r = m.solve(coso::TimeLimit(1.0));
+    REQUIRE(r.feasible());
+    REQUIRE(r.cost() == 10.0);
+    REQUIRE_FALSE(r.flows().empty());
+    REQUIRE(r.work_ticks() > 0);
+    REQUIRE(r.work_units() > 0.0);
 }
 
 // --------------------------------------------------------------------------
