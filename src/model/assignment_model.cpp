@@ -176,6 +176,11 @@ AssignmentData compile(const BuilderData& bd)
 
 } // anonymous namespace
 
+AssignmentModel::~AssignmentModel()
+{
+    remove_data(this);
+}
+
 // ---------------------------------------------------------------------------
 //  Shift types & employees
 // ---------------------------------------------------------------------------
@@ -296,7 +301,6 @@ Result AssignmentModel::solve(TimeLimit tl)
         auto wall_end = std::chrono::steady_clock::now();
         result.elapsed_seconds_ =
             std::chrono::duration<double>(wall_end - wall_start).count();
-        remove_data(this);
         return result;
     }
 
@@ -305,9 +309,6 @@ Result AssignmentModel::solve(TimeLimit tl)
     work.count(static_cast<uint64_t>(data.num_employees())
              + static_cast<uint64_t>(data.num_shift_types())
              + static_cast<uint64_t>(data.horizon));
-
-    // Clean up builder data for this model instance.
-    remove_data(this);
 
     // Validate: need at least one employee and one shift type.
     if (data.employees.empty() || data.shift_types.empty()

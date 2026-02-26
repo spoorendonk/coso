@@ -37,6 +37,8 @@ struct DemandParams {
 /// Supports nurse rostering, timetabling, and related assignment problems.
 class AssignmentModel {
 public:
+    ~AssignmentModel();
+
     /// Add a shift type.
     int add_shift_type(ShiftTypeParams p);
 
