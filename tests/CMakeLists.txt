@@ -1119,6 +1119,8 @@ function(add_e2e_pack_tests pack_name scenario_subdir)
 endfunction()
 
 add_e2e_pack_tests(network network)
+add_e2e_pack_tests(routing routing)
+add_e2e_pack_tests(routing_extended routing_extended)
 add_e2e_pack_tests(scheduling scheduling)
 add_e2e_pack_tests(assignment assignment)
 add_e2e_pack_tests(packing packing)
