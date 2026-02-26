@@ -157,6 +157,28 @@ add_executable(e2e_runner
 target_link_libraries(e2e_runner PRIVATE coso)
 
 # --------------------------------------------------------------------------- #
+#  Canonical examples                                                         #
+# --------------------------------------------------------------------------- #
+
+add_executable(canonical_routing_example examples/canonical/routing_example.cpp)
+target_link_libraries(canonical_routing_example PRIVATE coso)
+
+add_executable(canonical_network_example examples/canonical/network_example.cpp)
+target_link_libraries(canonical_network_example PRIVATE coso)
+
+add_executable(canonical_lotsizing_example examples/canonical/lotsizing_example.cpp)
+target_link_libraries(canonical_lotsizing_example PRIVATE coso)
+
+add_executable(canonical_schedule_example examples/canonical/schedule_example.cpp)
+target_link_libraries(canonical_schedule_example PRIVATE coso)
+
+add_executable(canonical_assignment_example examples/canonical/assignment_example.cpp)
+target_link_libraries(canonical_assignment_example PRIVATE coso)
+
+add_executable(canonical_packing_example examples/canonical/packing_example.cpp)
+target_link_libraries(canonical_packing_example PRIVATE coso)
+
+# --------------------------------------------------------------------------- #
 #  Tests                                                                       #
 # --------------------------------------------------------------------------- #
 
