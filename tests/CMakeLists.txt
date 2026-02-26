@@ -1090,6 +1090,33 @@ set_tests_properties(
         LABELS "e2e-benchmark;perf-gate"
 )
 
+add_test(
+    NAME e2e_perf_gate_policy_pass
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
+            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
+            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_ok
+            --threshold-policy ${CMAKE_SOURCE_DIR}/tests/perf/testdata/policies/policy_pass.json
+            --pack-key network
+            --scenario-prefix bench_network
+)
+set_tests_properties(e2e_perf_gate_policy_pass PROPERTIES LABELS "e2e-benchmark;perf-gate")
+
+add_test(
+    NAME e2e_perf_gate_policy_fail
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
+            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
+            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_ok
+            --threshold-policy ${CMAKE_SOURCE_DIR}/tests/perf/testdata/policies/policy_fail.json
+            --pack-key network
+            --scenario-prefix bench_network
+)
+set_tests_properties(
+    e2e_perf_gate_policy_fail
+    PROPERTIES
+        WILL_FAIL TRUE
+        LABELS "e2e-benchmark;perf-gate"
+)
+
 # --------------------------------------------------------------------------- #
 #  Variant E2E model-family packs                                              #
 # --------------------------------------------------------------------------- #
