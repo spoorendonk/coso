@@ -47,52 +47,52 @@ Status legend:
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| N1 | Multi-Commodity Flow | MCF | `smoke_n1_mcf_01`, `bench_n1_mcf_01` | 14.3 | 14.3 | TBD | planned |
-| N2 | Resource-Constrained MCF | RCMCF | `smoke_n2_rcmcf_01`, `bench_n2_rcmcf_01` | 14.3 | 14.3 | TBD | planned |
-| N3 | Liner Shipping Network Design | LSNDP | `smoke_n3_lsndp_01`, `bench_n3_lsndp_01` | 14.3 | 14.3 | TBD | planned |
+| N1 | Multi-Commodity Flow | MCF | `smoke_n1_mcf_01`, `bench_n1_mcf_01` | 14.3 | 14.3 | TBD | done |
+| N2 | Resource-Constrained MCF | RCMCF | `smoke_n2_rcmcf_01`, `bench_n2_rcmcf_01` | 14.3 | 14.3 | TBD | done |
+| N3 | Liner Shipping Network Design | LSNDP | `smoke_n3_lsndp_01`, `bench_n3_lsndp_01` | 14.3 | 14.3 | TBD | done |
 
 ## Scheduling (`S`)
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| S1 | Job Shop Scheduling | JSP | `smoke_s1_jsp_01`, `bench_s1_jsp_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S2 | Permutation Flow Shop | PFSP | `smoke_s2_pfsp_01`, `bench_s2_pfsp_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S3 | Flexible Job Shop | FJSP | `smoke_s3_fjsp_01`, `bench_s3_fjsp_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S4 | RCPSP | RCPSP | `smoke_s4_rcpsp_01`, `bench_s4_rcpsp_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S5 | JSP with Setup Times | JSP-SDST | `smoke_s5_jspsdst_01`, `bench_s5_jspsdst_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S6 | Parallel Machine | `P||Cmax` | `smoke_s6_pm_01`, `bench_s6_pm_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S7 | Unrelated Parallel Machine | `R||Cmax` | `smoke_s7_upm_01`, `bench_s7_upm_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S8 | Hybrid Flow Shop | HFS | `smoke_s8_hfs_01`, `bench_s8_hfs_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S9 | Open Shop | OSSP | `smoke_s9_ossp_01`, `bench_s9_ossp_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S10 | Multi-Mode RCPSP | MRCPSP | `smoke_s10_mrcpsp_01`, `bench_s10_mrcpsp_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S11 | Preemptive RCPSP | PRCPSP | `smoke_s11_prcpsp_01`, `bench_s11_prcpsp_01` | 14.4 | 14.4 | TBD | blocked_solve |
-| S12 | Car Sequencing | - | `smoke_s12_carseq_01`, `bench_s12_carseq_01` | 14.4 | 14.4 | TBD | blocked_solve |
+| S1 | Job Shop Scheduling | JSP | `smoke_s1_jsp_01`, `bench_s1_jsp_01` | 14.4 | 14.4 | TBD | done |
+| S2 | Permutation Flow Shop | PFSP | `smoke_s2_pfsp_01`, `bench_s2_pfsp_01` | 14.4 | 14.4 | TBD | done |
+| S3 | Flexible Job Shop | FJSP | `smoke_s3_fjsp_01`, `bench_s3_fjsp_01` | 14.4 | 14.4 | TBD | done |
+| S4 | RCPSP | RCPSP | `smoke_s4_rcpsp_01`, `bench_s4_rcpsp_01` | 14.4 | 14.4 | TBD | done |
+| S5 | JSP with Setup Times | JSP-SDST | `smoke_s5_jspsdst_01`, `bench_s5_jspsdst_01` | 14.4 | 14.4 | TBD | done |
+| S6 | Parallel Machine | `P||Cmax` | `smoke_s6_pm_01`, `bench_s6_pm_01` | 14.4 | 14.4 | TBD | done |
+| S7 | Unrelated Parallel Machine | `R||Cmax` | `smoke_s7_upm_01`, `bench_s7_upm_01` | 14.4 | 14.4 | TBD | done |
+| S8 | Hybrid Flow Shop | HFS | `smoke_s8_hfs_01`, `bench_s8_hfs_01` | 14.4 | 14.4 | TBD | done |
+| S9 | Open Shop | OSSP | `smoke_s9_ossp_01`, `bench_s9_ossp_01` | 14.4 | 14.4 | TBD | done |
+| S10 | Multi-Mode RCPSP | MRCPSP | `smoke_s10_mrcpsp_01`, `bench_s10_mrcpsp_01` | 14.4 | 14.4 | TBD | done |
+| S11 | Preemptive RCPSP | PRCPSP | `smoke_s11_prcpsp_01`, `bench_s11_prcpsp_01` | 14.4 | 14.4 | TBD | done |
+| S12 | Car Sequencing | - | `smoke_s12_carseq_01`, `bench_s12_carseq_01` | 14.4 | 14.4 | TBD | done |
 
 ## Assignment (`A`)
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| A1 | Nurse Rostering | NRP | `smoke_a1_nrp_01`, `bench_a1_nrp_01` | 14.5 | 14.5 | TBD | blocked_solve |
-| A2 | Employee Scheduling | ESP | `smoke_a2_esp_01`, `bench_a2_esp_01` | 14.5 | 14.5 | TBD | blocked_solve |
-| A3 | Multi-Activity Scheduling | MATSP | `smoke_a3_matsp_01`, `bench_a3_matsp_01` | 14.5 | 14.5 | TBD | blocked_solve |
-| A4 | School Timetabling | - | `smoke_a4_school_01`, `bench_a4_school_01` | 14.5 | 14.5 | TBD | blocked_solve |
-| A5 | Conference Scheduling | - | `smoke_a5_conference_01`, `bench_a5_conference_01` | 14.5 | 14.5 | TBD | blocked_solve |
-| A6 | Bed Allocation | BAS | `smoke_a6_bas_01`, `bench_a6_bas_01` | 14.5 | 14.5 | TBD | blocked_solve |
+| A1 | Nurse Rostering | NRP | `smoke_a1_nrp_01`, `bench_a1_nrp_01` | 14.5 | 14.5 | TBD | done |
+| A2 | Employee Scheduling | ESP | `smoke_a2_esp_01`, `bench_a2_esp_01` | 14.5 | 14.5 | TBD | done |
+| A3 | Multi-Activity Scheduling | MATSP | `smoke_a3_matsp_01`, `bench_a3_matsp_01` | 14.5 | 14.5 | TBD | done |
+| A4 | School Timetabling | - | `smoke_a4_school_01`, `bench_a4_school_01` | 14.5 | 14.5 | TBD | done |
+| A5 | Conference Scheduling | - | `smoke_a5_conference_01`, `bench_a5_conference_01` | 14.5 | 14.5 | TBD | done |
+| A6 | Bed Allocation | BAS | `smoke_a6_bas_01`, `bench_a6_bas_01` | 14.5 | 14.5 | TBD | done |
 
 ## Packing (`K`)
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| K1 | Bin Packing | BPP | `smoke_k1_bpp_01`, `bench_k1_bpp_01` | 14.6 | 14.6 | TBD | blocked_solve |
-| K2 | Vector Bin Packing | VBP | `smoke_k2_vbp_01`, `bench_k2_vbp_01` | 14.6 | 14.6 | TBD | blocked_solve |
-| K3 | Bin Packing w/ Conflicts | BPPC | `smoke_k3_bppc_01`, `bench_k3_bppc_01` | 14.6 | 14.6 | TBD | blocked_solve |
+| K1 | Bin Packing | BPP | `smoke_k1_bpp_01`, `bench_k1_bpp_01` | 14.6 | 14.6 | TBD | done |
+| K2 | Vector Bin Packing | VBP | `smoke_k2_vbp_01`, `bench_k2_vbp_01` | 14.6 | 14.6 | TBD | done |
+| K3 | Bin Packing w/ Conflicts | BPPC | `smoke_k3_bppc_01`, `bench_k3_bppc_01` | 14.6 | 14.6 | TBD | done |
 
 ## Production (`P`)
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| P1 | Capacitated Lot Sizing | CLSP | `smoke_p1_clsp_01`, `bench_p1_clsp_01` | 14.7 | 14.7 | TBD | planned |
-| P2 | Multi-Level CLSP | MLCLSP | `smoke_p2_mlclsp_01`, `bench_p2_mlclsp_01` | 14.7 | 14.7 | TBD | planned |
+| P1 | Capacitated Lot Sizing | CLSP | `smoke_p1_clsp_01`, `bench_p1_clsp_01` | 14.7 | 14.7 | TBD | done |
+| P2 | Multi-Level CLSP | MLCLSP | `smoke_p2_mlclsp_01`, `bench_p2_mlclsp_01` | 14.7 | 14.7 | TBD | done |
 
 ## Coordination Rules
 

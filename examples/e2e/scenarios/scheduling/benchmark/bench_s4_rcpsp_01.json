@@ -1,0 +1,11 @@
+{
+  "id": "bench_s4_rcpsp_01",
+  "model": "schedule",
+  "variant": "S4",
+  "profile": "benchmark",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.10
+  },
+  "checks": ["nonnegative_cost", "deterministic_work"]
+}

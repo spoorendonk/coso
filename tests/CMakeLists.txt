@@ -1089,3 +1089,37 @@ set_tests_properties(
         WILL_FAIL TRUE
         LABELS "e2e-benchmark;perf-gate"
 )
+
+# --------------------------------------------------------------------------- #
+#  Variant E2E model-family packs                                              #
+# --------------------------------------------------------------------------- #
+
+function(add_e2e_pack_tests pack_name scenario_subdir)
+    add_test(
+        NAME e2e_${pack_name}_smoke
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/e2e/run_pack.sh
+                $<TARGET_FILE:e2e_runner>
+                ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/${scenario_subdir}/smoke
+    )
+    set_tests_properties(
+        e2e_${pack_name}_smoke
+        PROPERTIES LABELS "e2e-smoke;e2e-pack;pack-${pack_name}"
+    )
+
+    add_test(
+        NAME e2e_${pack_name}_benchmark
+        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/e2e/run_pack.sh
+                $<TARGET_FILE:e2e_runner>
+                ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/${scenario_subdir}/benchmark
+    )
+    set_tests_properties(
+        e2e_${pack_name}_benchmark
+        PROPERTIES LABELS "e2e-benchmark;benchmark;e2e-pack;pack-${pack_name}"
+    )
+endfunction()
+
+add_e2e_pack_tests(network network)
+add_e2e_pack_tests(scheduling scheduling)
+add_e2e_pack_tests(assignment assignment)
+add_e2e_pack_tests(packing packing)
+add_e2e_pack_tests(lotsizing lotsizing)

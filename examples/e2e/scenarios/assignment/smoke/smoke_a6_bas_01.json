@@ -1,0 +1,11 @@
+{
+  "id": "smoke_a6_bas_01",
+  "model": "assignment",
+  "variant": "A6",
+  "profile": "smoke",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.05
+  },
+  "checks": ["feasible", "nonnegative_cost", "deterministic_work"]
+}
