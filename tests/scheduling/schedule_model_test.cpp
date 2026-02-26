@@ -246,10 +246,10 @@ TEST_CASE("ScheduleData: objective types", "[scheduling]")
 }
 
 // ---------------------------------------------------------------------------
-//  ScheduleModel::solve() returns a result (stub)
+//  ScheduleModel::solve() baseline solve path
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleModel: solve returns stub result", "[scheduling]")
+TEST_CASE("ScheduleModel: solve builds a feasible schedule", "[scheduling]")
 {
     ScheduleModel model;
 
@@ -268,8 +268,9 @@ TEST_CASE("ScheduleModel: solve returns stub result", "[scheduling]")
 
     Result result = model.solve(TimeLimit(1.0));
 
-    // Stub: feasible_ is false (no solver yet).
-    CHECK_FALSE(result.feasible());
+    CHECK(result.feasible());
+    CHECK(result.makespan() > 0);
+    CHECK(result.cost() > 0.0);
 
     // Elapsed time should be recorded (> 0).
     CHECK(result.elapsed_seconds() >= 0.0);
@@ -304,9 +305,9 @@ TEST_CASE("ScheduleModel: set_initial_schedule accepted", "[scheduling]")
     // Provide initial schedule: op0 on M0 at t=0, op1 on M1 at t=3.
     model.set_initial_schedule({{0, 0}, {1, 3}});
 
-    // Should not throw; solve is still a stub.
+    // Should not throw and should produce a schedule.
     Result result = model.solve(TimeLimit(0.1));
-    CHECK_FALSE(result.feasible());
+    CHECK(result.feasible());
 }
 
 // ---------------------------------------------------------------------------
