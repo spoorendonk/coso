@@ -1,0 +1,11 @@
+{
+  "id": "bench_n3_lsndp_01",
+  "model": "network",
+  "variant": "N3",
+  "profile": "benchmark",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.10
+  },
+  "checks": ["nonnegative_cost", "deterministic_work"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "smoke_a3_matsp_01",
+  "model": "assignment",
+  "variant": "A3",
+  "profile": "smoke",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.05
+  },
+  "checks": ["feasible", "nonnegative_cost", "deterministic_work"]
+}
