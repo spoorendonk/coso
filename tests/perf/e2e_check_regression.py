@@ -21,6 +21,12 @@ class ScenarioSample:
     work_units: float
 
 
+@dataclass(frozen=True)
+class ThresholdPolicy:
+    default_max_median_ratio: float
+    packs: dict[str, float]
+
+
 def parse_payloads(path: Path) -> list[dict]:
     text = path.read_text(encoding="utf-8").strip()
     if not text:
@@ -85,6 +91,44 @@ def collect_samples(root: Path) -> dict[str, float]:
     return samples
 
 
+def filter_by_prefix(samples: dict[str, float], prefix: str | None) -> dict[str, float]:
+    if prefix is None:
+        return samples
+    filtered = {scenario_id: value for scenario_id, value in samples.items()
+                if scenario_id.startswith(prefix)}
+    if not filtered:
+        raise ValueError(f"no scenarios match --scenario-prefix '{prefix}'")
+    return filtered
+
+
+def load_threshold_policy(path: Path) -> ThresholdPolicy:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{path}: policy must be a JSON object")
+
+    default_ratio = payload.get("default_max_median_ratio")
+    if not isinstance(default_ratio, (int, float)) or default_ratio <= 0:
+        raise ValueError(
+            f"{path}: default_max_median_ratio must be a positive number"
+        )
+
+    packs_payload = payload.get("packs", {})
+    if not isinstance(packs_payload, dict):
+        raise ValueError(f"{path}: packs must be an object")
+
+    packs: dict[str, float] = {}
+    for pack_name, threshold in packs_payload.items():
+        if not isinstance(pack_name, str) or not pack_name:
+            raise ValueError(f"{path}: pack names must be non-empty strings")
+        if not isinstance(threshold, (int, float)) or threshold <= 0:
+            raise ValueError(
+                f"{path}: pack threshold for '{pack_name}' must be positive"
+            )
+        packs[pack_name] = float(threshold)
+
+    return ThresholdPolicy(default_max_median_ratio=float(default_ratio), packs=packs)
+
+
 def format_ratio(value: float) -> str:
     return f"{value:.4f}x"
 
@@ -96,16 +140,46 @@ def main() -> int:
     parser.add_argument("--baseline", required=True, type=Path)
     parser.add_argument("--candidate", required=True, type=Path)
     parser.add_argument("--max-median-ratio", type=float, default=1.10)
+    parser.add_argument("--threshold-policy", type=Path)
+    parser.add_argument("--pack-key", type=str)
+    parser.add_argument("--scenario-prefix", type=str)
     parser.add_argument("--allow-missing", action="store_true")
     args = parser.parse_args()
 
-    if args.max_median_ratio <= 0.0:
+    if args.pack_key and not args.threshold_policy:
+        print(
+            "error: --pack-key requires --threshold-policy",
+            file=sys.stderr,
+        )
+        return 1
+
+    threshold = args.max_median_ratio
+    threshold_source = "--max-median-ratio"
+    if args.threshold_policy:
+        try:
+            policy = load_threshold_policy(args.threshold_policy)
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        threshold = policy.default_max_median_ratio
+        if args.pack_key and args.pack_key in policy.packs:
+            threshold = policy.packs[args.pack_key]
+            threshold_source = f"{args.threshold_policy}:{args.pack_key}"
+        else:
+            threshold_source = f"{args.threshold_policy}:default"
+
+    if not args.threshold_policy and args.max_median_ratio <= 0.0:
         print("error: --max-median-ratio must be positive", file=sys.stderr)
+        return 1
+    if threshold <= 0.0:
+        print("error: resolved threshold must be positive", file=sys.stderr)
         return 1
 
     try:
         baseline = collect_samples(args.baseline)
         candidate = collect_samples(args.candidate)
+        baseline = filter_by_prefix(baseline, args.scenario_prefix)
+        candidate = filter_by_prefix(candidate, args.scenario_prefix)
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -148,22 +222,23 @@ def main() -> int:
     print(f"baseline:  {args.baseline}")
     print(f"candidate: {args.candidate}")
     print(f"scenarios compared: {len(ratios)}")
+    print(f"threshold: {format_ratio(threshold)} ({threshold_source})")
     print(f"median ratio: {format_ratio(median_ratio)}")
     print(f"max ratio:    {format_ratio(max_ratio)}")
     if skipped_zero_baseline:
         print("skipped (baseline<=0): " + ", ".join(skipped_zero_baseline))
 
     status = 0
-    if median_ratio > args.max_median_ratio:
+    if median_ratio > threshold:
         print(
             f"FAIL: median ratio {format_ratio(median_ratio)} > threshold "
-            f"{format_ratio(args.max_median_ratio)}"
+            f"{format_ratio(threshold)}"
         )
         status = 2
     else:
         print(
             f"PASS: median ratio {format_ratio(median_ratio)} <= threshold "
-            f"{format_ratio(args.max_median_ratio)}"
+            f"{format_ratio(threshold)}"
         )
 
     print("\nPer-scenario ratios:")
