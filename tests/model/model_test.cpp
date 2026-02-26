@@ -2,6 +2,7 @@
 
 #include <model/routing_model.h>
 #include <model/network_model.h>
+#include <model/lotsizing_model.h>
 #include <model/schedule_model.h>
 #include <model/assignment_model.h>
 #include <model/packing_model.h>
@@ -297,6 +298,51 @@ TEST_CASE("NetworkModel solve returns flow result", "[network]")
     REQUIRE(r.feasible());
     REQUIRE(r.cost() == 10.0);
     REQUIRE_FALSE(r.flows().empty());
+    REQUIRE(r.work_ticks() > 0);
+    REQUIRE(r.work_units() > 0.0);
+}
+
+// --------------------------------------------------------------------------
+//  LotSizingModel
+// --------------------------------------------------------------------------
+
+TEST_CASE("LotSizingModel can be default-constructed", "[lotsizing]")
+{
+    coso::LotSizingModel m;
+    (void)m;
+}
+
+TEST_CASE("LotSizingModel add products and demand", "[lotsizing]")
+{
+    coso::LotSizingModel m;
+    m.set_num_periods(3);
+    int p0 = m.add_product(100.0, 2.0, 1.0, 2.0);
+    REQUIRE(p0 == 0);
+    m.set_demand(p0, 0, 10.0);
+    m.set_demand(p0, 1, 15.0);
+    m.set_demand(p0, 2, 20.0);
+    m.set_capacity(0, 50.0);
+    m.set_capacity(1, 50.0);
+    m.set_capacity(2, 50.0);
+}
+
+TEST_CASE("LotSizingModel solve returns typed production output", "[lotsizing]")
+{
+    coso::LotSizingModel m;
+    m.set_num_periods(3);
+    int p0 = m.add_product(100.0, 2.0, 1.0, 2.0);
+    m.set_demand(p0, 0, 10.0);
+    m.set_demand(p0, 1, 15.0);
+    m.set_demand(p0, 2, 20.0);
+    m.set_capacity(0, 50.0);
+    m.set_capacity(1, 50.0);
+    m.set_capacity(2, 50.0);
+
+    coso::Result r = m.solve(coso::TimeLimit(1.0));
+    REQUIRE(r.cost() >= 0.0);
+    REQUIRE_FALSE(r.production().empty());
+    REQUIRE(r.production().size() == 1);
+    REQUIRE(r.production()[0].size() == 3);
     REQUIRE(r.work_ticks() > 0);
     REQUIRE(r.work_units() > 0.0);
 }

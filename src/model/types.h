@@ -40,6 +40,7 @@ struct TimeLimit {
 ///   - assignment: assignments(), day()
 ///   - packing:    bins(), num_bins()
 ///   - network:    flows()
+///   - lotsizing:  production(), inventory()
 struct Result {
     bool   feasible_        = false;
     double cost_            = 0.0;
@@ -114,6 +115,20 @@ struct Result {
     std::vector<std::vector<PathFlow>> flows_;
 
     [[nodiscard]] auto const& flows() const noexcept { return flows_; }
+
+    // -- Lot sizing / production -----------------------------------------
+
+    /// production_quantities_[product][period] = produced quantity.
+    std::vector<std::vector<double>> production_quantities_;
+    /// inventory_levels_[product][period] = end-of-period inventory.
+    std::vector<std::vector<double>> inventory_levels_;
+
+    [[nodiscard]] auto const& production() const noexcept {
+        return production_quantities_;
+    }
+    [[nodiscard]] auto const& inventory() const noexcept {
+        return inventory_levels_;
+    }
 };
 
 } // namespace coso

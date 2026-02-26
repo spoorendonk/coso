@@ -1008,6 +1008,15 @@ else()
     add_test(NAME lotsizing_test COMMAND lotsizing_test)
 endif()
 
+add_executable(lotsizing_model_test lotsizing/lotsizing_model_test.cpp)
+target_link_libraries(lotsizing_model_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(lotsizing_model_test)
+else()
+    add_test(NAME lotsizing_model_test COMMAND lotsizing_model_test)
+endif()
+
 # --------------------------------------------------------------------------- #
 #  Setup times tests                                                           #
 # --------------------------------------------------------------------------- #
