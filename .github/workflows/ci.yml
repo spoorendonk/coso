@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  build-and-unit:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -23,5 +23,27 @@ jobs:
       - name: Build
         run: cmake --build build -j$(nproc)
 
-      - name: Test
-        run: ctest --test-dir build -j$(nproc) --output-on-failure
+      - name: Unit and integration tests (non-E2E packs)
+        run: |
+          ctest --test-dir build -j$(nproc) --output-on-failure \
+            -LE "e2e-smoke|e2e-benchmark|e2e-pack" \
+            -E "benchmark"
+
+  e2e-smoke:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14 g++-14 cmake
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
+
+      - name: Required E2E smoke gate
+        run: ctest --test-dir build -L e2e-smoke --output-on-failure
