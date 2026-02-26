@@ -23,6 +23,8 @@ jobs:
         run: cmake --build build -j$(nproc)
 
       - name: Run E2E benchmark lane
+        env:
+          COSO_E2E_APPLY_QUARANTINE: "1"
         run: |
           set -euo pipefail
           mkdir -p artifacts

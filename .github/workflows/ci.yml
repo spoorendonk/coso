@@ -46,4 +46,6 @@ jobs:
         run: cmake --build build -j$(nproc)
 
       - name: Required E2E smoke gate
+        env:
+          COSO_E2E_APPLY_QUARANTINE: "1"
         run: ctest --test-dir build -L e2e-smoke --output-on-failure
