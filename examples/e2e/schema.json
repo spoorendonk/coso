@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://coso.dev/schemas/e2e-scenario.json",
+  "title": "COSO E2E Scenario",
+  "description": "Scenario contract for cross-model end-to-end checks.",
+  "type": "object",
+  "required": [
+    "id",
+    "model",
+    "time_limit"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9_\\-]+$",
+      "description": "Stable scenario id used by CI and reports."
+    },
+    "model": {
+      "type": "string",
+      "enum": [
+        "routing",
+        "network",
+        "lotsizing",
+        "schedule",
+        "assignment",
+        "packing"
+      ]
+    },
+    "variant": {
+      "type": "string",
+      "description": "Roadmap variant code (e.g. R1, N2, S4)."
+    },
+    "profile": {
+      "type": "string",
+      "enum": ["smoke", "benchmark"],
+      "default": "smoke"
+    },
+    "time_limit": {
+      "type": "object",
+      "required": ["seconds"],
+      "properties": {
+        "seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "work_units": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "feasible",
+          "nonnegative_cost",
+          "deterministic_work"
+        ]
+      },
+      "uniqueItems": true,
+      "default": [
+        "nonnegative_cost"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    }
+  },
+  "additionalProperties": true
+}
