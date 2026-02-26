@@ -8,6 +8,7 @@ This guide defines the minimum bar for adding or updating E2E scenarios.
 - Update `docs/e2e-matrix.md` for affected rows:
   - set `Owner`
   - set `Status=in_progress`
+- Use `e2e-core` when no dedicated owner is assigned yet.
 
 ## 2. Add scenario files
 
