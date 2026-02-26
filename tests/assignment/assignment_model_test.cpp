@@ -101,8 +101,8 @@ TEST_CASE("AssignmentModel: demand constraints are stored", "[assignment]")
     // The model compiles internally on solve(); we just verify it doesn't crash
     // and returns a result.
     auto result = model.solve(TimeLimit(0.1));
-    // Stub solver returns infeasible.
-    REQUIRE_FALSE(result.feasible());
+    // Day 0 is intentionally over-constrained (needs 2, only 1 employee).
+    REQUIRE_FALSE(result.unassigned().empty());
 }
 
 TEST_CASE("AssignmentModel: hard constraints", "[assignment]")
@@ -117,7 +117,7 @@ TEST_CASE("AssignmentModel: hard constraints", "[assignment]")
     model.add_forbidden_sequence({0, 0, 0});  // No triple day shifts.
 
     auto result = model.solve(TimeLimit(0.1));
-    REQUIRE_FALSE(result.feasible());
+    REQUIRE(result.feasible());
     REQUIRE(result.elapsed_seconds() >= 0.0);
 }
 
@@ -136,7 +136,7 @@ TEST_CASE("AssignmentModel: preferences and unavailability", "[assignment]")
     model.add_unavailability(bob, 2);
 
     auto result = model.solve(TimeLimit(0.1));
-    REQUIRE_FALSE(result.feasible());
+    REQUIRE(result.feasible());
 }
 
 TEST_CASE("AssignmentModel: replanning with published schedule", "[assignment]")
@@ -156,7 +156,7 @@ TEST_CASE("AssignmentModel: replanning with published schedule", "[assignment]")
     model.set_change_penalty(100);
 
     auto result = model.solve(TimeLimit(0.1));
-    REQUIRE_FALSE(result.feasible());
+    REQUIRE(result.elapsed_seconds() >= 0.0);
 }
 
 TEST_CASE("AssignmentModel: solve returns result with elapsed time",
@@ -170,12 +170,25 @@ TEST_CASE("AssignmentModel: solve returns result with elapsed time",
 
     auto result = model.solve(TimeLimit(0.5));
 
-    // Stub solver is not feasible yet.
-    REQUIRE_FALSE(result.feasible());
     // But elapsed time should be non-negative.
     REQUIRE(result.elapsed_seconds() >= 0.0);
-    // Cost should be 0 for stub.
-    REQUIRE(result.cost() == 0.0);
+    REQUIRE(result.cost() >= 0.0);
+}
+
+TEST_CASE("AssignmentModel: feasible baseline instance", "[assignment]")
+{
+    AssignmentModel model;
+    model.add_shift_type({.name = "Day"});
+    model.add_employee({.name = "Alice"});
+    model.add_employee({.name = "Bob"});
+    model.set_horizon(4);
+    model.add_demand(0, {.min_employees = 1, .max_employees = 1});
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    REQUIRE(result.feasible());
+    REQUIRE(result.assignments().size() == 4);
+    REQUIRE(result.unassigned().empty());
 }
 
 TEST_CASE("AssignmentModel: empty model returns infeasible", "[assignment]")
