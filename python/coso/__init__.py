@@ -6,11 +6,14 @@ from coso._coso import (
     CostParams,
     TimeLimit,
     TimeWindow,
+    PathFlow,
     Result,
     VehicleTypeParams,
     ClientParams,
     DepotParams,
     RoutingModel,
+    NetworkModel,
+    LotSizingModel,
     solve_instance,
 )
 
@@ -20,10 +23,13 @@ __all__ = [
     "CostParams",
     "TimeLimit",
     "TimeWindow",
+    "PathFlow",
     "Result",
     "VehicleTypeParams",
     "ClientParams",
     "DepotParams",
     "RoutingModel",
+    "NetworkModel",
+    "LotSizingModel",
     "solve_instance",
 ]
