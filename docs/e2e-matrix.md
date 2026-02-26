@@ -47,9 +47,9 @@ Status legend:
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| N1 | Multi-Commodity Flow | MCF | `smoke_n1_mcf_01`, `bench_n1_mcf_01` | 14.3 | 14.3 | TBD | blocked_api |
-| N2 | Resource-Constrained MCF | RCMCF | `smoke_n2_rcmcf_01`, `bench_n2_rcmcf_01` | 14.3 | 14.3 | TBD | blocked_api |
-| N3 | Liner Shipping Network Design | LSNDP | `smoke_n3_lsndp_01`, `bench_n3_lsndp_01` | 14.3 | 14.3 | TBD | blocked_api |
+| N1 | Multi-Commodity Flow | MCF | `smoke_n1_mcf_01`, `bench_n1_mcf_01` | 14.3 | 14.3 | TBD | planned |
+| N2 | Resource-Constrained MCF | RCMCF | `smoke_n2_rcmcf_01`, `bench_n2_rcmcf_01` | 14.3 | 14.3 | TBD | planned |
+| N3 | Liner Shipping Network Design | LSNDP | `smoke_n3_lsndp_01`, `bench_n3_lsndp_01` | 14.3 | 14.3 | TBD | planned |
 
 ## Scheduling (`S`)
 
@@ -91,8 +91,8 @@ Status legend:
 
 | Variant | Problem | Abbrev | Scenario IDs (planned) | Pack lane | Owning work unit | Owner | Status |
 |---|---|---|---|---|---|---|---|
-| P1 | Capacitated Lot Sizing | CLSP | `smoke_p1_clsp_01`, `bench_p1_clsp_01` | 14.7 | 14.7 | TBD | blocked_api |
-| P2 | Multi-Level CLSP | MLCLSP | `smoke_p2_mlclsp_01`, `bench_p2_mlclsp_01` | 14.7 | 14.7 | TBD | blocked_api |
+| P1 | Capacitated Lot Sizing | CLSP | `smoke_p1_clsp_01`, `bench_p1_clsp_01` | 14.7 | 14.7 | TBD | planned |
+| P2 | Multi-Level CLSP | MLCLSP | `smoke_p2_mlclsp_01`, `bench_p2_mlclsp_01` | 14.7 | 14.7 | TBD | planned |
 
 ## Coordination Rules
 
