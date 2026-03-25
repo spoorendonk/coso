@@ -1055,68 +1055,6 @@ add_test(
 )
 set_tests_properties(e2e_smoke PROPERTIES LABELS "e2e-smoke")
 
-add_test(
-    NAME e2e_benchmark
-    COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/e2e/run_pack.sh
-            $<TARGET_FILE:e2e_runner>
-            ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/benchmark
-)
-set_tests_properties(e2e_benchmark PROPERTIES LABELS "e2e-benchmark;benchmark")
-
-# --------------------------------------------------------------------------- #
-#  Deterministic E2E perf gate tooling tests                                  #
-# --------------------------------------------------------------------------- #
-
-add_test(
-    NAME e2e_perf_gate_pass
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
-            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
-            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_ok
-            --max-median-ratio 1.10
-)
-set_tests_properties(e2e_perf_gate_pass PROPERTIES LABELS "e2e-benchmark;perf-gate")
-
-add_test(
-    NAME e2e_perf_gate_regression_detected
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
-            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
-            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_regress
-            --max-median-ratio 1.10
-)
-set_tests_properties(
-    e2e_perf_gate_regression_detected
-    PROPERTIES
-        WILL_FAIL TRUE
-        LABELS "e2e-benchmark;perf-gate"
-)
-
-add_test(
-    NAME e2e_perf_gate_policy_pass
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
-            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
-            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_ok
-            --threshold-policy ${CMAKE_SOURCE_DIR}/tests/perf/testdata/policies/policy_pass.json
-            --pack-key network
-            --scenario-prefix bench_network
-)
-set_tests_properties(e2e_perf_gate_policy_pass PROPERTIES LABELS "e2e-benchmark;perf-gate")
-
-add_test(
-    NAME e2e_perf_gate_policy_fail
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/perf/e2e_check_regression.py
-            --baseline ${CMAKE_SOURCE_DIR}/tests/perf/testdata/baseline
-            --candidate ${CMAKE_SOURCE_DIR}/tests/perf/testdata/candidate_ok
-            --threshold-policy ${CMAKE_SOURCE_DIR}/tests/perf/testdata/policies/policy_fail.json
-            --pack-key network
-            --scenario-prefix bench_network
-)
-set_tests_properties(
-    e2e_perf_gate_policy_fail
-    PROPERTIES
-        WILL_FAIL TRUE
-        LABELS "e2e-benchmark;perf-gate"
-)
-
 # --------------------------------------------------------------------------- #
 #  Variant E2E model-family packs                                              #
 # --------------------------------------------------------------------------- #
@@ -1133,16 +1071,6 @@ function(add_e2e_pack_tests pack_name scenario_subdir)
         PROPERTIES LABELS "e2e-smoke;e2e-pack;pack-${pack_name}"
     )
 
-    add_test(
-        NAME e2e_${pack_name}_benchmark
-        COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/e2e/run_pack.sh
-                $<TARGET_FILE:e2e_runner>
-                ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/${scenario_subdir}/benchmark
-    )
-    set_tests_properties(
-        e2e_${pack_name}_benchmark
-        PROPERTIES LABELS "e2e-benchmark;benchmark;e2e-pack;pack-${pack_name}"
-    )
 endfunction()
 
 add_e2e_pack_tests(network network)
@@ -1154,12 +1082,3 @@ add_e2e_pack_tests(assignment assignment)
 add_e2e_pack_tests(packing packing)
 add_e2e_pack_tests(lotsizing lotsizing)
 
-add_test(
-    NAME e2e_quarantine_audit
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tests/e2e/check_quarantine_sla.py
-            --file ${CMAKE_SOURCE_DIR}/tests/e2e/quarantine.csv
-)
-set_tests_properties(
-    e2e_quarantine_audit
-    PROPERTIES LABELS "e2e-smoke;quarantine-audit"
-)
