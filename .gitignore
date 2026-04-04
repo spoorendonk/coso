@@ -1,9 +1,25 @@
+# Build
 build/
 build-*/
 compile_commands.json
-.cache/
+
+# C++
+*.o
+*.a
+
+# Python
+__pycache__/
+*.pyc
 *.so
 *.pyd
+*.egg-info/
+.pytest_cache/
+dist/
+.venv/
+
+# Tools
+.cache/
+.vscode/
 
 # Benchmark instances (downloaded, not in git)
 tests/data/*.vrp
