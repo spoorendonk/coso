@@ -1,0 +1,61 @@
+{
+  "_note": "Git hooks installed by setup.sh: pre-commit (auto-format via clang-format/ruff/shfmt, auto-fix lint, tests), commit-msg (conventional commits), pre-push (review check, clean build+test, clang-tidy, shellcheck, ruff complexity, mypy). Claude hooks defined below: PostToolUse Write|Edit (auto-format, ruff complexity, mypy), PreToolUse Bash (block branch creation off main, enforce venv usage).",
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Bash(*>*)",
+      "Bash(*>>*)",
+      "Bash(*<<*)",
+      "Bash(*<*)",
+      "Bash(*|*)",
+      "Bash(*&&*)",
+      "Bash(*;*)",
+      "Read(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Search(*)",
+      "WebSearch",
+      "WebFetch"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(sudo *)",
+      "Bash(chmod -R 777 *)",
+      "Read(./.env*)",
+      "Read(./secrets/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .devkit/hooks/post-tool-format.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .devkit/hooks/check-branch-create.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .devkit/hooks/check-venv.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash .devkit/statusline.sh"
+  }
+}
