@@ -54,7 +54,7 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 | Engine | Problems | Approach | Status |
 |--------|----------|----------|--------|
 | **Routing** | CVRP, VRPTW, PDPTW, TRSP, fleet, multi-trip, ... | Resources + ILS/HGS | **Validated** — tested against Uchoa CVRP instances, ~1.5% gap to BKS |
-| **Network** | MCF, RCMCF, liner shipping | Single-commodity SSP (exact) + network local search | **Functional** — exact solver for unconstrained MCF |
+| **Network** | MCF, RCMCF, liner shipping | Successive shortest paths (exact) + network local search | **Functional** — exact min-cost flow solver (single commodity); MCF not yet implemented |
 | **Packing** | Bin packing, vector bin packing | FFD + local search | **Functional** — tested against Falkenauer instances |
 | **Lot sizing** | CLSP, MLCLSP | Constructive + lot-sizing operators | **Functional** — construction heuristics + local improvement |
 | **Scheduling** | JSP, FJSP, RCPSP, flow shop, open shop, ... | Disjunctive graph + local search | **Experimental** — known correctness issues under investigation |

@@ -92,7 +92,7 @@ The routing engine is the reference architecture for other engines:
 | Engine | Status |
 |--------|--------|
 | Routing | **Validated** — ~1.5% gap to Uchoa BKS |
-| Network | Functional — exact for unconstrained MCF |
+| Network | Functional — min-cost flow (single commodity); MCF not yet implemented |
 | Packing | Functional — tested on Falkenauer |
 | Lot sizing | Functional |
 | Scheduling | Experimental — known correctness issues |
