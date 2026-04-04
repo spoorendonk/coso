@@ -1,16 +1,19 @@
 # COSO — Combinatorial Structure-aware Optimization
 
-> **Disclaimer:** This project was developed entirely through [Claude Code](https://docs.anthropic.com/en/docs/claude-code). 😱
-
 Declarative modeling + LP-free solving for combinatorial optimization.
 C++ engine with Python bindings (nanobind).
 
-The user declares **what** the problem is, the solver decides **how** to solve it.
+Many combinatorial problems — routing, scheduling, packing — have rich structure
+that generic MIP solvers destroy when they flatten everything into rows and columns.
+COSO exploits that structure directly with problem-specific local search, construction
+heuristics, and metaheuristics.
 
-Sibling to [mip-heuristics](https://github.com/spoorendonk/mip-heuristics) (LP-free
-MIP solvers: FJ, Local-MIP). That repo handles generic MIP. This repo handles
-problems with exploitable structure where problem-specific local search dominates
-generic approaches by orders of magnitude.
+You pick the problem class (e.g. `RoutingModel`), declare the instance, and the
+solver selects the algorithm portfolio: which construction heuristic, which local
+search operators, which metaheuristic wrapper.
+
+> **Status:** Early development. The routing engine is validated against standard
+> benchmarks. Other engines are work-in-progress.
 
 ## Quick Start
 
@@ -48,18 +51,18 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 
 ## Engines
 
-| Engine | Problems | Approach |
-|--------|----------|----------|
-| **Routing** | CVRP, VRPTW, PDPTW, TRSP, fleet, multi-trip, ... | Resources + ILS/HGS |
-| **Scheduling** | JSP, FJSP, RCPSP, flow shop, open shop, ... | Disjunctive graph + tabu |
-| **Assignment** | Nurse rostering, timetabling, employee scheduling | Tabu + LA + VND + CP filter |
-| **Packing** | Bin packing, vector bin packing | Assignment engine + FFD |
-| **Network** | MCF, RCMCF, liner shipping | MCF + network local search |
-| **Lot sizing** | CLSP, MLCLSP | Constructive + lot-sizing operators |
+| Engine | Problems | Approach | Status |
+|--------|----------|----------|--------|
+| **Routing** | CVRP, VRPTW, PDPTW, TRSP, fleet, multi-trip, ... | Resources + ILS/HGS | **Validated** — tested against Uchoa CVRP instances, ~1.5% gap to BKS |
+| **Network** | MCF, RCMCF, liner shipping | Single-commodity SSP (exact) + network local search | **Functional** — exact solver for unconstrained MCF |
+| **Packing** | Bin packing, vector bin packing | FFD + local search | **Functional** — tested against Falkenauer instances |
+| **Lot sizing** | CLSP, MLCLSP | Constructive + lot-sizing operators | **Functional** — construction heuristics + local improvement |
+| **Scheduling** | JSP, FJSP, RCPSP, flow shop, open shop, ... | Disjunctive graph + local search | **Experimental** — known correctness issues under investigation |
+| **Assignment** | Nurse rostering, timetabling, employee scheduling | VND + CP filter | **Experimental** — partial metaheuristic coverage |
 
 ## Public Model APIs
 
-All engines are available through typed model APIs in C++ and Python:
+All engines are available through typed model APIs:
 
 - `RoutingModel`
 - `NetworkModel`
@@ -67,6 +70,8 @@ All engines are available through typed model APIs in C++ and Python:
 - `ScheduleModel`
 - `AssignmentModel`
 - `PackingModel`
+
+Python bindings currently cover `RoutingModel`, `NetworkModel`, and `LotSizingModel`.
 
 Example (`NetworkModel`):
 
@@ -110,3 +115,7 @@ ctest --test-dir build -j$(nproc)
 See [docs/roadmap.md](docs/roadmap.md) for the full design plan: modeling
 interface, architecture, problem catalog (50+ problem types), implementation
 steps, and design decisions.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
