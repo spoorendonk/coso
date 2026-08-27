@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "scheduling/calendar.h"
+
 #include "scheduling/schedule_data.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -9,15 +10,12 @@ using namespace coso;
 //  MachineCalendar basics
 // ---------------------------------------------------------------------------
 
-TEST_CASE("MachineCalendar: default construction", "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: default construction", "[scheduling][calendar]") {
     MachineCalendar cal;
     CHECK(cal.num_machines() == 0);
 }
 
-TEST_CASE("MachineCalendar: no restrictions means always available",
-          "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: no restrictions means always available", "[scheduling][calendar]") {
     MachineCalendar cal(3);
 
     CHECK_FALSE(cal.has_calendar(0));
@@ -27,9 +25,7 @@ TEST_CASE("MachineCalendar: no restrictions means always available",
     CHECK(cal.next_available(2, 42, 10) == 42);
 }
 
-TEST_CASE("MachineCalendar: single availability window",
-          "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: single availability window", "[scheduling][calendar]") {
     MachineCalendar cal(2);
 
     // Machine 0: available [10, 50)
@@ -52,8 +48,7 @@ TEST_CASE("MachineCalendar: single availability window",
     CHECK_FALSE(cal.available(0, 50, 60));
 }
 
-TEST_CASE("MachineCalendar: next_available", "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: next_available", "[scheduling][calendar]") {
     MachineCalendar cal(1);
 
     // Machine 0: available [10, 30) and [50, 80)
@@ -86,9 +81,7 @@ TEST_CASE("MachineCalendar: next_available", "[scheduling][calendar]")
     CHECK(cal.next_available(0, 100, 1) == -1);
 }
 
-TEST_CASE("MachineCalendar: overlapping intervals merge",
-          "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: overlapping intervals merge", "[scheduling][calendar]") {
     MachineCalendar cal(1);
 
     cal.add_available(0, 10, 30);
@@ -101,9 +94,7 @@ TEST_CASE("MachineCalendar: overlapping intervals merge",
     CHECK_FALSE(cal.available(0, 45, 55));
 }
 
-TEST_CASE("MachineCalendar: adjacent intervals merge",
-          "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: adjacent intervals merge", "[scheduling][calendar]") {
     MachineCalendar cal(1);
 
     cal.add_available(0, 10, 30);
@@ -114,8 +105,7 @@ TEST_CASE("MachineCalendar: adjacent intervals merge",
     CHECK(cal.available(0, 29, 31));
 }
 
-TEST_CASE("MachineCalendar: empty interval ignored", "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: empty interval ignored", "[scheduling][calendar]") {
     MachineCalendar cal(1);
 
     cal.add_available(0, 10, 10);  // empty [10, 10)
@@ -125,9 +115,7 @@ TEST_CASE("MachineCalendar: empty interval ignored", "[scheduling][calendar]")
     CHECK_FALSE(cal.has_calendar(0));
 }
 
-TEST_CASE("MachineCalendar: multiple machines independent",
-          "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: multiple machines independent", "[scheduling][calendar]") {
     MachineCalendar cal(2);
 
     cal.add_available(0, 0, 100);
@@ -140,8 +128,7 @@ TEST_CASE("MachineCalendar: multiple machines independent",
     CHECK(cal.available(1, 200, 300));
 }
 
-TEST_CASE("MachineCalendar: out-of-range machine", "[scheduling][calendar]")
-{
+TEST_CASE("MachineCalendar: out-of-range machine", "[scheduling][calendar]") {
     MachineCalendar cal(2);
 
     CHECK_FALSE(cal.available(-1, 0, 10));
@@ -157,8 +144,7 @@ TEST_CASE("MachineCalendar: out-of-range machine", "[scheduling][calendar]")
 //  Integration with ScheduleData
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: calendar via Builder", "[scheduling][calendar]")
-{
+TEST_CASE("ScheduleData: calendar via Builder", "[scheduling][calendar]") {
     ScheduleData::Builder builder;
 
     builder.add_machine({.name = "M0"});
@@ -182,8 +168,7 @@ TEST_CASE("ScheduleData: calendar via Builder", "[scheduling][calendar]")
     CHECK(cal.available(1, 50, 150));
 }
 
-TEST_CASE("ScheduleData: no calendar by default", "[scheduling][calendar]")
-{
+TEST_CASE("ScheduleData: no calendar by default", "[scheduling][calendar]") {
     ScheduleData::Builder builder;
     builder.add_machine({.name = "M0"});
     builder.add_job({.name = "J0"});

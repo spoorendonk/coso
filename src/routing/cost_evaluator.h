@@ -30,21 +30,19 @@ public:
     /// @param load_penalty   Penalty per unit of load excess.
     /// @param tw_penalty     Penalty per unit of time warp (future).
     /// @param dist_penalty   Penalty per unit of distance excess (future).
-    explicit CostEvaluator(int load_penalty = 100,
-                           int tw_penalty = 100,
-                           int dist_penalty = 100);
+    explicit CostEvaluator(int load_penalty = 100, int tw_penalty = 100, int dist_penalty = 100);
 
     // -------------------------------------------------------------------
     //  Penalty weight accessors / mutators
     // -------------------------------------------------------------------
 
-    [[nodiscard]] int load_penalty()  const noexcept { return load_penalty_; }
-    [[nodiscard]] int tw_penalty()    const noexcept { return tw_penalty_; }
-    [[nodiscard]] int dist_penalty()  const noexcept { return dist_penalty_; }
+    [[nodiscard]] int load_penalty() const noexcept { return load_penalty_; }
+    [[nodiscard]] int tw_penalty() const noexcept { return tw_penalty_; }
+    [[nodiscard]] int dist_penalty() const noexcept { return dist_penalty_; }
 
-    void set_load_penalty(int p)  noexcept { load_penalty_ = p; }
-    void set_tw_penalty(int p)    noexcept { tw_penalty_ = p; }
-    void set_dist_penalty(int p)  noexcept { dist_penalty_ = p; }
+    void set_load_penalty(int p) noexcept { load_penalty_ = p; }
+    void set_tw_penalty(int p) noexcept { tw_penalty_ = p; }
+    void set_dist_penalty(int p) noexcept { dist_penalty_ = p; }
 
     // -------------------------------------------------------------------
     //  Piecewise linear cost functions
@@ -104,8 +102,7 @@ public:
     /// @param pos     Position to insert at (0..route.size()).
     /// @param client  Client index to insert.
     /// @return Delta cost (positive = more expensive).
-    [[nodiscard]] int64_t eval_insert_cost(Route const& route,
-                                           int pos, int client) const;
+    [[nodiscard]] int64_t eval_insert_cost(Route const& route, int pos, int client) const;
 
     /// Cost change from removing a client from a route at the given position.
     ///
@@ -124,12 +121,10 @@ private:
     std::unique_ptr<PiecewiseLinearFunction> duration_cost_func_;
 
     /// Compute distance cost using piecewise or linear evaluation.
-    [[nodiscard]] int64_t distance_cost_(int distance,
-                                         CostParams const& cost) const;
+    [[nodiscard]] int64_t distance_cost_(int distance, CostParams const& cost) const;
 
     /// Compute duration cost using piecewise or linear evaluation.
-    [[nodiscard]] int64_t duration_cost_(int duration,
-                                         CostParams const& cost) const;
+    [[nodiscard]] int64_t duration_cost_(int duration, CostParams const& cost) const;
 };
 
-} // namespace coso
+}  // namespace coso

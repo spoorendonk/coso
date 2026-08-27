@@ -1,10 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/operators/route_split.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 
+#include <catch2/catch_test_macros.hpp>
 #include <vector>
 
 using namespace coso;
@@ -13,8 +13,7 @@ using namespace coso;
 //  Test instance builders
 // ---------------------------------------------------------------------------
 
-static ProblemData make_test_instance()
-{
+static ProblemData make_test_instance() {
     // 3 vehicles, capacity 15 each.
     // Clients laid out to make splitting beneficial:
     // Depot at origin, clients in two clusters.
@@ -22,23 +21,23 @@ static ProblemData make_test_instance()
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {15}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});   // 2
-    b.add_client({0.0, 10.0}, {.demand = {2}});   // 3
-    b.add_client({0.0, 20.0}, {.demand = {3}});   // 4
-    b.add_client({0.0, 30.0}, {.demand = {4}});   // 5
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});  // 2
+    b.add_client({0.0, 10.0}, {.demand = {2}});  // 3
+    b.add_client({0.0, 20.0}, {.demand = {3}});  // 4
+    b.add_client({0.0, 30.0}, {.demand = {4}});  // 5
 
     return b.build(0);
 }
 
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
@@ -47,9 +46,7 @@ static Solution make_solution(ProblemData const& data,
 //  RouteSplit tests
 // ===========================================================================
 
-TEST_CASE("RouteSplit: finds improving split on bad single route",
-          "[route_split]")
-{
+TEST_CASE("RouteSplit: finds improving split on bad single route", "[route_split]") {
     // Put all 6 clients on one route with two clusters far apart.
     // The route goes east then north, doubling back through the depot.
     // Splitting should create two shorter routes, each in one cluster.
@@ -71,8 +68,7 @@ TEST_CASE("RouteSplit: finds improving split on bad single route",
     CHECK(new_cost < old_cost);
 }
 
-TEST_CASE("RouteSplit: delta matches actual cost change", "[route_split]")
-{
+TEST_CASE("RouteSplit: delta matches actual cost change", "[route_split]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -88,8 +84,7 @@ TEST_CASE("RouteSplit: delta matches actual cost change", "[route_split]")
     }
 }
 
-TEST_CASE("RouteSplit: preserves all clients", "[route_split]")
-{
+TEST_CASE("RouteSplit: preserves all clients", "[route_split]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -101,17 +96,18 @@ TEST_CASE("RouteSplit: preserves all clients", "[route_split]")
 
         CHECK(sol.num_unassigned() == 0);
         std::vector<int> seen(data.num_clients(), 0);
-        for (int r = 0; r < sol.num_routes(); ++r)
-            for (int i = 0; i < sol.route(r).size(); ++i)
+        for (int r = 0; r < sol.num_routes(); ++r) {
+            for (int i = 0; i < sol.route(r).size(); ++i) {
                 seen[sol.route(r).client(i)]++;
-        for (int c = 0; c < data.num_clients(); ++c)
+            }
+        }
+        for (int c = 0; c < data.num_clients(); ++c) {
             CHECK(seen[c] == 1);
+        }
     }
 }
 
-TEST_CASE("RouteSplit: no split when route has only 1 client",
-          "[route_split]")
-{
+TEST_CASE("RouteSplit: no split when route has only 1 client", "[route_split]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -122,9 +118,7 @@ TEST_CASE("RouteSplit: no split when route has only 1 client",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("RouteSplit: no split when no empty vehicle available",
-          "[route_split]")
-{
+TEST_CASE("RouteSplit: no split when no empty vehicle available", "[route_split]") {
     // All 3 vehicles in use: no slot for the second half.
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
@@ -147,8 +141,7 @@ TEST_CASE("RouteSplit: no split when no empty vehicle available",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("RouteSplit: split reduces capacity violation", "[route_split]")
-{
+TEST_CASE("RouteSplit: split reduces capacity violation", "[route_split]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
@@ -175,9 +168,7 @@ TEST_CASE("RouteSplit: split reduces capacity violation", "[route_split]")
     CHECK(sol.feasible());
 }
 
-TEST_CASE("RouteSplit: two-client route splits into two singletons",
-          "[route_split]")
-{
+TEST_CASE("RouteSplit: two-client route splits into two singletons", "[route_split]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {5}});
@@ -204,8 +195,7 @@ TEST_CASE("RouteSplit: two-client route splits into two singletons",
     CHECK(sol.cost(eval) < old_cost);
 }
 
-TEST_CASE("RouteSplit: empty solution does not crash", "[route_split]")
-{
+TEST_CASE("RouteSplit: empty solution does not crash", "[route_split]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -215,8 +205,7 @@ TEST_CASE("RouteSplit: empty solution does not crash", "[route_split]")
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("RouteSplit: iterated application converges", "[route_split]")
-{
+TEST_CASE("RouteSplit: iterated application converges", "[route_split]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 

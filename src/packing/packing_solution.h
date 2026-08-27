@@ -109,24 +109,16 @@ public:
     [[nodiscard]] bool feasible() const noexcept;
 
     /// Number of capacity violations (bins where load > capacity in any dim).
-    [[nodiscard]] int num_capacity_violations() const noexcept {
-        return capacity_violations_;
-    }
+    [[nodiscard]] int num_capacity_violations() const noexcept { return capacity_violations_; }
 
     /// Number of conflict violations (pairs of conflicting items in same bin).
-    [[nodiscard]] int num_conflict_violations() const noexcept {
-        return conflict_violations_;
-    }
+    [[nodiscard]] int num_conflict_violations() const noexcept { return conflict_violations_; }
 
     /// True if all items are assigned.
-    [[nodiscard]] bool all_assigned() const noexcept {
-        return unassigned_count_ == 0;
-    }
+    [[nodiscard]] bool all_assigned() const noexcept { return unassigned_count_ == 0; }
 
     /// Number of unassigned items.
-    [[nodiscard]] int num_unassigned() const noexcept {
-        return unassigned_count_;
-    }
+    [[nodiscard]] int num_unassigned() const noexcept { return unassigned_count_; }
 
 private:
     PackingData const* data_ = nullptr;
@@ -146,11 +138,11 @@ private:
     std::vector<int> bin_load_;
 
     // Cached aggregates.
-    int bins_used_            = 0;
-    int cost_                 = 0;
-    int capacity_violations_  = 0;
-    int conflict_violations_  = 0;
-    int unassigned_count_     = 0;
+    int bins_used_ = 0;
+    int cost_ = 0;
+    int capacity_violations_ = 0;
+    int conflict_violations_ = 0;
+    int unassigned_count_ = 0;
 
     /// Count capacity violations for bin b.
     [[nodiscard]] int count_capacity_violations(int b) const;
@@ -159,4 +151,4 @@ private:
     [[nodiscard]] int count_conflict_violations(int b) const;
 };
 
-} // namespace coso
+}  // namespace coso

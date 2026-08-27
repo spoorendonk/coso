@@ -29,8 +29,7 @@ public:
     ///
     /// @param num_operators  Number of operators to choose from (must be > 0).
     /// @param exploration    UCB1 exploration parameter C (default sqrt(2)).
-    explicit OperatorSelector(int num_operators,
-                              double exploration = 1.41421356237);
+    explicit OperatorSelector(int num_operators, double exploration = 1.41421356237);
 
     /// Select the next operator to try (returns index in [0, num_operators)).
     ///
@@ -48,19 +47,13 @@ public:
     void reset();
 
     /// Number of operators.
-    [[nodiscard]] int num_operators() const noexcept {
-        return static_cast<int>(stats_.size());
-    }
+    [[nodiscard]] int num_operators() const noexcept { return static_cast<int>(stats_.size()); }
 
     /// Total number of selections across all operators.
-    [[nodiscard]] int total_selections() const noexcept {
-        return total_selections_;
-    }
+    [[nodiscard]] int total_selections() const noexcept { return total_selections_; }
 
     /// Number of times operator op_idx has been selected.
-    [[nodiscard]] int selections(int op_idx) const noexcept {
-        return stats_[op_idx].count;
-    }
+    [[nodiscard]] int selections(int op_idx) const noexcept { return stats_[op_idx].count; }
 
     /// Total reward accumulated by operator op_idx.
     [[nodiscard]] double total_reward(int op_idx) const noexcept {
@@ -68,14 +61,13 @@ public:
     }
 
     /// Number of times operator op_idx produced a positive reward.
-    [[nodiscard]] int successes(int op_idx) const noexcept {
-        return stats_[op_idx].successes;
-    }
+    [[nodiscard]] int successes(int op_idx) const noexcept { return stats_[op_idx].successes; }
 
     /// Average reward for operator op_idx (0 if never selected).
     [[nodiscard]] double avg_reward(int op_idx) const noexcept {
-        if (stats_[op_idx].count == 0)
+        if (stats_[op_idx].count == 0) {
             return 0.0;
+        }
         return stats_[op_idx].total_reward / stats_[op_idx].count;
     }
 
@@ -91,4 +83,4 @@ private:
     int total_selections_ = 0;
 };
 
-} // namespace coso
+}  // namespace coso

@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/resources/compartment_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -9,14 +9,13 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 3 compartments (frozen=0, fresh=1, ambient=2), 5 clients.
-static std::vector<CompartmentResource::ClientInfo> make_info_3comp()
-{
+static std::vector<CompartmentResource::ClientInfo> make_info_3comp() {
     return {
-        {0, 10},   // client 0: frozen, demand 10
-        {1,  5},   // client 1: fresh, demand 5
-        {2,  8},   // client 2: ambient, demand 8
-        {0, 15},   // client 3: frozen, demand 15
-        {1,  3},   // client 4: fresh, demand 3
+        {0, 10},  // client 0: frozen, demand 10
+        {1, 5},   // client 1: fresh, demand 5
+        {2, 8},   // client 2: ambient, demand 8
+        {0, 15},  // client 3: frozen, demand 15
+        {1, 3},   // client 4: fresh, demand 3
     };
 }
 
@@ -24,9 +23,7 @@ static std::vector<CompartmentResource::ClientInfo> make_info_3comp()
 //  Init tests
 // ===========================================================================
 
-TEST_CASE("CompartmentResource::init creates single-client state",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::init creates single-client state", "[compartment_resource]") {
     auto info = make_info_3comp();
 
     auto s0 = CompartmentResource::init(info, 0, 3);
@@ -41,9 +38,7 @@ TEST_CASE("CompartmentResource::init creates single-client state",
     CHECK(s2.loads[2] == 8);  // ambient
 }
 
-TEST_CASE("CompartmentResource::init_depot creates zero-load state",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::init_depot creates zero-load state", "[compartment_resource]") {
     auto s = CompartmentResource::init_depot(3);
     REQUIRE(s.num_compartments() == 3);
     CHECK(s.loads[0] == 0);
@@ -51,11 +46,9 @@ TEST_CASE("CompartmentResource::init_depot creates zero-load state",
     CHECK(s.loads[2] == 0);
 }
 
-TEST_CASE("CompartmentResource::init for unassigned client",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::init for unassigned client", "[compartment_resource]") {
     std::vector<CompartmentResource::ClientInfo> info = {
-        {-1, 0},   // client 0: no compartment
+        {-1, 0},  // client 0: no compartment
     };
 
     auto s = CompartmentResource::init(info, 0, 2);
@@ -67,9 +60,7 @@ TEST_CASE("CompartmentResource::init for unassigned client",
 //  Merge tests
 // ===========================================================================
 
-TEST_CASE("CompartmentResource::merge combines per-compartment loads",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::merge combines per-compartment loads", "[compartment_resource]") {
     auto info = make_info_3comp();
 
     auto s0 = CompartmentResource::init(info, 0, 3);  // frozen=10
@@ -81,9 +72,7 @@ TEST_CASE("CompartmentResource::merge combines per-compartment loads",
     CHECK(merged.loads[2] == 0);
 }
 
-TEST_CASE("CompartmentResource::merge across compartments",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::merge across compartments", "[compartment_resource]") {
     auto info = make_info_3comp();
 
     auto s0 = CompartmentResource::init(info, 0, 3);  // frozen=10
@@ -98,9 +87,7 @@ TEST_CASE("CompartmentResource::merge across compartments",
     CHECK(m012.loads[2] == 8);
 }
 
-TEST_CASE("CompartmentResource::merge_reverse equals merge",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::merge_reverse equals merge", "[compartment_resource]") {
     auto info = make_info_3comp();
 
     auto s0 = CompartmentResource::init(info, 0, 3);
@@ -114,9 +101,7 @@ TEST_CASE("CompartmentResource::merge_reverse equals merge",
     CHECK(fwd.loads[2] == rev.loads[2]);
 }
 
-TEST_CASE("CompartmentResource::merge with depot",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::merge with depot", "[compartment_resource]") {
     auto info = make_info_3comp();
 
     auto depot = CompartmentResource::init_depot(3);
@@ -133,8 +118,7 @@ TEST_CASE("CompartmentResource::merge with depot",
 // ===========================================================================
 
 TEST_CASE("CompartmentResource::excess with all compartments within capacity",
-          "[compartment_resource]")
-{
+          "[compartment_resource]") {
     auto info = make_info_3comp();
 
     auto s0 = CompartmentResource::init(info, 0, 3);  // frozen=10
@@ -146,8 +130,7 @@ TEST_CASE("CompartmentResource::excess with all compartments within capacity",
 }
 
 TEST_CASE("CompartmentResource::excess with one compartment over capacity",
-          "[compartment_resource]")
-{
+          "[compartment_resource]") {
     auto info = make_info_3comp();
 
     auto s0 = CompartmentResource::init(info, 0, 3);  // frozen=10
@@ -159,9 +142,7 @@ TEST_CASE("CompartmentResource::excess with one compartment over capacity",
     CHECK(CompartmentResource::excess(merged, caps) == 5);  // 25 - 20 = 5
 }
 
-TEST_CASE("CompartmentResource::excess with multiple compartments over",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::excess with multiple compartments over", "[compartment_resource]") {
     auto info = make_info_3comp();
 
     // Build route: clients 0,1,2,3,4
@@ -171,11 +152,10 @@ TEST_CASE("CompartmentResource::excess with multiple compartments over",
     auto s3 = CompartmentResource::init(info, 3, 3);
     auto s4 = CompartmentResource::init(info, 4, 3);
 
-    auto m = CompartmentResource::merge(
-        CompartmentResource::merge(
-            CompartmentResource::merge(s0, s1),
-            CompartmentResource::merge(s2, s3)),
-        s4);
+    auto m =
+        CompartmentResource::merge(CompartmentResource::merge(CompartmentResource::merge(s0, s1),
+                                                              CompartmentResource::merge(s2, s3)),
+                                   s4);
     // frozen=25, fresh=8, ambient=8
 
     std::vector<int> caps = {20, 5, 5};
@@ -183,9 +163,7 @@ TEST_CASE("CompartmentResource::excess with multiple compartments over",
     CHECK(CompartmentResource::excess(m, caps) == 11);
 }
 
-TEST_CASE("CompartmentResource::excess with empty route",
-          "[compartment_resource]")
-{
+TEST_CASE("CompartmentResource::excess with empty route", "[compartment_resource]") {
     auto depot = CompartmentResource::init_depot(3);
     std::vector<int> caps = {20, 10, 15};
     CHECK(CompartmentResource::excess(depot, caps) == 0);

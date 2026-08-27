@@ -1,10 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/operators/swap_star.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 
+#include <catch2/catch_test_macros.hpp>
 #include <vector>
 
 using namespace coso;
@@ -13,8 +13,7 @@ using namespace coso;
 //  Test instance builders
 // ---------------------------------------------------------------------------
 
-static ProblemData make_test_instance()
-{
+static ProblemData make_test_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {15}});
@@ -29,8 +28,7 @@ static ProblemData make_test_instance()
     return b.build(0);
 }
 
-static ProblemData make_granular_instance()
-{
+static ProblemData make_granular_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {15}});
@@ -46,12 +44,12 @@ static ProblemData make_granular_instance()
 }
 
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
@@ -60,9 +58,7 @@ static Solution make_solution(ProblemData const& data,
 //  SwapStar tests
 // ===========================================================================
 
-TEST_CASE("SwapStar: finds improving move on suboptimal solution",
-          "[swapstar]")
-{
+TEST_CASE("SwapStar: finds improving move on suboptimal solution", "[swapstar]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -80,8 +76,7 @@ TEST_CASE("SwapStar: finds improving move on suboptimal solution",
     }
 }
 
-TEST_CASE("SwapStar: delta matches actual cost change", "[swapstar]")
-{
+TEST_CASE("SwapStar: delta matches actual cost change", "[swapstar]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -97,8 +92,7 @@ TEST_CASE("SwapStar: delta matches actual cost change", "[swapstar]")
     }
 }
 
-TEST_CASE("SwapStar: preserves all clients", "[swapstar]")
-{
+TEST_CASE("SwapStar: preserves all clients", "[swapstar]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -110,16 +104,18 @@ TEST_CASE("SwapStar: preserves all clients", "[swapstar]")
 
         CHECK(sol.num_unassigned() == 0);
         std::vector<int> seen(data.num_clients(), 0);
-        for (int r = 0; r < sol.num_routes(); ++r)
-            for (int i = 0; i < sol.route(r).size(); ++i)
+        for (int r = 0; r < sol.num_routes(); ++r) {
+            for (int i = 0; i < sol.route(r).size(); ++i) {
                 seen[sol.route(r).client(i)]++;
-        for (int c = 0; c < data.num_clients(); ++c)
+            }
+        }
+        for (int c = 0; c < data.num_clients(); ++c) {
             CHECK(seen[c] == 1);
+        }
     }
 }
 
-TEST_CASE("SwapStar: no crash on single-client routes", "[swapstar]")
-{
+TEST_CASE("SwapStar: no crash on single-client routes", "[swapstar]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -134,8 +130,7 @@ TEST_CASE("SwapStar: no crash on single-client routes", "[swapstar]")
     }
 }
 
-TEST_CASE("SwapStar: works with granular neighbours", "[swapstar][granular]")
-{
+TEST_CASE("SwapStar: works with granular neighbours", "[swapstar][granular]") {
     auto data = make_granular_instance();
     CostEvaluator eval(100);
 
@@ -152,9 +147,7 @@ TEST_CASE("SwapStar: works with granular neighbours", "[swapstar][granular]")
     }
 }
 
-TEST_CASE("SwapStar: iterated application converges",
-          "[swapstar][iterate]")
-{
+TEST_CASE("SwapStar: iterated application converges", "[swapstar][iterate]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -171,8 +164,7 @@ TEST_CASE("SwapStar: iterated application converges",
     CHECK(sol.num_unassigned() == 0);
 }
 
-TEST_CASE("SwapStar: capacity violation reduction", "[swapstar][capacity]")
-{
+TEST_CASE("SwapStar: capacity violation reduction", "[swapstar][capacity]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
@@ -197,8 +189,7 @@ TEST_CASE("SwapStar: capacity violation reduction", "[swapstar][capacity]")
     CHECK(sol.num_unassigned() == 0);
 }
 
-TEST_CASE("SwapStar: empty routes handled correctly", "[swapstar]")
-{
+TEST_CASE("SwapStar: empty routes handled correctly", "[swapstar]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 

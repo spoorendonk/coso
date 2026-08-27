@@ -7,13 +7,9 @@
 
 namespace coso {
 
-SolutionFinalizer::SolutionFinalizer(ProblemData const& data)
-    : data_(&data), ls_(data)
-{
-}
+SolutionFinalizer::SolutionFinalizer(ProblemData const& data) : data_(&data), ls_(data) {}
 
-void SolutionFinalizer::finalize(Solution& sol, StopCriterion* stop)
-{
+void SolutionFinalizer::finalize(Solution& sol, StopCriterion* stop) {
     // Very high penalty weights make any constraint violation prohibitively
     // expensive, so local search will only accept feasible moves.
     constexpr int kHighPenalty = 1'000'000;
@@ -35,8 +31,7 @@ void SolutionFinalizer::finalize(Solution& sol, StopCriterion* stop)
     }
 }
 
-void SolutionFinalizer::repair_infeasible_(Solution& sol)
-{
+void SolutionFinalizer::repair_infeasible_(Solution& sol) {
     CostEvaluator eval_zero(0, 0, 0);
 
     for (int v = 0; v < sol.num_routes(); ++v) {
@@ -61,9 +56,8 @@ void SolutionFinalizer::repair_infeasible_(Solution& sol)
                 // Prefer removing clients that reduce excess the most.
                 // Break ties by distance delta (prefer larger distance
                 // savings).
-                bool better = (excess_after < best_excess_after)
-                    || (excess_after == best_excess_after
-                        && dist_delta < best_dist_delta);
+                bool better = (excess_after < best_excess_after) ||
+                              (excess_after == best_excess_after && dist_delta < best_dist_delta);
 
                 if (better) {
                     best_pos = p;
@@ -81,4 +75,4 @@ void SolutionFinalizer::repair_infeasible_(Solution& sol)
     }
 }
 
-} // namespace coso
+}  // namespace coso

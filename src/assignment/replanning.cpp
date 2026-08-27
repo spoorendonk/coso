@@ -15,9 +15,7 @@ namespace coso {
 //  LockedCells                                                                 //
 // --------------------------------------------------------------------------- //
 
-LockedCells::LockedCells(ReplanConfig const& config,
-                         AssignmentSolution const& sol)
-{
+LockedCells::LockedCells(ReplanConfig const& config, AssignmentSolution const& sol) {
     // Lock everything before horizon_start.
     for (int e = 0; e < sol.num_employees(); ++e) {
         for (int d = 0; d < config.horizon_start && d < sol.horizon(); ++d) {
@@ -41,52 +39,55 @@ namespace {
 /// any hard constraint (unavailability, consecutive days, rest time).
 /// Mirrors the logic from construction.cpp.
 bool is_feasible_assignment(AssignmentData const& data,
-                            std::vector<std::vector<int>> const& schedule,
-                            int e, int d, int s)
-{
+                            std::vector<std::vector<int>> const& schedule, int e, int d, int s) {
     // Unavailability.
-    if (data.is_unavailable(e, d))
+    if (data.is_unavailable(e, d)) {
         return false;
+    }
 
     // Already assigned on this day.
-    if (schedule[e][d] >= 0)
+    if (schedule[e][d] >= 0) {
         return false;
+    }
 
     // Consecutive days limit.
-    int max_consec = std::min(data.max_consecutive_shifts,
-                              data.employees[e].max_consecutive_days);
+    int max_consec = std::min(data.max_consecutive_shifts, data.employees[e].max_consecutive_days);
     int run_before = 0;
-    for (int dd = d - 1; dd >= 0 && schedule[e][dd] >= 0; --dd)
+    for (int dd = d - 1; dd >= 0 && schedule[e][dd] >= 0; --dd) {
         ++run_before;
+    }
     int run_after = 0;
-    for (int dd = d + 1; dd < data.horizon && schedule[e][dd] >= 0; ++dd)
+    for (int dd = d + 1; dd < data.horizon && schedule[e][dd] >= 0; ++dd) {
         ++run_after;
-    if (run_before + 1 + run_after > max_consec)
+    }
+    if (run_before + 1 + run_after > max_consec) {
         return false;
+    }
 
     // Minimum rest between shifts.
-    int min_rest = std::max(data.min_rest_between_shifts,
-                            data.employees[e].min_rest_hours);
+    int min_rest = std::max(data.min_rest_between_shifts, data.employees[e].min_rest_hours);
     if (min_rest > 0) {
         int ns = data.num_shift_types();
         if (d > 0) {
             int prev = schedule[e][d - 1];
             if (prev >= 0 && prev < ns) {
-                int end_prev  = data.shift_types[prev].end_hour;
+                int end_prev = data.shift_types[prev].end_hour;
                 int start_cur = data.shift_types[s].start_hour;
-                int rest      = (24 - end_prev) + start_cur;
-                if (rest < min_rest)
+                int rest = (24 - end_prev) + start_cur;
+                if (rest < min_rest) {
                     return false;
+                }
             }
         }
         if (d + 1 < data.horizon) {
             int next = schedule[e][d + 1];
             if (next >= 0 && next < ns) {
-                int end_cur    = data.shift_types[s].end_hour;
+                int end_cur = data.shift_types[s].end_hour;
                 int start_next = data.shift_types[next].start_hour;
-                int rest       = (24 - end_cur) + start_next;
-                if (rest < min_rest)
+                int rest = (24 - end_cur) + start_next;
+                if (rest < min_rest) {
                     return false;
+                }
             }
         }
     }
@@ -94,12 +95,14 @@ bool is_feasible_assignment(AssignmentData const& data,
     // Forbidden sequences.
     for (auto const& seq : data.forbidden_sequences) {
         int len = static_cast<int>(seq.size());
-        if (len < 2)
+        if (len < 2) {
             continue;
+        }
         for (int k = 0; k < len; ++k) {
             int start_day = d - k;
-            if (start_day < 0 || start_day + len > data.horizon)
+            if (start_day < 0 || start_day + len > data.horizon) {
                 continue;
+            }
             bool match = true;
             for (int j = 0; j < len; ++j) {
                 int dd = start_day + j;
@@ -109,8 +112,9 @@ bool is_feasible_assignment(AssignmentData const& data,
                     break;
                 }
             }
-            if (match)
+            if (match) {
                 return false;
+            }
         }
     }
 
@@ -118,11 +122,10 @@ bool is_feasible_assignment(AssignmentData const& data,
 }
 
 /// Check whether employee has a given skill (empty skill = always true).
-bool employee_has_skill(AssignmentData const& data, int e,
-                        std::string const& skill)
-{
-    if (skill.empty())
+bool employee_has_skill(AssignmentData const& data, int e, std::string const& skill) {
+    if (skill.empty()) {
         return true;
+    }
     auto const& skills = data.employees[e].skills;
     return std::find(skills.begin(), skills.end(), skill) != skills.end();
 }
@@ -131,25 +134,23 @@ bool employee_has_skill(AssignmentData const& data, int e,
 ///
 /// Iterates day by day, shift by shift, and assigns employees greedily to
 /// unmet demand slots — but only for unlocked cells.
-void construct_unlocked(AssignmentSolution& sol,
-                        AssignmentData const& data,
-                        LockedCells const& locked)
-{
+void construct_unlocked(AssignmentSolution& sol, AssignmentData const& data,
+                        LockedCells const& locked) {
     int const ns = data.num_shift_types();
-    int const H  = data.horizon;
+    int const H = data.horizon;
     int const ne = data.num_employees();
 
     for (int d = 0; d < H; ++d) {
         for (int s = 0; s < ns; ++s) {
             auto dem = data.get_demand(s, d);
-            if (dem.min_employees <= 0)
+            if (dem.min_employees <= 0) {
                 continue;
+            }
 
             // Count currently assigned employees (including locked ones).
             int assigned = 0;
             for (int e = 0; e < ne; ++e) {
-                if (sol.get(e, d) == s
-                    && employee_has_skill(data, e, dem.required_skill)) {
+                if (sol.get(e, d) == s && employee_has_skill(data, e, dem.required_skill)) {
                     ++assigned;
                 }
             }
@@ -157,32 +158,39 @@ void construct_unlocked(AssignmentSolution& sol,
             // Sort candidates by load (fewest assigned days first).
             std::vector<int> candidates(ne);
             std::iota(candidates.begin(), candidates.end(), 0);
-            std::sort(candidates.begin(), candidates.end(),
-                      [&](int a, int b) {
-                          int load_a = 0, load_b = 0;
-                          for (int dd = 0; dd < H; ++dd) {
-                              if (sol.get(a, dd) >= 0) ++load_a;
-                              if (sol.get(b, dd) >= 0) ++load_b;
-                          }
-                          return load_a < load_b;
-                      });
+            std::sort(candidates.begin(), candidates.end(), [&](int a, int b) {
+                int load_a = 0, load_b = 0;
+                for (int dd = 0; dd < H; ++dd) {
+                    if (sol.get(a, dd) >= 0) {
+                        ++load_a;
+                    }
+                    if (sol.get(b, dd) >= 0) {
+                        ++load_b;
+                    }
+                }
+                return load_a < load_b;
+            });
 
             while (assigned < dem.min_employees) {
                 bool found = false;
                 for (int e : candidates) {
-                    if (locked.is_locked(e, d))
+                    if (locked.is_locked(e, d)) {
                         continue;  // Cannot assign to locked cells.
-                    if (!employee_has_skill(data, e, dem.required_skill))
+                    }
+                    if (!employee_has_skill(data, e, dem.required_skill)) {
                         continue;
-                    if (!is_feasible_assignment(data, sol.schedule(), e, d, s))
+                    }
+                    if (!is_feasible_assignment(data, sol.schedule(), e, d, s)) {
                         continue;
+                    }
                     sol.assign(e, d, s);
                     ++assigned;
                     found = true;
                     break;
                 }
-                if (!found)
+                if (!found) {
                     break;
+                }
             }
         }
     }
@@ -192,9 +200,7 @@ void construct_unlocked(AssignmentSolution& sol,
 ///
 /// Runs steepest-descent ShiftMove and ShiftSwap, but skips any move
 /// that would modify a locked cell.
-void local_search_with_locks(AssignmentSolution& sol,
-                             LockedCells const& locked)
-{
+void local_search_with_locks(AssignmentSolution& sol, LockedCells const& locked) {
     bool improved = true;
 
     while (improved) {
@@ -204,23 +210,28 @@ void local_search_with_locks(AssignmentSolution& sol,
         {
             ShiftMove::Move best;
             int const ne = sol.num_employees();
-            int const H  = sol.horizon();
+            int const H = sol.horizon();
 
             for (int d = 0; d < H; ++d) {
                 for (int from = 0; from < ne; ++from) {
-                    if (locked.is_locked(from, d))
+                    if (locked.is_locked(from, d)) {
                         continue;
+                    }
                     int st = sol.get(from, d);
-                    if (st < 0)
+                    if (st < 0) {
                         continue;
+                    }
 
                     for (int to = 0; to < ne; ++to) {
-                        if (to == from)
+                        if (to == from) {
                             continue;
-                        if (locked.is_locked(to, d))
+                        }
+                        if (locked.is_locked(to, d)) {
                             continue;
-                        if (sol.get(to, d) >= 0)
+                        }
+                        if (sol.get(to, d) >= 0) {
                             continue;
+                        }
 
                         int delta = ShiftMove::evaluate(sol, from, to, d);
                         if (delta < best.delta) {
@@ -242,17 +253,20 @@ void local_search_with_locks(AssignmentSolution& sol,
         {
             ShiftSwap::Move best;
             int const ne = sol.num_employees();
-            int const H  = sol.horizon();
+            int const H = sol.horizon();
 
             for (int d = 0; d < H; ++d) {
                 for (int e1 = 0; e1 < ne; ++e1) {
-                    if (locked.is_locked(e1, d))
+                    if (locked.is_locked(e1, d)) {
                         continue;
+                    }
                     for (int e2 = e1 + 1; e2 < ne; ++e2) {
-                        if (locked.is_locked(e2, d))
+                        if (locked.is_locked(e2, d)) {
                             continue;
-                        if (sol.get(e1, d) == sol.get(e2, d))
+                        }
+                        if (sol.get(e1, d) == sol.get(e2, d)) {
                             continue;
+                        }
 
                         int delta = ShiftSwap::evaluate(sol, e1, e2, d);
                         if (delta < best.delta) {
@@ -273,7 +287,7 @@ void local_search_with_locks(AssignmentSolution& sol,
         {
             BlockSwap::Move best;
             int const ne = sol.num_employees();
-            int const H  = sol.horizon();
+            int const H = sol.horizon();
             int const max_block_len = 7;
 
             for (int e1 = 0; e1 < ne; ++e1) {
@@ -286,22 +300,21 @@ void local_search_with_locks(AssignmentSolution& sol,
                             bool any_locked = false;
                             bool differs = false;
                             for (int d = start; d < start + len; ++d) {
-                                if (locked.is_locked(e1, d)
-                                    || locked.is_locked(e2, d)) {
+                                if (locked.is_locked(e1, d) || locked.is_locked(e2, d)) {
                                     any_locked = true;
                                     break;
                                 }
-                                if (sol.get(e1, d) != sol.get(e2, d))
+                                if (sol.get(e1, d) != sol.get(e2, d)) {
                                     differs = true;
+                                }
                             }
-                            if (any_locked || !differs)
+                            if (any_locked || !differs) {
                                 continue;
+                            }
 
-                            int delta = BlockSwap::evaluate(
-                                sol, e1, e2, start, len);
+                            int delta = BlockSwap::evaluate(sol, e1, e2, start, len);
                             if (delta < best.delta) {
-                                best = BlockSwap::Move{
-                                    e1, e2, start, len, delta};
+                                best = BlockSwap::Move{e1, e2, start, len, delta};
                             }
                         }
                     }
@@ -319,21 +332,17 @@ void local_search_with_locks(AssignmentSolution& sol,
     }
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // --------------------------------------------------------------------------- //
 //  replan                                                                      //
 // --------------------------------------------------------------------------- //
 
-void replan(AssignmentSolution& sol,
-            ReplanConfig const& config,
-            AssignmentData& data,
-            AssignmentCostEvaluator const& evaluator)
-{
+void replan(AssignmentSolution& sol, ReplanConfig const& config, AssignmentData& data,
+            AssignmentCostEvaluator const& evaluator) {
     // 1. Apply new constraints to the data.
     for (auto const& [emp, day] : config.new_unavailabilities) {
-        data.unavailabilities.insert(
-            AssignmentData::unavail_key(emp, day));
+        data.unavailabilities.insert(AssignmentData::unavail_key(emp, day));
     }
     for (auto const& pref : config.new_preferences) {
         data.preferences.push_back(pref);
@@ -346,10 +355,12 @@ void replan(AssignmentSolution& sol,
     //    (They may already be correct, but ensure they match.)
     for (auto const& [emp, day, shift] : config.locked_assignments) {
         if (sol.get(emp, day) != shift) {
-            if (sol.get(emp, day) >= 0)
+            if (sol.get(emp, day) >= 0) {
                 sol.unassign(emp, day);
-            if (shift >= 0)
+            }
+            if (shift >= 0) {
                 sol.assign(emp, day, shift);
+            }
         }
     }
 
@@ -357,10 +368,12 @@ void replan(AssignmentSolution& sol,
     //    (e.g., newly unavailable employees).
     for (int e = 0; e < sol.num_employees(); ++e) {
         for (int d = 0; d < sol.horizon(); ++d) {
-            if (locked.is_locked(e, d))
+            if (locked.is_locked(e, d)) {
                 continue;
-            if (sol.get(e, d) >= 0 && data.is_unavailable(e, d))
+            }
+            if (sol.get(e, d) >= 0 && data.is_unavailable(e, d)) {
                 sol.unassign(e, d);
+            }
         }
     }
 
@@ -374,4 +387,4 @@ void replan(AssignmentSolution& sol,
     sol.recompute_cost();
 }
 
-} // namespace coso
+}  // namespace coso

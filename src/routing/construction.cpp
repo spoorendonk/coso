@@ -11,9 +11,7 @@ namespace coso::construction {
 //  Helper: check if a merged load state fits within a vehicle type's capacity.
 // ---------------------------------------------------------------------------
 
-static bool load_fits(LoadResource::State const& state,
-                      ProblemData::VehicleTypeData const& vt)
-{
+static bool load_fits(LoadResource::State const& state, ProblemData::VehicleTypeData const& vt) {
     return LoadResource::excess(state, vt) == 0;
 }
 
@@ -21,9 +19,7 @@ static bool load_fits(LoadResource::State const& state,
 //  Nearest-neighbour
 // ---------------------------------------------------------------------------
 
-Solution nearest_neighbour(ProblemData const& data,
-                           CostEvaluator const& eval)
-{
+Solution nearest_neighbour(ProblemData const& data, CostEvaluator const& eval) {
     Solution sol(data);
 
     int num_clients = data.num_clients();
@@ -50,8 +46,9 @@ Solution nearest_neighbour(ProblemData const& data,
             int best_dist = INT_MAX;
 
             for (int c = 0; c < num_clients; ++c) {
-                if (visited[c])
+                if (visited[c]) {
                     continue;
+                }
 
                 int client_node = num_depots + c;
                 int d = data.dist(profile, current_node, client_node);
@@ -67,8 +64,9 @@ Solution nearest_neighbour(ProblemData const& data,
                 }
             }
 
-            if (best_client < 0)
+            if (best_client < 0) {
                 break;  // No more clients fit in this route.
+            }
 
             // Add the best client.
             route.insert(route.size(), best_client);
@@ -94,9 +92,7 @@ Solution nearest_neighbour(ProblemData const& data,
 //  Clarke-Wright savings
 // ---------------------------------------------------------------------------
 
-Solution clarke_wright(ProblemData const& data,
-                       CostEvaluator const& eval)
-{
+Solution clarke_wright(ProblemData const& data, CostEvaluator const& eval) {
     int num_clients = data.num_clients();
     int num_depots = data.num_depots();
     int depot = 0;  // depot node index
@@ -135,8 +131,8 @@ Solution clarke_wright(ProblemData const& data,
 
     // Step 2: Compute savings for all client pairs.
     struct Saving {
-        int i, j;       // client indices
-        int value;      // saving amount
+        int i, j;   // client indices
+        int value;  // saving amount
     };
 
     std::vector<Saving> savings;
@@ -160,9 +156,7 @@ Solution clarke_wright(ProblemData const& data,
 
     // Sort by decreasing savings.
     std::sort(savings.begin(), savings.end(),
-              [](Saving const& a, Saving const& b) {
-                  return a.value > b.value;
-              });
+              [](Saving const& a, Saving const& b) { return a.value > b.value; });
 
     // Step 3: Process savings and merge routes.
     for (auto const& [ci, cj, sval] : savings) {
@@ -170,8 +164,9 @@ Solution clarke_wright(ProblemData const& data,
         int rj = route_of[cj];
 
         // Skip if already in the same route.
-        if (ri == rj)
+        if (ri == rj) {
             continue;
+        }
 
         // Check that ci is at the end of route ri and cj is at the start
         // of route rj, or vice versa.  This ensures we only merge at
@@ -179,9 +174,9 @@ Solution clarke_wright(ProblemData const& data,
         auto& route_i = routes[ri];
         auto& route_j = routes[rj];
 
-        bool i_at_end   = (!route_i.clients.empty() && route_i.clients.back() == ci);
+        bool i_at_end = (!route_i.clients.empty() && route_i.clients.back() == ci);
         bool j_at_start = (!route_j.clients.empty() && route_j.clients.front() == cj);
-        bool j_at_end   = (!route_j.clients.empty() && route_j.clients.back() == cj);
+        bool j_at_end = (!route_j.clients.empty() && route_j.clients.back() == cj);
         bool i_at_start = (!route_i.clients.empty() && route_i.clients.front() == ci);
 
         // Determine merge direction.
@@ -214,13 +209,12 @@ Solution clarke_wright(ProblemData const& data,
         }
 
         if (reverse_from) {
-            std::reverse(routes[from_route].clients.begin(),
-                         routes[from_route].clients.end());
+            std::reverse(routes[from_route].clients.begin(), routes[from_route].clients.end());
         }
 
         // Check capacity of merged route.
-        auto merged_load = LoadResource::merge(
-            routes[to_route].load_state, routes[from_route].load_state);
+        auto merged_load =
+            LoadResource::merge(routes[to_route].load_state, routes[from_route].load_state);
 
         // Find a vehicle type that can handle the merged load.
         bool found_vtype = false;
@@ -230,8 +224,9 @@ Solution clarke_wright(ProblemData const& data,
                 break;
             }
         }
-        if (!found_vtype)
+        if (!found_vtype) {
             continue;
+        }
 
         // Merge: append from_route clients to to_route.
         auto& to = routes[to_route];
@@ -253,24 +248,24 @@ Solution clarke_wright(ProblemData const& data,
     // Collect non-empty routes.
     std::vector<int> nonempty;
     for (int r = 0; r < num_clients; ++r) {
-        if (!routes[r].clients.empty())
+        if (!routes[r].clients.empty()) {
             nonempty.push_back(r);
+        }
     }
 
     // Sort non-empty routes by decreasing load (assign biggest routes to
     // biggest vehicles first for best fit).
-    std::sort(nonempty.begin(), nonempty.end(),
-              [&](int a, int b) {
-                  // Compare by total demand in first dimension.
-                  int load_a = 0, load_b = 0;
-                  if (!routes[a].load_state.dims.empty())
-                      load_a = routes[a].load_state.dims[0].delivery
-                             + routes[a].load_state.dims[0].pickup;
-                  if (!routes[b].load_state.dims.empty())
-                      load_b = routes[b].load_state.dims[0].delivery
-                             + routes[b].load_state.dims[0].pickup;
-                  return load_a > load_b;
-              });
+    std::sort(nonempty.begin(), nonempty.end(), [&](int a, int b) {
+        // Compare by total demand in first dimension.
+        int load_a = 0, load_b = 0;
+        if (!routes[a].load_state.dims.empty()) {
+            load_a = routes[a].load_state.dims[0].delivery + routes[a].load_state.dims[0].pickup;
+        }
+        if (!routes[b].load_state.dims.empty()) {
+            load_b = routes[b].load_state.dims[0].delivery + routes[b].load_state.dims[0].pickup;
+        }
+        return load_a > load_b;
+    });
 
     // Sort vehicle types by decreasing capacity for best-fit assignment.
     struct VehicleSlot {
@@ -290,14 +285,13 @@ Solution clarke_wright(ProblemData const& data,
     }
 
     // Sort slots by decreasing capacity (first dimension).
-    std::sort(slots.begin(), slots.end(),
-              [&](VehicleSlot const& a, VehicleSlot const& b) {
-                  auto const& vta = data.vehicle_type(a.vtype);
-                  auto const& vtb = data.vehicle_type(b.vtype);
-                  int cap_a = vta.capacity.empty() ? 0 : vta.capacity[0];
-                  int cap_b = vtb.capacity.empty() ? 0 : vtb.capacity[0];
-                  return cap_a > cap_b;
-              });
+    std::sort(slots.begin(), slots.end(), [&](VehicleSlot const& a, VehicleSlot const& b) {
+        auto const& vta = data.vehicle_type(a.vtype);
+        auto const& vtb = data.vehicle_type(b.vtype);
+        int cap_a = vta.capacity.empty() ? 0 : vta.capacity[0];
+        int cap_b = vtb.capacity.empty() ? 0 : vtb.capacity[0];
+        return cap_a > cap_b;
+    });
 
     std::vector<bool> slot_used(slots.size(), false);
 
@@ -306,8 +300,9 @@ Solution clarke_wright(ProblemData const& data,
 
         // Find the first unused slot whose vehicle type can handle this load.
         for (size_t s = 0; s < slots.size(); ++s) {
-            if (slot_used[s])
+            if (slot_used[s]) {
                 continue;
+            }
 
             auto const& vt = data.vehicle_type(slots[s].vtype);
             if (load_fits(cw_route.load_state, vt)) {
@@ -321,4 +316,4 @@ Solution clarke_wright(ProblemData const& data,
     return sol;
 }
 
-} // namespace coso::construction
+}  // namespace coso::construction

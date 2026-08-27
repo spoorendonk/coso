@@ -14,10 +14,10 @@ namespace coso {
 /// costs.  This struct controls which relaxations are allowed and their
 /// penalty weights.
 struct OverconstrainedConfig {
-    bool allow_unserved            = false;  ///< Allow clients to be left unserved.
-    int64_t unserved_penalty       = 10000;  ///< Cost per unserved client.
-    int64_t tw_violation_penalty   = 1000;   ///< Cost per unit of time window violation.
-    int64_t capacity_violation_penalty = 1000; ///< Cost per unit of capacity excess.
+    bool allow_unserved = false;                ///< Allow clients to be left unserved.
+    int64_t unserved_penalty = 10000;           ///< Cost per unserved client.
+    int64_t tw_violation_penalty = 1000;        ///< Cost per unit of time window violation.
+    int64_t capacity_violation_penalty = 1000;  ///< Cost per unit of capacity excess.
 };
 
 /// Compute the overconstrained penalty cost for a routing solution.
@@ -30,9 +30,8 @@ struct OverconstrainedConfig {
 /// @param sol     The routing solution to evaluate.
 /// @param config  Overconstrained configuration with penalty weights.
 /// @return The total overconstrained penalty cost (non-negative).
-[[nodiscard]] int64_t overconstrained_penalty(
-    Solution const& sol,
-    OverconstrainedConfig const& config);
+[[nodiscard]] int64_t overconstrained_penalty(Solution const& sol,
+                                              OverconstrainedConfig const& config);
 
 /// Compute the total overconstrained cost: regular objective + overconstrained
 /// penalties.
@@ -44,9 +43,8 @@ struct OverconstrainedConfig {
 /// @param sol     The routing solution to evaluate.
 /// @param config  Overconstrained configuration with penalty weights.
 /// @return Total overconstrained cost = objective + overconstrained penalties.
-[[nodiscard]] int64_t overconstrained_cost(
-    Solution const& sol,
-    OverconstrainedConfig const& config);
+[[nodiscard]] int64_t overconstrained_cost(Solution const& sol,
+                                           OverconstrainedConfig const& config);
 
 /// Compute the number of unserved required clients.
 ///
@@ -81,8 +79,7 @@ struct OverconstrainedConfig {
 /// @param sol     The routing solution.
 /// @param config  Overconstrained configuration.
 /// @return true if the solution satisfies overconstrained feasibility.
-[[nodiscard]] bool overconstrained_feasible(
-    Solution const& sol,
-    OverconstrainedConfig const& config);
+[[nodiscard]] bool overconstrained_feasible(Solution const& sol,
+                                            OverconstrainedConfig const& config);
 
-} // namespace coso
+}  // namespace coso

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "scheduling/schedule_data.h"
 #include "model/types.h"
+#include "scheduling/schedule_data.h"
 
 namespace coso {
 
@@ -41,4 +41,4 @@ enum class DispatchRule {
 [[nodiscard]] Result construct_dispatch(ScheduleData const& data,
                                         DispatchRule rule = DispatchRule::SPT);
 
-} // namespace coso
+}  // namespace coso

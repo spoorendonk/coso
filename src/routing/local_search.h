@@ -30,8 +30,7 @@ public:
     ///
     /// Modifies sol in place.  On return, no single Exchange10, Exchange11,
     /// Exchange20, or SwapTails move can improve the penalized cost.
-    void run(Solution& sol, CostEvaluator const& eval,
-             StopCriterion* stop = nullptr);
+    void run(Solution& sol, CostEvaluator const& eval, StopCriterion* stop = nullptr);
 
     /// Number of improving moves applied in the last run() call.
     [[nodiscard]] int last_num_moves() const noexcept { return last_num_moves_; }
@@ -45,4 +44,4 @@ private:
     int last_num_iters_ = 0;
 };
 
-} // namespace coso
+}  // namespace coso

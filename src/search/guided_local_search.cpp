@@ -8,16 +8,14 @@ GuidedLocalSearch::GuidedLocalSearch(ProblemData const& data, double lambda)
     : data_(&data),
       lambda_(lambda),
       num_nodes_(data.num_nodes()),
-      penalties_(static_cast<size_t>(num_nodes_) * num_nodes_, 0)
-{
-}
+      penalties_(static_cast<size_t>(num_nodes_) * num_nodes_, 0) {}
 
-void GuidedLocalSearch::penalize(Solution const& sol)
-{
+void GuidedLocalSearch::penalize(Solution const& sol) {
     auto sol_edges = edges_(sol);
 
-    if (sol_edges.empty())
+    if (sol_edges.empty()) {
         return;
+    }
 
     // Find the edge with the highest utility.
     // utility(i,j) = d(i,j) / (1 + p(i,j))
@@ -42,8 +40,7 @@ void GuidedLocalSearch::penalize(Solution const& sol)
     }
 }
 
-int64_t GuidedLocalSearch::augmented_cost(Solution const& sol) const
-{
+int64_t GuidedLocalSearch::augmented_cost(Solution const& sol) const {
     auto sol_edges = edges_(sol);
 
     // Augmented cost = lambda * sum_{(i,j) in sol} d(i,j) * p(i,j)
@@ -61,26 +58,23 @@ int64_t GuidedLocalSearch::augmented_cost(Solution const& sol) const
     return static_cast<int64_t>(std::llround(lambda_ * total));
 }
 
-void GuidedLocalSearch::reset()
-{
+void GuidedLocalSearch::reset() {
     std::fill(penalties_.begin(), penalties_.end(), 0);
 }
 
-int GuidedLocalSearch::penalty(int from, int to) const
-{
+int GuidedLocalSearch::penalty(int from, int to) const {
     return penalties_[from * num_nodes_ + to];
 }
 
-std::vector<std::pair<int, int>> GuidedLocalSearch::edges_(
-    Solution const& sol) const
-{
+std::vector<std::pair<int, int>> GuidedLocalSearch::edges_(Solution const& sol) const {
     std::vector<std::pair<int, int>> edges;
     int num_depots = data_->num_depots();
 
     for (int v = 0; v < sol.num_routes(); ++v) {
         auto const& route = sol.route(v);
-        if (route.empty())
+        if (route.empty()) {
             continue;
+        }
 
         int depot = 0;  // depot node index (first depot)
 
@@ -103,4 +97,4 @@ std::vector<std::pair<int, int>> GuidedLocalSearch::edges_(
     return edges;
 }
 
-} // namespace coso
+}  // namespace coso

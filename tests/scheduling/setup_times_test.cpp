@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "scheduling/setup_times.h"
+
 #include "scheduling/schedule_data.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -9,8 +10,7 @@ using namespace coso;
 //  SetupTimeMatrix basics
 // ---------------------------------------------------------------------------
 
-TEST_CASE("SetupTimeMatrix: default construction", "[scheduling][setup]")
-{
+TEST_CASE("SetupTimeMatrix: default construction", "[scheduling][setup]") {
     SetupTimeMatrix stm;
     CHECK(stm.empty());
     CHECK(stm.num_operations() == 0);
@@ -19,8 +19,7 @@ TEST_CASE("SetupTimeMatrix: default construction", "[scheduling][setup]")
     CHECK(stm.setup_time(0, 0, 0) == 0);
 }
 
-TEST_CASE("SetupTimeMatrix: set and query per-machine", "[scheduling][setup]")
-{
+TEST_CASE("SetupTimeMatrix: set and query per-machine", "[scheduling][setup]") {
     SetupTimeMatrix stm(3, 2);  // 3 operations, 2 machines
     CHECK_FALSE(stm.empty());
     CHECK(stm.num_operations() == 3);
@@ -42,8 +41,7 @@ TEST_CASE("SetupTimeMatrix: set and query per-machine", "[scheduling][setup]")
     CHECK(stm.setup_time(2, 0, 0) == 0);  // not set
 }
 
-TEST_CASE("SetupTimeMatrix: set uniform across machines", "[scheduling][setup]")
-{
+TEST_CASE("SetupTimeMatrix: set uniform across machines", "[scheduling][setup]") {
     SetupTimeMatrix stm(3, 3);
 
     stm.set(0, 2, 7);  // op0 -> op2 on all machines: 7
@@ -54,8 +52,7 @@ TEST_CASE("SetupTimeMatrix: set uniform across machines", "[scheduling][setup]")
     CHECK(stm.setup_time(2, 0, 0) == 0);  // reverse direction not set
 }
 
-TEST_CASE("SetupTimeMatrix: overwrite values", "[scheduling][setup]")
-{
+TEST_CASE("SetupTimeMatrix: overwrite values", "[scheduling][setup]") {
     SetupTimeMatrix stm(2, 1);
 
     stm.set(0, 1, 0, 5);
@@ -65,9 +62,7 @@ TEST_CASE("SetupTimeMatrix: overwrite values", "[scheduling][setup]")
     CHECK(stm.setup_time(0, 1, 0) == 8);
 }
 
-TEST_CASE("SetupTimeMatrix: out-of-range queries return 0",
-          "[scheduling][setup]")
-{
+TEST_CASE("SetupTimeMatrix: out-of-range queries return 0", "[scheduling][setup]") {
     SetupTimeMatrix stm(2, 2);
     stm.set(0, 1, 0, 5);
 
@@ -77,8 +72,7 @@ TEST_CASE("SetupTimeMatrix: out-of-range queries return 0",
     CHECK(stm.setup_time(0, 0, 9) == 0);
 }
 
-TEST_CASE("SetupTimeMatrix: out-of-range set throws", "[scheduling][setup]")
-{
+TEST_CASE("SetupTimeMatrix: out-of-range set throws", "[scheduling][setup]") {
     SetupTimeMatrix stm(2, 2);
     CHECK_THROWS(stm.set(-1, 0, 0, 5));
     CHECK_THROWS(stm.set(0, 5, 0, 5));
@@ -89,8 +83,7 @@ TEST_CASE("SetupTimeMatrix: out-of-range set throws", "[scheduling][setup]")
 //  Integration with ScheduleData
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: setup times via Builder", "[scheduling][setup]")
-{
+TEST_CASE("ScheduleData: setup times via Builder", "[scheduling][setup]") {
     ScheduleData::Builder builder;
 
     builder.add_machine({.name = "M0"});
@@ -113,9 +106,7 @@ TEST_CASE("ScheduleData: setup times via Builder", "[scheduling][setup]")
     CHECK(data.setup_time(0, 1, 1) == 0);
 }
 
-TEST_CASE("ScheduleData: uniform setup times via Builder",
-          "[scheduling][setup]")
-{
+TEST_CASE("ScheduleData: uniform setup times via Builder", "[scheduling][setup]") {
     ScheduleData::Builder builder;
 
     builder.add_machine({.name = "M0"});
@@ -136,8 +127,7 @@ TEST_CASE("ScheduleData: uniform setup times via Builder",
     CHECK(data.setup_time(0, 1, 1) == 7);
 }
 
-TEST_CASE("ScheduleData: no setup times by default", "[scheduling][setup]")
-{
+TEST_CASE("ScheduleData: no setup times by default", "[scheduling][setup]") {
     ScheduleData::Builder builder;
     builder.add_machine({.name = "M0"});
     builder.add_job({.name = "J0"});

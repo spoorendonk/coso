@@ -1,8 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
-#include "scheduling/disjunctive_graph.h"
 #include "scheduling/schedule_operators.h"
 
+#include "scheduling/disjunctive_graph.h"
+
+#include <catch2/catch_test_macros.hpp>
 #include <climits>
 
 using namespace coso;
@@ -33,8 +33,7 @@ struct TestGraph {
     DisjunctiveGraph graph;
 };
 
-TestGraph make_3x3()
-{
+TestGraph make_3x3() {
     DisjunctiveGraph g(3, 3);
 
     // Job 0: M0(3) -> M1(2) -> M2(2)
@@ -71,8 +70,7 @@ TestGraph make_3x3()
 ///   op 1: J0, M1, dur=2
 ///   op 2: J1, M1, dur=4
 ///   op 3: J1, M0, dur=1
-DisjunctiveGraph make_2x2()
-{
+DisjunctiveGraph make_2x2() {
     DisjunctiveGraph g(2, 2);
     g.add_operation(0, 0, 3);  // op 0
     g.add_operation(0, 1, 2);  // op 1
@@ -87,15 +85,13 @@ DisjunctiveGraph make_2x2()
     return g;
 }
 
-} // namespace
+}  // namespace
 
 // ===========================================================================
 //  SwapAdjacentOps tests
 // ===========================================================================
 
-TEST_CASE("SwapAdjacentOps: enumerate on 3x3 instance",
-          "[scheduling][operators]")
-{
+TEST_CASE("SwapAdjacentOps: enumerate on 3x3 instance", "[scheduling][operators]") {
     auto [graph] = make_3x3();
     auto moves = SwapAdjacentOps::enumerate(graph);
 
@@ -104,18 +100,22 @@ TEST_CASE("SwapAdjacentOps: enumerate on 3x3 instance",
 
     int count_m0 = 0, count_m1 = 0, count_m2 = 0;
     for (auto const& m : moves) {
-        if (m.machine == 0) ++count_m0;
-        if (m.machine == 1) ++count_m1;
-        if (m.machine == 2) ++count_m2;
+        if (m.machine == 0) {
+            ++count_m0;
+        }
+        if (m.machine == 1) {
+            ++count_m1;
+        }
+        if (m.machine == 2) {
+            ++count_m2;
+        }
     }
     CHECK(count_m0 == 2);
     CHECK(count_m1 == 2);
     CHECK(count_m2 == 2);
 }
 
-TEST_CASE("SwapAdjacentOps: apply swaps adjacent ops on machine",
-          "[scheduling][operators]")
-{
+TEST_CASE("SwapAdjacentOps: apply swaps adjacent ops on machine", "[scheduling][operators]") {
     auto [graph] = make_3x3();
 
     // M0 sequence is {0, 3, 7}. Swap pos 0 => {3, 0, 7}.
@@ -129,9 +129,7 @@ TEST_CASE("SwapAdjacentOps: apply swaps adjacent ops on machine",
     CHECK(seq[2] == 7);
 }
 
-TEST_CASE("SwapAdjacentOps: evaluate returns correct makespan",
-          "[scheduling][operators]")
-{
+TEST_CASE("SwapAdjacentOps: evaluate returns correct makespan", "[scheduling][operators]") {
     auto [graph] = make_3x3();
 
     int original_ms = graph.critical_path();
@@ -147,9 +145,7 @@ TEST_CASE("SwapAdjacentOps: evaluate returns correct makespan",
     CHECK(new_ms > 0);
 }
 
-TEST_CASE("SwapAdjacentOps: evaluate matches apply on 2x2",
-          "[scheduling][operators]")
-{
+TEST_CASE("SwapAdjacentOps: evaluate matches apply on 2x2", "[scheduling][operators]") {
     auto graph = make_2x2();
     auto moves = SwapAdjacentOps::enumerate(graph);
     int original_ms = graph.critical_path();
@@ -178,8 +174,7 @@ TEST_CASE("SwapAdjacentOps: evaluate matches apply on 2x2",
 //  InsertOp tests
 // ===========================================================================
 
-TEST_CASE("InsertOp: enumerate on 2x2 instance", "[scheduling][operators]")
-{
+TEST_CASE("InsertOp: enumerate on 2x2 instance", "[scheduling][operators]") {
     auto graph = make_2x2();
     auto moves = InsertOp::enumerate(graph);
 
@@ -189,8 +184,7 @@ TEST_CASE("InsertOp: enumerate on 2x2 instance", "[scheduling][operators]")
     CHECK(moves.empty());
 }
 
-TEST_CASE("InsertOp: enumerate on 3x3 instance", "[scheduling][operators]")
-{
+TEST_CASE("InsertOp: enumerate on 3x3 instance", "[scheduling][operators]") {
     auto [graph] = make_3x3();
     auto moves = InsertOp::enumerate(graph);
 
@@ -198,9 +192,7 @@ TEST_CASE("InsertOp: enumerate on 3x3 instance", "[scheduling][operators]")
     CHECK(moves.size() == 6);
 }
 
-TEST_CASE("InsertOp: apply moves operation to new position",
-          "[scheduling][operators]")
-{
+TEST_CASE("InsertOp: apply moves operation to new position", "[scheduling][operators]") {
     auto [graph] = make_3x3();
 
     // M0 sequence: {0, 3, 7}. Insert from_pos=0 to_pos=1.
@@ -215,8 +207,7 @@ TEST_CASE("InsertOp: apply moves operation to new position",
     CHECK(seq[2] == 7);
 }
 
-TEST_CASE("InsertOp: apply moves last to first", "[scheduling][operators]")
-{
+TEST_CASE("InsertOp: apply moves last to first", "[scheduling][operators]") {
     auto [graph] = make_3x3();
 
     // M2 sequence: {2, 4, 8}. Insert from_pos=2 to_pos=0.
@@ -231,11 +222,10 @@ TEST_CASE("InsertOp: apply moves last to first", "[scheduling][operators]")
     CHECK(seq[2] == 4);
 }
 
-TEST_CASE("InsertOp: evaluate matches apply on 3x3",
-          "[scheduling][operators]")
-{
-    SKIP("InsertOp::evaluate can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("InsertOp: evaluate matches apply on 3x3", "[scheduling][operators]") {
+    SKIP(
+        "InsertOp::evaluate can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto [graph] = make_3x3();
     auto moves = InsertOp::enumerate(graph);
     int original_ms = graph.critical_path();
@@ -257,11 +247,10 @@ TEST_CASE("InsertOp: evaluate matches apply on 3x3",
     CHECK(graph.critical_path() == original_ms);
 }
 
-TEST_CASE("InsertOp: cycle-creating moves return INT_MAX",
-          "[scheduling][operators]")
-{
-    SKIP("InsertOp::evaluate can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("InsertOp: cycle-creating moves return INT_MAX", "[scheduling][operators]") {
+    SKIP(
+        "InsertOp::evaluate can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto [graph] = make_3x3();
     auto moves = InsertOp::enumerate(graph);
 
@@ -269,8 +258,9 @@ TEST_CASE("InsertOp: cycle-creating moves return INT_MAX",
     int feasible_count = 0;
     for (auto const& move : moves) {
         int ms = InsertOp::evaluate(graph, move);
-        if (ms < INT_MAX)
+        if (ms < INT_MAX) {
             ++feasible_count;
+        }
     }
     CHECK(feasible_count > 0);
 }
@@ -279,9 +269,7 @@ TEST_CASE("InsertOp: cycle-creating moves return INT_MAX",
 //  BlockReverse tests
 // ===========================================================================
 
-TEST_CASE("BlockReverse: enumerate_all on 3x3 instance",
-          "[scheduling][operators]")
-{
+TEST_CASE("BlockReverse: enumerate_all on 3x3 instance", "[scheduling][operators]") {
     auto [graph] = make_3x3();
     auto moves = BlockReverse::enumerate_all(graph);
 
@@ -290,8 +278,7 @@ TEST_CASE("BlockReverse: enumerate_all on 3x3 instance",
     CHECK(moves.size() == 9);
 }
 
-TEST_CASE("BlockReverse: apply reverses a block", "[scheduling][operators]")
-{
+TEST_CASE("BlockReverse: apply reverses a block", "[scheduling][operators]") {
     auto [graph] = make_3x3();
 
     // M0 sequence: {0, 3, 7}. Reverse [0,2] => {7, 3, 0}.
@@ -305,8 +292,7 @@ TEST_CASE("BlockReverse: apply reverses a block", "[scheduling][operators]")
     CHECK(seq[2] == 0);
 }
 
-TEST_CASE("BlockReverse: partial block reversal", "[scheduling][operators]")
-{
+TEST_CASE("BlockReverse: partial block reversal", "[scheduling][operators]") {
     auto [graph] = make_3x3();
 
     // M1 sequence: {1, 5, 6}. Reverse [0,1] => {5, 1, 6}.
@@ -320,11 +306,10 @@ TEST_CASE("BlockReverse: partial block reversal", "[scheduling][operators]")
     CHECK(seq[2] == 6);
 }
 
-TEST_CASE("BlockReverse: evaluate matches apply on 3x3",
-          "[scheduling][operators]")
-{
-    SKIP("BlockReverse::evaluate can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("BlockReverse: evaluate matches apply on 3x3", "[scheduling][operators]") {
+    SKIP(
+        "BlockReverse::evaluate can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto [graph] = make_3x3();
     auto moves = BlockReverse::enumerate_all(graph);
     int original_ms = graph.critical_path();
@@ -346,17 +331,16 @@ TEST_CASE("BlockReverse: evaluate matches apply on 3x3",
     CHECK(graph.critical_path() == original_ms);
 }
 
-TEST_CASE("BlockReverse: enumerate_critical finds critical blocks",
-          "[scheduling][operators]")
-{
+TEST_CASE("BlockReverse: enumerate_critical finds critical blocks", "[scheduling][operators]") {
     auto [graph] = make_3x3();
 
     auto moves = BlockReverse::enumerate_critical(graph);
 
     auto crit_ops = graph.critical_path_ops();
     std::vector<bool> on_critical(graph.num_operations(), false);
-    for (int op : crit_ops)
+    for (int op : crit_ops) {
         on_critical[op] = true;
+    }
 
     for (auto const& move : moves) {
         auto const& seq = graph.machine_sequence(move.machine);
@@ -371,11 +355,10 @@ TEST_CASE("BlockReverse: enumerate_critical finds critical blocks",
     }
 }
 
-TEST_CASE("BlockReverse: critical block reversal can improve makespan",
-          "[scheduling][operators]")
-{
-    SKIP("BlockReverse::evaluate can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("BlockReverse: critical block reversal can improve makespan", "[scheduling][operators]") {
+    SKIP(
+        "BlockReverse::evaluate can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto [graph] = make_3x3();
     int original_ms = graph.critical_path();
     CHECK(original_ms > 0);
@@ -394,11 +377,10 @@ TEST_CASE("BlockReverse: critical block reversal can improve makespan",
 //  Combined: best-improvement local search step
 // ===========================================================================
 
-TEST_CASE("Best swap improves or maintains makespan on 3x3",
-          "[scheduling][operators]")
-{
-    SKIP("Exercises InsertOp/BlockReverse, which can create a cyclic disjunctive graph, "
-         "aborting in DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("Best swap improves or maintains makespan on 3x3", "[scheduling][operators]") {
+    SKIP(
+        "Exercises InsertOp/BlockReverse, which can create a cyclic disjunctive graph, "
+        "aborting in DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto [graph] = make_3x3();
     int original_ms = graph.critical_path();
 
@@ -421,11 +403,10 @@ TEST_CASE("Best swap improves or maintains makespan on 3x3",
     }
 }
 
-TEST_CASE("Single InsertOp step on 3x3 evaluates correctly",
-          "[scheduling][operators]")
-{
-    SKIP("InsertOp::evaluate can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("Single InsertOp step on 3x3 evaluates correctly", "[scheduling][operators]") {
+    SKIP(
+        "InsertOp::evaluate can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto [graph] = make_3x3();
     int original_ms = graph.critical_path();
     CHECK(original_ms > 0);

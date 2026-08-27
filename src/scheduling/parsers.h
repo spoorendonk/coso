@@ -50,4 +50,4 @@ namespace coso {
 /// Read an FJSP instance from a file.
 [[nodiscard]] ScheduleData read_fjsp(const std::string& path);
 
-} // namespace coso
+}  // namespace coso

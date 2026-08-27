@@ -14,26 +14,37 @@ using namespace coso;
 
 namespace {
 
-AssignmentData make_instance()
-{
+AssignmentData make_instance() {
     AssignmentData data;
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day",   .start_hour = 8,  .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6,  .duration_hours = 0},
+        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
+        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
     };
 
     // 4 employees.
     data.employees = {
-        {.name = "Alice", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Bob",   .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Carol", .skills = {"nurse", "senior"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Dave",  .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
+        {.name = "Alice",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Bob",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Carol",
+         .skills = {"nurse", "senior"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Dave",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
     };
 
     data.horizon = 7;
@@ -46,7 +57,7 @@ AssignmentData make_instance()
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
 
-    data.max_consecutive_shifts  = 5;
+    data.max_consecutive_shifts = 5;
     data.min_rest_between_shifts = 11;
 
     return data;
@@ -57,10 +68,8 @@ AssignmentData make_instance()
 /// Bob:   Night shifts on days 0-4.
 /// Carol: unassigned.
 /// Dave:  unassigned.
-AssignmentSolution make_populated_solution(
-    AssignmentData const& data,
-    AssignmentCostEvaluator const& eval)
-{
+AssignmentSolution make_populated_solution(AssignmentData const& data,
+                                           AssignmentCostEvaluator const& eval) {
     AssignmentSolution sol(data, eval);
     for (int d = 0; d < 5; ++d) {
         sol.assign(0, d, 0);  // Alice -> Day
@@ -69,19 +78,17 @@ AssignmentSolution make_populated_solution(
     return sol;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ===========================================================================
 //  PillarMove tests
 // ===========================================================================
 
-TEST_CASE("PillarMove: finds improving move", "[assignment][pillar]")
-{
+TEST_CASE("PillarMove: finds improving move", "[assignment][pillar]") {
     auto data = make_instance();
     // Carol strongly prefers Day on days 0-2.
     for (int d = 0; d < 3; ++d) {
-        data.preferences.push_back(
-            {.employee = 2, .day = d, .shift_type = 0, .weight = 50});
+        data.preferences.push_back({.employee = 2, .day = d, .shift_type = 0, .weight = 50});
     }
 
     AssignmentCostEvaluator eval(data);
@@ -102,8 +109,7 @@ TEST_CASE("PillarMove: finds improving move", "[assignment][pillar]")
     }
 }
 
-TEST_CASE("PillarMove: target must be unassigned", "[assignment][pillar]")
-{
+TEST_CASE("PillarMove: target must be unassigned", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -117,8 +123,7 @@ TEST_CASE("PillarMove: target must be unassigned", "[assignment][pillar]")
     }
 }
 
-TEST_CASE("PillarMove: delta accuracy", "[assignment][pillar]")
-{
+TEST_CASE("PillarMove: delta accuracy", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -146,8 +151,7 @@ TEST_CASE("PillarMove: delta accuracy", "[assignment][pillar]")
     }
 }
 
-TEST_CASE("PillarMove: source must be assigned", "[assignment][pillar]")
-{
+TEST_CASE("PillarMove: source must be assigned", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -164,15 +168,12 @@ TEST_CASE("PillarMove: source must be assigned", "[assignment][pillar]")
 //  PillarSwap tests
 // ===========================================================================
 
-TEST_CASE("PillarSwap: finds improving swap", "[assignment][pillar]")
-{
+TEST_CASE("PillarSwap: finds improving swap", "[assignment][pillar]") {
     auto data = make_instance();
     // Alice prefers Night on days 0-2, Bob prefers Day on days 0-2.
     for (int d = 0; d < 3; ++d) {
-        data.preferences.push_back(
-            {.employee = 0, .day = d, .shift_type = 1, .weight = 10});
-        data.preferences.push_back(
-            {.employee = 1, .day = d, .shift_type = 0, .weight = 10});
+        data.preferences.push_back({.employee = 0, .day = d, .shift_type = 1, .weight = 10});
+        data.preferences.push_back({.employee = 1, .day = d, .shift_type = 0, .weight = 10});
     }
 
     AssignmentCostEvaluator eval(data);
@@ -189,8 +190,7 @@ TEST_CASE("PillarSwap: finds improving swap", "[assignment][pillar]")
     REQUIRE(sol.cost() == cost_before + move.delta);
 }
 
-TEST_CASE("PillarSwap: both employees must be assigned", "[assignment][pillar]")
-{
+TEST_CASE("PillarSwap: both employees must be assigned", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -204,8 +204,7 @@ TEST_CASE("PillarSwap: both employees must be assigned", "[assignment][pillar]")
     }
 }
 
-TEST_CASE("PillarSwap: skips identical blocks", "[assignment][pillar]")
-{
+TEST_CASE("PillarSwap: skips identical blocks", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     AssignmentSolution sol(data, eval);
@@ -232,8 +231,7 @@ TEST_CASE("PillarSwap: skips identical blocks", "[assignment][pillar]")
     }
 }
 
-TEST_CASE("PillarSwap: delta accuracy", "[assignment][pillar]")
-{
+TEST_CASE("PillarSwap: delta accuracy", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -242,14 +240,16 @@ TEST_CASE("PillarSwap: delta accuracy", "[assignment][pillar]")
     for (auto const& m : moves) {
         int cost_before = sol.cost();
 
-        for (int d = m.start; d < m.start + m.len; ++d)
+        for (int d = m.start; d < m.start + m.len; ++d) {
             sol.swap(m.emp1, m.emp2, d);
+        }
         int cost_after = sol.cost();
         REQUIRE(m.delta == cost_after - cost_before);
 
         // Undo.
-        for (int d = m.start; d < m.start + m.len; ++d)
+        for (int d = m.start; d < m.start + m.len; ++d) {
             sol.swap(m.emp1, m.emp2, d);
+        }
     }
 }
 
@@ -257,17 +257,13 @@ TEST_CASE("PillarSwap: delta accuracy", "[assignment][pillar]")
 //  PillarRotate tests
 // ===========================================================================
 
-TEST_CASE("PillarRotate: finds improving rotation with 3 employees",
-          "[assignment][pillar]")
-{
+TEST_CASE("PillarRotate: finds improving rotation with 3 employees", "[assignment][pillar]") {
     auto data = make_instance();
     // Set up preferences that favor a cyclic rotation.
     // Alice (0) wants Night, Bob (1) wants Day, Carol (2) wants what Bob had.
     for (int d = 0; d < 3; ++d) {
-        data.preferences.push_back(
-            {.employee = 0, .day = d, .shift_type = 1, .weight = 20});
-        data.preferences.push_back(
-            {.employee = 2, .day = d, .shift_type = 0, .weight = 20});
+        data.preferences.push_back({.employee = 0, .day = d, .shift_type = 1, .weight = 20});
+        data.preferences.push_back({.employee = 2, .day = d, .shift_type = 0, .weight = 20});
     }
 
     AssignmentCostEvaluator eval(data);
@@ -294,8 +290,7 @@ TEST_CASE("PillarRotate: finds improving rotation with 3 employees",
     }
 }
 
-TEST_CASE("PillarRotate: skips trivial rotations", "[assignment][pillar]")
-{
+TEST_CASE("PillarRotate: skips trivial rotations", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     AssignmentSolution sol(data, eval);
@@ -324,8 +319,7 @@ TEST_CASE("PillarRotate: skips trivial rotations", "[assignment][pillar]")
     }
 }
 
-TEST_CASE("PillarRotate: delta accuracy", "[assignment][pillar]")
-{
+TEST_CASE("PillarRotate: delta accuracy", "[assignment][pillar]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     AssignmentSolution sol(data, eval);
@@ -342,14 +336,12 @@ TEST_CASE("PillarRotate: delta accuracy", "[assignment][pillar]")
         int cost_before = sol.cost();
 
         // Apply rotation: e0<-e1, e1<-e2, e2<-e0.
-        PillarRotate::apply_rotation(sol, m.emp0, m.emp1, m.emp2,
-                                     m.start, m.len);
+        PillarRotate::apply_rotation(sol, m.emp0, m.emp1, m.emp2, m.start, m.len);
         int cost_after = sol.cost();
         REQUIRE(m.delta == cost_after - cost_before);
 
         // Undo: reverse rotation.
-        PillarRotate::apply_rotation(sol, m.emp0, m.emp2, m.emp1,
-                                     m.start, m.len);
+        PillarRotate::apply_rotation(sol, m.emp0, m.emp2, m.emp1, m.start, m.len);
     }
 }
 
@@ -357,15 +349,12 @@ TEST_CASE("PillarRotate: delta accuracy", "[assignment][pillar]")
 //  VND integration test
 // ===========================================================================
 
-TEST_CASE("pillar_vnd: improves solution", "[assignment][pillar]")
-{
+TEST_CASE("pillar_vnd: improves solution", "[assignment][pillar]") {
     auto data = make_instance();
     // Preferences that favor reassignment.
     for (int d = 0; d < 3; ++d) {
-        data.preferences.push_back(
-            {.employee = 2, .day = d, .shift_type = 0, .weight = 50});
-        data.preferences.push_back(
-            {.employee = 0, .day = d, .shift_type = 1, .weight = 50});
+        data.preferences.push_back({.employee = 2, .day = d, .shift_type = 0, .weight = 50});
+        data.preferences.push_back({.employee = 0, .day = d, .shift_type = 1, .weight = 50});
     }
 
     AssignmentCostEvaluator eval(data);

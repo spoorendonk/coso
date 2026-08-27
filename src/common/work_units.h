@@ -21,10 +21,10 @@ public:
         return static_cast<double>(ticks_) * kTickToUnit;
     }
 
-    [[nodiscard]] static uint64_t ticks_from_units(double units) noexcept
-    {
-        if (units <= 0.0)
+    [[nodiscard]] static uint64_t ticks_from_units(double units) noexcept {
+        if (units <= 0.0) {
             return 0;
+        }
         return static_cast<uint64_t>(units / kTickToUnit);
     }
 
@@ -32,4 +32,4 @@ private:
     uint64_t ticks_ = 0;
 };
 
-} // namespace coso
+}  // namespace coso

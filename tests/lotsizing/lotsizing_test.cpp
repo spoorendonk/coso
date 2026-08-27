@@ -1,10 +1,10 @@
+#include "lotsizing/construction.h"
+#include "lotsizing/lotsizing_data.h"
+#include "lotsizing/lotsizing_operators.h"
+#include "lotsizing/lotsizing_solution.h"
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-
-#include "lotsizing/lotsizing_data.h"
-#include "lotsizing/lotsizing_solution.h"
-#include "lotsizing/lotsizing_operators.h"
-#include "lotsizing/construction.h"
 
 using Catch::Matchers::WithinAbs;
 
@@ -19,8 +19,7 @@ namespace {
 ///   Product 0: setup_cost=100, setup_time=2, unit_cost=1, holding_cost=2
 ///   Demand: [10, 20, 15, 25]  (total = 70)
 ///   Capacity per period: 50
-coso::LotsizingData make_simple_instance()
-{
+coso::LotsizingData make_simple_instance() {
     coso::LotsizingData::Builder b;
     b.set_num_periods(4);
     int p = b.add_product(100.0, 2.0, 1.0, 2.0);
@@ -28,14 +27,14 @@ coso::LotsizingData make_simple_instance()
     b.set_demand(p, 1, 20.0);
     b.set_demand(p, 2, 15.0);
     b.set_demand(p, 3, 25.0);
-    for (int t = 0; t < 4; ++t)
+    for (int t = 0; t < 4; ++t) {
         b.set_capacity(t, 50.0);
+    }
     return b.build();
 }
 
 /// Build a 2-product, 3-period instance.
-coso::LotsizingData make_multi_product_instance()
-{
+coso::LotsizingData make_multi_product_instance() {
     coso::LotsizingData::Builder b;
     b.set_num_periods(3);
     int p0 = b.add_product(80.0, 1.0, 0.5, 1.5);
@@ -46,14 +45,14 @@ coso::LotsizingData make_multi_product_instance()
     b.set_demand(p1, 0, 5.0);
     b.set_demand(p1, 1, 10.0);
     b.set_demand(p1, 2, 8.0);
-    for (int t = 0; t < 3; ++t)
+    for (int t = 0; t < 3; ++t) {
         b.set_capacity(t, 60.0);
+    }
     return b.build();
 }
 
 /// Build a 2-level MLCLSP: product 0 (end) requires 2 units of product 1.
-coso::LotsizingData make_mlclsp_instance()
-{
+coso::LotsizingData make_mlclsp_instance() {
     coso::LotsizingData::Builder b;
     b.set_num_periods(3);
     int p0 = b.add_product(100.0, 2.0, 1.0, 3.0);  // end product
@@ -63,19 +62,19 @@ coso::LotsizingData make_mlclsp_instance()
     b.set_demand(p0, 2, 8.0);
     // Component has no external demand; only dependent demand via BOM.
     b.add_bom(p0, p1, 2.0);
-    for (int t = 0; t < 3; ++t)
+    for (int t = 0; t < 3; ++t) {
         b.set_capacity(t, 100.0);
+    }
     return b.build();
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ===========================================================================
 //  LotsizingData tests
 // ===========================================================================
 
-TEST_CASE("LotsizingData: basic construction", "[lotsizing]")
-{
+TEST_CASE("LotsizingData: basic construction", "[lotsizing]") {
     auto data = make_simple_instance();
 
     CHECK(data.num_products() == 1);
@@ -92,8 +91,7 @@ TEST_CASE("LotsizingData: basic construction", "[lotsizing]")
     CHECK_THAT(data.holding_cost(0), WithinAbs(2.0, 1e-9));
 }
 
-TEST_CASE("LotsizingData: multi-product", "[lotsizing]")
-{
+TEST_CASE("LotsizingData: multi-product", "[lotsizing]") {
     auto data = make_multi_product_instance();
 
     CHECK(data.num_products() == 2);
@@ -102,8 +100,7 @@ TEST_CASE("LotsizingData: multi-product", "[lotsizing]")
     CHECK_THAT(data.setup_cost(1), WithinAbs(120.0, 1e-9));
 }
 
-TEST_CASE("LotsizingData: MLCLSP BOM", "[lotsizing]")
-{
+TEST_CASE("LotsizingData: MLCLSP BOM", "[lotsizing]") {
     auto data = make_mlclsp_instance();
 
     CHECK(data.is_multi_level());
@@ -125,8 +122,7 @@ TEST_CASE("LotsizingData: MLCLSP BOM", "[lotsizing]")
 //  LotsizingSolution tests
 // ===========================================================================
 
-TEST_CASE("LotsizingSolution: empty solution has zero production", "[lotsizing]")
-{
+TEST_CASE("LotsizingSolution: empty solution has zero production", "[lotsizing]") {
     auto data = make_simple_instance();
     coso::LotsizingSolution sol(data);
 
@@ -135,8 +131,7 @@ TEST_CASE("LotsizingSolution: empty solution has zero production", "[lotsizing]"
     CHECK_FALSE(sol.setup(0, 0));
 }
 
-TEST_CASE("LotsizingSolution: empty solution has demand violation", "[lotsizing]")
-{
+TEST_CASE("LotsizingSolution: empty solution has demand violation", "[lotsizing]") {
     auto data = make_simple_instance();
     coso::LotsizingSolution sol(data);
 
@@ -145,8 +140,7 @@ TEST_CASE("LotsizingSolution: empty solution has demand violation", "[lotsizing]
     CHECK(sol.total_backlog() > 0.0);
 }
 
-TEST_CASE("LotsizingSolution: set production updates inventory", "[lotsizing]")
-{
+TEST_CASE("LotsizingSolution: set production updates inventory", "[lotsizing]") {
     auto data = make_simple_instance();
     coso::LotsizingSolution sol(data);
 
@@ -166,8 +160,7 @@ TEST_CASE("LotsizingSolution: set production updates inventory", "[lotsizing]")
     CHECK_FALSE(sol.has_demand_violation());
 }
 
-TEST_CASE("LotsizingSolution: cost computation", "[lotsizing]")
-{
+TEST_CASE("LotsizingSolution: cost computation", "[lotsizing]") {
     auto data = make_simple_instance();
     coso::LotsizingSolution sol(data);
 
@@ -187,8 +180,7 @@ TEST_CASE("LotsizingSolution: cost computation", "[lotsizing]")
     CHECK(sol.feasible());
 }
 
-TEST_CASE("LotsizingSolution: capacity violation detection", "[lotsizing]")
-{
+TEST_CASE("LotsizingSolution: capacity violation detection", "[lotsizing]") {
     auto data = make_simple_instance();
     coso::LotsizingSolution sol(data);
 
@@ -199,8 +191,7 @@ TEST_CASE("LotsizingSolution: capacity violation detection", "[lotsizing]")
     CHECK_FALSE(sol.feasible());
 }
 
-TEST_CASE("LotsizingSolution: feasible when spread across periods", "[lotsizing]")
-{
+TEST_CASE("LotsizingSolution: feasible when spread across periods", "[lotsizing]") {
     auto data = make_simple_instance();
     coso::LotsizingSolution sol(data);
 
@@ -219,8 +210,7 @@ TEST_CASE("LotsizingSolution: feasible when spread across periods", "[lotsizing]
 //  Construction heuristic tests
 // ===========================================================================
 
-TEST_CASE("lot_for_lot produces demand each period", "[lotsizing]")
-{
+TEST_CASE("lot_for_lot produces demand each period", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::lot_for_lot(data);
 
@@ -230,44 +220,44 @@ TEST_CASE("lot_for_lot produces demand each period", "[lotsizing]")
     CHECK_THAT(sol.production(0, 2), WithinAbs(15.0, 1e-9));
     CHECK_THAT(sol.production(0, 3), WithinAbs(25.0, 1e-9));
     // All inventory should be 0.
-    for (int t = 0; t < 4; ++t)
+    for (int t = 0; t < 4; ++t) {
         CHECK_THAT(sol.inventory(0, t), WithinAbs(0.0, 1e-9));
+    }
 }
 
-TEST_CASE("silver_meal produces feasible solution", "[lotsizing]")
-{
+TEST_CASE("silver_meal produces feasible solution", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::silver_meal(data);
 
     CHECK_FALSE(sol.has_demand_violation());
     // Silver-Meal should consolidate some lots (fewer setups).
     int setups = 0;
-    for (int t = 0; t < data.num_periods(); ++t)
-        if (sol.setup(0, t)) ++setups;
+    for (int t = 0; t < data.num_periods(); ++t) {
+        if (sol.setup(0, t)) {
+            ++setups;
+        }
+    }
     // Must have at least 1 setup and at most 4.
     CHECK(setups >= 1);
     CHECK(setups <= 4);
 }
 
-TEST_CASE("silver_meal cost <= lot_for_lot cost", "[lotsizing]")
-{
+TEST_CASE("silver_meal cost <= lot_for_lot cost", "[lotsizing]") {
     auto data = make_simple_instance();
     auto lfl = coso::lot_for_lot(data);
-    auto sm  = coso::silver_meal(data);
+    auto sm = coso::silver_meal(data);
 
     CHECK(sm.cost() <= lfl.cost() + 1e-9);
 }
 
-TEST_CASE("part_period_balancing produces feasible solution", "[lotsizing]")
-{
+TEST_CASE("part_period_balancing produces feasible solution", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::part_period_balancing(data);
 
     CHECK_FALSE(sol.has_demand_violation());
 }
 
-TEST_CASE("part_period_balancing cost <= lot_for_lot cost", "[lotsizing]")
-{
+TEST_CASE("part_period_balancing cost <= lot_for_lot cost", "[lotsizing]") {
     auto data = make_simple_instance();
     auto lfl = coso::lot_for_lot(data);
     auto ppb = coso::part_period_balancing(data);
@@ -275,8 +265,7 @@ TEST_CASE("part_period_balancing cost <= lot_for_lot cost", "[lotsizing]")
     CHECK(ppb.cost() <= lfl.cost() + 1e-9);
 }
 
-TEST_CASE("construction heuristics work for multi-product", "[lotsizing]")
-{
+TEST_CASE("construction heuristics work for multi-product", "[lotsizing]") {
     auto data = make_multi_product_instance();
 
     auto lfl = coso::lot_for_lot(data);
@@ -293,8 +282,7 @@ TEST_CASE("construction heuristics work for multi-product", "[lotsizing]")
 //  Operator tests
 // ===========================================================================
 
-TEST_CASE("ShiftProduction: shift production to earlier period", "[lotsizing]")
-{
+TEST_CASE("ShiftProduction: shift production to earlier period", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::lot_for_lot(data);
 
@@ -310,8 +298,7 @@ TEST_CASE("ShiftProduction: shift production to earlier period", "[lotsizing]")
     CHECK_THAT(shift.delta, WithinAbs(-60.0, 1e-9));
 }
 
-TEST_CASE("ShiftProduction: apply improves cost", "[lotsizing]")
-{
+TEST_CASE("ShiftProduction: apply improves cost", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::lot_for_lot(data);
     double old_cost = sol.cost();
@@ -324,8 +311,7 @@ TEST_CASE("ShiftProduction: apply improves cost", "[lotsizing]")
     CHECK_FALSE(sol.has_demand_violation());
 }
 
-TEST_CASE("MergeSetups: merge adjacent setups", "[lotsizing]")
-{
+TEST_CASE("MergeSetups: merge adjacent setups", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::lot_for_lot(data);
 
@@ -337,8 +323,7 @@ TEST_CASE("MergeSetups: merge adjacent setups", "[lotsizing]")
     CHECK(merge.delta < 0.0);
 }
 
-TEST_CASE("MergeSetups: apply eliminates a setup", "[lotsizing]")
-{
+TEST_CASE("MergeSetups: apply eliminates a setup", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::lot_for_lot(data);
 
@@ -353,8 +338,7 @@ TEST_CASE("MergeSetups: apply eliminates a setup", "[lotsizing]")
     CHECK_FALSE(sol.has_demand_violation());
 }
 
-TEST_CASE("SplitLot: split overloaded period", "[lotsizing]")
-{
+TEST_CASE("SplitLot: split overloaded period", "[lotsizing]") {
     // Create a tight instance where one period is overloaded.
     coso::LotsizingData::Builder b;
     b.set_num_periods(2);
@@ -384,8 +368,7 @@ TEST_CASE("SplitLot: split overloaded period", "[lotsizing]")
     CHECK_THAT(sol.production(0, 0), WithinAbs(20.0, 1e-9));
 }
 
-TEST_CASE("enumerate_shifts returns improving moves", "[lotsizing]")
-{
+TEST_CASE("enumerate_shifts returns improving moves", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::lot_for_lot(data);
 
@@ -394,13 +377,15 @@ TEST_CASE("enumerate_shifts returns improving moves", "[lotsizing]")
 
     // At least one should be improving (negative delta).
     bool has_improving = false;
-    for (auto const& s : shifts)
-        if (s.delta < -1e-9) has_improving = true;
+    for (auto const& s : shifts) {
+        if (s.delta < -1e-9) {
+            has_improving = true;
+        }
+    }
     CHECK(has_improving);
 }
 
-TEST_CASE("enumerate_merges returns valid moves", "[lotsizing]")
-{
+TEST_CASE("enumerate_merges returns valid moves", "[lotsizing]") {
     auto data = make_simple_instance();
     auto sol = coso::lot_for_lot(data);
 

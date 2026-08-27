@@ -1,5 +1,3 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "scheduling/construction.h"
 #include "scheduling/disjunctive_graph.h"
 #include "scheduling/parsers.h"
@@ -7,6 +5,7 @@
 #include "scheduling/schedule_operators.h"
 
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <climits>
 #include <cstdlib>
 #include <filesystem>
@@ -22,28 +21,26 @@ using namespace coso;
 //  Helper: locate the tests/data/ directory.
 // ---------------------------------------------------------------------------
 
-static std::string data_dir()
-{
+static std::string data_dir() {
     if (auto const* env = std::getenv("COSO_DATA_DIR"); env && *env) {
         return env;
     }
 
     for (auto p = fs::current_path(); p != p.root_path(); p = p.parent_path()) {
         auto candidate = p / "tests" / "data";
-        if (fs::is_directory(candidate))
+        if (fs::is_directory(candidate)) {
             return candidate.string();
+        }
     }
 
     return "tests/data";
 }
 
-static std::string instance_path(const std::string& filename)
-{
+static std::string instance_path(const std::string& filename) {
     return data_dir() + "/" + filename;
 }
 
-static bool instance_exists(const std::string& filename)
-{
+static bool instance_exists(const std::string& filename) {
     return fs::is_regular_file(instance_path(filename));
 }
 
@@ -51,15 +48,14 @@ static bool instance_exists(const std::string& filename)
 //  Helper: verify schedule feasibility (same as in construction_test.cpp).
 // ---------------------------------------------------------------------------
 
-static void check_feasible(ScheduleData const& data, Result const& result)
-{
+static void check_feasible(ScheduleData const& data, Result const& result) {
     REQUIRE(result.feasible());
     REQUIRE(static_cast<int>(result.schedule().size()) == data.num_operations());
 
     // Precedence constraints: before must finish <= after starts.
     for (auto const& arc : data.precedences()) {
         auto const& before = result.schedule()[arc.before];
-        auto const& after  = result.schedule()[arc.after];
+        auto const& after = result.schedule()[arc.after];
         int dur_before = data.processing_time(arc.before, before.machine);
         REQUIRE(dur_before < INT_MAX);
         CHECK(before.start_time + dur_before <= after.start_time);
@@ -67,21 +63,22 @@ static void check_feasible(ScheduleData const& data, Result const& result)
 
     // Machine constraints: no two operations overlap on the same machine.
     for (int m = 0; m < data.num_machines(); ++m) {
-        struct Interval { int start; int end; int op; };
+        struct Interval {
+            int start;
+            int end;
+            int op;
+        };
         std::vector<Interval> intervals;
         for (int o = 0; o < data.num_operations(); ++o) {
             if (result.schedule()[o].machine == m) {
                 int dur = data.processing_time(o, m);
                 REQUIRE(dur < INT_MAX);
-                intervals.push_back({result.schedule()[o].start_time,
-                                     result.schedule()[o].start_time + dur,
-                                     o});
+                intervals.push_back(
+                    {result.schedule()[o].start_time, result.schedule()[o].start_time + dur, o});
             }
         }
         std::sort(intervals.begin(), intervals.end(),
-                  [](auto const& a, auto const& b) {
-                      return a.start < b.start;
-                  });
+                  [](auto const& a, auto const& b) { return a.start < b.start; });
         for (int i = 0; i + 1 < static_cast<int>(intervals.size()); ++i) {
             CHECK(intervals[i].end <= intervals[i + 1].start);
         }
@@ -94,10 +91,12 @@ static void check_feasible(ScheduleData const& data, Result const& result)
             std::vector<int> usage(ms + 1, 0);
             for (int o = 0; o < data.num_operations(); ++o) {
                 int u = data.resource_usage(o, r);
-                if (u == 0) continue;
-                int m   = result.schedule()[o].machine;
+                if (u == 0) {
+                    continue;
+                }
+                int m = result.schedule()[o].machine;
                 int dur = data.processing_time(o, m);
-                int st  = result.schedule()[o].start_time;
+                int st = result.schedule()[o].start_time;
                 for (int t = st; t < st + dur; ++t) {
                     usage[t] += u;
                     CHECK(usage[t] <= data.resource_capacity(r));
@@ -112,14 +111,12 @@ static void check_feasible(ScheduleData const& data, Result const& result)
 //  a simple best-improvement local search using SwapAdjacentOps.
 // ---------------------------------------------------------------------------
 
-static DisjunctiveGraph build_graph(ScheduleData const& data,
-                                    Result const& result)
-{
+static DisjunctiveGraph build_graph(ScheduleData const& data, Result const& result) {
     DisjunctiveGraph graph(data.num_jobs(), data.num_machines());
 
     // Add operations.
     for (int o = 0; o < data.num_operations(); ++o) {
-        int m   = result.schedule()[o].machine;
+        int m = result.schedule()[o].machine;
         int dur = data.processing_time(o, m);
         graph.add_operation(data.operation(o).job, m, dur);
     }
@@ -127,7 +124,10 @@ static DisjunctiveGraph build_graph(ScheduleData const& data,
     // Build machine sequences from the construction result, ordered by
     // start time.
     for (int m = 0; m < data.num_machines(); ++m) {
-        struct OpTime { int op; int start; };
+        struct OpTime {
+            int op;
+            int start;
+        };
         std::vector<OpTime> ops;
         for (int o = 0; o < data.num_operations(); ++o) {
             if (result.schedule()[o].machine == m) {
@@ -135,13 +135,12 @@ static DisjunctiveGraph build_graph(ScheduleData const& data,
             }
         }
         std::sort(ops.begin(), ops.end(),
-                  [](auto const& a, auto const& b) {
-                      return a.start < b.start;
-                  });
+                  [](auto const& a, auto const& b) { return a.start < b.start; });
         std::vector<int> seq;
         seq.reserve(ops.size());
-        for (auto const& ot : ops)
+        for (auto const& ot : ops) {
             seq.push_back(ot.op);
+        }
         graph.set_sequence(m, seq);
     }
 
@@ -150,8 +149,7 @@ static DisjunctiveGraph build_graph(ScheduleData const& data,
 
 /// Run a simple steepest-descent local search using SwapAdjacentOps.
 /// Returns the best makespan found.
-static int local_search_swap(DisjunctiveGraph& graph, int max_iters = 200)
-{
+static int local_search_swap(DisjunctiveGraph& graph, int max_iters = 200) {
     int best = graph.critical_path();
 
     for (int iter = 0; iter < max_iters; ++iter) {
@@ -169,8 +167,9 @@ static int local_search_swap(DisjunctiveGraph& graph, int max_iters = 200)
             }
         }
 
-        if (!found)
+        if (!found) {
             break;  // local optimum
+        }
 
         SwapAdjacentOps::apply(graph, best_move);
         best = best_move_ms;
@@ -196,15 +195,11 @@ static int local_search_swap(DisjunctiveGraph& graph, int max_iters = 200)
 //    ta10: 15x15, BKS = 1241
 // ---------------------------------------------------------------------------
 
-static void run_jsp_benchmark(
-    const std::string& file,
-    int expected_jobs,
-    int expected_machines,
-    int bks,
-    double max_gap = 0.50)
-{
+static void run_jsp_benchmark(const std::string& file, int expected_jobs, int expected_machines,
+                              int bks, double max_gap = 0.50) {
     if (!instance_exists(file)) {
-        SKIP("Benchmark instance " + file + " not found. "
+        SKIP("Benchmark instance " + file +
+             " not found. "
              "Run tests/data/download_benchmarks.sh first.");
     }
 
@@ -257,53 +252,43 @@ static void run_jsp_benchmark(
     CHECK(best_ms <= static_cast<int>(bks * (1.0 + max_gap)));
 }
 
-TEST_CASE("ta01 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta01 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta01.txt", 15, 15, 1231);
 }
 
-TEST_CASE("ta02 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta02 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta02.txt", 15, 15, 1244);
 }
 
-TEST_CASE("ta03 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta03 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta03.txt", 15, 15, 1218);
 }
 
-TEST_CASE("ta04 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta04 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta04.txt", 15, 15, 1175);
 }
 
-TEST_CASE("ta05 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta05 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta05.txt", 15, 15, 1224);
 }
 
-TEST_CASE("ta06 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta06 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta06.txt", 15, 15, 1238);
 }
 
-TEST_CASE("ta07 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta07 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta07.txt", 15, 15, 1227);
 }
 
-TEST_CASE("ta08 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta08 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta08.txt", 15, 15, 1217);
 }
 
-TEST_CASE("ta09 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta09 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta09.txt", 15, 15, 1274);
 }
 
-TEST_CASE("ta10 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
-{
+TEST_CASE("ta10 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta10.txt", 15, 15, 1241);
 }
 
@@ -320,15 +305,11 @@ TEST_CASE("ta10 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]")
 //    j301_5: BKS = 39
 // ---------------------------------------------------------------------------
 
-static void run_rcpsp_benchmark(
-    const std::string& file,
-    int expected_activities,
-    int expected_resources,
-    int bks,
-    double max_gap = 0.50)
-{
+static void run_rcpsp_benchmark(const std::string& file, int expected_activities,
+                                int expected_resources, int bks, double max_gap = 0.50) {
     if (!instance_exists(file)) {
-        SKIP("Benchmark instance " + file + " not found. "
+        SKIP("Benchmark instance " + file +
+             " not found. "
              "Run tests/data/download_benchmarks.sh first.");
     }
 
@@ -358,27 +339,22 @@ static void run_rcpsp_benchmark(
     CHECK(result.makespan() <= static_cast<int>(bks * (1.0 + max_gap)));
 }
 
-TEST_CASE("j301_1 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]")
-{
+TEST_CASE("j301_1 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
     run_rcpsp_benchmark("psplib/j301_1.sm", 32, 4, 43);
 }
 
-TEST_CASE("j301_2 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]")
-{
+TEST_CASE("j301_2 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
     run_rcpsp_benchmark("psplib/j301_2.sm", 32, 4, 47);
 }
 
-TEST_CASE("j301_3 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]")
-{
+TEST_CASE("j301_3 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
     run_rcpsp_benchmark("psplib/j301_3.sm", 32, 4, 47);
 }
 
-TEST_CASE("j301_4 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]")
-{
+TEST_CASE("j301_4 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
     run_rcpsp_benchmark("psplib/j301_4.sm", 32, 4, 62);
 }
 
-TEST_CASE("j301_5 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]")
-{
+TEST_CASE("j301_5 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
     run_rcpsp_benchmark("psplib/j301_5.sm", 32, 4, 39);
 }

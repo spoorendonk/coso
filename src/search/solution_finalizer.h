@@ -40,4 +40,4 @@ private:
     void repair_infeasible_(Solution& sol);
 };
 
-} // namespace coso
+}  // namespace coso

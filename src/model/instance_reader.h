@@ -13,24 +13,24 @@ namespace coso {
 
 /// Edge weight type in a VRP instance file.
 enum class EdgeWeightType {
-    EUC_2D,       ///< Euclidean 2D (rounded to nearest int)
-    CEIL_2D,      ///< Euclidean 2D (ceiling)
-    GEO,          ///< Geographic (latitude/longitude)
-    ATT,          ///< Pseudo-Euclidean (ATT instances)
-    EXPLICIT,     ///< Distances given as a matrix
+    EUC_2D,    ///< Euclidean 2D (rounded to nearest int)
+    CEIL_2D,   ///< Euclidean 2D (ceiling)
+    GEO,       ///< Geographic (latitude/longitude)
+    ATT,       ///< Pseudo-Euclidean (ATT instances)
+    EXPLICIT,  ///< Distances given as a matrix
 };
 
 /// Edge weight format for EXPLICIT instances.
 enum class EdgeWeightFormat {
-    FULL_MATRIX,       ///< n x n matrix
-    UPPER_ROW,         ///< Upper-triangular, row-by-row (no diagonal)
-    LOWER_ROW,         ///< Lower-triangular, row-by-row (no diagonal)
-    UPPER_DIAG_ROW,    ///< Upper-triangular with diagonal
-    LOWER_DIAG_ROW,    ///< Lower-triangular with diagonal
-    UPPER_COL,         ///< Upper-triangular, column-by-column
-    LOWER_COL,         ///< Lower-triangular, column-by-column
-    UPPER_DIAG_COL,    ///< Upper-triangular with diagonal, col-by-col
-    LOWER_DIAG_COL,    ///< Lower-triangular with diagonal, col-by-col
+    FULL_MATRIX,     ///< n x n matrix
+    UPPER_ROW,       ///< Upper-triangular, row-by-row (no diagonal)
+    LOWER_ROW,       ///< Lower-triangular, row-by-row (no diagonal)
+    UPPER_DIAG_ROW,  ///< Upper-triangular with diagonal
+    LOWER_DIAG_ROW,  ///< Lower-triangular with diagonal
+    UPPER_COL,       ///< Upper-triangular, column-by-column
+    LOWER_COL,       ///< Lower-triangular, column-by-column
+    UPPER_DIAG_COL,  ///< Upper-triangular with diagonal, col-by-col
+    LOWER_DIAG_COL,  ///< Lower-triangular with diagonal, col-by-col
 };
 
 /// Parsed data from a VRP instance file.
@@ -43,23 +43,23 @@ struct VrpInstance {
     // -- Metadata --
     std::string name;
     std::string comment;
-    std::string type;                               ///< e.g. "CVRP", "VRPTW", "PDPTW"
-    int dimension       = 0;                        ///< Number of nodes
-    int capacity        = 0;                        ///< Vehicle capacity
-    int vehicles        = 0;                        ///< Min vehicles (0 = unset)
-    double distance     = 0.0;                      ///< Best known distance (0 = unset)
+    std::string type;       ///< e.g. "CVRP", "VRPTW", "PDPTW"
+    int dimension = 0;      ///< Number of nodes
+    int capacity = 0;       ///< Vehicle capacity
+    int vehicles = 0;       ///< Min vehicles (0 = unset)
+    double distance = 0.0;  ///< Best known distance (0 = unset)
 
     EdgeWeightType edge_weight_type = EdgeWeightType::EUC_2D;
     std::optional<EdgeWeightFormat> edge_weight_format;
 
     // -- Node data (indexed 0..dimension-1) --
-    std::vector<Coord> coords;                      ///< Node coordinates
-    std::vector<int> demands;                       ///< Node demands
-    std::vector<int> depot_ids;                     ///< Depot node indices (0-based)
+    std::vector<Coord> coords;   ///< Node coordinates
+    std::vector<int> demands;    ///< Node demands
+    std::vector<int> depot_ids;  ///< Depot node indices (0-based)
 
     // -- Time windows (Solomon/VRPTW format) --
-    std::vector<TimeWindow> time_windows;           ///< Per-node time windows
-    std::vector<int> service_times;                 ///< Per-node service durations
+    std::vector<TimeWindow> time_windows;  ///< Per-node time windows
+    std::vector<int> service_times;        ///< Per-node service durations
 
     // -- Pickup-delivery pairs (Li-Lim/PDPTW format) --
     /// Each pair is (pickup_index, delivery_index), 0-based.
@@ -102,4 +102,4 @@ struct VrpInstance {
 /// Parse a CVRPLIB .vrp instance from a string (useful for testing).
 [[nodiscard]] VrpInstance parse_vrp(const std::string& content);
 
-} // namespace coso
+}  // namespace coso

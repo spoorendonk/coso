@@ -15,9 +15,7 @@ namespace coso {
 
 namespace {
 
-std::vector<Result::PathFlow> decompose_paths(NetworkData const& data,
-                                              NetworkSolution const& sol)
-{
+std::vector<Result::PathFlow> decompose_paths(NetworkData const& data, NetworkSolution const& sol) {
     std::vector<Result::PathFlow> paths;
     std::vector<int> remaining(data.num_arcs(), 0);
     for (int a = 0; a < data.num_arcs(); ++a) {
@@ -26,27 +24,32 @@ std::vector<Result::PathFlow> decompose_paths(NetworkData const& data,
 
     auto has_outgoing_flow = [&](int n) -> bool {
         for (int a : data.outgoing(n)) {
-            if (remaining[a] > 0) return true;
+            if (remaining[a] > 0) {
+                return true;
+            }
         }
         return false;
     };
 
     auto pick_start = [&]() -> int {
         for (int n = 0; n < data.num_nodes(); ++n) {
-            if (data.supply(n) > 0 && has_outgoing_flow(n))
+            if (data.supply(n) > 0 && has_outgoing_flow(n)) {
                 return n;
+            }
         }
         for (int n = 0; n < data.num_nodes(); ++n) {
-            if (has_outgoing_flow(n))
+            if (has_outgoing_flow(n)) {
                 return n;
+            }
         }
         return -1;
     };
 
     while (true) {
         int start = pick_start();
-        if (start < 0)
+        if (start < 0) {
             break;
+        }
 
         std::vector<int> path{start};
         std::vector<int> used_arcs;
@@ -59,13 +62,17 @@ std::vector<Result::PathFlow> decompose_paths(NetworkData const& data,
         while (true) {
             int chosen = -1;
             for (int a : data.outgoing(cur)) {
-                if (remaining[a] <= 0) continue;
+                if (remaining[a] <= 0) {
+                    continue;
+                }
                 chosen = a;
-                if (data.supply(data.arc(a).head) < 0)
+                if (data.supply(data.arc(a).head) < 0) {
                     break;
+                }
             }
-            if (chosen < 0)
+            if (chosen < 0) {
                 break;
+            }
 
             used_arcs.push_back(chosen);
             bottleneck = std::min(bottleneck, remaining[chosen]);
@@ -73,16 +80,17 @@ std::vector<Result::PathFlow> decompose_paths(NetworkData const& data,
             int next = data.arc(chosen).head;
             path.push_back(next);
 
-            if (data.supply(next) < 0)
+            if (data.supply(next) < 0) {
                 break;
-            if (seen[next])
+            }
+            if (seen[next]) {
                 break;
+            }
             seen[next] = true;
             cur = next;
         }
 
-        if (used_arcs.empty() || bottleneck <= 0
-            || bottleneck == std::numeric_limits<int>::max()) {
+        if (used_arcs.empty() || bottleneck <= 0 || bottleneck == std::numeric_limits<int>::max()) {
             break;
         }
 
@@ -99,18 +107,15 @@ std::vector<Result::PathFlow> decompose_paths(NetworkData const& data,
     return paths;
 }
 
-} // namespace
+}  // namespace
 
-int NetworkModel::add_node(int supply, std::string name)
-{
+int NetworkModel::add_node(int supply, std::string name) {
     int idx = static_cast<int>(nodes_.size());
     nodes_.push_back({supply, std::move(name)});
     return idx;
 }
 
-int NetworkModel::add_arc(int tail, int head, int cost,
-                          int lower_cap, int upper_cap)
-{
+int NetworkModel::add_arc(int tail, int head, int cost, int lower_cap, int upper_cap) {
     int n = static_cast<int>(nodes_.size());
     if (tail < 0 || tail >= n || head < 0 || head >= n) {
         throw std::out_of_range("NetworkModel::add_arc: invalid node index");
@@ -124,15 +129,13 @@ int NetworkModel::add_arc(int tail, int head, int cost,
     return idx;
 }
 
-int NetworkModel::add_resource(std::string name, int upper_bound)
-{
+int NetworkModel::add_resource(std::string name, int upper_bound) {
     int idx = static_cast<int>(resources_.size());
     resources_.push_back({std::move(name), upper_bound});
     return idx;
 }
 
-void NetworkModel::set_resource_usage(int arc, int resource, int amount)
-{
+void NetworkModel::set_resource_usage(int arc, int resource, int amount) {
     if (arc < 0 || arc >= static_cast<int>(arcs_.size())) {
         throw std::out_of_range("NetworkModel::set_resource_usage: invalid arc");
     }
@@ -140,16 +143,17 @@ void NetworkModel::set_resource_usage(int arc, int resource, int amount)
         throw std::out_of_range("NetworkModel::set_resource_usage: invalid resource");
     }
 
-    if (resource_usage_.size() <= static_cast<size_t>(arc))
+    if (resource_usage_.size() <= static_cast<size_t>(arc)) {
         resource_usage_.resize(static_cast<size_t>(arc) + 1);
-    if (resource_usage_[arc].size() <= static_cast<size_t>(resource))
+    }
+    if (resource_usage_[arc].size() <= static_cast<size_t>(resource)) {
         resource_usage_[arc].resize(static_cast<size_t>(resource) + 1, 0);
+    }
 
     resource_usage_[arc][resource] = amount;
 }
 
-Result NetworkModel::solve(TimeLimit tl)
-{
+Result NetworkModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
     StopCriterion stop(tl.seconds);
@@ -188,14 +192,12 @@ Result NetworkModel::solve(TimeLimit tl)
         result.work_ticks_ = work.ticks();
         result.work_units_ = work.units();
         auto wall_end = std::chrono::steady_clock::now();
-        result.elapsed_seconds_ =
-            std::chrono::duration<double>(wall_end - wall_start).count();
+        result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
         return result;
     }
 
     NetworkData data = builder.build();
-    work.count(static_cast<uint64_t>(data.num_nodes())
-             + static_cast<uint64_t>(data.num_arcs()));
+    work.count(static_cast<uint64_t>(data.num_nodes()) + static_cast<uint64_t>(data.num_arcs()));
 
     NetworkSolution sol = McfSolver::solve(data);
     work.count(static_cast<uint64_t>(data.num_arcs()));
@@ -208,10 +210,9 @@ Result NetworkModel::solve(TimeLimit tl)
     result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
-    result.elapsed_seconds_ =
-        std::chrono::duration<double>(wall_end - wall_start).count();
+    result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
 
     return result;
 }
 
-} // namespace coso
+}  // namespace coso

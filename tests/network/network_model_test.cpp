@@ -1,11 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "model/network_model.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
-TEST_CASE("NetworkModel solves a simple minimum-cost flow", "[network][model]")
-{
+TEST_CASE("NetworkModel solves a simple minimum-cost flow", "[network][model]") {
     NetworkModel model;
     int s = model.add_node(5, "source");
     int m = model.add_node(0, "middle");
@@ -24,8 +23,7 @@ TEST_CASE("NetworkModel solves a simple minimum-cost flow", "[network][model]")
     REQUIRE_FALSE(result.flows()[0].empty());
 }
 
-TEST_CASE("NetworkModel invalid arc indices throw", "[network][model]")
-{
+TEST_CASE("NetworkModel invalid arc indices throw", "[network][model]") {
     NetworkModel model;
     model.add_node(1, "s");
     model.add_node(-1, "t");
@@ -34,8 +32,7 @@ TEST_CASE("NetworkModel invalid arc indices throw", "[network][model]")
     REQUIRE_THROWS_AS(model.add_arc(-1, 1, 1, 0, 1), std::out_of_range);
 }
 
-TEST_CASE("NetworkModel deterministic work units repeat", "[network][model]")
-{
+TEST_CASE("NetworkModel deterministic work units repeat", "[network][model]") {
     NetworkModel model;
     int s = model.add_node(5, "s");
     int t = model.add_node(-5, "t");

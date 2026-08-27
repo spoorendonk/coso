@@ -5,10 +5,7 @@
 namespace coso {
 
 NetworkSolution::NetworkSolution(NetworkData const& data)
-    : data_(data)
-    , flow_(data.num_arcs(), 0)
-    , excess_(data.num_nodes(), 0)
-{
+    : data_(data), flow_(data.num_arcs(), 0), excess_(data.num_nodes(), 0) {
     // Initial excess is just the node supply (zero flow everywhere).
     for (int n = 0; n < data.num_nodes(); ++n) {
         excess_[n] = data.supply(n);
@@ -45,7 +42,9 @@ bool NetworkSolution::feasible() const {
 
 bool NetworkSolution::flow_conservation() const {
     for (int n = 0; n < data_.num_nodes(); ++n) {
-        if (excess_[n] != 0) return false;
+        if (excess_[n] != 0) {
+            return false;
+        }
     }
     return true;
 }
@@ -53,22 +52,26 @@ bool NetworkSolution::flow_conservation() const {
 bool NetworkSolution::capacity_feasible() const {
     for (int a = 0; a < data_.num_arcs(); ++a) {
         auto const& ad = data_.arc(a);
-        if (flow_[a] < ad.lower_cap || flow_[a] > ad.upper_cap)
+        if (flow_[a] < ad.lower_cap || flow_[a] > ad.upper_cap) {
             return false;
+        }
     }
     return true;
 }
 
 bool NetworkSolution::resource_feasible() const {
-    if (!data_.has_resources()) return true;
+    if (!data_.has_resources()) {
+        return true;
+    }
 
     for (int r = 0; r < data_.num_resources(); ++r) {
         long long total = 0;
         for (int a = 0; a < data_.num_arcs(); ++a) {
             total += static_cast<long long>(flow_[a]) * data_.resource_usage(a, r);
         }
-        if (total > data_.resource(r).upper_bound)
+        if (total > data_.resource(r).upper_bound) {
             return false;
+        }
     }
     return true;
 }
@@ -76,7 +79,9 @@ bool NetworkSolution::resource_feasible() const {
 int NetworkSolution::num_excess_violations() const {
     int count = 0;
     for (int n = 0; n < data_.num_nodes(); ++n) {
-        if (excess_[n] != 0) ++count;
+        if (excess_[n] != 0) {
+            ++count;
+        }
     }
     return count;
 }
@@ -85,8 +90,9 @@ int NetworkSolution::num_capacity_violations() const {
     int count = 0;
     for (int a = 0; a < data_.num_arcs(); ++a) {
         auto const& ad = data_.arc(a);
-        if (flow_[a] < ad.lower_cap || flow_[a] > ad.upper_cap)
+        if (flow_[a] < ad.lower_cap || flow_[a] > ad.upper_cap) {
             ++count;
+        }
     }
     return count;
 }
@@ -103,4 +109,4 @@ void NetworkSolution::recompute_excess_() {
     }
 }
 
-} // namespace coso
+}  // namespace coso

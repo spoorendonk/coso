@@ -24,13 +24,12 @@ public:
     // -------------------------------------------------------------------
 
     /// Build a PackingData from a PackingModel.
-    static PackingData build(PackingModel const& model)
-    {
+    static PackingData build(PackingModel const& model) {
         PackingData data;
 
         data.num_bin_types_ = model.num_bin_types();
-        data.num_items_     = model.num_items();
-        data.num_dims_      = model.num_dimensions();
+        data.num_items_ = model.num_items();
+        data.num_dims_ = model.num_dimensions();
 
         // Copy bin type data into flat arrays.
         data.bin_capacities_.resize(data.num_bin_types_ * data.num_dims_);
@@ -42,7 +41,7 @@ public:
             for (int d = 0; d < data.num_dims_; ++d) {
                 data.bin_capacities_[b * data.num_dims_ + d] = bt.capacity[d];
             }
-            data.bin_costs_[b]  = bt.cost;
+            data.bin_costs_[b] = bt.cost;
             data.bin_counts_[b] = bt.count;
         }
 
@@ -73,8 +72,8 @@ public:
     // -------------------------------------------------------------------
 
     [[nodiscard]] int num_bin_types() const noexcept { return num_bin_types_; }
-    [[nodiscard]] int num_items()     const noexcept { return num_items_; }
-    [[nodiscard]] int num_dims()      const noexcept { return num_dims_; }
+    [[nodiscard]] int num_items() const noexcept { return num_items_; }
+    [[nodiscard]] int num_dims() const noexcept { return num_dims_; }
 
     /// Capacity of bin type b in dimension d.
     [[nodiscard]] int bin_capacity(int b, int d) const {
@@ -115,20 +114,16 @@ public:
 
     /// Continuous lower bound: ceil(sum of item sizes / bin capacity) per dim,
     /// taking the max across dimensions. Uses bin type 0.
-    [[nodiscard]] int continuous_lower_bound() const noexcept {
-        return continuous_lb_;
-    }
+    [[nodiscard]] int continuous_lower_bound() const noexcept { return continuous_lb_; }
 
     /// L2 lower bound (Martello & Toth, 1990) for single-dimension case
     /// using bin type 0. Falls back to continuous LB for multi-dim.
-    [[nodiscard]] int l2_lower_bound() const noexcept {
-        return l2_lb_;
-    }
+    [[nodiscard]] int l2_lower_bound() const noexcept { return l2_lb_; }
 
 private:
     int num_bin_types_ = 0;
-    int num_items_     = 0;
-    int num_dims_      = 0;
+    int num_items_ = 0;
+    int num_dims_ = 0;
 
     // Flat arrays: bin_capacities_[b * num_dims_ + d], item_sizes_[i * num_dims_ + d].
     std::vector<int> bin_capacities_;
@@ -141,12 +136,12 @@ private:
 
     // Lower bounds.
     int continuous_lb_ = 0;
-    int l2_lb_         = 0;
+    int l2_lb_ = 0;
 
-    void compute_lower_bounds_()
-    {
-        if (num_items_ == 0 || num_bin_types_ == 0)
+    void compute_lower_bounds_() {
+        if (num_items_ == 0 || num_bin_types_ == 0) {
             return;
+        }
 
         // Continuous lower bound: max over dimensions of ceil(sum_sizes / capacity).
         // Use bin type 0 as the reference bin.
@@ -194,4 +189,4 @@ private:
     }
 };
 
-} // namespace coso
+}  // namespace coso

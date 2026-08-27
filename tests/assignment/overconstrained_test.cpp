@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "assignment/overconstrained.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -10,12 +10,11 @@ using namespace coso;
 
 /// 3 employees, 2 shift types, 5-day horizon, demand of 1 per shift per day.
 /// max_consecutive_shifts = 5 (no consecutive violation possible in 5 days).
-static AssignmentData make_basic_data()
-{
+static AssignmentData make_basic_data() {
     AssignmentData data;
     data.horizon = 5;
 
-    data.shift_types.push_back({.name = "Day",   .start_hour = 8, .end_hour = 16});
+    data.shift_types.push_back({.name = "Day", .start_hour = 8, .end_hour = 16});
     data.shift_types.push_back({.name = "Night", .start_hour = 22, .end_hour = 6});
 
     data.employees.push_back({.name = "Alice"});
@@ -25,9 +24,8 @@ static AssignmentData make_basic_data()
     // Demand: 1 employee per shift per day.
     for (int s = 0; s < 2; ++s) {
         for (int d = 0; d < 5; ++d) {
-            data.demand[AssignmentData::demand_key(s, d)] = {
-                .min_employees = 1, .max_employees = 2
-            };
+            data.demand[AssignmentData::demand_key(s, d)] = {.min_employees = 1,
+                                                             .max_employees = 2};
         }
     }
 
@@ -37,8 +35,7 @@ static AssignmentData make_basic_data()
 }
 
 /// Overconstrained: 2 employees but demand of 2 per shift (needs 4).
-static AssignmentData make_overconstrained_data()
-{
+static AssignmentData make_overconstrained_data() {
     AssignmentData data;
     data.horizon = 3;
 
@@ -49,20 +46,15 @@ static AssignmentData make_overconstrained_data()
 
     // Demand: 2 employees per day shift, but only 2 employees total.
     for (int d = 0; d < 3; ++d) {
-        data.demand[AssignmentData::demand_key(0, d)] = {
-            .min_employees = 2, .max_employees = 3
-        };
+        data.demand[AssignmentData::demand_key(0, d)] = {.min_employees = 2, .max_employees = 3};
     }
 
     return data;
 }
 
 /// Create an empty schedule for the given data.
-static std::vector<std::vector<int>> make_empty_schedule(
-    AssignmentData const& data)
-{
-    return std::vector<std::vector<int>>(
-        data.num_employees(), std::vector<int>(data.horizon, -1));
+static std::vector<std::vector<int>> make_empty_schedule(AssignmentData const& data) {
+    return std::vector<std::vector<int>>(data.num_employees(), std::vector<int>(data.horizon, -1));
 }
 
 // ===========================================================================
@@ -70,8 +62,7 @@ static std::vector<std::vector<int>> make_empty_schedule(
 // ===========================================================================
 
 TEST_CASE("assignment overconstrained: no understaffing when demand met",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     auto sched = make_empty_schedule(data);
 
@@ -85,8 +76,7 @@ TEST_CASE("assignment overconstrained: no understaffing when demand met",
 }
 
 TEST_CASE("assignment overconstrained: understaffing when demand unmet",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     auto sched = make_empty_schedule(data);
 
@@ -95,9 +85,7 @@ TEST_CASE("assignment overconstrained: understaffing when demand unmet",
     CHECK(assignment_total_understaffing(data, sched) == 10);
 }
 
-TEST_CASE("assignment overconstrained: partial understaffing",
-          "[overconstrained][assignment]")
-{
+TEST_CASE("assignment overconstrained: partial understaffing", "[overconstrained][assignment]") {
     auto data = make_overconstrained_data();
     auto sched = make_empty_schedule(data);
 
@@ -112,8 +100,7 @@ TEST_CASE("assignment overconstrained: partial understaffing",
 }
 
 TEST_CASE("assignment overconstrained: understaffing with partial coverage",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_overconstrained_data();
     auto sched = make_empty_schedule(data);
 
@@ -132,8 +119,7 @@ TEST_CASE("assignment overconstrained: understaffing with partial coverage",
 // ===========================================================================
 
 TEST_CASE("assignment overconstrained: no violations with valid schedule",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     AssignmentCostEvaluator eval(data);
     auto sched = make_empty_schedule(data);
@@ -148,8 +134,7 @@ TEST_CASE("assignment overconstrained: no violations with valid schedule",
 }
 
 TEST_CASE("assignment overconstrained: consecutive violations detected",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     data.max_consecutive_shifts = 3;
 
@@ -169,8 +154,7 @@ TEST_CASE("assignment overconstrained: consecutive violations detected",
 // ===========================================================================
 
 TEST_CASE("assignment overconstrained: penalty is zero when all satisfied",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     AssignmentCostEvaluator eval(data);
     auto sched = make_empty_schedule(data);
@@ -186,8 +170,7 @@ TEST_CASE("assignment overconstrained: penalty is zero when all satisfied",
 }
 
 TEST_CASE("assignment overconstrained: penalty for understaffing",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     AssignmentCostEvaluator eval(data);
     auto sched = make_empty_schedule(data);
@@ -206,8 +189,7 @@ TEST_CASE("assignment overconstrained: penalty for understaffing",
 // ===========================================================================
 
 TEST_CASE("assignment overconstrained: cost includes preferences and penalties",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     // Add a preference: Alice prefers Day shift on day 0, weight 10.
     data.preferences.push_back({.employee = 0, .day = 0, .shift_type = 0, .weight = 10});
@@ -234,8 +216,7 @@ TEST_CASE("assignment overconstrained: cost includes preferences and penalties",
 // ===========================================================================
 
 TEST_CASE("assignment overconstrained: feasible when no violations",
-          "[overconstrained][assignment]")
-{
+          "[overconstrained][assignment]") {
     auto data = make_basic_data();
     AssignmentCostEvaluator eval(data);
     auto sched = make_empty_schedule(data);
@@ -253,9 +234,7 @@ TEST_CASE("assignment overconstrained: feasible when no violations",
 //  AssignmentOverconstrainedConfig defaults
 // ===========================================================================
 
-TEST_CASE("AssignmentOverconstrainedConfig: default values",
-          "[overconstrained][assignment]")
-{
+TEST_CASE("AssignmentOverconstrainedConfig: default values", "[overconstrained][assignment]") {
     AssignmentOverconstrainedConfig config;
 
     CHECK(config.understaffing_penalty == 10000);

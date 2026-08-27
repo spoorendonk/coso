@@ -11,37 +11,37 @@ namespace coso {
 
 /// Parameters for a vehicle type.
 struct VehicleTypeParams {
-    std::vector<int> capacity;           ///< N load dimensions
-    int max_duration          = 0;       ///< 0 = unlimited
-    int max_distance          = 0;       ///< 0 = unlimited
-    int min_tasks             = 0;       ///< 0 = no minimum
-    int max_tasks             = 0;       ///< 0 = unlimited
-    int max_overtime          = 0;       ///< allowed overtime beyond max_duration
-    int unit_overtime_cost    = 0;       ///< cost per unit of overtime
-    int reload_depot          = -1;      ///< depot id for multi-trip reload (-1 = none)
-    int max_reloads           = 0;       ///< max number of reloads per shift
+    std::vector<int> capacity;   ///< N load dimensions
+    int max_duration = 0;        ///< 0 = unlimited
+    int max_distance = 0;        ///< 0 = unlimited
+    int min_tasks = 0;           ///< 0 = no minimum
+    int max_tasks = 0;           ///< 0 = unlimited
+    int max_overtime = 0;        ///< allowed overtime beyond max_duration
+    int unit_overtime_cost = 0;  ///< cost per unit of overtime
+    int reload_depot = -1;       ///< depot id for multi-trip reload (-1 = none)
+    int max_reloads = 0;         ///< max number of reloads per shift
     CostParams cost;
-    int profile               = 0;       ///< distance/duration matrix index
-    double speed_factor       = 1.0;
+    int profile = 0;  ///< distance/duration matrix index
+    double speed_factor = 1.0;
     std::vector<std::string> skills;
 };
 
 /// Parameters for a client location.
 struct ClientParams {
-    std::vector<int> demand;             ///< N load dimensions (matches capacity)
-    std::vector<int> pickup;             ///< backhaul pickup quantities
-    TimeWindow tw              = {0, INT_MAX};
-    std::vector<TimeWindow> extra_tw;    ///< additional time windows
-    int service                = 0;      ///< service duration
-    int release_time           = 0;
-    int prize                  = 0;      ///< for optional clients (Team Orienteering)
-    bool required              = true;
-    int group                  = -1;     ///< client group id (-1 = none)
-    int quantity               = 0;      ///< for pickup/delivery requests
+    std::vector<int> demand;  ///< N load dimensions (matches capacity)
+    std::vector<int> pickup;  ///< backhaul pickup quantities
+    TimeWindow tw = {0, INT_MAX};
+    std::vector<TimeWindow> extra_tw;  ///< additional time windows
+    int service = 0;                   ///< service duration
+    int release_time = 0;
+    int prize = 0;  ///< for optional clients (Team Orienteering)
+    bool required = true;
+    int group = -1;    ///< client group id (-1 = none)
+    int quantity = 0;  ///< for pickup/delivery requests
     std::vector<std::string> skills;
-    int setup_time             = 0;
-    int location               = -1;     ///< location id for location-aware setup
-    int client_type            = -1;     ///< type id for incompatibility constraints (-1 = none)
+    int setup_time = 0;
+    int location = -1;     ///< location id for location-aware setup
+    int client_type = -1;  ///< type id for incompatibility constraints (-1 = none)
 };
 
 /// Parameters for a depot location.
@@ -122,8 +122,8 @@ private:
     // -- Stored depot data ---------------------------------------------------
     struct DepotEntry {
         double x = 0.0, y = 0.0;
-        bool has_coord = false;   ///< false when added with explicit id
-        int explicit_id = -1;     ///< node id when added without coordinates
+        bool has_coord = false;  ///< false when added with explicit id
+        int explicit_id = -1;    ///< node id when added without coordinates
         DepotParams params;
     };
     std::vector<DepotEntry> depots_;
@@ -145,13 +145,18 @@ private:
     std::vector<VehicleTypeEntry> vehicle_types_;
 
     // -- Pickup-delivery requests --------------------------------------------
-    std::vector<std::pair<int,int>> requests_;
+    std::vector<std::pair<int, int>> requests_;
 
     // -- Client groups -------------------------------------------------------
     int next_group_id_ = 0;
 
     // -- Explicit matrix entries ---------------------------------------------
-    struct MatEntry { int profile; int from; int to; int value; };
+    struct MatEntry {
+        int profile;
+        int from;
+        int to;
+        int value;
+    };
     std::vector<MatEntry> dist_entries_;
     std::vector<MatEntry> dur_entries_;
     std::vector<MatEntry> cost_entries_;
@@ -165,4 +170,4 @@ private:
 /// Convenience: solve a CVRPLIB / VRPLIB instance file directly.
 Result solve(const std::string& instance_path, TimeLimit tl);
 
-} // namespace coso
+}  // namespace coso

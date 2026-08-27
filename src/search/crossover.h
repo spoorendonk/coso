@@ -27,11 +27,7 @@ namespace coso {
 /// @param rng       Random number generator.
 /// @param max_routes Maximum number of routes to select from parent1 (default 3).
 /// @return A new offspring solution.
-Solution srex_crossover(Solution const& parent1,
-                        Solution const& parent2,
-                        ProblemData const& data,
-                        CostEvaluator const& eval,
-                        std::mt19937& rng,
-                        int max_routes = 3);
+Solution srex_crossover(Solution const& parent1, Solution const& parent2, ProblemData const& data,
+                        CostEvaluator const& eval, std::mt19937& rng, int max_routes = 3);
 
-} // namespace coso
+}  // namespace coso

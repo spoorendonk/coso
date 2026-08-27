@@ -10,8 +10,7 @@ namespace coso {
 //  Lot-for-lot
 // ---------------------------------------------------------------------------
 
-LotsizingSolution lot_for_lot(LotsizingData const& data)
-{
+LotsizingSolution lot_for_lot(LotsizingData const& data) {
     LotsizingSolution sol(data);
     int P = data.num_products();
     int T = data.num_periods();
@@ -19,8 +18,9 @@ LotsizingSolution lot_for_lot(LotsizingData const& data)
     for (int p = 0; p < P; ++p) {
         for (int t = 0; t < T; ++t) {
             double d = data.demand(p, t);
-            if (d > 0.0)
+            if (d > 0.0) {
                 sol.set_production(p, t, d);
+            }
         }
     }
 
@@ -31,8 +31,7 @@ LotsizingSolution lot_for_lot(LotsizingData const& data)
 //  Silver-Meal
 // ---------------------------------------------------------------------------
 
-LotsizingSolution silver_meal(LotsizingData const& data)
-{
+LotsizingSolution silver_meal(LotsizingData const& data) {
     LotsizingSolution sol(data);
     int P = data.num_products();
     int T = data.num_periods();
@@ -53,7 +52,7 @@ LotsizingSolution silver_meal(LotsizingData const& data)
             // Start a new lot in period t.
             double lot_qty = d_t;
             double total_holding = 0.0;
-            double total_cost = s; // setup
+            double total_cost = s;  // setup
             int periods_covered = 1;
             double avg_cost = total_cost / periods_covered;
 
@@ -73,8 +72,9 @@ LotsizingSolution silver_meal(LotsizingData const& data)
                 double new_avg = new_total_cost / new_periods;
 
                 // Silver-Meal: stop when average cost per period increases.
-                if (new_avg > avg_cost + 1e-9)
+                if (new_avg > avg_cost + 1e-9) {
                     break;
+                }
 
                 lot_qty += d_j;
                 total_holding += extra_holding;
@@ -96,8 +96,7 @@ LotsizingSolution silver_meal(LotsizingData const& data)
 //  Part-period balancing
 // ---------------------------------------------------------------------------
 
-LotsizingSolution part_period_balancing(LotsizingData const& data)
-{
+LotsizingSolution part_period_balancing(LotsizingData const& data) {
     LotsizingSolution sol(data);
     int P = data.num_products();
     int T = data.num_periods();
@@ -128,8 +127,9 @@ LotsizingSolution part_period_balancing(LotsizingData const& data)
                 }
 
                 double extra_holding = h * d_j * (j - t);
-                if (cum_holding + extra_holding > s)
+                if (cum_holding + extra_holding > s) {
                     break;
+                }
 
                 lot_qty += d_j;
                 cum_holding += extra_holding;
@@ -144,4 +144,4 @@ LotsizingSolution part_period_balancing(LotsizingData const& data)
     return sol;
 }
 
-} // namespace coso
+}  // namespace coso

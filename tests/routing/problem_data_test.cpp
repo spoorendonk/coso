@@ -1,9 +1,7 @@
-#include <catch2/catch_test_macros.hpp>
-
-#include <routing/problem_data.h>
-
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <cmath>
+#include <routing/problem_data.h>
 #include <set>
 #include <vector>
 
@@ -13,8 +11,7 @@ using namespace coso;
 //  Helper: build a simple CVRP instance (1 depot, N clients in a line)
 // =========================================================================
 
-static ProblemData make_line_instance(int num_clients, int granular_k = 0)
-{
+static ProblemData make_line_instance(int num_clients, int granular_k = 0) {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     for (int i = 1; i <= num_clients; ++i) {
@@ -29,8 +26,7 @@ static ProblemData make_line_instance(int num_clients, int granular_k = 0)
 //  Construction and basic accessors
 // =========================================================================
 
-TEST_CASE("ProblemData counts depots, clients, vehicle types", "[problem_data]")
-{
+TEST_CASE("ProblemData counts depots, clients, vehicle types", "[problem_data]") {
     auto pd = make_line_instance(5);
     REQUIRE(pd.num_depots() == 1);
     REQUIRE(pd.num_clients() == 5);
@@ -39,8 +35,7 @@ TEST_CASE("ProblemData counts depots, clients, vehicle types", "[problem_data]")
     REQUIRE(pd.num_profiles() == 1);
 }
 
-TEST_CASE("ProblemData depot data is accessible", "[problem_data]")
-{
+TEST_CASE("ProblemData depot data is accessible", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({100.0, 200.0}, {.tw = {0, 500}});
     auto pd = b.build(0);
@@ -52,19 +47,18 @@ TEST_CASE("ProblemData depot data is accessible", "[problem_data]")
     REQUIRE(pd.depot(0).tw.end == 500);
 }
 
-TEST_CASE("ProblemData client data preserves attributes", "[problem_data]")
-{
+TEST_CASE("ProblemData client data preserves attributes", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({10.0, 20.0}, {
-        .demand = {5, 3},
-        .tw = {100, 200},
-        .service = 15,
-        .release_time = 50,
-        .prize = 10,
-        .required = false,
-        .group = 2,
-    });
+                                   .demand = {5, 3},
+                                   .tw = {100, 200},
+                                   .service = 15,
+                                   .release_time = 50,
+                                   .prize = 10,
+                                   .required = false,
+                                   .group = 2,
+                               });
     b.add_vehicle_type(1, {.capacity = {50, 30}});
     auto pd = b.build(0);
 
@@ -84,23 +78,23 @@ TEST_CASE("ProblemData client data preserves attributes", "[problem_data]")
     REQUIRE(c.group == 2);
 }
 
-TEST_CASE("ProblemData vehicle type data preserves attributes", "[problem_data]")
-{
+TEST_CASE("ProblemData vehicle type data preserves attributes", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_vehicle_type(3, {
-        .capacity = {100, 50},
-        .max_duration = 500,
-        .max_distance = 300,
-        .max_tasks = 10,
-        .max_overtime = 60,
-        .unit_overtime_cost = 5,
-        .reload_depot = 0,
-        .max_reloads = 2,
-        .cost = {.fixed_cost = 20, .unit_distance_cost = 2, .unit_duration_cost = 1},
-        .profile = 0,
-        .speed_factor = 1.5,
-    });
+    b.add_vehicle_type(
+        3, {
+               .capacity = {100, 50},
+               .max_duration = 500,
+               .max_distance = 300,
+               .max_tasks = 10,
+               .max_overtime = 60,
+               .unit_overtime_cost = 5,
+               .reload_depot = 0,
+               .max_reloads = 2,
+               .cost = {.fixed_cost = 20, .unit_distance_cost = 2, .unit_duration_cost = 1},
+               .profile = 0,
+               .speed_factor = 1.5,
+           });
     auto pd = b.build(0);
 
     REQUIRE(pd.num_vehicle_types() == 1);
@@ -122,8 +116,7 @@ TEST_CASE("ProblemData vehicle type data preserves attributes", "[problem_data]"
     REQUIRE(vt.speed_factor == 1.5);
 }
 
-TEST_CASE("ProblemData total_vehicles sums across types", "[problem_data]")
-{
+TEST_CASE("ProblemData total_vehicles sums across types", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {100}});
@@ -133,8 +126,7 @@ TEST_CASE("ProblemData total_vehicles sums across types", "[problem_data]")
     REQUIRE(pd.total_vehicles() == 5);
 }
 
-TEST_CASE("ProblemData num_load_dims is max of demand/capacity dims", "[problem_data]")
-{
+TEST_CASE("ProblemData num_load_dims is max of demand/capacity dims", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({10.0, 0.0}, {.demand = {5, 3, 1}});
@@ -156,12 +148,11 @@ TEST_CASE("ProblemData num_load_dims is max of demand/capacity dims", "[problem_
 //  Distance matrix (Euclidean)
 // =========================================================================
 
-TEST_CASE("Euclidean distances are computed correctly", "[problem_data]")
-{
+TEST_CASE("Euclidean distances are computed correctly", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_client({3.0, 4.0});    // distance from depot = 5
-    b.add_client({6.0, 8.0});    // distance from depot = 10
+    b.add_client({3.0, 4.0});  // distance from depot = 5
+    b.add_client({6.0, 8.0});  // distance from depot = 10
     auto pd = b.build(0);
 
     // Node 0 = depot, node 1 = client 0, node 2 = client 1.
@@ -179,8 +170,7 @@ TEST_CASE("Euclidean distances are computed correctly", "[problem_data]")
     REQUIRE(pd.dist(1, 1) == 0);
 }
 
-TEST_CASE("Duration defaults to distance", "[problem_data]")
-{
+TEST_CASE("Duration defaults to distance", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({3.0, 4.0});
@@ -189,8 +179,7 @@ TEST_CASE("Duration defaults to distance", "[problem_data]")
     REQUIRE(pd.dur(0, 1) == pd.dist(0, 1));
 }
 
-TEST_CASE("Cost defaults to distance", "[problem_data]")
-{
+TEST_CASE("Cost defaults to distance", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({3.0, 4.0});
@@ -203,8 +192,7 @@ TEST_CASE("Cost defaults to distance", "[problem_data]")
 //  Explicit distance overrides
 // =========================================================================
 
-TEST_CASE("Explicit distances override Euclidean", "[problem_data]")
-{
+TEST_CASE("Explicit distances override Euclidean", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({3.0, 4.0});
@@ -216,8 +204,7 @@ TEST_CASE("Explicit distances override Euclidean", "[problem_data]")
     REQUIRE(pd.dist(1, 0) == 5);
 }
 
-TEST_CASE("Explicit durations override default", "[problem_data]")
-{
+TEST_CASE("Explicit durations override default", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({3.0, 4.0});
@@ -229,8 +216,7 @@ TEST_CASE("Explicit durations override default", "[problem_data]")
     REQUIRE(pd.dur(1, 0) == 5);
 }
 
-TEST_CASE("Explicit cost overrides distance-based default", "[problem_data]")
-{
+TEST_CASE("Explicit cost overrides distance-based default", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({3.0, 4.0});
@@ -244,8 +230,7 @@ TEST_CASE("Explicit cost overrides distance-based default", "[problem_data]")
     REQUIRE(pd.dist(0, 1) == 42);
 }
 
-TEST_CASE("Cost defaults to explicit distance when no explicit cost", "[problem_data]")
-{
+TEST_CASE("Cost defaults to explicit distance when no explicit cost", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({3.0, 4.0});
@@ -260,8 +245,7 @@ TEST_CASE("Cost defaults to explicit distance when no explicit cost", "[problem_
 //  Multiple profiles
 // =========================================================================
 
-TEST_CASE("Multiple distance profiles", "[problem_data]")
-{
+TEST_CASE("Multiple distance profiles", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({3.0, 4.0});
@@ -286,12 +270,11 @@ TEST_CASE("Multiple distance profiles", "[problem_data]")
 //  Pickup-delivery requests
 // =========================================================================
 
-TEST_CASE("Pickup-delivery requests are stored", "[problem_data]")
-{
+TEST_CASE("Pickup-delivery requests are stored", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_client({10.0, 0.0});   // client 0 = pickup
-    b.add_client({20.0, 0.0});   // client 1 = delivery
+    b.add_client({10.0, 0.0});  // client 0 = pickup
+    b.add_client({20.0, 0.0});  // client 1 = delivery
     b.add_request(0, 1);
     auto pd = b.build(0);
 
@@ -304,8 +287,7 @@ TEST_CASE("Pickup-delivery requests are stored", "[problem_data]")
 //  Granular neighbour lists
 // =========================================================================
 
-TEST_CASE("Granular neighbours with k=3", "[problem_data]")
-{
+TEST_CASE("Granular neighbours with k=3", "[problem_data]") {
     // Depot at origin, 5 clients along x-axis at 10, 20, 30, 40, 50.
     auto pd = make_line_instance(5, 3);
 
@@ -321,8 +303,7 @@ TEST_CASE("Granular neighbours with k=3", "[problem_data]")
     REQUIRE(nb0_set.contains(3));  // client 2 at distance 20
 }
 
-TEST_CASE("Granular neighbours sorted by distance", "[problem_data]")
-{
+TEST_CASE("Granular neighbours sorted by distance", "[problem_data]") {
     auto pd = make_line_instance(5, 3);
 
     // For each client, verify neighbours are sorted by distance.
@@ -330,14 +311,15 @@ TEST_CASE("Granular neighbours sorted by distance", "[problem_data]")
         auto nb = pd.neighbours(c);
         int c_node = pd.num_depots() + c;
         for (int i = 1; i < static_cast<int>(nb.size()); ++i) {
-            if (nb[i] == -1) break;
+            if (nb[i] == -1) {
+                break;
+            }
             REQUIRE(pd.dist(c_node, nb[i - 1]) <= pd.dist(c_node, nb[i]));
         }
     }
 }
 
-TEST_CASE("Granular k clamped to num_clients-1", "[problem_data]")
-{
+TEST_CASE("Granular k clamped to num_clients-1", "[problem_data]") {
     // Only 2 clients, but request k=40.
     auto pd = make_line_instance(2, 40);
 
@@ -350,8 +332,7 @@ TEST_CASE("Granular k clamped to num_clients-1", "[problem_data]")
     REQUIRE(nb.size() == 1);
 }
 
-TEST_CASE("Granular k=0 means no neighbours", "[problem_data]")
-{
+TEST_CASE("Granular k=0 means no neighbours", "[problem_data]") {
     auto pd = make_line_instance(5, 0);
     REQUIRE(pd.granular_k() == 0);
 }
@@ -360,8 +341,7 @@ TEST_CASE("Granular k=0 means no neighbours", "[problem_data]")
 //  node_coord
 // =========================================================================
 
-TEST_CASE("node_coord returns correct coordinates", "[problem_data]")
-{
+TEST_CASE("node_coord returns correct coordinates", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({100.0, 200.0});
     b.add_client({10.0, 20.0});
@@ -385,8 +365,7 @@ TEST_CASE("node_coord returns correct coordinates", "[problem_data]")
 //  Edge cases
 // =========================================================================
 
-TEST_CASE("Empty ProblemData (no clients)", "[problem_data]")
-{
+TEST_CASE("Empty ProblemData (no clients)", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {10}});
@@ -399,8 +378,7 @@ TEST_CASE("Empty ProblemData (no clients)", "[problem_data]")
     REQUIRE(pd.dist(0, 0) == 0);
 }
 
-TEST_CASE("Multiple depots", "[problem_data]")
-{
+TEST_CASE("Multiple depots", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_depot({100.0, 0.0});
@@ -417,8 +395,7 @@ TEST_CASE("Multiple depots", "[problem_data]")
     REQUIRE(pd.dist(0, 1) == 100);
 }
 
-TEST_CASE("Asymmetric explicit distances", "[problem_data]")
-{
+TEST_CASE("Asymmetric explicit distances", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({0.0, 0.0});  // same location (Euclidean = 0)

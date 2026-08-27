@@ -23,8 +23,7 @@ public:
     /// Scan all unserved optional clients and find the best insertion.
     ///
     /// @return true if an improving insertion was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best move to the solution.
@@ -37,9 +36,9 @@ public:
 private:
     int64_t best_delta_ = 0;
 
-    int client_ = -1;   ///< Client to insert.
-    int route_  = -1;   ///< Target route index.
-    int pos_    = -1;    ///< Insertion position in the target route.
+    int client_ = -1;  ///< Client to insert.
+    int route_ = -1;   ///< Target route index.
+    int pos_ = -1;     ///< Insertion position in the target route.
 };
 
 // ---------------------------------------------------------------------------
@@ -57,8 +56,7 @@ public:
     /// Scan all served optional clients and find the best removal.
     ///
     /// @return true if an improving removal was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best move to the solution.
@@ -71,8 +69,8 @@ public:
 private:
     int64_t best_delta_ = 0;
 
-    int route_ = -1;    ///< Route containing the client to remove.
-    int pos_   = -1;     ///< Position of the client in the route.
+    int route_ = -1;  ///< Route containing the client to remove.
+    int pos_ = -1;    ///< Position of the client in the route.
 };
 
-} // namespace coso
+}  // namespace coso

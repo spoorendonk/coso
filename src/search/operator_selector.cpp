@@ -5,19 +5,18 @@
 namespace coso {
 
 OperatorSelector::OperatorSelector(int num_operators, double exploration)
-    : stats_(num_operators), exploration_(exploration)
-{
+    : stats_(num_operators), exploration_(exploration) {
     assert(num_operators > 0);
 }
 
-int OperatorSelector::select() const
-{
+int OperatorSelector::select() const {
     assert(!stats_.empty());
 
     // Phase 1: try each operator at least once (round-robin).
     for (int i = 0; i < static_cast<int>(stats_.size()); ++i) {
-        if (stats_[i].count == 0)
+        if (stats_[i].count == 0) {
             return i;
+        }
     }
 
     // Phase 2: UCB1 selection.
@@ -39,20 +38,19 @@ int OperatorSelector::select() const
     return best_idx;
 }
 
-void OperatorSelector::update(int op_idx, double reward)
-{
+void OperatorSelector::update(int op_idx, double reward) {
     assert(op_idx >= 0 && op_idx < static_cast<int>(stats_.size()));
 
     auto& s = stats_[op_idx];
     s.count++;
     s.total_reward += reward;
-    if (reward > 0.0)
+    if (reward > 0.0) {
         s.successes++;
+    }
     total_selections_++;
 }
 
-void OperatorSelector::reset()
-{
+void OperatorSelector::reset() {
     for (auto& s : stats_) {
         s.count = 0;
         s.total_reward = 0.0;
@@ -61,4 +59,4 @@ void OperatorSelector::reset()
     total_selections_ = 0;
 }
 
-} // namespace coso
+}  // namespace coso

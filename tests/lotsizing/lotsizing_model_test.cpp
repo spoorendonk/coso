@@ -1,11 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "model/lotsizing_model.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
-TEST_CASE("LotSizingModel solves basic CLSP instance", "[lotsizing][model]")
-{
+TEST_CASE("LotSizingModel solves basic CLSP instance", "[lotsizing][model]") {
     LotSizingModel model;
     model.set_num_periods(4);
     int p = model.add_product(100.0, 2.0, 1.0, 2.0);
@@ -26,12 +25,11 @@ TEST_CASE("LotSizingModel solves basic CLSP instance", "[lotsizing][model]")
     REQUIRE(result.cost() > 0.0);
 }
 
-TEST_CASE("LotSizingModel supports BOM", "[lotsizing][model]")
-{
+TEST_CASE("LotSizingModel supports BOM", "[lotsizing][model]") {
     LotSizingModel model;
     model.set_num_periods(3);
     int parent = model.add_product(120.0, 2.0, 1.0, 2.0);
-    int child  = model.add_product(80.0, 1.0, 0.5, 1.5);
+    int child = model.add_product(80.0, 1.0, 0.5, 1.5);
 
     model.add_bom(parent, child, 2.0);
     model.set_demand(parent, 0, 5.0);
@@ -46,8 +44,7 @@ TEST_CASE("LotSizingModel supports BOM", "[lotsizing][model]")
     REQUIRE(result.inventory().size() == 2);
 }
 
-TEST_CASE("LotSizingModel validates indices", "[lotsizing][model]")
-{
+TEST_CASE("LotSizingModel validates indices", "[lotsizing][model]") {
     LotSizingModel model;
     model.set_num_periods(2);
     int p = model.add_product(50.0, 1.0, 1.0, 1.0);

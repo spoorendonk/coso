@@ -1,4 +1,5 @@
 #include "model/routing_model.h"
+
 #include "common/work_units.h"
 #include "model/instance_reader.h"
 #include "routing/cost_evaluator.h"
@@ -16,67 +17,55 @@ namespace coso {
 //  Depot / Client / VehicleType registration
 // ---------------------------------------------------------------------------
 
-int RoutingModel::add_depot(double x, double y, DepotParams p)
-{
+int RoutingModel::add_depot(double x, double y, DepotParams p) {
     int idx = static_cast<int>(depots_.size());
-    depots_.push_back({.x = x, .y = y, .has_coord = true,
-                       .explicit_id = -1, .params = p});
+    depots_.push_back({.x = x, .y = y, .has_coord = true, .explicit_id = -1, .params = p});
     return idx;
 }
 
-int RoutingModel::add_depot(int id, DepotParams p)
-{
+int RoutingModel::add_depot(int id, DepotParams p) {
     int idx = static_cast<int>(depots_.size());
-    depots_.push_back({.x = 0.0, .y = 0.0, .has_coord = false,
-                       .explicit_id = id, .params = p});
+    depots_.push_back({.x = 0.0, .y = 0.0, .has_coord = false, .explicit_id = id, .params = p});
     return idx;
 }
 
-int RoutingModel::add_vehicle_type(int count, VehicleTypeParams p)
-{
+int RoutingModel::add_vehicle_type(int count, VehicleTypeParams p) {
     int idx = static_cast<int>(vehicle_types_.size());
     vehicle_types_.push_back({.count = count, .params = std::move(p)});
     return idx;
 }
 
-int RoutingModel::add_client(double x, double y, ClientParams p)
-{
+int RoutingModel::add_client(double x, double y, ClientParams p) {
     int idx = static_cast<int>(clients_.size());
-    clients_.push_back({.x = x, .y = y, .has_coord = true,
-                        .explicit_id = -1, .params = std::move(p)});
+    clients_.push_back(
+        {.x = x, .y = y, .has_coord = true, .explicit_id = -1, .params = std::move(p)});
     return idx;
 }
 
-int RoutingModel::add_client(int id, ClientParams p)
-{
+int RoutingModel::add_client(int id, ClientParams p) {
     int idx = static_cast<int>(clients_.size());
-    clients_.push_back({.x = 0.0, .y = 0.0, .has_coord = false,
-                        .explicit_id = id, .params = std::move(p)});
+    clients_.push_back(
+        {.x = 0.0, .y = 0.0, .has_coord = false, .explicit_id = id, .params = std::move(p)});
     return idx;
 }
 
-int RoutingModel::add_pickup(double x, double y, ClientParams p)
-{
+int RoutingModel::add_pickup(double x, double y, ClientParams p) {
     return add_client(x, y, std::move(p));
 }
 
-int RoutingModel::add_delivery(double x, double y, ClientParams p)
-{
+int RoutingModel::add_delivery(double x, double y, ClientParams p) {
     return add_client(x, y, std::move(p));
 }
 
-void RoutingModel::add_request(int pickup, int delivery)
-{
+void RoutingModel::add_request(int pickup, int delivery) {
     requests_.emplace_back(pickup, delivery);
 }
 
-void RoutingModel::add_pickup_delivery(int pickup, int delivery)
-{
+void RoutingModel::add_pickup_delivery(int pickup, int delivery) {
     add_request(pickup, delivery);
 }
 
-int RoutingModel::add_client_group()
-{
+int RoutingModel::add_client_group() {
     return next_group_id_++;
 }
 
@@ -84,33 +73,27 @@ int RoutingModel::add_client_group()
 //  Distance / duration / cost matrix setters
 // ---------------------------------------------------------------------------
 
-void RoutingModel::set_distance(int from, int to, int dist)
-{
+void RoutingModel::set_distance(int from, int to, int dist) {
     dist_entries_.push_back({current_profile_, from, to, dist});
 }
 
-void RoutingModel::set_duration(int from, int to, int dur)
-{
+void RoutingModel::set_duration(int from, int to, int dur) {
     dur_entries_.push_back({current_profile_, from, to, dur});
 }
 
-void RoutingModel::set_profile(int profile)
-{
+void RoutingModel::set_profile(int profile) {
     current_profile_ = profile;
 }
 
-void RoutingModel::set_profile_distance(int profile, int from, int to, int dist)
-{
+void RoutingModel::set_profile_distance(int profile, int from, int to, int dist) {
     dist_entries_.push_back({profile, from, to, dist});
 }
 
-void RoutingModel::set_profile_duration(int profile, int from, int to, int dur)
-{
+void RoutingModel::set_profile_duration(int profile, int from, int to, int dur) {
     dur_entries_.push_back({profile, from, to, dur});
 }
 
-void RoutingModel::set_cost_matrix(int profile, int from, int to, int cost)
-{
+void RoutingModel::set_cost_matrix(int profile, int from, int to, int cost) {
     cost_entries_.push_back({profile, from, to, cost});
 }
 
@@ -118,13 +101,11 @@ void RoutingModel::set_cost_matrix(int profile, int from, int to, int cost)
 //  Warm start / pin
 // ---------------------------------------------------------------------------
 
-void RoutingModel::set_initial_routes(const std::vector<std::vector<int>>& routes)
-{
+void RoutingModel::set_initial_routes(const std::vector<std::vector<int>>& routes) {
     initial_routes_ = routes;
 }
 
-void RoutingModel::pin(int client_id)
-{
+void RoutingModel::pin(int client_id) {
     pinned_.push_back(client_id);
 }
 
@@ -132,8 +113,7 @@ void RoutingModel::pin(int client_id)
 //  solve()
 // ---------------------------------------------------------------------------
 
-Result RoutingModel::solve(TimeLimit tl)
-{
+Result RoutingModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
 
@@ -218,8 +198,9 @@ Result RoutingModel::solve(TimeLimit tl)
     // Extract non-empty routes.
     for (int v = 0; v < best.num_routes(); ++v) {
         auto const& route = best.route(v);
-        if (route.empty())
+        if (route.empty()) {
             continue;
+        }
 
         std::vector<int> client_ids;
         client_ids.reserve(route.size());
@@ -239,8 +220,7 @@ Result RoutingModel::solve(TimeLimit tl)
     result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
-    result.elapsed_seconds_ = std::chrono::duration<double>(
-        wall_end - wall_start).count();
+    result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
 
     return result;
 }
@@ -249,8 +229,7 @@ Result RoutingModel::solve(TimeLimit tl)
 //  Free function: solve from file
 // ---------------------------------------------------------------------------
 
-Result solve(const std::string& instance_path, TimeLimit tl)
-{
+Result solve(const std::string& instance_path, TimeLimit tl) {
     // Try to read the VRP instance file.
     VrpInstance inst;
     try {
@@ -298,8 +277,9 @@ Result solve(const std::string& instance_path, TimeLimit tl)
 
     int client_idx = 0;
     for (int i = 0; i < inst.dimension; ++i) {
-        if (is_depot[i])
+        if (is_depot[i]) {
             continue;
+        }
 
         ClientParams cp;
         if (!inst.demands.empty() && inst.demands[i] > 0) {
@@ -324,8 +304,9 @@ Result solve(const std::string& instance_path, TimeLimit tl)
         // Estimate: ceil(total_demand / capacity), with a minimum of 1.
         int total_demand = 0;
         for (int i = 0; i < inst.dimension; ++i) {
-            if (!is_depot[i] && !inst.demands.empty())
+            if (!is_depot[i] && !inst.demands.empty()) {
                 total_demand += inst.demands[i];
+            }
         }
         if (inst.capacity > 0) {
             num_vehicles = (total_demand + inst.capacity - 1) / inst.capacity;
@@ -352,10 +333,14 @@ Result solve(const std::string& instance_path, TimeLimit tl)
         int n = num_depots + client_idx;  // total model nodes
         for (int i = 0; i < inst.dimension; ++i) {
             int mi = node_to_model[i];
-            if (mi < 0) continue;
+            if (mi < 0) {
+                continue;
+            }
             for (int j = 0; j < inst.dimension; ++j) {
                 int mj = node_to_model[j];
-                if (mj < 0) continue;
+                if (mj < 0) {
+                    continue;
+                }
                 int d = inst.dist(i, j);
                 model.set_distance(mi, mj, d);
             }
@@ -365,4 +350,4 @@ Result solve(const std::string& instance_path, TimeLimit tl)
     return model.solve(tl);
 }
 
-} // namespace coso
+}  // namespace coso

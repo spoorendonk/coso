@@ -10,8 +10,7 @@ namespace coso {
 //  ModeAssignment
 // ---------------------------------------------------------------------------
 
-ModeAssignment::ModeAssignment(ScheduleData const& data)
-{
+ModeAssignment::ModeAssignment(ScheduleData const& data) {
     int n = data.num_operations();
     int nr = data.num_resources();
 
@@ -28,8 +27,9 @@ ModeAssignment::ModeAssignment(ScheduleData const& data)
 
         // Collect base resource usage for this operation.
         std::vector<int> base_usage(nr, 0);
-        for (int r = 0; r < nr; ++r)
+        for (int r = 0; r < nr; ++r) {
             base_usage[r] = data.resource_usage(op, r);
+        }
 
         if (!opdata.eligible_machines.empty()) {
             // FJSP-style: each eligible machine is a mode with its own duration.
@@ -37,47 +37,44 @@ ModeAssignment::ModeAssignment(ScheduleData const& data)
                 int dur = (i < static_cast<int>(opdata.durations_per_machine.size()))
                               ? opdata.durations_per_machine[i]
                               : opdata.duration;
-                modes_[op].push_back({.duration = dur,
-                                      .resource_usage = base_usage});
+                modes_[op].push_back({.duration = dur, .resource_usage = base_usage});
             }
         } else {
             // Single mode from fixed machine/duration.
-            modes_[op].push_back({.duration = opdata.duration,
-                                  .resource_usage = base_usage});
+            modes_[op].push_back({.duration = opdata.duration, .resource_usage = base_usage});
         }
     }
 }
 
-int ModeAssignment::total_resource_usage(int r) const
-{
+int ModeAssignment::total_resource_usage(int r) const {
     int total = 0;
-    for (int op = 0; op < num_operations(); ++op)
+    for (int op = 0; op < num_operations(); ++op) {
         total += resource_usage(op, r);
+    }
     return total;
 }
 
-int ModeAssignment::total_duration() const
-{
+int ModeAssignment::total_duration() const {
     int total = 0;
-    for (int op = 0; op < num_operations(); ++op)
+    for (int op = 0; op < num_operations(); ++op) {
         total += duration(op);
+    }
     return total;
 }
 
-bool ModeAssignment::mode_resource_feasible(ScheduleData const& data) const
-{
+bool ModeAssignment::mode_resource_feasible(ScheduleData const& data) const {
     int nr = data.num_resources();
     for (int op = 0; op < num_operations(); ++op) {
         for (int r = 0; r < nr; ++r) {
-            if (resource_usage(op, r) > data.resource_capacity(r))
+            if (resource_usage(op, r) > data.resource_capacity(r)) {
                 return false;
+            }
         }
     }
     return true;
 }
 
-void ModeAssignment::add_mode(int op, OperationMode m)
-{
+void ModeAssignment::add_mode(int op, OperationMode m) {
     if (op >= static_cast<int>(modes_.size())) {
         modes_.resize(op + 1);
         selected_mode_.resize(op + 1, 0);
@@ -89,8 +86,7 @@ void ModeAssignment::add_mode(int op, OperationMode m)
 //  Greedy mode selection
 // ---------------------------------------------------------------------------
 
-ModeAssignment greedy_mode_selection(ScheduleData const& data)
-{
+ModeAssignment greedy_mode_selection(ScheduleData const& data) {
     ModeAssignment assignment(data);
     int nr = data.num_resources();
 
@@ -104,22 +100,23 @@ ModeAssignment greedy_mode_selection(ScheduleData const& data)
             // Check per-operation resource feasibility.
             bool feasible = true;
             for (int r = 0; r < nr; ++r) {
-                int usage = (r < static_cast<int>(mode.resource_usage.size()))
-                                ? mode.resource_usage[r] : 0;
+                int usage =
+                    (r < static_cast<int>(mode.resource_usage.size())) ? mode.resource_usage[r] : 0;
                 if (usage > data.resource_capacity(r)) {
                     feasible = false;
                     break;
                 }
             }
-            if (!feasible)
+            if (!feasible) {
                 continue;
+            }
 
             // Cost = sum of resource usage + duration (weighted equally).
             // This balances resource consumption against processing time.
             int cost = mode.duration;
             for (int r = 0; r < nr; ++r) {
-                int usage = (r < static_cast<int>(mode.resource_usage.size()))
-                                ? mode.resource_usage[r] : 0;
+                int usage =
+                    (r < static_cast<int>(mode.resource_usage.size())) ? mode.resource_usage[r] : 0;
                 cost += usage;
             }
 
@@ -139,8 +136,7 @@ ModeAssignment greedy_mode_selection(ScheduleData const& data)
 //  Local search over mode assignments
 // ---------------------------------------------------------------------------
 
-void local_search_modes(ScheduleData const& data, ModeAssignment& assignment)
-{
+void local_search_modes(ScheduleData const& data, ModeAssignment& assignment) {
     int nr = data.num_resources();
     bool improved = true;
 
@@ -148,17 +144,18 @@ void local_search_modes(ScheduleData const& data, ModeAssignment& assignment)
         improved = false;
 
         // Steepest descent: find the best single-operation mode swap.
-        int best_op   = -1;
+        int best_op = -1;
         int best_mode = -1;
         int best_delta = 0;  // negative = improvement
 
         for (int op = 0; op < assignment.num_operations(); ++op) {
             int current_mode = assignment.selected_mode(op);
-            int current_dur  = assignment.duration(op);
+            int current_dur = assignment.duration(op);
 
             for (int m = 0; m < assignment.num_modes(op); ++m) {
-                if (m == current_mode)
+                if (m == current_mode) {
                     continue;
+                }
 
                 auto const& candidate = assignment.mode(op, m);
 
@@ -166,20 +163,22 @@ void local_search_modes(ScheduleData const& data, ModeAssignment& assignment)
                 bool feasible = true;
                 for (int r = 0; r < nr; ++r) {
                     int usage = (r < static_cast<int>(candidate.resource_usage.size()))
-                                    ? candidate.resource_usage[r] : 0;
+                                    ? candidate.resource_usage[r]
+                                    : 0;
                     if (usage > data.resource_capacity(r)) {
                         feasible = false;
                         break;
                     }
                 }
-                if (!feasible)
+                if (!feasible) {
                     continue;
+                }
 
                 int delta = candidate.duration - current_dur;
                 if (delta < best_delta) {
                     best_delta = delta;
-                    best_op    = op;
-                    best_mode  = m;
+                    best_op = op;
+                    best_mode = m;
                 }
             }
         }
@@ -191,4 +190,4 @@ void local_search_modes(ScheduleData const& data, ModeAssignment& assignment)
     }
 }
 
-} // namespace coso
+}  // namespace coso

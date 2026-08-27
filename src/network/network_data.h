@@ -22,11 +22,11 @@ public:
     // -------------------------------------------------------------------
 
     struct ArcData {
-        int tail         = -1;    ///< source node index
-        int head         = -1;    ///< destination node index
-        int lower_cap    = 0;     ///< minimum flow on this arc
-        int upper_cap    = INT_MAX; ///< maximum flow on this arc
-        int cost         = 0;     ///< unit cost per flow on this arc
+        int tail = -1;            ///< source node index
+        int head = -1;            ///< destination node index
+        int lower_cap = 0;        ///< minimum flow on this arc
+        int upper_cap = INT_MAX;  ///< maximum flow on this arc
+        int cost = 0;             ///< unit cost per flow on this arc
     };
 
     // -------------------------------------------------------------------
@@ -35,7 +35,7 @@ public:
 
     struct ResourceData {
         std::string name;
-        int upper_bound  = INT_MAX; ///< global upper bound on resource consumption
+        int upper_bound = INT_MAX;  ///< global upper bound on resource consumption
     };
 
     // -------------------------------------------------------------------
@@ -49,8 +49,7 @@ public:
         int add_node(int supply = 0, std::string name = "");
 
         /// Add an arc from tail to head. Returns arc index (0-based).
-        int add_arc(int tail, int head, int cost = 0,
-                    int lower_cap = 0, int upper_cap = INT_MAX);
+        int add_arc(int tail, int head, int cost = 0, int lower_cap = 0, int upper_cap = INT_MAX);
 
         /// Add a resource type. Returns resource index (0-based).
         int add_resource(std::string name = "", int upper_bound = INT_MAX);
@@ -91,8 +90,8 @@ public:
     //  Accessors (all const -- NetworkData is immutable after construction)
     // -------------------------------------------------------------------
 
-    [[nodiscard]] int num_nodes()     const noexcept { return num_nodes_; }
-    [[nodiscard]] int num_arcs()      const noexcept { return num_arcs_; }
+    [[nodiscard]] int num_nodes() const noexcept { return num_nodes_; }
+    [[nodiscard]] int num_arcs() const noexcept { return num_arcs_; }
     [[nodiscard]] int num_resources() const noexcept { return num_resources_; }
 
     /// Supply/demand of node n (positive = supply, negative = demand).
@@ -141,25 +140,25 @@ public:
     }
 
     /// Whether the instance has any resource constraints.
-    [[nodiscard]] bool has_resources() const noexcept {
-        return num_resources_ > 0;
-    }
+    [[nodiscard]] bool has_resources() const noexcept { return num_resources_ > 0; }
 
     /// Total supply (should equal total demand for a balanced problem).
     [[nodiscard]] int total_supply() const noexcept {
         int s = 0;
-        for (int i = 0; i < num_nodes_; ++i) s += supply_[i];
+        for (int i = 0; i < num_nodes_; ++i) {
+            s += supply_[i];
+        }
         return s;
     }
 
 private:
-    int num_nodes_     = 0;
-    int num_arcs_      = 0;
+    int num_nodes_ = 0;
+    int num_arcs_ = 0;
     int num_resources_ = 0;
 
-    std::vector<int>          supply_;
-    std::vector<std::string>  node_names_;
-    std::vector<ArcData>      arcs_;
+    std::vector<int> supply_;
+    std::vector<std::string> node_names_;
+    std::vector<ArcData> arcs_;
     std::vector<ResourceData> resources_;
 
     /// Flat row-major: resource_usage_[arc * num_resources_ + resource].
@@ -170,11 +169,11 @@ private:
     std::vector<int> out_arcs_;
 
     /// CSR-style adjacency for incoming arcs.
-    std::vector<int> in_offset_;   ///< size num_nodes_+1
+    std::vector<int> in_offset_;  ///< size num_nodes_+1
     std::vector<int> in_arcs_;
 
     NetworkData() = default;
     friend class Builder;
 };
 
-} // namespace coso
+}  // namespace coso

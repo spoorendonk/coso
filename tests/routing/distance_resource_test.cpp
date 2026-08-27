@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
+#include "routing/resources/distance_resource.h"
 
 #include "routing/route.h"
-#include "routing/resources/distance_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -11,48 +12,45 @@ using namespace coso;
 
 /// 1 depot at (0,0), 4 clients on a line: (10,0), (20,0), (30,0), (0,10).
 /// Single vehicle type, no max_distance/max_duration constraints.
-static ProblemData make_basic_instance()
-{
+static ProblemData make_basic_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {100}});
 
-    b.add_client({10.0, 0.0}, {.demand = {1}});                 // client 0
-    b.add_client({20.0, 0.0}, {.demand = {1}});                 // client 1
-    b.add_client({30.0, 0.0}, {.demand = {1}});                 // client 2
-    b.add_client({0.0, 10.0}, {.demand = {1}});                 // client 3
+    b.add_client({10.0, 0.0}, {.demand = {1}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {1}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {1}});  // client 2
+    b.add_client({0.0, 10.0}, {.demand = {1}});  // client 3
 
     return b.build(0);
 }
 
 /// Instance with max_distance = 50 and max_duration = 60.
-static ProblemData make_constrained_instance()
-{
+static ProblemData make_constrained_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {
-        .capacity = {100},
-        .max_duration = 60,
-        .max_distance = 50,
-    });
+                              .capacity = {100},
+                              .max_duration = 60,
+                              .max_distance = 50,
+                          });
 
-    b.add_client({10.0, 0.0}, {.demand = {1}, .service = 5});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {1}, .service = 5});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {1}, .service = 5});   // client 2
-    b.add_client({0.0, 10.0}, {.demand = {1}, .service = 5});   // client 3
+    b.add_client({10.0, 0.0}, {.demand = {1}, .service = 5});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {1}, .service = 5});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {1}, .service = 5});  // client 2
+    b.add_client({0.0, 10.0}, {.demand = {1}, .service = 5});  // client 3
 
     return b.build(0);
 }
 
 /// Instance with only max_duration constraint (max_distance = 0 means unlimited).
-static ProblemData make_duration_only_instance()
-{
+static ProblemData make_duration_only_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {
-        .capacity = {100},
-        .max_duration = 40,
-    });
+                              .capacity = {100},
+                              .max_duration = 40,
+                          });
 
     b.add_client({10.0, 0.0}, {.demand = {1}, .service = 10});  // client 0
     b.add_client({20.0, 0.0}, {.demand = {1}, .service = 10});  // client 1
@@ -64,9 +62,7 @@ static ProblemData make_duration_only_instance()
 //  DistanceResource unit tests
 // ===========================================================================
 
-TEST_CASE("DistanceResource::init creates correct single-client state",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::init creates correct single-client state", "[distance_resource]") {
     auto data = make_constrained_instance();
 
     auto s0 = DistanceResource::init(data, 0);
@@ -76,9 +72,7 @@ TEST_CASE("DistanceResource::init creates correct single-client state",
     CHECK(s0.last == 1);
 }
 
-TEST_CASE("DistanceResource::init_depot creates empty state",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::init_depot creates empty state", "[distance_resource]") {
     auto s = DistanceResource::init_depot(0);
     CHECK(s.distance == 0);
     CHECK(s.duration == 0);
@@ -86,9 +80,7 @@ TEST_CASE("DistanceResource::init_depot creates empty state",
     CHECK(s.last == 0);
 }
 
-TEST_CASE("DistanceResource::merge combines two subsequences",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::merge combines two subsequences", "[distance_resource]") {
     auto data = make_basic_instance();
 
     // Clients at (10,0) and (20,0). Euclidean dist = 10.
@@ -102,9 +94,7 @@ TEST_CASE("DistanceResource::merge combines two subsequences",
     CHECK(merged.last == 2);       // node index of c1
 }
 
-TEST_CASE("DistanceResource::merge with service times",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::merge with service times", "[distance_resource]") {
     auto data = make_constrained_instance();
 
     // Clients at (10,0) service=5 and (20,0) service=5. Edge dist = 10.
@@ -116,9 +106,7 @@ TEST_CASE("DistanceResource::merge with service times",
     CHECK(merged.duration == 20);  // service(c0)=5 + travel=10 + service(c1)=5
 }
 
-TEST_CASE("DistanceResource::merge depot -> client -> depot",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::merge depot -> client -> depot", "[distance_resource]") {
     auto data = make_basic_instance();
 
     // Route: depot(0,0) -> c0(10,0) -> depot(0,0)
@@ -129,12 +117,10 @@ TEST_CASE("DistanceResource::merge depot -> client -> depot",
     CHECK(dep_c0.distance == 10);  // depot -> c0
 
     auto full = DistanceResource::merge(dep_c0, DistanceResource::init_depot(0), data, 0);
-    CHECK(full.distance == 20);    // depot -> c0 -> depot
+    CHECK(full.distance == 20);  // depot -> c0 -> depot
 }
 
-TEST_CASE("DistanceResource::excess with no constraints returns 0",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::excess with no constraints returns 0", "[distance_resource]") {
     auto data = make_basic_instance();
     auto const& vt = data.vehicle_type(0);
 
@@ -143,9 +129,7 @@ TEST_CASE("DistanceResource::excess with no constraints returns 0",
     CHECK(DistanceResource::excess(s, vt) == 0);
 }
 
-TEST_CASE("DistanceResource::excess with max_distance violation",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::excess with max_distance violation", "[distance_resource]") {
     auto data = make_constrained_instance();
     auto const& vt = data.vehicle_type(0);  // max_distance=50, max_duration=60
 
@@ -153,9 +137,7 @@ TEST_CASE("DistanceResource::excess with max_distance violation",
     CHECK(DistanceResource::excess(s, vt) == 5);  // 55 - 50 = 5
 }
 
-TEST_CASE("DistanceResource::excess with max_duration violation",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::excess with max_duration violation", "[distance_resource]") {
     auto data = make_constrained_instance();
     auto const& vt = data.vehicle_type(0);  // max_distance=50, max_duration=60
 
@@ -163,9 +145,7 @@ TEST_CASE("DistanceResource::excess with max_duration violation",
     CHECK(DistanceResource::excess(s, vt) == 15);  // 75 - 60 = 15
 }
 
-TEST_CASE("DistanceResource::excess with both violations",
-          "[distance_resource]")
-{
+TEST_CASE("DistanceResource::excess with both violations", "[distance_resource]") {
     auto data = make_constrained_instance();
     auto const& vt = data.vehicle_type(0);  // max_distance=50, max_duration=60
 
@@ -178,9 +158,7 @@ TEST_CASE("DistanceResource::excess with both violations",
 //  Route integration tests for distance resource
 // ===========================================================================
 
-TEST_CASE("Route: empty route has zero duration and no dist excess",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: empty route has zero duration and no dist excess", "[route][distance_resource]") {
     auto data = make_constrained_instance();
     Route route(data, 0);
 
@@ -190,9 +168,7 @@ TEST_CASE("Route: empty route has zero duration and no dist excess",
     CHECK(route.dist_feasible());
 }
 
-TEST_CASE("Route: distance and duration tracking",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: distance and duration tracking", "[route][distance_resource]") {
     auto data = make_constrained_instance();
     Route route(data, 0);
 
@@ -209,9 +185,7 @@ TEST_CASE("Route: distance and duration tracking",
     CHECK(route.dist_excess() == 0);
 }
 
-TEST_CASE("Route: distance excess when max_distance exceeded",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: distance excess when max_distance exceeded", "[route][distance_resource]") {
     auto data = make_constrained_instance();
     Route route(data, 0);
 
@@ -228,9 +202,7 @@ TEST_CASE("Route: distance excess when max_distance exceeded",
     CHECK_FALSE(route.dist_feasible());
 }
 
-TEST_CASE("Route: duration-only constraint",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: duration-only constraint", "[route][distance_resource]") {
     auto data = make_duration_only_instance();
     Route route(data, 0);
 
@@ -246,9 +218,7 @@ TEST_CASE("Route: duration-only constraint",
     CHECK_FALSE(route.dist_feasible());
 }
 
-TEST_CASE("Route: dist prefix/suffix arrays are correct",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: dist prefix/suffix arrays are correct", "[route][distance_resource]") {
     auto data = make_constrained_instance();
     Route route(data, 0);
 
@@ -283,9 +253,7 @@ TEST_CASE("Route: dist prefix/suffix arrays are correct",
 //  O(1) move evaluation tests for distance resource
 // ===========================================================================
 
-TEST_CASE("Route: eval_insert_dist_excess matches actual insert",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: eval_insert_dist_excess matches actual insert", "[route][distance_resource]") {
     auto data = make_constrained_instance();
     Route route(data, 0);
 
@@ -303,9 +271,7 @@ TEST_CASE("Route: eval_insert_dist_excess matches actual insert",
     }
 }
 
-TEST_CASE("Route: eval_remove_dist_excess matches actual remove",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: eval_remove_dist_excess matches actual remove", "[route][distance_resource]") {
     auto data = make_constrained_instance();
     Route route(data, 0);
 
@@ -322,9 +288,7 @@ TEST_CASE("Route: eval_remove_dist_excess matches actual remove",
     }
 }
 
-TEST_CASE("Route: eval_insert_dist_excess on empty route",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: eval_insert_dist_excess on empty route", "[route][distance_resource]") {
     auto data = make_constrained_instance();
     Route route(data, 0);
 
@@ -337,15 +301,15 @@ TEST_CASE("Route: eval_insert_dist_excess on empty route",
 }
 
 TEST_CASE("Route: eval_insert_dist_excess with all clients and positions",
-          "[route][distance_resource]")
-{
+          "[route][distance_resource]") {
     auto data = make_constrained_instance();
 
     // Test all combinations of existing routes and insertions.
     for (int base_size = 0; base_size <= 3; ++base_size) {
         std::vector<int> base_clients;
-        for (int i = 0; i < base_size; ++i)
+        for (int i = 0; i < base_size; ++i) {
             base_clients.push_back(i);
+        }
 
         Route route(data, 0);
         route.set_clients(base_clients);
@@ -363,9 +327,7 @@ TEST_CASE("Route: eval_insert_dist_excess with all clients and positions",
     }
 }
 
-TEST_CASE("Route: distance unchanged from original computation",
-          "[route][distance_resource]")
-{
+TEST_CASE("Route: distance unchanged from original computation", "[route][distance_resource]") {
     // Verify the new DistanceResource-based distance matches the original
     // simple sum-of-edges computation.
     auto data = make_basic_instance();

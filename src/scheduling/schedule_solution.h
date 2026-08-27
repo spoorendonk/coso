@@ -17,12 +17,10 @@ class ScheduleSolution {
 public:
     /// Per-operation assignment.
     struct Assignment {
-        int machine    = -1;  ///< assigned machine (-1 = unassigned)
+        int machine = -1;     ///< assigned machine (-1 = unassigned)
         int start_time = -1;  ///< start time (-1 = unassigned)
 
-        [[nodiscard]] bool assigned() const noexcept {
-            return machine >= 0 && start_time >= 0;
-        }
+        [[nodiscard]] bool assigned() const noexcept { return machine >= 0 && start_time >= 0; }
     };
 
     /// Construct an empty solution for the given problem data.
@@ -103,4 +101,4 @@ private:
     int num_assigned_ = 0;
 };
 
-} // namespace coso
+}  // namespace coso

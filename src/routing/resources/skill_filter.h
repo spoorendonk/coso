@@ -50,29 +50,33 @@ struct SkillFilter {
         auto get_or_assign = [&](std::string const& name) -> int {
             auto [it, inserted] = sd.skill_index.emplace(name, sd.num_skills);
             if (inserted) {
-                assert(sd.num_skills < 64 &&
-                       "SkillFilter supports at most 64 distinct skills");
+                assert(sd.num_skills < 64 && "SkillFilter supports at most 64 distinct skills");
                 ++sd.num_skills;
             }
             return it->second;
         };
 
         // Index all skills from clients.
-        for (int c = 0; c < data.num_clients(); ++c)
-            for (auto const& s : data.client(c).skills)
+        for (int c = 0; c < data.num_clients(); ++c) {
+            for (auto const& s : data.client(c).skills) {
                 get_or_assign(s);
+            }
+        }
 
         // Index all skills from vehicle types.
-        for (int v = 0; v < data.num_vehicle_types(); ++v)
-            for (auto const& s : data.vehicle_type(v).skills)
+        for (int v = 0; v < data.num_vehicle_types(); ++v) {
+            for (auto const& s : data.vehicle_type(v).skills) {
                 get_or_assign(s);
+            }
+        }
 
         // Build client masks.
         sd.client_mask.resize(data.num_clients(), 0);
         for (int c = 0; c < data.num_clients(); ++c) {
             uint64_t mask = 0;
-            for (auto const& s : data.client(c).skills)
+            for (auto const& s : data.client(c).skills) {
                 mask |= uint64_t{1} << sd.skill_index.at(s);
+            }
             sd.client_mask[c] = mask;
         }
 
@@ -80,8 +84,9 @@ struct SkillFilter {
         sd.vehicle_mask.resize(data.num_vehicle_types(), 0);
         for (int v = 0; v < data.num_vehicle_types(); ++v) {
             uint64_t mask = 0;
-            for (auto const& s : data.vehicle_type(v).skills)
+            for (auto const& s : data.vehicle_type(v).skills) {
                 mask |= uint64_t{1} << sd.skill_index.at(s);
+            }
             sd.vehicle_mask[v] = mask;
         }
 
@@ -98,21 +103,17 @@ struct SkillFilter {
     /// @param sd      Precomputed skill data.
     /// @param client  Client index (0-based among clients).
     [[nodiscard]] static State init(SkillData const& sd, int client) {
-        assert(client >= 0
-               && client < static_cast<int>(sd.client_mask.size()));
+        assert(client >= 0 && client < static_cast<int>(sd.client_mask.size()));
         return {sd.client_mask[client]};
     }
 
     /// Initialize empty state at depot (no skills required).
-    [[nodiscard]] static State init_depot() {
-        return {0};
-    }
+    [[nodiscard]] static State init_depot() { return {0}; }
 
     /// Merge two adjacent subsequence states.
     ///
     /// The merged state requires the union of both subsequences' skills.
-    [[nodiscard]] static State merge(State const& left,
-                                     State const& right) {
+    [[nodiscard]] static State merge(State const& left, State const& right) {
         return {left.required | right.required};
     }
 
@@ -120,8 +121,7 @@ struct SkillFilter {
     ///
     /// For SkillFilter, direction does not matter: the set of required
     /// skills is the same regardless of visit order.
-    [[nodiscard]] static State merge_reverse(State const& left,
-                                             State const& right) {
+    [[nodiscard]] static State merge_reverse(State const& left, State const& right) {
         return merge(left, right);
     }
 
@@ -131,22 +131,16 @@ struct SkillFilter {
     /// @param sd     Precomputed skill data.
     /// @param vtype  Vehicle type index.
     /// @return Number of missing skills (0 = feasible).
-    [[nodiscard]] static int excess(State const& state,
-                                    SkillData const& sd,
-                                    int vtype) {
-        assert(vtype >= 0
-               && vtype < static_cast<int>(sd.vehicle_mask.size()));
+    [[nodiscard]] static int excess(State const& state, SkillData const& sd, int vtype) {
+        assert(vtype >= 0 && vtype < static_cast<int>(sd.vehicle_mask.size()));
         uint64_t missing = state.required & ~sd.vehicle_mask[vtype];
         return std::popcount(missing);
     }
 
     /// Convenience: check whether a vehicle type can serve this route.
-    [[nodiscard]] static bool feasible(State const& state,
-                                       SkillData const& sd,
-                                       int vtype) {
+    [[nodiscard]] static bool feasible(State const& state, SkillData const& sd, int vtype) {
         return excess(state, sd, vtype) == 0;
     }
-
 };
 
-} // namespace coso
+}  // namespace coso

@@ -59,8 +59,7 @@ public:
     /// Scan all routes for the best split or merge move.
     ///
     /// @return true if an improving move was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best move to the solution.
@@ -80,8 +79,8 @@ private:
     // For SPLIT: split route_a_ at position split_pos_.
     //   Clients [0..split_pos_) stay in route_a_.
     //   Clients [split_pos_..n) go to empty_route_ (an empty route slot).
-    int route_a_     = -1;
-    int split_pos_   = -1;
+    int route_a_ = -1;
+    int split_pos_ = -1;
     int empty_route_ = -1;  // destination for the second half
 
     // For MERGE: append route_b_'s clients after route_a_'s clients.
@@ -89,15 +88,12 @@ private:
 
     /// Find an empty route slot for the given vehicle type.
     /// Returns -1 if none available.
-    [[nodiscard]] static int find_empty_route(Solution const& sol,
-                                               ProblemData const& data,
-                                               int vehicle_type,
-                                               int exclude_route = -1);
+    [[nodiscard]] static int find_empty_route(Solution const& sol, ProblemData const& data,
+                                              int vehicle_type, int exclude_route = -1);
 
     /// Count how many non-empty routes exist for a given vehicle type.
-    [[nodiscard]] static int count_trips(Solution const& sol,
-                                          ProblemData const& data,
-                                          int vehicle_type);
+    [[nodiscard]] static int count_trips(Solution const& sol, ProblemData const& data,
+                                         int vehicle_type);
 };
 
-} // namespace coso
+}  // namespace coso

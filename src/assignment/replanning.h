@@ -42,22 +42,17 @@ public:
     LockedCells(ReplanConfig const& config, AssignmentSolution const& sol);
 
     /// Check whether a cell is locked.
-    [[nodiscard]] bool is_locked(int employee, int day) const
-    {
+    [[nodiscard]] bool is_locked(int employee, int day) const {
         return locked_.count(key(employee, day)) > 0;
     }
 
     /// Number of locked cells.
-    [[nodiscard]] int size() const noexcept
-    {
-        return static_cast<int>(locked_.size());
-    }
+    [[nodiscard]] int size() const noexcept { return static_cast<int>(locked_.size()); }
 
 private:
-    static int64_t key(int employee, int day) noexcept
-    {
-        return (static_cast<int64_t>(employee) << 32)
-               | static_cast<int64_t>(static_cast<uint32_t>(day));
+    static int64_t key(int employee, int day) noexcept {
+        return (static_cast<int64_t>(employee) << 32) |
+               static_cast<int64_t>(static_cast<uint32_t>(day));
     }
 
     std::unordered_set<int64_t> locked_;
@@ -74,9 +69,7 @@ private:
 /// @param data      The assignment instance data (may be modified with new
 ///                  constraints).
 /// @param evaluator The cost evaluator.
-void replan(AssignmentSolution& sol,
-            ReplanConfig const& config,
-            AssignmentData& data,
+void replan(AssignmentSolution& sol, ReplanConfig const& config, AssignmentData& data,
             AssignmentCostEvaluator const& evaluator);
 
-} // namespace coso
+}  // namespace coso

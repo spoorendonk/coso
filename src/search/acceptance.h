@@ -22,8 +22,7 @@ public:
     void init(int64_t cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost,
-                              int64_t current_cost);
+    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
 
     /// Advance one iteration (updates the fitness list with current cost).
     void iteration(int64_t current_cost);
@@ -46,15 +45,13 @@ public:
     /// @param initial_temp  Starting temperature.
     /// @param alpha         Cooling factor per iteration (0 < alpha < 1).
     /// @param seed          Random seed.
-    SimulatedAnnealing(double initial_temp, double alpha,
-                       unsigned int seed = 42);
+    SimulatedAnnealing(double initial_temp, double alpha, unsigned int seed = 42);
 
     /// Initialize (resets temperature to initial value).
     void init(int64_t cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost,
-                              int64_t current_cost);
+    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
 
     /// Advance one iteration (cools temperature).
     void iteration(int64_t current_cost);
@@ -84,8 +81,7 @@ public:
     void init(int64_t cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost,
-                              int64_t current_cost);
+    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
 
     /// Advance one iteration (decays threshold).
     void iteration(int64_t current_cost);
@@ -115,8 +111,7 @@ public:
     void init(int64_t cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost,
-                              int64_t current_cost);
+    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
 
     /// Advance one iteration.
     void iteration(int64_t current_cost);
@@ -125,4 +120,4 @@ private:
     std::variant<LateAcceptance, SimulatedAnnealing, RecordToRecord> impl_;
 };
 
-} // namespace coso
+}  // namespace coso

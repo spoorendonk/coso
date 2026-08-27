@@ -22,16 +22,14 @@ struct TaskCountResource {
 
     /// Initialize state for a single client node.
     /// Each client contributes exactly 1 task.
-    [[nodiscard]] static State init(
-        [[maybe_unused]] ProblemData const& data,
-        [[maybe_unused]] int client) {
+    [[nodiscard]] static State init([[maybe_unused]] ProblemData const& data,
+                                    [[maybe_unused]] int client) {
         assert(client >= 0 && client < data.num_clients());
         return State{1};
     }
 
     /// Initialize empty state at depot (no tasks).
-    [[nodiscard]] static State init_depot(
-        [[maybe_unused]] ProblemData const& data) {
+    [[nodiscard]] static State init_depot([[maybe_unused]] ProblemData const& data) {
         return State{0};
     }
 
@@ -42,8 +40,7 @@ struct TaskCountResource {
 
     /// Merge when the right subsequence is reversed.
     /// Task count is direction-independent, so merge_reverse == merge.
-    [[nodiscard]] static State merge_reverse(State const& left,
-                                             State const& right) {
+    [[nodiscard]] static State merge_reverse(State const& left, State const& right) {
         return merge(left, right);
     }
 
@@ -55,31 +52,33 @@ struct TaskCountResource {
     ///
     /// @param state         The merged state for the full route.
     /// @param vt            The vehicle type to check constraints against.
-    [[nodiscard]] static int excess(State const& state,
-                                    ProblemData::VehicleTypeData const& vt) {
+    [[nodiscard]] static int excess(State const& state, ProblemData::VehicleTypeData const& vt) {
         int ex = 0;
 
         // min_tasks violation: too few clients.
-        if (vt.min_tasks > 0 && state.count < vt.min_tasks)
+        if (vt.min_tasks > 0 && state.count < vt.min_tasks) {
             ex += vt.min_tasks - state.count;
+        }
 
         // max_tasks violation: too many clients.
-        if (vt.max_tasks > 0 && state.count > vt.max_tasks)
+        if (vt.max_tasks > 0 && state.count > vt.max_tasks) {
             ex += state.count - vt.max_tasks;
+        }
 
         return ex;
     }
 
     /// Convenience: compute excess from explicit min/max values.
-    [[nodiscard]] static int excess(State const& state,
-                                    int min_tasks, int max_tasks) {
+    [[nodiscard]] static int excess(State const& state, int min_tasks, int max_tasks) {
         int ex = 0;
-        if (min_tasks > 0 && state.count < min_tasks)
+        if (min_tasks > 0 && state.count < min_tasks) {
             ex += min_tasks - state.count;
-        if (max_tasks > 0 && state.count > max_tasks)
+        }
+        if (max_tasks > 0 && state.count > max_tasks) {
             ex += state.count - max_tasks;
+        }
         return ex;
     }
 };
 
-} // namespace coso
+}  // namespace coso

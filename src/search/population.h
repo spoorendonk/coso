@@ -42,9 +42,7 @@ public:
     /// @param num_close      Number of closest neighbours for diversity
     ///                       contribution (default: floor(pop_size * 0.2),
     ///                       clamped to at least 1).  Pass 0 for automatic.
-    explicit Population(ProblemData const& data,
-                        int max_feasible = 25,
-                        int max_infeasible = 25,
+    explicit Population(ProblemData const& data, int max_feasible = 25, int max_infeasible = 25,
                         int num_close = 0);
 
     /// Add a solution to the appropriate sub-population (feasible or
@@ -62,14 +60,10 @@ public:
     [[nodiscard]] Solution const& best_feasible() const;
 
     /// Whether there is at least one feasible solution.
-    [[nodiscard]] bool has_feasible() const noexcept {
-        return !feasible_.empty();
-    }
+    [[nodiscard]] bool has_feasible() const noexcept { return !feasible_.empty(); }
 
     /// Number of feasible solutions.
-    [[nodiscard]] int feasible_size() const noexcept {
-        return static_cast<int>(feasible_.size());
-    }
+    [[nodiscard]] int feasible_size() const noexcept { return static_cast<int>(feasible_.size()); }
 
     /// Number of infeasible solutions.
     [[nodiscard]] int infeasible_size() const noexcept {
@@ -77,14 +71,12 @@ public:
     }
 
     /// Total population size.
-    [[nodiscard]] int size() const noexcept {
-        return feasible_size() + infeasible_size();
-    }
+    [[nodiscard]] int size() const noexcept { return feasible_size() + infeasible_size(); }
 
 private:
     struct Individual {
         Solution sol;
-        int64_t cost;                    ///< Penalized cost.
+        int64_t cost;                            ///< Penalized cost.
         std::vector<std::pair<int, int>> edges;  ///< Sorted edge set for diversity.
     };
 
@@ -101,25 +93,21 @@ private:
     /// Extract the sorted edge set from a solution.
     /// An edge is an ordered pair (a, b) with a < b, for each consecutive
     /// pair of clients in each route.  Depot edges are excluded.
-    [[nodiscard]] static std::vector<std::pair<int, int>>
-    extract_edges(Solution const& sol);
+    [[nodiscard]] static std::vector<std::pair<int, int>> extract_edges(Solution const& sol);
 
     /// Broken-pairs distance between two individuals.
-    [[nodiscard]] static int broken_pairs(Individual const& a,
-                                          Individual const& b);
+    [[nodiscard]] static int broken_pairs(Individual const& a, Individual const& b);
 
     /// Compute biased fitness for each member of a sub-population.
     /// Returns a vector of fitness values (lower = better).
-    [[nodiscard]] std::vector<double>
-    biased_fitness(SubPop const& pop) const;
+    [[nodiscard]] std::vector<double> biased_fitness(SubPop const& pop) const;
 
     /// Remove the worst individual from a sub-population.
     void survivor_selection(SubPop& pop, int max_size);
 
     /// Binary tournament: pick two random indices from combined pop,
     /// return reference to the one with better biased fitness.
-    [[nodiscard]] Solution const&
-    tournament(std::mt19937& rng) const;
+    [[nodiscard]] Solution const& tournament(std::mt19937& rng) const;
 };
 
-} // namespace coso
+}  // namespace coso

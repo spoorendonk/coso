@@ -1,9 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
+#include "packing/packing_operators.h"
 
 #include "model/packing_model.h"
 #include "packing/packing_data.h"
-#include "packing/packing_operators.h"
 #include "packing/packing_solution.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -12,8 +13,7 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 1D instance: items {3, 5, 7, 2, 4}, bin cap 10, cost 1.
-static PackingData make_simple_1d()
-{
+static PackingData make_simple_1d() {
     PackingModel model;
     model.add_bin_type({.capacity = {10}});
     model.add_item({.size = {3}});  // 0
@@ -25,8 +25,7 @@ static PackingData make_simple_1d()
 }
 
 /// 1D instance with conflicts: items {10, 10, 10}, cap 100, conflict(0,1).
-static PackingData make_conflict_instance()
-{
+static PackingData make_conflict_instance() {
     PackingModel model;
     model.add_bin_type({.capacity = {100}});
     model.add_item({.size = {10}});  // 0
@@ -40,8 +39,7 @@ static PackingData make_conflict_instance()
 //  MoveItem tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("MoveItem: evaluate delta", "[packing][operators]")
-{
+TEST_CASE("MoveItem: evaluate delta", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -62,8 +60,7 @@ TEST_CASE("MoveItem: evaluate delta", "[packing][operators]")
     REQUIRE(move2.delta == 1);
 }
 
-TEST_CASE("MoveItem: feasibility check", "[packing][operators]")
-{
+TEST_CASE("MoveItem: feasibility check", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -79,8 +76,7 @@ TEST_CASE("MoveItem: feasibility check", "[packing][operators]")
     REQUIRE(is_feasible(sol, move2));
 }
 
-TEST_CASE("MoveItem: apply", "[packing][operators]")
-{
+TEST_CASE("MoveItem: apply", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -97,8 +93,7 @@ TEST_CASE("MoveItem: apply", "[packing][operators]")
     REQUIRE(sol.cost() == cost_before + move.delta);
 }
 
-TEST_CASE("MoveItem: enumerate returns feasible moves", "[packing][operators]")
-{
+TEST_CASE("MoveItem: enumerate returns feasible moves", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -115,8 +110,7 @@ TEST_CASE("MoveItem: enumerate returns feasible moves", "[packing][operators]")
     }
 }
 
-TEST_CASE("MoveItem: delta accuracy", "[packing][operators]")
-{
+TEST_CASE("MoveItem: delta accuracy", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -140,8 +134,7 @@ TEST_CASE("MoveItem: delta accuracy", "[packing][operators]")
 //  SwapItems tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("SwapItems: evaluate delta is zero", "[packing][operators]")
-{
+TEST_CASE("SwapItems: evaluate delta is zero", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -153,8 +146,7 @@ TEST_CASE("SwapItems: evaluate delta is zero", "[packing][operators]")
     REQUIRE(swap.delta == 0);
 }
 
-TEST_CASE("SwapItems: feasibility - capacity", "[packing][operators]")
-{
+TEST_CASE("SwapItems: feasibility - capacity", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -173,8 +165,7 @@ TEST_CASE("SwapItems: feasibility - capacity", "[packing][operators]")
     REQUIRE(is_feasible(sol, swap2));
 }
 
-TEST_CASE("SwapItems: feasibility - capacity violation", "[packing][operators]")
-{
+TEST_CASE("SwapItems: feasibility - capacity violation", "[packing][operators]") {
     PackingModel model;
     model.add_bin_type({.capacity = {10}});
     model.add_item({.size = {3}});  // 0
@@ -196,8 +187,7 @@ TEST_CASE("SwapItems: feasibility - capacity violation", "[packing][operators]")
     REQUIRE_FALSE(is_feasible(sol, swap));
 }
 
-TEST_CASE("SwapItems: apply", "[packing][operators]")
-{
+TEST_CASE("SwapItems: apply", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -213,8 +203,7 @@ TEST_CASE("SwapItems: apply", "[packing][operators]")
     REQUIRE(sol.bin_load(1, 0) == 3);
 }
 
-TEST_CASE("SwapItems: enumerate returns feasible swaps", "[packing][operators]")
-{
+TEST_CASE("SwapItems: enumerate returns feasible swaps", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -229,8 +218,7 @@ TEST_CASE("SwapItems: enumerate returns feasible swaps", "[packing][operators]")
     }
 }
 
-TEST_CASE("SwapItems: delta accuracy", "[packing][operators]")
-{
+TEST_CASE("SwapItems: delta accuracy", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -253,8 +241,7 @@ TEST_CASE("SwapItems: delta accuracy", "[packing][operators]")
 //  MergeBins tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("MergeBins: evaluate delta", "[packing][operators]")
-{
+TEST_CASE("MergeBins: evaluate delta", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -266,8 +253,7 @@ TEST_CASE("MergeBins: evaluate delta", "[packing][operators]")
     REQUIRE(merge.delta == -1);
 }
 
-TEST_CASE("MergeBins: feasibility - fits", "[packing][operators]")
-{
+TEST_CASE("MergeBins: feasibility - fits", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -279,8 +265,7 @@ TEST_CASE("MergeBins: feasibility - fits", "[packing][operators]")
     REQUIRE(is_feasible(sol, merge));
 }
 
-TEST_CASE("MergeBins: feasibility - does not fit", "[packing][operators]")
-{
+TEST_CASE("MergeBins: feasibility - does not fit", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -292,8 +277,7 @@ TEST_CASE("MergeBins: feasibility - does not fit", "[packing][operators]")
     REQUIRE_FALSE(is_feasible(sol, merge));
 }
 
-TEST_CASE("MergeBins: apply", "[packing][operators]")
-{
+TEST_CASE("MergeBins: apply", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -310,8 +294,7 @@ TEST_CASE("MergeBins: apply", "[packing][operators]")
     REQUIRE(sol.cost() == cost_before + merge.delta);
 }
 
-TEST_CASE("MergeBins: enumerate returns feasible merges", "[packing][operators]")
-{
+TEST_CASE("MergeBins: enumerate returns feasible merges", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -327,8 +310,7 @@ TEST_CASE("MergeBins: enumerate returns feasible merges", "[packing][operators]"
     }
 }
 
-TEST_CASE("MergeBins: delta accuracy", "[packing][operators]")
-{
+TEST_CASE("MergeBins: delta accuracy", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -349,8 +331,7 @@ TEST_CASE("MergeBins: delta accuracy", "[packing][operators]")
 //  SplitBin tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("SplitBin: evaluate delta", "[packing][operators]")
-{
+TEST_CASE("SplitBin: evaluate delta", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -363,8 +344,7 @@ TEST_CASE("SplitBin: evaluate delta", "[packing][operators]")
     REQUIRE(split.delta == 1);
 }
 
-TEST_CASE("SplitBin: feasibility", "[packing][operators]")
-{
+TEST_CASE("SplitBin: feasibility", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -376,8 +356,7 @@ TEST_CASE("SplitBin: feasibility", "[packing][operators]")
     REQUIRE(is_feasible(sol, split));
 }
 
-TEST_CASE("SplitBin: apply resolves overload", "[packing][operators]")
-{
+TEST_CASE("SplitBin: apply resolves overload", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -395,9 +374,7 @@ TEST_CASE("SplitBin: apply resolves overload", "[packing][operators]")
     REQUIRE(sol.num_capacity_violations() == 0);
 }
 
-TEST_CASE("SplitBin: enumerate finds splits for overloaded bins",
-          "[packing][operators]")
-{
+TEST_CASE("SplitBin: enumerate finds splits for overloaded bins", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -419,8 +396,7 @@ TEST_CASE("SplitBin: enumerate finds splits for overloaded bins",
     }
 }
 
-TEST_CASE("SplitBin: delta accuracy", "[packing][operators]")
-{
+TEST_CASE("SplitBin: delta accuracy", "[packing][operators]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
@@ -438,8 +414,7 @@ TEST_CASE("SplitBin: delta accuracy", "[packing][operators]")
 //  Conflict-aware tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("MoveItem: conflict prevents move", "[packing][operators]")
-{
+TEST_CASE("MoveItem: conflict prevents move", "[packing][operators]") {
     auto data = make_conflict_instance();
     PackingSolution sol(data);
 
@@ -456,8 +431,7 @@ TEST_CASE("MoveItem: conflict prevents move", "[packing][operators]")
     REQUIRE(is_feasible(sol, move2));
 }
 
-TEST_CASE("SwapItems: conflict prevents swap", "[packing][operators]")
-{
+TEST_CASE("SwapItems: conflict prevents swap", "[packing][operators]") {
     PackingModel model;
     model.add_bin_type({.capacity = {100}});
     model.add_item({.size = {10}});  // 0
@@ -486,8 +460,7 @@ TEST_CASE("SwapItems: conflict prevents swap", "[packing][operators]")
     REQUIRE(is_feasible(sol, swap2));
 }
 
-TEST_CASE("MergeBins: conflict prevents merge", "[packing][operators]")
-{
+TEST_CASE("MergeBins: conflict prevents merge", "[packing][operators]") {
     auto data = make_conflict_instance();
     PackingSolution sol(data);
 
@@ -508,8 +481,7 @@ TEST_CASE("MergeBins: conflict prevents merge", "[packing][operators]")
 //  Multi-dimensional tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("MoveItem: 2D feasibility check", "[packing][operators]")
-{
+TEST_CASE("MoveItem: 2D feasibility check", "[packing][operators]") {
     PackingModel model;
     model.add_bin_type({.capacity = {10, 20}});
     model.add_item({.size = {3, 15}});  // 0: fits weight but tight on volume

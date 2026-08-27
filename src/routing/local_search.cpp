@@ -6,14 +6,9 @@
 
 namespace coso {
 
-LocalSearch::LocalSearch(ProblemData const& data)
-    : data_(&data)
-{
-}
+LocalSearch::LocalSearch(ProblemData const& data) : data_(&data) {}
 
-void LocalSearch::run(Solution& sol, CostEvaluator const& eval,
-                      StopCriterion* stop)
-{
+void LocalSearch::run(Solution& sol, CostEvaluator const& eval, StopCriterion* stop) {
     last_num_moves_ = 0;
     last_num_iters_ = 0;
 
@@ -23,13 +18,14 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval,
     Exchange10 op10;
     Exchange11 op11;
     Exchange20 op20;
-    SwapTails  op_st;
-    SwapStar   op_ss;
+    SwapTails op_st;
+    SwapStar op_ss;
 
     bool improved = true;
     while (improved) {
-        if (stop && stop->should_stop())
+        if (stop && stop->should_stop()) {
             break;
+        }
         improved = false;
         ++last_num_iters_;
 
@@ -77,4 +73,4 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval,
     }
 }
 
-} // namespace coso
+}  // namespace coso

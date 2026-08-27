@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/overconstrained.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -9,60 +9,56 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 1 depot at (0,0), 4 clients, capacity 10, 2 vehicles.
-static ProblemData make_basic_instance()
-{
+static ProblemData make_basic_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});   // client 2
-    b.add_client({0.0, 10.0}, {.demand = {2}});   // client 3
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});  // client 2
+    b.add_client({0.0, 10.0}, {.demand = {2}});  // client 3
 
     return b.build(0);
 }
 
 /// Instance that is overconstrained: total demand 24 but only 2 vehicles
 /// with capacity 10 each (max feasible demand = 20).
-static ProblemData make_overconstrained_instance()
-{
+static ProblemData make_overconstrained_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {7}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {8}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {6}});   // client 2
-    b.add_client({0.0, 10.0}, {.demand = {3}});   // client 3
+    b.add_client({10.0, 0.0}, {.demand = {7}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {8}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {6}});  // client 2
+    b.add_client({0.0, 10.0}, {.demand = {3}});  // client 3
 
     return b.build(0);
 }
 
 /// Instance with time windows.
-static ProblemData make_tw_instance()
-{
+static ProblemData make_tw_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0}, {.tw = {0, 100}});
     b.add_vehicle_type(2, {.capacity = {100}});
 
     // Very tight TW that forces time warp.
-    b.add_client({10.0, 0.0}, {.demand = {1}, .tw = {0, 5}});    // client 0
-    b.add_client({20.0, 0.0}, {.demand = {1}, .tw = {0, 5}});    // client 1
+    b.add_client({10.0, 0.0}, {.demand = {1}, .tw = {0, 5}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {1}, .tw = {0, 5}});  // client 1
 
     return b.build(0);
 }
 
 /// Instance with optional clients (required = false).
-static ProblemData make_optional_instance()
-{
+static ProblemData make_optional_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {5}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});                          // client 0: required
-    b.add_client({20.0, 0.0}, {.demand = {4}});                          // client 1: required
-    b.add_client({30.0, 0.0}, {.demand = {2}, .required = false});       // client 2: optional
+    b.add_client({10.0, 0.0}, {.demand = {3}});                     // client 0: required
+    b.add_client({20.0, 0.0}, {.demand = {4}});                     // client 1: required
+    b.add_client({30.0, 0.0}, {.demand = {2}, .required = false});  // client 2: optional
 
     return b.build(0);
 }
@@ -71,9 +67,7 @@ static ProblemData make_optional_instance()
 //  num_unserved_required
 // ===========================================================================
 
-TEST_CASE("overconstrained: num_unserved_required with all served",
-          "[overconstrained][routing]")
-{
+TEST_CASE("overconstrained: num_unserved_required with all served", "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -85,8 +79,7 @@ TEST_CASE("overconstrained: num_unserved_required with all served",
 }
 
 TEST_CASE("overconstrained: num_unserved_required with some unserved",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -97,8 +90,7 @@ TEST_CASE("overconstrained: num_unserved_required with some unserved",
 }
 
 TEST_CASE("overconstrained: optional clients not counted as unserved required",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_optional_instance();
     Solution sol(data);
 
@@ -114,8 +106,7 @@ TEST_CASE("overconstrained: optional clients not counted as unserved required",
 // ===========================================================================
 
 TEST_CASE("overconstrained: total_load_excess with feasible solution",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -126,8 +117,7 @@ TEST_CASE("overconstrained: total_load_excess with feasible solution",
 }
 
 TEST_CASE("overconstrained: total_load_excess with overloaded routes",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -143,8 +133,7 @@ TEST_CASE("overconstrained: total_load_excess with overloaded routes",
 // ===========================================================================
 
 TEST_CASE("overconstrained: total_time_warp with tight time windows",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_tw_instance();
     Solution sol(data);
 
@@ -160,9 +149,7 @@ TEST_CASE("overconstrained: total_time_warp with tight time windows",
 //  overconstrained_penalty
 // ===========================================================================
 
-TEST_CASE("overconstrained: penalty is zero for feasible solution",
-          "[overconstrained][routing]")
-{
+TEST_CASE("overconstrained: penalty is zero for feasible solution", "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -173,9 +160,7 @@ TEST_CASE("overconstrained: penalty is zero for feasible solution",
     CHECK(overconstrained_penalty(sol, config) == 0);
 }
 
-TEST_CASE("overconstrained: penalty for unserved clients",
-          "[overconstrained][routing]")
-{
+TEST_CASE("overconstrained: penalty for unserved clients", "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -192,9 +177,7 @@ TEST_CASE("overconstrained: penalty for unserved clients",
     CHECK(overconstrained_penalty(sol, config) == 10000);
 }
 
-TEST_CASE("overconstrained: penalty for capacity violation",
-          "[overconstrained][routing]")
-{
+TEST_CASE("overconstrained: penalty for capacity violation", "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -211,9 +194,7 @@ TEST_CASE("overconstrained: penalty for capacity violation",
     CHECK(overconstrained_penalty(sol, config) == 1000);
 }
 
-TEST_CASE("overconstrained: combined penalties accumulate",
-          "[overconstrained][routing]")
-{
+TEST_CASE("overconstrained: combined penalties accumulate", "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -234,9 +215,7 @@ TEST_CASE("overconstrained: combined penalties accumulate",
 //  overconstrained_cost
 // ===========================================================================
 
-TEST_CASE("overconstrained: cost includes objective and penalties",
-          "[overconstrained][routing]")
-{
+TEST_CASE("overconstrained: cost includes objective and penalties", "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -254,8 +233,7 @@ TEST_CASE("overconstrained: cost includes objective and penalties",
 }
 
 TEST_CASE("overconstrained: cost with penalties exceeds base objective",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -278,8 +256,7 @@ TEST_CASE("overconstrained: cost with penalties exceeds base objective",
 // ===========================================================================
 
 TEST_CASE("overconstrained: feasible when all served and no violations",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -291,8 +268,7 @@ TEST_CASE("overconstrained: feasible when all served and no violations",
 }
 
 TEST_CASE("overconstrained: infeasible when required clients unserved",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -305,8 +281,7 @@ TEST_CASE("overconstrained: infeasible when required clients unserved",
 }
 
 TEST_CASE("overconstrained: feasible with allow_unserved even when clients unserved",
-          "[overconstrained][routing]")
-{
+          "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -320,9 +295,7 @@ TEST_CASE("overconstrained: feasible with allow_unserved even when clients unser
     CHECK(overconstrained_feasible(sol, config));
 }
 
-TEST_CASE("overconstrained: infeasible when routes are overloaded",
-          "[overconstrained][routing]")
-{
+TEST_CASE("overconstrained: infeasible when routes are overloaded", "[overconstrained][routing]") {
     auto data = make_basic_instance();
     Solution sol(data);
 
@@ -339,8 +312,7 @@ TEST_CASE("overconstrained: infeasible when routes are overloaded",
 //  OverconstrainedConfig defaults
 // ===========================================================================
 
-TEST_CASE("OverconstrainedConfig: default values", "[overconstrained][routing]")
-{
+TEST_CASE("OverconstrainedConfig: default values", "[overconstrained][routing]") {
     OverconstrainedConfig config;
 
     CHECK_FALSE(config.allow_unserved);

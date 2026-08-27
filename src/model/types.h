@@ -18,10 +18,10 @@ struct TimeWindow {
 
 /// Cost parameters for a vehicle type.
 struct CostParams {
-    int fixed_cost          = 0;
-    int unit_distance_cost  = 1;
-    int unit_duration_cost  = 0;
-    int per_task_hour_cost  = 0;
+    int fixed_cost = 0;
+    int unit_distance_cost = 1;
+    int unit_duration_cost = 0;
+    int per_task_hour_cost = 0;
 };
 
 /// Stop criterion passed to solve().
@@ -42,19 +42,19 @@ struct TimeLimit {
 ///   - network:    flows()
 ///   - lotsizing:  production(), inventory()
 struct Result {
-    bool   feasible_        = false;
-    double cost_            = 0.0;
+    bool feasible_ = false;
+    double cost_ = 0.0;
     double elapsed_seconds_ = 0.0;
-    int    iterations_      = 0;
-    uint64_t work_ticks_    = 0;
-    double work_units_      = 0.0;
+    int iterations_ = 0;
+    uint64_t work_ticks_ = 0;
+    double work_units_ = 0.0;
 
-    [[nodiscard]] bool   feasible()        const noexcept { return feasible_; }
-    [[nodiscard]] double cost()            const noexcept { return cost_; }
+    [[nodiscard]] bool feasible() const noexcept { return feasible_; }
+    [[nodiscard]] double cost() const noexcept { return cost_; }
     [[nodiscard]] double elapsed_seconds() const noexcept { return elapsed_seconds_; }
-    [[nodiscard]] int    iterations()      const noexcept { return iterations_; }
-    [[nodiscard]] uint64_t work_ticks()    const noexcept { return work_ticks_; }
-    [[nodiscard]] double work_units()      const noexcept { return work_units_; }
+    [[nodiscard]] int iterations() const noexcept { return iterations_; }
+    [[nodiscard]] uint64_t work_ticks() const noexcept { return work_ticks_; }
+    [[nodiscard]] double work_units() const noexcept { return work_units_; }
 
     // -- Routing ---------------------------------------------------------
 
@@ -63,27 +63,27 @@ struct Result {
     /// Clients that could not be served (optional / infeasible).
     std::vector<int> unserved_;
 
-    [[nodiscard]] auto const& routes()   const noexcept { return routes_; }
+    [[nodiscard]] auto const& routes() const noexcept { return routes_; }
     [[nodiscard]] auto const& unserved() const noexcept { return unserved_; }
 
     // -- Scheduling ------------------------------------------------------
 
     /// Per-operation: (machine, start_time).
     struct OpSchedule {
-        int machine    = -1;
+        int machine = -1;
         int start_time = 0;
     };
     std::vector<OpSchedule> schedule_;
     int makespan_ = 0;
 
     [[nodiscard]] auto const& schedule() const noexcept { return schedule_; }
-    [[nodiscard]] int makespan()         const noexcept { return makespan_; }
+    [[nodiscard]] int makespan() const noexcept { return makespan_; }
 
     // -- Assignment (nurse rostering) ------------------------------------
 
     struct Assignment {
-        int         employee = -1;
-        int         shift    = -1;
+        int employee = -1;
+        int shift = -1;
         std::string employee_name;
         std::string shift_name;
     };
@@ -92,24 +92,24 @@ struct Result {
     std::vector<int> unassigned_;
 
     [[nodiscard]] auto const& assignments() const noexcept { return assignments_; }
-    [[nodiscard]] auto const& unassigned()  const noexcept { return unassigned_; }
+    [[nodiscard]] auto const& unassigned() const noexcept { return unassigned_; }
     /// Convenience: assignments for a given day.
-    [[nodiscard]] auto const& day(int d)    const { return assignments_.at(d); }
+    [[nodiscard]] auto const& day(int d) const { return assignments_.at(d); }
 
     // -- Packing ---------------------------------------------------------
 
     /// Each inner vector is a bin: the item ids placed in that bin.
     std::vector<std::vector<int>> bins_;
 
-    [[nodiscard]] auto const& bins()     const noexcept { return bins_; }
-    [[nodiscard]] int         num_bins() const noexcept { return static_cast<int>(bins_.size()); }
+    [[nodiscard]] auto const& bins() const noexcept { return bins_; }
+    [[nodiscard]] int num_bins() const noexcept { return static_cast<int>(bins_.size()); }
 
     // -- Network / Flow --------------------------------------------------
 
     /// Per-commodity: list of (path, flow) pairs.
     struct PathFlow {
         std::vector<int> path;
-        double           flow = 0.0;
+        double flow = 0.0;
     };
     /// flows_[commodity] = vector of PathFlow.
     std::vector<std::vector<PathFlow>> flows_;
@@ -123,12 +123,8 @@ struct Result {
     /// inventory_levels_[product][period] = end-of-period inventory.
     std::vector<std::vector<double>> inventory_levels_;
 
-    [[nodiscard]] auto const& production() const noexcept {
-        return production_quantities_;
-    }
-    [[nodiscard]] auto const& inventory() const noexcept {
-        return inventory_levels_;
-    }
+    [[nodiscard]] auto const& production() const noexcept { return production_quantities_; }
+    [[nodiscard]] auto const& inventory() const noexcept { return inventory_levels_; }
 };
 
-} // namespace coso
+}  // namespace coso

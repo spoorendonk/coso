@@ -1,10 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/construction.h"
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 #include "search/guided_local_search.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -12,14 +12,13 @@ using namespace coso;
 //  Helper: build a small CVRP instance (6 clients, 1 depot, 2 vehicles cap 20)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_small_cvrp()
-{
+static ProblemData make_small_cvrp() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
 
-    b.add_client({10.0, 0.0},  {.demand = {5}});
+    b.add_client({10.0, 0.0}, {.demand = {5}});
     b.add_client({10.0, 10.0}, {.demand = {5}});
-    b.add_client({0.0, 10.0},  {.demand = {5}});
+    b.add_client({0.0, 10.0}, {.demand = {5}});
     b.add_client({-10.0, 0.0}, {.demand = {5}});
     b.add_client({-10.0, -10.0}, {.demand = {5}});
     b.add_client({0.0, -10.0}, {.demand = {5}});
@@ -33,16 +32,14 @@ static ProblemData make_small_cvrp()
 //  Helper: build a medium instance (20 clients)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_medium_cvrp()
-{
+static ProblemData make_medium_cvrp() {
     ProblemData::Builder b;
     b.add_depot({50.0, 50.0});
 
     for (int i = 0; i < 5; ++i) {
         for (int j = 0; j < 4; ++j) {
-            b.add_client(
-                {static_cast<double>(i * 20), static_cast<double>(j * 25)},
-                {.demand = {3}});
+            b.add_client({static_cast<double>(i * 20), static_cast<double>(j * 25)},
+                         {.demand = {3}});
         }
     }
 
@@ -51,8 +48,7 @@ static ProblemData make_medium_cvrp()
     return b.build();
 }
 
-TEST_CASE("GLS — initial state has zero penalties", "[gls]")
-{
+TEST_CASE("GLS — initial state has zero penalties", "[gls]") {
     auto data = make_small_cvrp();
     GuidedLocalSearch gls(data, 0.1);
 
@@ -65,8 +61,7 @@ TEST_CASE("GLS — initial state has zero penalties", "[gls]")
     }
 }
 
-TEST_CASE("GLS — augmented cost is zero with no penalties", "[gls]")
-{
+TEST_CASE("GLS — augmented cost is zero with no penalties", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -76,8 +71,7 @@ TEST_CASE("GLS — augmented cost is zero with no penalties", "[gls]")
     CHECK(gls.augmented_cost(sol) == 0);
 }
 
-TEST_CASE("GLS — penalize increments exactly one edge penalty", "[gls]")
-{
+TEST_CASE("GLS — penalize increments exactly one edge penalty", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -97,8 +91,7 @@ TEST_CASE("GLS — penalize increments exactly one edge penalty", "[gls]")
     CHECK(total_penalty == 1);
 }
 
-TEST_CASE("GLS — augmented cost is positive after penalizing", "[gls]")
-{
+TEST_CASE("GLS — augmented cost is positive after penalizing", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -112,8 +105,7 @@ TEST_CASE("GLS — augmented cost is positive after penalizing", "[gls]")
     CHECK(aug > 0);
 }
 
-TEST_CASE("GLS — repeated penalization diversifies across edges", "[gls]")
-{
+TEST_CASE("GLS — repeated penalization diversifies across edges", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -131,8 +123,9 @@ TEST_CASE("GLS — repeated penalization diversifies across edges", "[gls]")
     int penalized_edges = 0;
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            if (gls.penalty(i, j) > 0)
+            if (gls.penalty(i, j) > 0) {
                 penalized_edges++;
+            }
         }
     }
 
@@ -141,8 +134,7 @@ TEST_CASE("GLS — repeated penalization diversifies across edges", "[gls]")
     CHECK(penalized_edges >= 2);
 }
 
-TEST_CASE("GLS — reset clears all penalties", "[gls]")
-{
+TEST_CASE("GLS — reset clears all penalties", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -163,8 +155,7 @@ TEST_CASE("GLS — reset clears all penalties", "[gls]")
     CHECK(gls.augmented_cost(sol) == 0);
 }
 
-TEST_CASE("GLS — lambda = 0 gives zero augmented cost", "[gls]")
-{
+TEST_CASE("GLS — lambda = 0 gives zero augmented cost", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -175,8 +166,7 @@ TEST_CASE("GLS — lambda = 0 gives zero augmented cost", "[gls]")
     CHECK(gls.augmented_cost(sol) == 0);
 }
 
-TEST_CASE("GLS — higher lambda gives higher augmented cost", "[gls]")
-{
+TEST_CASE("GLS — higher lambda gives higher augmented cost", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -194,8 +184,7 @@ TEST_CASE("GLS — higher lambda gives higher augmented cost", "[gls]")
     CHECK(gls_high.augmented_cost(sol) >= gls_low.augmented_cost(sol));
 }
 
-TEST_CASE("GLS — empty solution has zero augmented cost", "[gls]")
-{
+TEST_CASE("GLS — empty solution has zero augmented cost", "[gls]") {
     auto data = make_small_cvrp();
     GuidedLocalSearch gls(data, 0.5);
 
@@ -206,8 +195,7 @@ TEST_CASE("GLS — empty solution has zero augmented cost", "[gls]")
     CHECK(gls.augmented_cost(sol) == 0);
 }
 
-TEST_CASE("GLS — set_lambda changes penalty weight", "[gls]")
-{
+TEST_CASE("GLS — set_lambda changes penalty weight", "[gls]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -224,12 +212,11 @@ TEST_CASE("GLS — set_lambda changes penalty weight", "[gls]")
     CHECK(gls.lambda() == 1.0);
 }
 
-TEST_CASE("GLS — utility prefers expensive edges", "[gls]")
-{
+TEST_CASE("GLS — utility prefers expensive edges", "[gls]") {
     // Build a 3-client instance where one edge is much longer than the others.
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_client({1.0, 0.0}, {.demand = {1}});   // close to depot
+    b.add_client({1.0, 0.0}, {.demand = {1}});    // close to depot
     b.add_client({100.0, 0.0}, {.demand = {1}});  // far from depot
     b.add_client({101.0, 0.0}, {.demand = {1}});  // close to client 1
     b.add_vehicle_type(1, {.capacity = {10}});
@@ -247,8 +234,7 @@ TEST_CASE("GLS — utility prefers expensive edges", "[gls]")
     CHECK(gls.augmented_cost(sol) > 0);
 }
 
-TEST_CASE("GLS — medium instance repeated penalization", "[gls]")
-{
+TEST_CASE("GLS — medium instance repeated penalization", "[gls]") {
     auto data = make_medium_cvrp();
     CostEvaluator eval;
 

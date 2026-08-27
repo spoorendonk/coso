@@ -17,4 +17,4 @@ namespace coso {
 /// cost approximately equals the setup cost.
 [[nodiscard]] LotsizingSolution part_period_balancing(LotsizingData const& data);
 
-} // namespace coso
+}  // namespace coso

@@ -45,4 +45,4 @@ private:
     uint64_t seed_ = 42;
 };
 
-} // namespace coso
+}  // namespace coso

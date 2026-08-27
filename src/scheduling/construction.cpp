@@ -16,12 +16,11 @@ namespace {
 
 /// Build successor lists and in-degree counts from precedence arcs.
 struct PrecedenceInfo {
-    std::vector<std::vector<int>> successors;   // successors[op] = list of ops
-    std::vector<int>              in_degree;     // number of unsatisfied preds
+    std::vector<std::vector<int>> successors;  // successors[op] = list of ops
+    std::vector<int> in_degree;                // number of unsatisfied preds
 };
 
-PrecedenceInfo build_precedence(ScheduleData const& data)
-{
+PrecedenceInfo build_precedence(ScheduleData const& data) {
     int n = data.num_operations();
     PrecedenceInfo info;
     info.successors.resize(n);
@@ -36,8 +35,7 @@ PrecedenceInfo build_precedence(ScheduleData const& data)
 
 /// Choose the best machine for an operation (shortest processing time).
 /// Returns (machine, duration).
-std::pair<int, int> best_machine(ScheduleData const& data, int op)
-{
+std::pair<int, int> best_machine(ScheduleData const& data, int op) {
     int best_m = -1;
     int best_d = INT_MAX;
     for (int m = 0; m < data.num_machines(); ++m) {
@@ -51,9 +49,7 @@ std::pair<int, int> best_machine(ScheduleData const& data, int op)
 }
 
 /// Compute makespan from a schedule vector.
-int compute_makespan(ScheduleData const& data,
-                     std::vector<Result::OpSchedule> const& sched)
-{
+int compute_makespan(ScheduleData const& data, std::vector<Result::OpSchedule> const& sched) {
     int ms = 0;
     for (int o = 0; o < data.num_operations(); ++o) {
         int m = sched[o].machine;
@@ -69,54 +65,54 @@ int compute_makespan(ScheduleData const& data,
 /// time unit during its execution.
 ///
 /// resource_profile[r][t] = current usage of resource r at time t.
-bool resource_feasible(ScheduleData const& data,
-                       int op, int start_time, int duration,
-                       std::vector<std::vector<int>> const& resource_profile)
-{
-    if (data.num_resources() == 0)
+bool resource_feasible(ScheduleData const& data, int op, int start_time, int duration,
+                       std::vector<std::vector<int>> const& resource_profile) {
+    if (data.num_resources() == 0) {
         return true;
+    }
 
     for (int r = 0; r < data.num_resources(); ++r) {
         int usage = data.resource_usage(op, r);
-        if (usage == 0)
+        if (usage == 0) {
             continue;
+        }
         int cap = data.resource_capacity(r);
         for (int t = start_time; t < start_time + duration; ++t) {
-            int current = (t < static_cast<int>(resource_profile[r].size()))
-                              ? resource_profile[r][t]
-                              : 0;
-            if (current + usage > cap)
+            int current =
+                (t < static_cast<int>(resource_profile[r].size())) ? resource_profile[r][t] : 0;
+            if (current + usage > cap) {
                 return false;
+            }
         }
     }
     return true;
 }
 
 /// Update resource profile after scheduling an operation.
-void update_resource_profile(ScheduleData const& data,
-                             int op, int start_time, int duration,
-                             std::vector<std::vector<int>>& resource_profile)
-{
+void update_resource_profile(ScheduleData const& data, int op, int start_time, int duration,
+                             std::vector<std::vector<int>>& resource_profile) {
     for (int r = 0; r < data.num_resources(); ++r) {
         int usage = data.resource_usage(op, r);
-        if (usage == 0)
+        if (usage == 0) {
             continue;
+        }
         int end = start_time + duration;
-        if (end > static_cast<int>(resource_profile[r].size()))
+        if (end > static_cast<int>(resource_profile[r].size())) {
             resource_profile[r].resize(end, 0);
-        for (int t = start_time; t < end; ++t)
+        }
+        for (int t = start_time; t < end; ++t) {
             resource_profile[r][t] += usage;
+        }
     }
 }
 
-} // namespace
+}  // namespace
 
 // ---------------------------------------------------------------------------
 //  SGS — Serial Generation Scheme
 // ---------------------------------------------------------------------------
 
-Result construct_sgs(ScheduleData const& data)
-{
+Result construct_sgs(ScheduleData const& data) {
     int n = data.num_operations();
     auto [successors, in_degree] = build_precedence(data);
 
@@ -135,16 +131,18 @@ Result construct_sgs(ScheduleData const& data)
     int scheduled = 0;
     while (scheduled < n) {
         // Collect all ready operations (in-degree = 0, not yet scheduled).
-        int best_op    = -1;
+        int best_op = -1;
         int best_start = INT_MAX;
-        int best_mach  = -1;
-        int best_dur   = 0;
+        int best_mach = -1;
+        int best_dur = 0;
 
         for (int op = 0; op < n; ++op) {
-            if (completion[op] >= 0)
+            if (completion[op] >= 0) {
                 continue;  // already scheduled
-            if (in_degree[op] > 0)
+            }
+            if (in_degree[op] > 0) {
                 continue;  // predecessors not done
+            }
 
             // Earliest start from predecessors.
             int es = 0;
@@ -170,46 +168,48 @@ Result construct_sgs(ScheduleData const& data)
 
             // Pick best machine for this operation.
             auto [m, dur] = best_machine(data, op);
-            if (m < 0)
+            if (m < 0) {
                 continue;  // no valid machine
+            }
 
             // Earliest start on this machine.
             int start = std::max(es, machine_free[m]);
 
             // Resource feasibility: advance start until feasible.
-            while (!resource_feasible(data, op, start, dur, resource_profile))
+            while (!resource_feasible(data, op, start, dur, resource_profile)) {
                 ++start;
+            }
 
             // Pick operation with smallest earliest start (ties: lowest index).
             if (start < best_start || (start == best_start && op < best_op)) {
-                best_op    = op;
+                best_op = op;
                 best_start = start;
-                best_mach  = m;
-                best_dur   = dur;
+                best_mach = m;
+                best_dur = dur;
             }
         }
 
-        if (best_op < 0)
+        if (best_op < 0) {
             break;  // should not happen for valid instances
+        }
 
         // Schedule best_op.
-        result.schedule_[best_op] = {.machine = best_mach,
-                                     .start_time = best_start};
-        completion[best_op]       = best_start + best_dur;
-        machine_free[best_mach]   = best_start + best_dur;
+        result.schedule_[best_op] = {.machine = best_mach, .start_time = best_start};
+        completion[best_op] = best_start + best_dur;
+        machine_free[best_mach] = best_start + best_dur;
 
-        update_resource_profile(data, best_op, best_start, best_dur,
-                                resource_profile);
+        update_resource_profile(data, best_op, best_start, best_dur, resource_profile);
 
         // Decrement in-degree for successors.
-        for (int succ : successors[best_op])
+        for (int succ : successors[best_op]) {
             --in_degree[succ];
+        }
 
         ++scheduled;
     }
 
     result.makespan_ = compute_makespan(data, result.schedule_);
-    result.cost_     = result.makespan_;
+    result.cost_ = result.makespan_;
     result.feasible_ = (scheduled == n);
     return result;
 }
@@ -218,10 +218,9 @@ Result construct_sgs(ScheduleData const& data)
 //  NEH heuristic
 // ---------------------------------------------------------------------------
 
-Result construct_neh(ScheduleData const& data)
-{
+Result construct_neh(ScheduleData const& data) {
     int nj = data.num_jobs();
-    int n  = data.num_operations();
+    int n = data.num_operations();
 
     // Compute total processing time per job (using best machine for each op).
     std::vector<int> job_total(nj, 0);
@@ -235,9 +234,8 @@ Result construct_neh(ScheduleData const& data)
     // Sort jobs by descending total processing time.
     std::vector<int> job_order(nj);
     std::iota(job_order.begin(), job_order.end(), 0);
-    std::sort(job_order.begin(), job_order.end(), [&](int a, int b) {
-        return job_total[a] > job_total[b];
-    });
+    std::sort(job_order.begin(), job_order.end(),
+              [&](int a, int b) { return job_total[a] > job_total[b]; });
 
     // We maintain the sequence of jobs inserted so far.
     // For each new job we try all insertion positions and keep the best.
@@ -246,9 +244,8 @@ Result construct_neh(ScheduleData const& data)
 
     // Lambda: given a job sequence, build a schedule and return makespan.
     // We use a simple left-to-right scheduler respecting intra-job precedence.
-    auto evaluate = [&](std::vector<int> const& seq)
-        -> std::pair<std::vector<Result::OpSchedule>, int>
-    {
+    auto evaluate =
+        [&](std::vector<int> const& seq) -> std::pair<std::vector<Result::OpSchedule>, int> {
         std::vector<Result::OpSchedule> sched(n);
         std::vector<int> machine_free(data.num_machines(), 0);
         std::vector<int> op_completion(n, 0);
@@ -261,8 +258,8 @@ Result construct_neh(ScheduleData const& data)
                 int start = std::max(prev_finish, machine_free[m]);
                 sched[op] = {.machine = m, .start_time = start};
                 op_completion[op] = start + dur;
-                machine_free[m]   = start + dur;
-                prev_finish       = start + dur;
+                machine_free[m] = start + dur;
+                prev_finish = start + dur;
             }
         }
 
@@ -278,7 +275,7 @@ Result construct_neh(ScheduleData const& data)
     for (int ji = 0; ji < nj; ++ji) {
         int job = job_order[ji];
         int best_pos = 0;
-        int best_ms  = INT_MAX;
+        int best_ms = INT_MAX;
 
         // Try inserting job at each position 0..sequence.size().
         for (int pos = 0; pos <= static_cast<int>(sequence.size()); ++pos) {
@@ -286,7 +283,7 @@ Result construct_neh(ScheduleData const& data)
             trial.insert(trial.begin() + pos, job);
             auto [sched, ms] = evaluate(trial);
             if (ms < best_ms) {
-                best_ms  = ms;
+                best_ms = ms;
                 best_pos = pos;
             }
         }
@@ -298,7 +295,7 @@ Result construct_neh(ScheduleData const& data)
     Result result;
     result.schedule_ = std::move(final_sched);
     result.makespan_ = final_ms;
-    result.cost_     = final_ms;
+    result.cost_ = final_ms;
     result.feasible_ = true;
     return result;
 }
@@ -307,8 +304,7 @@ Result construct_neh(ScheduleData const& data)
 //  Dispatching rule construction
 // ---------------------------------------------------------------------------
 
-Result construct_dispatch(ScheduleData const& data, DispatchRule rule)
-{
+Result construct_dispatch(ScheduleData const& data, DispatchRule rule) {
     int n = data.num_operations();
     auto [successors, in_degree] = build_precedence(data);
 
@@ -329,19 +325,22 @@ Result construct_dispatch(ScheduleData const& data, DispatchRule rule)
     // Ready list: operations with in_degree == 0.
     std::vector<int> ready;
     for (int o = 0; o < n; ++o) {
-        if (in_degree[o] == 0)
+        if (in_degree[o] == 0) {
             ready.push_back(o);
+        }
     }
 
     // Sort ready list by priority rule.
     auto sort_ready = [&]() {
         std::sort(ready.begin(), ready.end(), [&](int a, int b) {
             if (rule == DispatchRule::SPT) {
-                if (op_duration[a] != op_duration[b])
+                if (op_duration[a] != op_duration[b]) {
                     return op_duration[a] < op_duration[b];
+                }
             } else {
-                if (op_duration[a] != op_duration[b])
+                if (op_duration[a] != op_duration[b]) {
                     return op_duration[a] > op_duration[b];
+                }
             }
             return a < b;  // tie-break by index
         });
@@ -360,33 +359,36 @@ Result construct_dispatch(ScheduleData const& data, DispatchRule rule)
         // Earliest start from predecessors.
         int es = 0;
         for (auto const& arc : data.precedences()) {
-            if (arc.after == op && completion[arc.before] >= 0)
+            if (arc.after == op && completion[arc.before] >= 0) {
                 es = std::max(es, completion[arc.before]);
+            }
         }
 
         auto const& opdata = data.operation(op);
-        if (opdata.job >= 0)
+        if (opdata.job >= 0) {
             es = std::max(es, data.job(opdata.job).release_time);
+        }
 
         int start = std::max(es, machine_free[m]);
         result.schedule_[op] = {.machine = m, .start_time = start};
-        completion[op]       = start + dur;
-        machine_free[m]      = start + dur;
+        completion[op] = start + dur;
+        machine_free[m] = start + dur;
 
         // Update successors.
         for (int succ : successors[op]) {
             --in_degree[succ];
-            if (in_degree[succ] == 0)
+            if (in_degree[succ] == 0) {
                 ready.push_back(succ);
+            }
         }
 
         ++scheduled;
     }
 
     result.makespan_ = compute_makespan(data, result.schedule_);
-    result.cost_     = result.makespan_;
+    result.cost_ = result.makespan_;
     result.feasible_ = (scheduled == n);
     return result;
 }
 
-} // namespace coso
+}  // namespace coso

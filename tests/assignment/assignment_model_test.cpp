@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "model/assignment_model.h"
+
 #include "assignment/assignment_data.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -9,32 +10,27 @@ using namespace coso;
 //  AssignmentData unit tests
 // ===========================================================================
 
-TEST_CASE("AssignmentData: shift type effective duration", "[assignment]")
-{
-    SECTION("explicit duration overrides start/end")
-    {
-        AssignmentData::ShiftType st{.name = "Custom", .start_hour = 8,
-                                     .end_hour = 16, .duration_hours = 10};
+TEST_CASE("AssignmentData: shift type effective duration", "[assignment]") {
+    SECTION("explicit duration overrides start/end") {
+        AssignmentData::ShiftType st{
+            .name = "Custom", .start_hour = 8, .end_hour = 16, .duration_hours = 10};
         REQUIRE(st.effective_duration() == 10);
     }
 
-    SECTION("computed from start/end (day shift)")
-    {
-        AssignmentData::ShiftType st{.name = "Day", .start_hour = 8,
-                                     .end_hour = 16, .duration_hours = 0};
+    SECTION("computed from start/end (day shift)") {
+        AssignmentData::ShiftType st{
+            .name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0};
         REQUIRE(st.effective_duration() == 8);
     }
 
-    SECTION("overnight shift wraps around 24h")
-    {
-        AssignmentData::ShiftType st{.name = "Night", .start_hour = 22,
-                                     .end_hour = 6, .duration_hours = 0};
+    SECTION("overnight shift wraps around 24h") {
+        AssignmentData::ShiftType st{
+            .name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0};
         REQUIRE(st.effective_duration() == 8);
     }
 }
 
-TEST_CASE("AssignmentData: demand key helpers", "[assignment]")
-{
+TEST_CASE("AssignmentData: demand key helpers", "[assignment]") {
     auto k1 = AssignmentData::demand_key(0, 0);
     auto k2 = AssignmentData::demand_key(0, 1);
     auto k3 = AssignmentData::demand_key(1, 0);
@@ -44,8 +40,7 @@ TEST_CASE("AssignmentData: demand key helpers", "[assignment]")
     REQUIRE(k2 != k3);
 }
 
-TEST_CASE("AssignmentData: unavailability helpers", "[assignment]")
-{
+TEST_CASE("AssignmentData: unavailability helpers", "[assignment]") {
     AssignmentData data;
     data.unavailabilities.insert(AssignmentData::unavail_key(0, 2));
 
@@ -58,35 +53,27 @@ TEST_CASE("AssignmentData: unavailability helpers", "[assignment]")
 //  AssignmentModel API tests
 // ===========================================================================
 
-TEST_CASE("AssignmentModel: add shift types returns sequential ids",
-          "[assignment]")
-{
+TEST_CASE("AssignmentModel: add shift types returns sequential ids", "[assignment]") {
     AssignmentModel model;
-    int morning = model.add_shift_type({.name = "Morning", .start_hour = 6,
-                                        .end_hour = 14});
-    int evening = model.add_shift_type({.name = "Evening", .start_hour = 14,
-                                        .end_hour = 22});
-    int night   = model.add_shift_type({.name = "Night", .start_hour = 22,
-                                        .end_hour = 6});
+    int morning = model.add_shift_type({.name = "Morning", .start_hour = 6, .end_hour = 14});
+    int evening = model.add_shift_type({.name = "Evening", .start_hour = 14, .end_hour = 22});
+    int night = model.add_shift_type({.name = "Night", .start_hour = 22, .end_hour = 6});
 
     REQUIRE(morning == 0);
     REQUIRE(evening == 1);
     REQUIRE(night == 2);
 }
 
-TEST_CASE("AssignmentModel: add employees returns sequential ids",
-          "[assignment]")
-{
+TEST_CASE("AssignmentModel: add employees returns sequential ids", "[assignment]") {
     AssignmentModel model;
     int alice = model.add_employee({.name = "Alice", .skills = {"nurse"}});
-    int bob   = model.add_employee({.name = "Bob", .skills = {"nurse", "senior"}});
+    int bob = model.add_employee({.name = "Bob", .skills = {"nurse", "senior"}});
 
     REQUIRE(alice == 0);
     REQUIRE(bob == 1);
 }
 
-TEST_CASE("AssignmentModel: demand constraints are stored", "[assignment]")
-{
+TEST_CASE("AssignmentModel: demand constraints are stored", "[assignment]") {
     AssignmentModel model;
     model.add_shift_type({.name = "Day"});
     model.add_employee({.name = "Alice"});
@@ -105,8 +92,7 @@ TEST_CASE("AssignmentModel: demand constraints are stored", "[assignment]")
     REQUIRE_FALSE(result.unassigned().empty());
 }
 
-TEST_CASE("AssignmentModel: hard constraints", "[assignment]")
-{
+TEST_CASE("AssignmentModel: hard constraints", "[assignment]") {
     AssignmentModel model;
     model.add_shift_type({.name = "Day"});
     model.add_employee({.name = "Alice"});
@@ -121,12 +107,11 @@ TEST_CASE("AssignmentModel: hard constraints", "[assignment]")
     REQUIRE(result.elapsed_seconds() >= 0.0);
 }
 
-TEST_CASE("AssignmentModel: preferences and unavailability", "[assignment]")
-{
+TEST_CASE("AssignmentModel: preferences and unavailability", "[assignment]") {
     AssignmentModel model;
     int day = model.add_shift_type({.name = "Day"});
     int alice = model.add_employee({.name = "Alice"});
-    int bob   = model.add_employee({.name = "Bob"});
+    int bob = model.add_employee({.name = "Bob"});
     model.set_horizon(7);
 
     // Alice prefers day shift on Monday (day 0).
@@ -139,8 +124,7 @@ TEST_CASE("AssignmentModel: preferences and unavailability", "[assignment]")
     REQUIRE(result.feasible());
 }
 
-TEST_CASE("AssignmentModel: replanning with published schedule", "[assignment]")
-{
+TEST_CASE("AssignmentModel: replanning with published schedule", "[assignment]") {
     AssignmentModel model;
     model.add_shift_type({.name = "Day"});
     model.add_employee({.name = "Alice"});
@@ -149,7 +133,7 @@ TEST_CASE("AssignmentModel: replanning with published schedule", "[assignment]")
 
     // Published schedule: employee 0 works shift 0 every day, employee 1 off.
     std::vector<std::vector<int>> schedule = {
-        {0, 0, 0, 0, 0, -1, -1},  // Alice
+        {0, 0, 0, 0, 0, -1, -1},     // Alice
         {-1, -1, -1, -1, -1, 0, 0},  // Bob
     };
     model.set_published_schedule(schedule);
@@ -159,9 +143,7 @@ TEST_CASE("AssignmentModel: replanning with published schedule", "[assignment]")
     REQUIRE(result.elapsed_seconds() >= 0.0);
 }
 
-TEST_CASE("AssignmentModel: solve returns result with elapsed time",
-          "[assignment]")
-{
+TEST_CASE("AssignmentModel: solve returns result with elapsed time", "[assignment]") {
     AssignmentModel model;
     model.add_shift_type({.name = "Morning"});
     model.add_employee({.name = "Nurse A"});
@@ -175,8 +157,7 @@ TEST_CASE("AssignmentModel: solve returns result with elapsed time",
     REQUIRE(result.cost() >= 0.0);
 }
 
-TEST_CASE("AssignmentModel: feasible baseline instance", "[assignment]")
-{
+TEST_CASE("AssignmentModel: feasible baseline instance", "[assignment]") {
     AssignmentModel model;
     model.add_shift_type({.name = "Day"});
     model.add_employee({.name = "Alice"});
@@ -191,15 +172,13 @@ TEST_CASE("AssignmentModel: feasible baseline instance", "[assignment]")
     REQUIRE(result.unassigned().empty());
 }
 
-TEST_CASE("AssignmentModel: empty model returns infeasible", "[assignment]")
-{
+TEST_CASE("AssignmentModel: empty model returns infeasible", "[assignment]") {
     AssignmentModel model;
     auto result = model.solve(TimeLimit(0.1));
     REQUIRE_FALSE(result.feasible());
 }
 
-TEST_CASE("AssignmentModel: missing horizon returns infeasible", "[assignment]")
-{
+TEST_CASE("AssignmentModel: missing horizon returns infeasible", "[assignment]") {
     AssignmentModel model;
     model.add_shift_type({.name = "Day"});
     model.add_employee({.name = "Alice"});

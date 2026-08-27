@@ -78,9 +78,7 @@ public:
     [[nodiscard]] double holding_cost() const noexcept { return holding_cost_; }
 
     /// Total production (variable) cost component.
-    [[nodiscard]] double production_cost() const noexcept {
-        return production_cost_;
-    }
+    [[nodiscard]] double production_cost() const noexcept { return production_cost_; }
 
     /// Recompute all costs from scratch (useful after batch modifications).
     void recompute_costs();
@@ -115,17 +113,17 @@ public:
 private:
     LotsizingData const* data_ = nullptr;
 
-    std::vector<double> production_;   // flat: [p * T + t]
-    std::vector<double> inventory_;    // flat: [p * T + t]
-    std::vector<bool>   setup_;        // flat: [p * T + t]
+    std::vector<double> production_;  // flat: [p * T + t]
+    std::vector<double> inventory_;   // flat: [p * T + t]
+    std::vector<bool> setup_;         // flat: [p * T + t]
 
-    double cost_            = 0.0;
-    double setup_cost_      = 0.0;
-    double holding_cost_    = 0.0;
+    double cost_ = 0.0;
+    double setup_cost_ = 0.0;
+    double holding_cost_ = 0.0;
     double production_cost_ = 0.0;
 
     /// Recompute inventory for product p from period `from` onward.
     void recompute_inventory_(int p, int from = 0);
 };
 
-} // namespace coso
+}  // namespace coso

@@ -88,19 +88,13 @@ public:
 
     [[nodiscard]] int num_jobs() const noexcept { return num_jobs_; }
     [[nodiscard]] int num_machines() const noexcept { return num_machines_; }
-    [[nodiscard]] int num_operations() const noexcept {
-        return static_cast<int>(ops_.size());
-    }
+    [[nodiscard]] int num_operations() const noexcept { return static_cast<int>(ops_.size()); }
 
     /// Source node index (virtual, = num_operations).
-    [[nodiscard]] int source() const noexcept {
-        return static_cast<int>(ops_.size());
-    }
+    [[nodiscard]] int source() const noexcept { return static_cast<int>(ops_.size()); }
 
     /// Sink node index (virtual, = num_operations + 1).
-    [[nodiscard]] int sink() const noexcept {
-        return static_cast<int>(ops_.size()) + 1;
-    }
+    [[nodiscard]] int sink() const noexcept { return static_cast<int>(ops_.size()) + 1; }
 
     /// Access operation data.
     [[nodiscard]] Operation const& operation(int op) const {
@@ -138,17 +132,17 @@ private:
 
     std::vector<Operation> ops_;
     std::vector<std::vector<int>> job_ops_;      ///< ops per job
-    std::vector<std::vector<int>> machine_seq_;   ///< current sequence per machine
+    std::vector<std::vector<int>> machine_seq_;  ///< current sequence per machine
 
     // Adjacency list: successors of each node.
     // Nodes 0..num_ops-1 are operations, num_ops = source, num_ops+1 = sink.
     std::vector<std::vector<int>> adj_;
 
     // Computed times (invalidated on mutation).
-    std::vector<int> earliest_start_;   ///< forward pass
+    std::vector<int> earliest_start_;  ///< forward pass
     std::vector<int> earliest_finish_;
-    std::vector<int> latest_start_;     ///< backward pass
+    std::vector<int> latest_start_;  ///< backward pass
     bool dirty_ = true;
 };
 
-} // namespace coso
+}  // namespace coso

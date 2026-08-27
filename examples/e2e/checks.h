@@ -27,4 +27,4 @@ using SolveFn = std::function<coso::Result()>;
 Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
                            SolveFn const& solve_once);
 
-} // namespace coso::e2e
+}  // namespace coso::e2e

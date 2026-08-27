@@ -38,14 +38,13 @@ struct PrecedenceResource {
 
     /// Per-client role in pickup-delivery requests.
     struct ClientInfo {
-        int request = -1;   ///< Request index, or -1 if not part of any request.
+        int request = -1;  ///< Request index, or -1 if not part of any request.
         bool is_pickup = false;
         bool is_delivery = false;
     };
 
     /// Build a client-to-request lookup table.  Call once per ProblemData.
-    [[nodiscard]] static std::vector<ClientInfo>
-    build_lookup(ProblemData const& data) {
+    [[nodiscard]] static std::vector<ClientInfo> build_lookup(ProblemData const& data) {
         std::vector<ClientInfo> lookup(data.num_clients());
         auto const& reqs = data.requests();
         for (int r = 0; r < static_cast<int>(reqs.size()); ++r) {
@@ -61,24 +60,24 @@ struct PrecedenceResource {
     }
 
     /// Initialize state for a single client node.
-    [[nodiscard]] static State init(std::vector<ClientInfo> const& lookup,
-                                    int client) {
+    [[nodiscard]] static State init(std::vector<ClientInfo> const& lookup, int client) {
         State s;
         auto const& info = lookup[client];
-        if (info.request < 0)
+        if (info.request < 0) {
             return s;
+        }
 
-        if (info.is_pickup)
+        if (info.is_pickup) {
             s.active.push_back(info.request);
-        if (info.is_delivery)
+        }
+        if (info.is_delivery) {
             s.needed.push_back(info.request);
+        }
         return s;
     }
 
     /// Initialize empty state at depot.
-    [[nodiscard]] static State init_depot() {
-        return State{};
-    }
+    [[nodiscard]] static State init_depot() { return State{}; }
 
     /// Merge two adjacent subsequence states (left followed by right).
     ///
@@ -90,27 +89,22 @@ struct PrecedenceResource {
 
         // Requests resolved at the junction: right needs pickup, left has it.
         std::vector<int> resolved;
-        std::set_intersection(right.needed.begin(), right.needed.end(),
-                              left.active.begin(), left.active.end(),
-                              std::back_inserter(resolved));
+        std::set_intersection(right.needed.begin(), right.needed.end(), left.active.begin(),
+                              left.active.end(), std::back_inserter(resolved));
 
         // Propagate unresolved right deliveries + all left deliveries.
         std::vector<int> right_unresolved;
-        std::set_difference(right.needed.begin(), right.needed.end(),
-                            resolved.begin(), resolved.end(),
-                            std::back_inserter(right_unresolved));
-        std::merge(left.needed.begin(), left.needed.end(),
-                   right_unresolved.begin(), right_unresolved.end(),
-                   std::back_inserter(result.needed));
+        std::set_difference(right.needed.begin(), right.needed.end(), resolved.begin(),
+                            resolved.end(), std::back_inserter(right_unresolved));
+        std::merge(left.needed.begin(), left.needed.end(), right_unresolved.begin(),
+                   right_unresolved.end(), std::back_inserter(result.needed));
 
         // Propagate left pickups not consumed by right + all right pickups.
         std::vector<int> left_remaining;
-        std::set_difference(left.active.begin(), left.active.end(),
-                            resolved.begin(), resolved.end(),
-                            std::back_inserter(left_remaining));
-        std::merge(left_remaining.begin(), left_remaining.end(),
-                   right.active.begin(), right.active.end(),
-                   std::back_inserter(result.active));
+        std::set_difference(left.active.begin(), left.active.end(), resolved.begin(),
+                            resolved.end(), std::back_inserter(left_remaining));
+        std::merge(left_remaining.begin(), left_remaining.end(), right.active.begin(),
+                   right.active.end(), std::back_inserter(result.active));
 
         return result;
     }
@@ -124,4 +118,4 @@ struct PrecedenceResource {
     }
 };
 
-} // namespace coso
+}  // namespace coso

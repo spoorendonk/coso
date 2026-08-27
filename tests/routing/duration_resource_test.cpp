@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
+#include "routing/resources/duration_resource.h"
 
 #include "routing/route.h"
-#include "routing/resources/duration_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -12,8 +13,7 @@ using namespace coso;
 /// 1 depot at (0,0) with TW [0, 1000], 4 clients on a line.
 /// Duration matrix == distance matrix (speed = 1).
 /// Clients have time windows and service times.
-static ProblemData make_vrptw_instance()
-{
+static ProblemData make_vrptw_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0}, {.tw = {0, 1000}});
     b.add_vehicle_type(2, {.capacity = {100}});
@@ -31,8 +31,7 @@ static ProblemData make_vrptw_instance()
 }
 
 /// Tight time windows that force infeasibility.
-static ProblemData make_infeasible_tw_instance()
-{
+static ProblemData make_infeasible_tw_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0}, {.tw = {0, 100}});
     b.add_vehicle_type(1, {.capacity = {100}});
@@ -48,8 +47,7 @@ static ProblemData make_infeasible_tw_instance()
 }
 
 /// Instance with explicit durations (different from distances).
-static ProblemData make_explicit_duration_instance()
-{
+static ProblemData make_explicit_duration_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0}, {.tw = {0, 200}});
     b.add_vehicle_type(1, {.capacity = {100}});
@@ -60,10 +58,13 @@ static ProblemData make_explicit_duration_instance()
 
     // Set explicit durations: all travel takes 3 time units.
     // 3 nodes: depot=0, client0=1, client1=2
-    for (int i = 0; i < 3; ++i)
-        for (int j = 0; j < 3; ++j)
-            if (i != j)
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (i != j) {
                 b.set_duration(0, i, j, 3);
+            }
+        }
+    }
 
     return b.build(0);
 }
@@ -72,24 +73,20 @@ static ProblemData make_explicit_duration_instance()
 //  DurationResource basic tests
 // ===========================================================================
 
-TEST_CASE("DurationResource::init creates correct single-client state",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource::init creates correct single-client state", "[duration_resource]") {
     auto data = make_vrptw_instance();
 
     // Client 0: TW [5, 50], service = 5.
     auto s0 = DurationResource::init(data, 0, data.num_depots() + 0);
-    CHECK(s0.earliest == 10);    // tw.start + service = 5 + 5
-    CHECK(s0.latest == 50);      // tw.end
-    CHECK(s0.duration == 5);     // service
+    CHECK(s0.earliest == 10);  // tw.start + service = 5 + 5
+    CHECK(s0.latest == 50);    // tw.end
+    CHECK(s0.duration == 5);   // service
     CHECK(s0.time_warp == 0);
-    CHECK(s0.first_node == 1);   // depot=0, so client 0 = node 1
+    CHECK(s0.first_node == 1);  // depot=0, so client 0 = node 1
     CHECK(s0.last_node == 1);
 }
 
-TEST_CASE("DurationResource::init_depot creates depot state",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource::init_depot creates depot state", "[duration_resource]") {
     auto data = make_vrptw_instance();
     auto s = DurationResource::init_depot(data, 0);
     CHECK(s.earliest == 0);
@@ -98,9 +95,7 @@ TEST_CASE("DurationResource::init_depot creates depot state",
     CHECK(s.time_warp == 0);
 }
 
-TEST_CASE("DurationResource::merge two feasible clients",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource::merge two feasible clients", "[duration_resource]") {
     auto data = make_vrptw_instance();
 
     // depot -> client 0 -> client 1
@@ -128,9 +123,7 @@ TEST_CASE("DurationResource::merge two feasible clients",
     CHECK(d_c0_c1.time_warp == 0);
 }
 
-TEST_CASE("DurationResource::merge with waiting",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource::merge with waiting", "[duration_resource]") {
     auto data = make_vrptw_instance();
 
     // Go to client 2 first (TW [50, 100]):
@@ -145,9 +138,7 @@ TEST_CASE("DurationResource::merge with waiting",
     CHECK(d_c2.time_warp == 0);
 }
 
-TEST_CASE("DurationResource::merge with time warp",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource::merge with time warp", "[duration_resource]") {
     auto data = make_infeasible_tw_instance();
 
     auto depot = DurationResource::init_depot(data, 0);
@@ -168,9 +159,7 @@ TEST_CASE("DurationResource::merge with time warp",
     CHECK(d_c0_c1.earliest == 30);
 }
 
-TEST_CASE("DurationResource::excess returns time warp",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource::excess returns time warp", "[duration_resource]") {
     auto data = make_infeasible_tw_instance();
 
     auto depot = DurationResource::init_depot(data, 0);
@@ -184,9 +173,7 @@ TEST_CASE("DurationResource::excess returns time warp",
     CHECK(DurationResource::time_warp(full) == 11);
 }
 
-TEST_CASE("DurationResource with explicit durations",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource with explicit durations", "[duration_resource]") {
     auto data = make_explicit_duration_instance();
 
     auto depot = DurationResource::init_depot(data, 0);
@@ -210,8 +197,7 @@ TEST_CASE("DurationResource with explicit durations",
 //  Route duration tracking tests
 // ===========================================================================
 
-TEST_CASE("Route: empty route has zero time warp", "[route][duration]")
-{
+TEST_CASE("Route: empty route has zero time warp", "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
@@ -219,9 +205,7 @@ TEST_CASE("Route: empty route has zero time warp", "[route][duration]")
     CHECK(route.tw_feasible());
 }
 
-TEST_CASE("Route: feasible VRPTW route has zero time warp",
-          "[route][duration]")
-{
+TEST_CASE("Route: feasible VRPTW route has zero time warp", "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
@@ -232,9 +216,7 @@ TEST_CASE("Route: feasible VRPTW route has zero time warp",
     CHECK(route.tw_feasible());
 }
 
-TEST_CASE("Route: infeasible VRPTW route has positive time warp",
-          "[route][duration]")
-{
+TEST_CASE("Route: infeasible VRPTW route has positive time warp", "[route][duration]") {
     auto data = make_infeasible_tw_instance();
     Route route(data, 0);
 
@@ -244,9 +226,7 @@ TEST_CASE("Route: infeasible VRPTW route has positive time warp",
     CHECK_FALSE(route.tw_feasible());
 }
 
-TEST_CASE("Route: eval_insert_time_warp matches actual insert",
-          "[route][duration]")
-{
+TEST_CASE("Route: eval_insert_time_warp matches actual insert", "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
@@ -264,9 +244,7 @@ TEST_CASE("Route: eval_insert_time_warp matches actual insert",
     }
 }
 
-TEST_CASE("Route: eval_remove_time_warp matches actual remove",
-          "[route][duration]")
-{
+TEST_CASE("Route: eval_remove_time_warp matches actual remove", "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
@@ -283,9 +261,7 @@ TEST_CASE("Route: eval_remove_time_warp matches actual remove",
     }
 }
 
-TEST_CASE("Route: eval_insert_time_warp on infeasible instance",
-          "[route][duration]")
-{
+TEST_CASE("Route: eval_insert_time_warp on infeasible instance", "[route][duration]") {
     auto data = make_infeasible_tw_instance();
     Route route(data, 0);
 
@@ -300,9 +276,7 @@ TEST_CASE("Route: eval_insert_time_warp on infeasible instance",
     CHECK(predicted_tw == verify.time_warp());
 }
 
-TEST_CASE("Route: eval_remove_time_warp reduces time warp",
-          "[route][duration]")
-{
+TEST_CASE("Route: eval_remove_time_warp reduces time warp", "[route][duration]") {
     auto data = make_infeasible_tw_instance();
     Route route(data, 0);
 
@@ -319,9 +293,7 @@ TEST_CASE("Route: eval_remove_time_warp reduces time warp",
     CHECK(predicted_tw == 0);
 }
 
-TEST_CASE("Route: eval_insert_time_warp into empty route",
-          "[route][duration]")
-{
+TEST_CASE("Route: eval_insert_time_warp into empty route", "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
@@ -330,8 +302,7 @@ TEST_CASE("Route: eval_insert_time_warp into empty route",
 }
 
 TEST_CASE("Route: eval_insert_time_warp with tight TW client into empty route",
-          "[route][duration]")
-{
+          "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
@@ -344,9 +315,7 @@ TEST_CASE("Route: eval_insert_time_warp with tight TW client into empty route",
     CHECK(tw == 0);
 }
 
-TEST_CASE("Route: time warp with waiting scenario",
-          "[route][duration]")
-{
+TEST_CASE("Route: time warp with waiting scenario", "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
@@ -363,9 +332,7 @@ TEST_CASE("Route: time warp with waiting scenario",
 //  DurationResource latest (backward propagation) tests
 // ===========================================================================
 
-TEST_CASE("DurationResource::merge latest propagation",
-          "[duration_resource]")
-{
+TEST_CASE("DurationResource::merge latest propagation", "[duration_resource]") {
     auto data = make_vrptw_instance();
 
     auto depot = DurationResource::init_depot(data, 0);
@@ -383,9 +350,7 @@ TEST_CASE("DurationResource::merge latest propagation",
 //  Suffix array tests
 // ===========================================================================
 
-TEST_CASE("Route: dur_prefix and dur_suffix are consistent",
-          "[route][duration]")
-{
+TEST_CASE("Route: dur_prefix and dur_suffix are consistent", "[route][duration]") {
     auto data = make_vrptw_instance();
     Route route(data, 0);
 

@@ -7,11 +7,8 @@
 
 namespace coso {
 
-McfSolver::PathResult McfSolver::find_shortest_path(
-    NetworkData const& data,
-    NetworkSolution const& sol,
-    int src, int dst)
-{
+McfSolver::PathResult McfSolver::find_shortest_path(NetworkData const& data,
+                                                    NetworkSolution const& sol, int src, int dst) {
     int const nn = data.num_nodes();
     int const na = data.num_arcs();
 
@@ -37,7 +34,9 @@ McfSolver::PathResult McfSolver::find_shortest_path(
         // Forward arcs from u.
         for (int a : data.outgoing(u)) {
             int res = data.arc(a).upper_cap - sol.flow(a);
-            if (res <= 0) continue;
+            if (res <= 0) {
+                continue;
+            }
 
             int v = data.arc(a).head;
             long long new_dist = result.dist[u] + data.arc(a).cost;
@@ -60,7 +59,9 @@ McfSolver::PathResult McfSolver::find_shortest_path(
         // For each arc a: tail -> u, we can push flow back.
         for (int a : data.incoming(u)) {
             int res = sol.flow(a) - data.arc(a).lower_cap;
-            if (res <= 0) continue;
+            if (res <= 0) {
+                continue;
+            }
 
             int v = data.arc(a).tail;
             long long new_dist = result.dist[u] - data.arc(a).cost;
@@ -136,7 +137,9 @@ NetworkSolution McfSolver::solve(NetworkData const& data) {
                 break;
             }
         }
-        if (src < 0) break;  // no more supply to route
+        if (src < 0) {
+            break;  // no more supply to route
+        }
 
         // Find a node with negative excess (unmet demand).
         int dst = -1;
@@ -146,15 +149,21 @@ NetworkSolution McfSolver::solve(NetworkData const& data) {
                 break;
             }
         }
-        if (dst < 0) break;  // no more demand
+        if (dst < 0) {
+            break;  // no more demand
+        }
 
         // Find shortest path in residual graph.
         auto path = find_shortest_path(data, sol, src, dst);
-        if (!path.found || path.bottleneck <= 0) continue;
+        if (!path.found || path.bottleneck <= 0) {
+            continue;
+        }
 
         // Limit flow to the min of supply at src and demand at dst.
         int send = std::min({path.bottleneck, sol.excess(src), -sol.excess(dst)});
-        if (send <= 0) continue;
+        if (send <= 0) {
+            continue;
+        }
 
         // Augment along the path.
         int cur = dst;
@@ -178,4 +187,4 @@ NetworkSolution McfSolver::solve(NetworkData const& data) {
     return sol;
 }
 
-} // namespace coso
+}  // namespace coso

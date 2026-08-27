@@ -1,13 +1,13 @@
-#include <catch2/catch_test_macros.hpp>
+#include "search/partitioned_search.h"
 
 #include "routing/construction.h"
 #include "routing/cost_evaluator.h"
 #include "routing/local_search.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
-#include "search/partitioned_search.h"
 
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <numeric>
 #include <set>
 
@@ -17,17 +17,16 @@ using namespace coso;
 //  Helper: build a small CVRP instance (6 clients, 1 depot, 2 vehicles)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_small_cvrp()
-{
+static ProblemData make_small_cvrp() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
 
-    b.add_client({10.0, 0.0},    {.demand = {5}});
-    b.add_client({10.0, 10.0},   {.demand = {5}});
-    b.add_client({0.0, 10.0},    {.demand = {5}});
-    b.add_client({-10.0, 0.0},   {.demand = {5}});
+    b.add_client({10.0, 0.0}, {.demand = {5}});
+    b.add_client({10.0, 10.0}, {.demand = {5}});
+    b.add_client({0.0, 10.0}, {.demand = {5}});
+    b.add_client({-10.0, 0.0}, {.demand = {5}});
     b.add_client({-10.0, -10.0}, {.demand = {5}});
-    b.add_client({0.0, -10.0},   {.demand = {5}});
+    b.add_client({0.0, -10.0}, {.demand = {5}});
 
     b.add_vehicle_type(2, {.capacity = {20}});
 
@@ -38,16 +37,14 @@ static ProblemData make_small_cvrp()
 //  Helper: build a medium CVRP instance (20 clients)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_medium_cvrp()
-{
+static ProblemData make_medium_cvrp() {
     ProblemData::Builder b;
     b.add_depot({50.0, 50.0});
 
     for (int i = 0; i < 5; ++i) {
         for (int j = 0; j < 4; ++j) {
-            b.add_client(
-                {static_cast<double>(i * 20), static_cast<double>(j * 25)},
-                {.demand = {3}});
+            b.add_client({static_cast<double>(i * 20), static_cast<double>(j * 25)},
+                         {.demand = {3}});
         }
     }
 
@@ -60,8 +57,7 @@ static ProblemData make_medium_cvrp()
 //  Helper: build a larger spatially-clustered instance (40 clients)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_clustered_cvrp()
-{
+static ProblemData make_clustered_cvrp() {
     ProblemData::Builder b;
     b.add_depot({50.0, 50.0});
 
@@ -84,8 +80,7 @@ static ProblemData make_clustered_cvrp()
 //  Partition tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Partition — k-means creates valid clusters", "[partitioned_search]")
-{
+TEST_CASE("Partition — k-means creates valid clusters", "[partitioned_search]") {
     auto data = make_medium_cvrp();
     PartitionedSearch ps(data);
 
@@ -114,8 +109,7 @@ TEST_CASE("Partition — k-means creates valid clusters", "[partitioned_search]"
     }
 }
 
-TEST_CASE("Partition — k=1 puts all clients in one cluster", "[partitioned_search]")
-{
+TEST_CASE("Partition — k=1 puts all clients in one cluster", "[partitioned_search]") {
     auto data = make_small_cvrp();
     PartitionedSearch ps(data);
 
@@ -125,8 +119,7 @@ TEST_CASE("Partition — k=1 puts all clients in one cluster", "[partitioned_sea
     CHECK(static_cast<int>(part.clusters[0].size()) == data.num_clients());
 }
 
-TEST_CASE("Partition — k clamped to num_clients", "[partitioned_search]")
-{
+TEST_CASE("Partition — k clamped to num_clients", "[partitioned_search]") {
     auto data = make_small_cvrp();
     PartitionedSearch ps(data);
 
@@ -144,8 +137,7 @@ TEST_CASE("Partition — k clamped to num_clients", "[partitioned_search]")
     CHECK(total == data.num_clients());
 }
 
-TEST_CASE("Partition — clusters are non-overlapping", "[partitioned_search]")
-{
+TEST_CASE("Partition — clusters are non-overlapping", "[partitioned_search]") {
     auto data = make_clustered_cvrp();
     PartitionedSearch ps(data);
 
@@ -166,8 +158,7 @@ TEST_CASE("Partition — clusters are non-overlapping", "[partitioned_search]")
 //  Overlap expansion tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Overlap expansion adds boundary clients", "[partitioned_search]")
-{
+TEST_CASE("Overlap expansion adds boundary clients", "[partitioned_search]") {
     auto data = make_medium_cvrp();
     PartitionedSearch ps(data);
 
@@ -182,8 +173,7 @@ TEST_CASE("Overlap expansion adds boundary clients", "[partitioned_search]")
     }
 }
 
-TEST_CASE("Overlap 0.0 returns base clusters unchanged", "[partitioned_search]")
-{
+TEST_CASE("Overlap 0.0 returns base clusters unchanged", "[partitioned_search]") {
     auto data = make_medium_cvrp();
     PartitionedSearch ps(data);
 
@@ -199,8 +189,7 @@ TEST_CASE("Overlap 0.0 returns base clusters unchanged", "[partitioned_search]")
 //  Merge produces a valid complete solution
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Partitioned search — merge produces valid solution", "[partitioned_search]")
-{
+TEST_CASE("Partitioned search — merge produces valid solution", "[partitioned_search]") {
     auto data = make_medium_cvrp();
     CostEvaluator eval;
 
@@ -240,8 +229,7 @@ TEST_CASE("Partitioned search — merge produces valid solution", "[partitioned_
 // ---------------------------------------------------------------------------
 
 TEST_CASE("Partitioned search — with local search produces valid solution",
-          "[partitioned_search]")
-{
+          "[partitioned_search]") {
     auto data = make_medium_cvrp();
     CostEvaluator eval;
 
@@ -250,9 +238,7 @@ TEST_CASE("Partitioned search — with local search produces valid solution",
     PartitionedSearch ps(data, 123);
     LocalSearch ls(data);
 
-    auto local_search_fn = [&ls](Solution& sol, CostEvaluator const& ev) {
-        ls.run(sol, ev);
-    };
+    auto local_search_fn = [&ls](Solution& sol, CostEvaluator const& ev) { ls.run(sol, ev); };
 
     PartitionConfig config;
     config.num_partitions = 3;
@@ -268,8 +254,7 @@ TEST_CASE("Partitioned search — with local search produces valid solution",
 }
 
 TEST_CASE("Partitioned search — clustered instance benefits from decomposition",
-          "[partitioned_search]")
-{
+          "[partitioned_search]") {
     auto data = make_clustered_cvrp();
     CostEvaluator eval;
 
@@ -279,9 +264,7 @@ TEST_CASE("Partitioned search — clustered instance benefits from decomposition
     PartitionedSearch ps(data, 42);
     LocalSearch ls(data);
 
-    auto local_search_fn = [&ls](Solution& sol, CostEvaluator const& ev) {
-        ls.run(sol, ev);
-    };
+    auto local_search_fn = [&ls](Solution& sol, CostEvaluator const& ev) { ls.run(sol, ev); };
 
     PartitionConfig config;
     config.num_partitions = 4;
@@ -294,9 +277,7 @@ TEST_CASE("Partitioned search — clustered instance benefits from decomposition
     CHECK(result.cost(eval) > 0);
 }
 
-TEST_CASE("Partitioned search — single partition is identity-like",
-          "[partitioned_search]")
-{
+TEST_CASE("Partitioned search — single partition is identity-like", "[partitioned_search]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -306,9 +287,7 @@ TEST_CASE("Partitioned search — single partition is identity-like",
     PartitionedSearch ps(data);
     LocalSearch ls(data);
 
-    auto local_search_fn = [&ls](Solution& sol, CostEvaluator const& ev) {
-        ls.run(sol, ev);
-    };
+    auto local_search_fn = [&ls](Solution& sol, CostEvaluator const& ev) { ls.run(sol, ev); };
 
     PartitionConfig config;
     config.num_partitions = 1;

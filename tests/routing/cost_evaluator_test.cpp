@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/cost_evaluator.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -10,40 +10,34 @@ using namespace coso;
 
 /// 1 depot at (0,0), 4 clients on x-axis, capacity 10.
 /// unit_distance_cost = 1, fixed_cost = 0.
-static ProblemData make_basic_instance()
-{
+static ProblemData make_basic_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});   // client 2
-    b.add_client({0.0, 10.0}, {.demand = {2}});   // client 3
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});  // client 2
+    b.add_client({0.0, 10.0}, {.demand = {2}});  // client 3
 
     return b.build(0);
 }
 
 /// Instance with fixed cost and non-default unit_distance_cost.
-static ProblemData make_cost_instance()
-{
+static ProblemData make_cost_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_vehicle_type(2, {
-        .capacity = {10},
-        .cost = {.fixed_cost = 50, .unit_distance_cost = 2}
-    });
+    b.add_vehicle_type(2, {.capacity = {10}, .cost = {.fixed_cost = 50, .unit_distance_cost = 2}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});   // client 2
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});  // client 2
 
     return b.build(0);
 }
 
 /// Instance with prizes.
-static ProblemData make_prize_instance()
-{
+static ProblemData make_prize_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
@@ -58,24 +52,21 @@ static ProblemData make_prize_instance()
 //  CostEvaluator construction
 // ===========================================================================
 
-TEST_CASE("CostEvaluator: default construction", "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: default construction", "[cost_evaluator]") {
     CostEvaluator eval;
     CHECK(eval.load_penalty() == 100);
     CHECK(eval.tw_penalty() == 100);
     CHECK(eval.dist_penalty() == 100);
 }
 
-TEST_CASE("CostEvaluator: custom penalties", "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: custom penalties", "[cost_evaluator]") {
     CostEvaluator eval(200, 50, 75);
     CHECK(eval.load_penalty() == 200);
     CHECK(eval.tw_penalty() == 50);
     CHECK(eval.dist_penalty() == 75);
 }
 
-TEST_CASE("CostEvaluator: penalty setters", "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: penalty setters", "[cost_evaluator]") {
     CostEvaluator eval;
     eval.set_load_penalty(500);
     eval.set_tw_penalty(300);
@@ -90,8 +81,7 @@ TEST_CASE("CostEvaluator: penalty setters", "[cost_evaluator]")
 //  Route objective
 // ===========================================================================
 
-TEST_CASE("CostEvaluator: empty route has zero cost", "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: empty route has zero cost", "[cost_evaluator]") {
     auto data = make_basic_instance();
     Route route(data, 0);
     CostEvaluator eval;
@@ -101,9 +91,7 @@ TEST_CASE("CostEvaluator: empty route has zero cost", "[cost_evaluator]")
     CHECK(eval.route_cost(route) == 0);
 }
 
-TEST_CASE("CostEvaluator: route_objective with distance cost",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: route_objective with distance cost", "[cost_evaluator]") {
     auto data = make_basic_instance();
     Route route(data, 0);
     CostEvaluator eval;
@@ -115,8 +103,7 @@ TEST_CASE("CostEvaluator: route_objective with distance cost",
 }
 
 TEST_CASE("CostEvaluator: route_objective with fixed cost and cost multiplier",
-          "[cost_evaluator]")
-{
+          "[cost_evaluator]") {
     auto data = make_cost_instance();
     Route route(data, 0);
     CostEvaluator eval;
@@ -128,9 +115,7 @@ TEST_CASE("CostEvaluator: route_objective with fixed cost and cost multiplier",
     CHECK(eval.route_objective(route) == 130);
 }
 
-TEST_CASE("CostEvaluator: route_objective subtracts prizes",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: route_objective subtracts prizes", "[cost_evaluator]") {
     auto data = make_prize_instance();
     Route route(data, 0);
     CostEvaluator eval;
@@ -148,8 +133,7 @@ TEST_CASE("CostEvaluator: route_objective subtracts prizes",
 //  Route penalty
 // ===========================================================================
 
-TEST_CASE("CostEvaluator: no penalty when feasible", "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: no penalty when feasible", "[cost_evaluator]") {
     auto data = make_basic_instance();
     Route route(data, 0);
     CostEvaluator eval(100);
@@ -158,9 +142,7 @@ TEST_CASE("CostEvaluator: no penalty when feasible", "[cost_evaluator]")
     CHECK(eval.route_penalty(route) == 0);
 }
 
-TEST_CASE("CostEvaluator: load penalty for overloaded route",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: load penalty for overloaded route", "[cost_evaluator]") {
     auto data = make_basic_instance();
     Route route(data, 0);
     CostEvaluator eval(100);
@@ -169,8 +151,7 @@ TEST_CASE("CostEvaluator: load penalty for overloaded route",
     CHECK(eval.route_penalty(route) == 200);
 }
 
-TEST_CASE("CostEvaluator: penalty weight affects penalty", "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: penalty weight affects penalty", "[cost_evaluator]") {
     auto data = make_basic_instance();
     Route route(data, 0);
     route.set_clients({0, 1, 2});  // excess=2
@@ -182,9 +163,7 @@ TEST_CASE("CostEvaluator: penalty weight affects penalty", "[cost_evaluator]")
     CHECK(eval2.route_penalty(route) == 400);
 }
 
-TEST_CASE("CostEvaluator: route_cost = objective + penalty",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: route_cost = objective + penalty", "[cost_evaluator]") {
     auto data = make_basic_instance();
     Route route(data, 0);
     CostEvaluator eval(100);
@@ -199,9 +178,7 @@ TEST_CASE("CostEvaluator: route_cost = objective + penalty",
 //  Delta evaluation: insert
 // ===========================================================================
 
-TEST_CASE("CostEvaluator: eval_insert_cost matches actual cost change",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: eval_insert_cost matches actual cost change", "[cost_evaluator]") {
     auto data = make_basic_instance();
     CostEvaluator eval(100);
 
@@ -224,8 +201,7 @@ TEST_CASE("CostEvaluator: eval_insert_cost matches actual cost change",
 }
 
 TEST_CASE("CostEvaluator: eval_insert_cost into empty route includes fixed cost",
-          "[cost_evaluator]")
-{
+          "[cost_evaluator]") {
     auto data = make_cost_instance();
     CostEvaluator eval(100);
 
@@ -241,9 +217,7 @@ TEST_CASE("CostEvaluator: eval_insert_cost into empty route includes fixed cost"
     CHECK(delta == actual);  // was zero, now equals full cost
 }
 
-TEST_CASE("CostEvaluator: eval_insert_cost accounts for prizes",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: eval_insert_cost accounts for prizes", "[cost_evaluator]") {
     auto data = make_prize_instance();
     CostEvaluator eval(100);
 
@@ -259,9 +233,7 @@ TEST_CASE("CostEvaluator: eval_insert_cost accounts for prizes",
 //  Delta evaluation: remove
 // ===========================================================================
 
-TEST_CASE("CostEvaluator: eval_remove_cost matches actual cost change",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: eval_remove_cost matches actual cost change", "[cost_evaluator]") {
     auto data = make_basic_instance();
     CostEvaluator eval(100);
 
@@ -281,9 +253,7 @@ TEST_CASE("CostEvaluator: eval_remove_cost matches actual cost change",
     }
 }
 
-TEST_CASE("CostEvaluator: eval_remove_cost of last client removes fixed cost",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: eval_remove_cost of last client removes fixed cost", "[cost_evaluator]") {
     auto data = make_cost_instance();
     CostEvaluator eval(100);
 
@@ -297,9 +267,7 @@ TEST_CASE("CostEvaluator: eval_remove_cost of last client removes fixed cost",
     CHECK(delta == -old_cost);
 }
 
-TEST_CASE("CostEvaluator: eval_remove_cost accounts for prizes",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: eval_remove_cost accounts for prizes", "[cost_evaluator]") {
     auto data = make_prize_instance();
     CostEvaluator eval(100);
 
@@ -321,9 +289,7 @@ TEST_CASE("CostEvaluator: eval_remove_cost accounts for prizes",
 //  Delta evaluation consistency: insert then remove = identity
 // ===========================================================================
 
-TEST_CASE("CostEvaluator: insert + remove delta sums to zero",
-          "[cost_evaluator]")
-{
+TEST_CASE("CostEvaluator: insert + remove delta sums to zero", "[cost_evaluator]") {
     auto data = make_basic_instance();
     CostEvaluator eval(100);
 

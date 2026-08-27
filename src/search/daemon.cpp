@@ -6,33 +6,27 @@
 
 namespace coso {
 
-Daemon::Daemon(ProblemData const& data)
-    : data_(data)
-{
-}
+Daemon::Daemon(ProblemData const& data) : data_(data) {}
 
-Daemon::~Daemon()
-{
+Daemon::~Daemon() {
     stop();
 }
 
-void Daemon::start(CostEvaluator const& eval, StopCriterion& stop)
-{
-    if (running_.load())
+void Daemon::start(CostEvaluator const& eval, StopCriterion& stop) {
+    if (running_.load()) {
         return;  // already running
+    }
 
     stop_requested_.store(false);
     running_.store(true);
 
-    solver_thread_ = std::jthread([this, &eval, &stop] {
-        solver_loop_(eval, stop);
-    });
+    solver_thread_ = std::jthread([this, &eval, &stop] { solver_loop_(eval, stop); });
 }
 
-void Daemon::update(std::function<ProblemData(ProblemData const&)> transform)
-{
-    if (!running_.load())
+void Daemon::update(std::function<ProblemData(ProblemData const&)> transform) {
+    if (!running_.load()) {
         return;
+    }
 
     // Set the pending update.
     {
@@ -48,14 +42,12 @@ void Daemon::update(std::function<ProblemData(ProblemData const&)> transform)
     }
 }
 
-std::optional<Solution> Daemon::current_solution() const
-{
+std::optional<Solution> Daemon::current_solution() const {
     std::lock_guard lock(solution_mutex_);
     return best_solution_;
 }
 
-void Daemon::stop()
-{
+void Daemon::stop() {
     stop_requested_.store(true);
 
     if (solver_thread_.joinable()) {
@@ -65,13 +57,11 @@ void Daemon::stop()
     running_.store(false);
 }
 
-bool Daemon::running() const noexcept
-{
+bool Daemon::running() const noexcept {
     return running_.load();
 }
 
-void Daemon::solver_loop_(CostEvaluator const& eval, StopCriterion& stop)
-{
+void Daemon::solver_loop_(CostEvaluator const& eval, StopCriterion& stop) {
     // Each "epoch" runs ILS for a short iteration budget, then checks
     // for updates and stop conditions.
     constexpr int kEpochIterations = 50;
@@ -95,8 +85,7 @@ void Daemon::solver_loop_(CostEvaluator const& eval, StopCriterion& stop)
         // Update best solution if this epoch found something better.
         {
             std::lock_guard lock(solution_mutex_);
-            if (!best_solution_.has_value() ||
-                epoch_sol.cost(eval) < best_solution_->cost(eval)) {
+            if (!best_solution_.has_value() || epoch_sol.cost(eval) < best_solution_->cost(eval)) {
                 best_solution_ = std::move(epoch_sol);
                 stop.improvement();
             }
@@ -143,4 +132,4 @@ void Daemon::solver_loop_(CostEvaluator const& eval, StopCriterion& stop)
     running_.store(false);
 }
 
-} // namespace coso
+}  // namespace coso

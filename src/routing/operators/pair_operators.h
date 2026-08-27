@@ -40,8 +40,7 @@ public:
     /// Scan the neighbourhood and find the best improving move.
     ///
     /// @return true if an improving move was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best move to the solution.
@@ -54,13 +53,13 @@ public:
 private:
     int64_t best_delta_ = 0;
 
-    int request_    = -1;  ///< Request index being moved.
+    int request_ = -1;     ///< Request index being moved.
     int from_route_ = -1;  ///< Source route.
-    int to_route_   = -1;  ///< Target route.
-    int pickup_     = -1;  ///< Pickup client index.
-    int delivery_   = -1;  ///< Delivery client index.
-    int insert_p_   = -1;  ///< Insertion position for pickup in target.
-    int insert_d_   = -1;  ///< Insertion position for delivery in target.
+    int to_route_ = -1;    ///< Target route.
+    int pickup_ = -1;      ///< Pickup client index.
+    int delivery_ = -1;    ///< Delivery client index.
+    int insert_p_ = -1;    ///< Insertion position for pickup in target.
+    int insert_d_ = -1;    ///< Insertion position for delivery in target.
 };
 
 // ---------------------------------------------------------------------------
@@ -77,8 +76,7 @@ public:
     /// Scan the neighbourhood and find the best improving move.
     ///
     /// @return true if an improving move was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best move to the solution.
@@ -91,20 +89,20 @@ public:
 private:
     int64_t best_delta_ = 0;
 
-    int request_a_    = -1;  ///< First request (from route A).
-    int request_b_    = -1;  ///< Second request (from route B).
-    int route_a_      = -1;  ///< Route A index.
-    int route_b_      = -1;  ///< Route B index.
-    int pickup_a_     = -1;
-    int delivery_a_   = -1;
-    int pickup_b_     = -1;
-    int delivery_b_   = -1;
+    int request_a_ = -1;  ///< First request (from route A).
+    int request_b_ = -1;  ///< Second request (from route B).
+    int route_a_ = -1;    ///< Route A index.
+    int route_b_ = -1;    ///< Route B index.
+    int pickup_a_ = -1;
+    int delivery_a_ = -1;
+    int pickup_b_ = -1;
+    int delivery_b_ = -1;
     // Best insertion positions for pair A in route B.
-    int insert_pa_    = -1;
-    int insert_da_    = -1;
+    int insert_pa_ = -1;
+    int insert_da_ = -1;
     // Best insertion positions for pair B in route A.
-    int insert_pb_    = -1;
-    int insert_db_    = -1;
+    int insert_pb_ = -1;
+    int insert_db_ = -1;
 };
 
-} // namespace coso
+}  // namespace coso

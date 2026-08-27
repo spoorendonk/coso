@@ -1,13 +1,13 @@
-#include <catch2/catch_test_macros.hpp>
+#include "routing/local_search.h"
 
 #include "routing/construction.h"
 #include "routing/cost_evaluator.h"
-#include "routing/local_search.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 #include "search/stop_criterion.h"
 
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <vector>
 
 using namespace coso;
@@ -18,8 +18,7 @@ using namespace coso;
 
 /// 1 depot at (0,0), 6 clients in a pattern that allows obvious improvements.
 /// 2 vehicle types with capacity 15, 3 vehicles each.
-static ProblemData make_small_instance(int granular_k = 0)
-{
+static ProblemData make_small_instance(int granular_k = 0) {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {15}});
@@ -36,8 +35,7 @@ static ProblemData make_small_instance(int granular_k = 0)
 
 /// Larger instance: 1 depot, 12 clients arranged in two clusters.
 /// Cluster A around (50,0), cluster B around (0,50).
-static ProblemData make_clustered_instance(int granular_k = 0)
-{
+static ProblemData make_clustered_instance(int granular_k = 0) {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(4, {.capacity = {30}});
@@ -63,36 +61,35 @@ static ProblemData make_clustered_instance(int granular_k = 0)
 
 /// Build a solution with given route assignments.
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
 
 /// Verify that every client appears exactly once across all routes.
-static void check_all_clients_assigned(Solution const& sol,
-                                       ProblemData const& data)
-{
+static void check_all_clients_assigned(Solution const& sol, ProblemData const& data) {
     CHECK(sol.num_unassigned() == 0);
     std::vector<int> count(data.num_clients(), 0);
-    for (int r = 0; r < sol.num_routes(); ++r)
-        for (int i = 0; i < sol.route(r).size(); ++i)
+    for (int r = 0; r < sol.num_routes(); ++r) {
+        for (int i = 0; i < sol.route(r).size(); ++i) {
             count[sol.route(r).client(i)]++;
-    for (int c = 0; c < data.num_clients(); ++c)
+        }
+    }
+    for (int c = 0; c < data.num_clients(); ++c) {
         CHECK(count[c] == 1);
+    }
 }
 
 // ===========================================================================
 //  Basic local search tests
 // ===========================================================================
 
-TEST_CASE("LocalSearch: improves a badly ordered solution",
-          "[localsearch]")
-{
+TEST_CASE("LocalSearch: improves a badly ordered solution", "[localsearch]") {
     auto data = make_small_instance();
     CostEvaluator eval(100);
 
@@ -109,9 +106,7 @@ TEST_CASE("LocalSearch: improves a badly ordered solution",
     check_all_clients_assigned(sol, data);
 }
 
-TEST_CASE("LocalSearch: reaches a local optimum (no further improvement)",
-          "[localsearch]")
-{
+TEST_CASE("LocalSearch: reaches a local optimum (no further improvement)", "[localsearch]") {
     auto data = make_small_instance();
     CostEvaluator eval(100);
 
@@ -132,9 +127,7 @@ TEST_CASE("LocalSearch: reaches a local optimum (no further improvement)",
     check_all_clients_assigned(sol, data);
 }
 
-TEST_CASE("LocalSearch: handles empty solution gracefully",
-          "[localsearch]")
-{
+TEST_CASE("LocalSearch: handles empty solution gracefully", "[localsearch]") {
     auto data = make_small_instance();
     CostEvaluator eval(100);
 
@@ -148,9 +141,7 @@ TEST_CASE("LocalSearch: handles empty solution gracefully",
     CHECK(ls.last_num_moves() == 0);
 }
 
-TEST_CASE("LocalSearch: handles single-client routes",
-          "[localsearch]")
-{
+TEST_CASE("LocalSearch: handles single-client routes", "[localsearch]") {
     auto data = make_small_instance();
     CostEvaluator eval(100);
 
@@ -168,18 +159,16 @@ TEST_CASE("LocalSearch: handles single-client routes",
 //  Clustered instance tests
 // ===========================================================================
 
-TEST_CASE("LocalSearch: separates inter-mixed clusters",
-          "[localsearch][clustered]")
-{
+TEST_CASE("LocalSearch: separates inter-mixed clusters", "[localsearch][clustered]") {
     auto data = make_clustered_instance();
     CostEvaluator eval(100);
 
     // Deliberately mix clients from clusters A and B across routes.
     auto sol = make_solution(data, {
-        {0, 6, 2, 8},      // mixed A+B
-        {1, 7, 3, 9},      // mixed A+B
-        {4, 10, 5, 11},    // mixed A+B
-    });
+                                       {0, 6, 2, 8},    // mixed A+B
+                                       {1, 7, 3, 9},    // mixed A+B
+                                       {4, 10, 5, 11},  // mixed A+B
+                                   });
     int64_t old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
@@ -195,9 +184,7 @@ TEST_CASE("LocalSearch: separates inter-mixed clusters",
 //  Granular neighbourhood tests
 // ===========================================================================
 
-TEST_CASE("LocalSearch: works with granular neighbours",
-          "[localsearch][granular]")
-{
+TEST_CASE("LocalSearch: works with granular neighbours", "[localsearch][granular]") {
     auto data = make_small_instance(5);  // k=5 nearest neighbours
     CostEvaluator eval(100);
 
@@ -211,17 +198,15 @@ TEST_CASE("LocalSearch: works with granular neighbours",
     check_all_clients_assigned(sol, data);
 }
 
-TEST_CASE("LocalSearch: granular clustered instance",
-          "[localsearch][granular][clustered]")
-{
+TEST_CASE("LocalSearch: granular clustered instance", "[localsearch][granular][clustered]") {
     auto data = make_clustered_instance(8);  // k=8
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {
-        {0, 6, 2, 8},
-        {1, 7, 3, 9},
-        {4, 10, 5, 11},
-    });
+                                       {0, 6, 2, 8},
+                                       {1, 7, 3, 9},
+                                       {4, 10, 5, 11},
+                                   });
     int64_t old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
@@ -235,9 +220,7 @@ TEST_CASE("LocalSearch: granular clustered instance",
 //  Construction + local search integration
 // ===========================================================================
 
-TEST_CASE("LocalSearch: improves nearest-neighbour solution",
-          "[localsearch][construction]")
-{
+TEST_CASE("LocalSearch: improves nearest-neighbour solution", "[localsearch][construction]") {
     auto data = make_clustered_instance();
     CostEvaluator eval(100);
 
@@ -253,9 +236,7 @@ TEST_CASE("LocalSearch: improves nearest-neighbour solution",
     check_all_clients_assigned(sol, data);
 }
 
-TEST_CASE("LocalSearch: improves Clarke-Wright solution",
-          "[localsearch][construction]")
-{
+TEST_CASE("LocalSearch: improves Clarke-Wright solution", "[localsearch][construction]") {
     auto data = make_clustered_instance();
     CostEvaluator eval(100);
 
@@ -274,9 +255,7 @@ TEST_CASE("LocalSearch: improves Clarke-Wright solution",
 //  Capacity violation tests
 // ===========================================================================
 
-TEST_CASE("LocalSearch: reduces capacity violations",
-          "[localsearch][capacity]")
-{
+TEST_CASE("LocalSearch: reduces capacity violations", "[localsearch][capacity]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {10}});
@@ -306,9 +285,7 @@ TEST_CASE("LocalSearch: reduces capacity violations",
 //  Statistics tests
 // ===========================================================================
 
-TEST_CASE("LocalSearch: reports iteration and move counts",
-          "[localsearch][stats]")
-{
+TEST_CASE("LocalSearch: reports iteration and move counts", "[localsearch][stats]") {
     auto data = make_small_instance();
     CostEvaluator eval(100);
 
@@ -327,18 +304,16 @@ TEST_CASE("LocalSearch: reports iteration and move counts",
 //  Stop criterion tests
 // ===========================================================================
 
-TEST_CASE("LocalSearch: respects stop criterion",
-          "[localsearch][stop]")
-{
+TEST_CASE("LocalSearch: respects stop criterion", "[localsearch][stop]") {
     auto data = make_clustered_instance();
     CostEvaluator eval(100);
 
     // Badly mixed solution that will need many moves to fix.
     auto sol = make_solution(data, {
-        {0, 6, 2, 8},
-        {1, 7, 3, 9},
-        {4, 10, 5, 11},
-    });
+                                       {0, 6, 2, 8},
+                                       {1, 7, 3, 9},
+                                       {4, 10, 5, 11},
+                                   });
 
     // Run without stop criterion to get baseline.
     auto sol_full = sol;
@@ -357,9 +332,7 @@ TEST_CASE("LocalSearch: respects stop criterion",
     CHECK(ls.last_num_moves() == 0);
 }
 
-TEST_CASE("LocalSearch: nullptr stop criterion runs to completion",
-          "[localsearch][stop]")
-{
+TEST_CASE("LocalSearch: nullptr stop criterion runs to completion", "[localsearch][stop]") {
     auto data = make_small_instance();
     CostEvaluator eval(100);
 

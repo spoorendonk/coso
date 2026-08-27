@@ -1,11 +1,11 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-
 #include "search/population.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <random>
 
 using namespace coso;
@@ -15,27 +15,24 @@ using namespace coso;
 // --------------------------------------------------------------------------- //
 
 /// 1 depot at (0,0), 6 clients in a line, 2 vehicles with capacity 20.
-static ProblemData make_pop_instance()
-{
+static ProblemData make_pop_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {20}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});   // 2
-    b.add_client({40.0, 0.0}, {.demand = {2}});   // 3
-    b.add_client({50.0, 0.0}, {.demand = {1}});   // 4
-    b.add_client({60.0, 0.0}, {.demand = {3}});   // 5
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});  // 2
+    b.add_client({40.0, 0.0}, {.demand = {2}});  // 3
+    b.add_client({50.0, 0.0}, {.demand = {1}});  // 4
+    b.add_client({60.0, 0.0}, {.demand = {3}});  // 5
 
     return b.build(0);
 }
 
 /// Create a solution with specific route assignments.
-static Solution make_solution(ProblemData const& data,
-                              std::vector<int> route0,
-                              std::vector<int> route1)
-{
+static Solution make_solution(ProblemData const& data, std::vector<int> route0,
+                              std::vector<int> route1) {
     Solution sol(data);
     sol.set_route_clients(0, std::move(route0));
     sol.set_route_clients(1, std::move(route1));
@@ -43,8 +40,7 @@ static Solution make_solution(ProblemData const& data,
 }
 
 /// Instance where all solutions are infeasible due to capacity.
-static ProblemData make_tight_instance()
-{
+static ProblemData make_tight_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {5}});
@@ -60,8 +56,7 @@ static ProblemData make_tight_instance()
 //  Construction and basic properties                                           //
 // =========================================================================== //
 
-TEST_CASE("Population: empty population", "[search][population]")
-{
+TEST_CASE("Population: empty population", "[search][population]") {
     auto data = make_pop_instance();
     Population pop(data, 5, 5);
 
@@ -71,8 +66,7 @@ TEST_CASE("Population: empty population", "[search][population]")
     CHECK_FALSE(pop.has_feasible());
 }
 
-TEST_CASE("Population: add feasible solution", "[search][population]")
-{
+TEST_CASE("Population: add feasible solution", "[search][population]") {
     auto data = make_pop_instance();
     CostEvaluator eval;
     Population pop(data, 5, 5);
@@ -87,8 +81,7 @@ TEST_CASE("Population: add feasible solution", "[search][population]")
     CHECK(pop.has_feasible());
 }
 
-TEST_CASE("Population: add infeasible solution", "[search][population]")
-{
+TEST_CASE("Population: add infeasible solution", "[search][population]") {
     auto data = make_tight_instance();
     CostEvaluator eval;
     Population pop(data, 5, 5);
@@ -105,9 +98,7 @@ TEST_CASE("Population: add infeasible solution", "[search][population]")
     CHECK_FALSE(pop.has_feasible());
 }
 
-TEST_CASE("Population: best_feasible returns lowest cost",
-          "[search][population]")
-{
+TEST_CASE("Population: best_feasible returns lowest cost", "[search][population]") {
     auto data = make_pop_instance();
     CostEvaluator eval;
     Population pop(data, 10, 10);
@@ -131,9 +122,7 @@ TEST_CASE("Population: best_feasible returns lowest cost",
 //  Survivor selection (max size enforcement)                                    //
 // =========================================================================== //
 
-TEST_CASE("Population: feasible sub-population does not exceed max size",
-          "[search][population]")
-{
+TEST_CASE("Population: feasible sub-population does not exceed max size", "[search][population]") {
     auto data = make_pop_instance();
     CostEvaluator eval;
     int max_feas = 3;
@@ -144,10 +133,11 @@ TEST_CASE("Population: feasible sub-population does not exceed max size",
         // Create different solutions by rotating client assignments.
         std::vector<int> r0, r1;
         for (int c = 0; c < 6; ++c) {
-            if ((c + i) % 2 == 0)
+            if ((c + i) % 2 == 0) {
                 r0.push_back(c);
-            else
+            } else {
                 r1.push_back(c);
+            }
         }
         pop.add(make_solution(data, r0, r1), eval);
     }
@@ -156,8 +146,7 @@ TEST_CASE("Population: feasible sub-population does not exceed max size",
 }
 
 TEST_CASE("Population: infeasible sub-population does not exceed max size",
-          "[search][population]")
-{
+          "[search][population]") {
     auto data = make_tight_instance();
     CostEvaluator eval;
     int max_infeas = 3;
@@ -167,12 +156,13 @@ TEST_CASE("Population: infeasible sub-population does not exceed max size",
     for (int i = 0; i < 6; ++i) {
         Solution sol(data);
         // Vary the order to get different edge sets.
-        if (i % 3 == 0)
+        if (i % 3 == 0) {
             sol.set_route_clients(0, {0, 1, 2});
-        else if (i % 3 == 1)
+        } else if (i % 3 == 1) {
             sol.set_route_clients(0, {1, 0, 2});
-        else
+        } else {
             sol.set_route_clients(0, {2, 1, 0});
+        }
 
         pop.add(std::move(sol), eval);
     }
@@ -184,9 +174,7 @@ TEST_CASE("Population: infeasible sub-population does not exceed max size",
 //  Parent selection                                                             //
 // =========================================================================== //
 
-TEST_CASE("Population: select_parent returns a valid solution",
-          "[search][population]")
-{
+TEST_CASE("Population: select_parent returns a valid solution", "[search][population]") {
     auto data = make_pop_instance();
     CostEvaluator eval;
     Population pop(data, 10, 10);
@@ -204,9 +192,7 @@ TEST_CASE("Population: select_parent returns a valid solution",
     }
 }
 
-TEST_CASE("Population: select_parent with single solution",
-          "[search][population]")
-{
+TEST_CASE("Population: select_parent with single solution", "[search][population]") {
     auto data = make_pop_instance();
     CostEvaluator eval;
     Population pop(data, 10, 10);
@@ -225,8 +211,7 @@ TEST_CASE("Population: select_parent with single solution",
 // =========================================================================== //
 
 TEST_CASE("Population: identical solutions have zero broken-pairs distance",
-          "[search][population]")
-{
+          "[search][population]") {
     auto data = make_pop_instance();
     CostEvaluator eval;
     Population pop(data, 10, 10);
@@ -239,9 +224,7 @@ TEST_CASE("Population: identical solutions have zero broken-pairs distance",
     CHECK(pop.feasible_size() == 2);
 }
 
-TEST_CASE("Population: diverse solutions survive over clones",
-          "[search][population]")
-{
+TEST_CASE("Population: diverse solutions survive over clones", "[search][population]") {
     auto data = make_pop_instance();
     CostEvaluator eval;
     Population pop(data, 3, 3);
@@ -275,9 +258,7 @@ TEST_CASE("Population: diverse solutions survive over clones",
 //  Mixed feasible/infeasible population                                         //
 // =========================================================================== //
 
-TEST_CASE("Population: mixed feasible and infeasible",
-          "[search][population]")
-{
+TEST_CASE("Population: mixed feasible and infeasible", "[search][population]") {
     // Use tight instance: 1 vehicle, capacity 5.
     // Clients: demand 3, 4, 5.
     auto data = make_tight_instance();

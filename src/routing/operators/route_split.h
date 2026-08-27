@@ -32,8 +32,7 @@ public:
     /// Scan all routes and find the best improving split.
     ///
     /// @return true if an improving split was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best split to the solution.
@@ -46,9 +45,9 @@ public:
 private:
     int64_t best_delta_ = 0;
 
-    int source_route_ = -1;   ///< Route to split.
-    int split_pos_    = -1;   ///< Split after this position (0..size-2).
-    int target_route_ = -1;   ///< Empty route to receive the second half.
+    int source_route_ = -1;  ///< Route to split.
+    int split_pos_ = -1;     ///< Split after this position (0..size-2).
+    int target_route_ = -1;  ///< Empty route to receive the second half.
 };
 
-} // namespace coso
+}  // namespace coso

@@ -1,5 +1,6 @@
-#include "assignment/assignment_data.h"
 #include "assignment/constraints/constraint.h"
+
+#include "assignment/assignment_data.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <climits>
@@ -14,22 +15,30 @@ using namespace coso;
 
 namespace {
 
-AssignmentData make_instance()
-{
+AssignmentData make_instance() {
     AssignmentData data;
 
     data.shift_types = {
-        {.name = "Day",   .start_hour = 8,  .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6,  .duration_hours = 0},
+        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
+        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
     };
 
     data.employees = {
-        {.name = "Alice", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Bob",   .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Carol", .skills = {"nurse", "senior"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
+        {.name = "Alice",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Bob",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Carol",
+         .skills = {"nurse", "senior"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
     };
 
     data.horizon = 7;
@@ -41,31 +50,29 @@ AssignmentData make_instance()
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
 
-    data.max_consecutive_shifts  = 5;
+    data.max_consecutive_shifts = 5;
     data.min_rest_between_shifts = 11;
 
     return data;
 }
 
 /// Apply a move to a schedule in-place.
-void apply_move(std::vector<std::vector<int>>& schedule,
-                AssignmentMove const& move)
-{
+void apply_move(std::vector<std::vector<int>>& schedule, AssignmentMove const& move) {
     schedule[move.employee][move.day] = move.new_shift;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ===========================================================================
 //  MaxConsecutiveConstraint
 // ===========================================================================
 
-TEST_CASE("MaxConsecutiveConstraint: no violation", "[assignment][constraint]")
-{
+TEST_CASE("MaxConsecutiveConstraint: no violation", "[assignment][constraint]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
 
     MaxConsecutiveConstraint c(10000);
 
@@ -78,12 +85,12 @@ TEST_CASE("MaxConsecutiveConstraint: no violation", "[assignment][constraint]")
     REQUIRE(c.evaluate(data, sched) == 0);
 }
 
-TEST_CASE("MaxConsecutiveConstraint: violation on 4th day", "[assignment][constraint]")
-{
+TEST_CASE("MaxConsecutiveConstraint: violation on 4th day", "[assignment][constraint]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
 
     MaxConsecutiveConstraint c(10000);
 
@@ -96,12 +103,12 @@ TEST_CASE("MaxConsecutiveConstraint: violation on 4th day", "[assignment][constr
     REQUIRE(c.evaluate(data, sched) == 10000);
 }
 
-TEST_CASE("MaxConsecutiveConstraint: delta matches full", "[assignment][constraint]")
-{
+TEST_CASE("MaxConsecutiveConstraint: delta matches full", "[assignment][constraint]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
 
     MaxConsecutiveConstraint c(10000);
 
@@ -126,8 +133,7 @@ TEST_CASE("MaxConsecutiveConstraint: delta matches full", "[assignment][constrai
 //  MinRestConstraint
 // ===========================================================================
 
-TEST_CASE("MinRestConstraint: sufficient rest", "[assignment][constraint]")
-{
+TEST_CASE("MinRestConstraint: sufficient rest", "[assignment][constraint]") {
     auto data = make_instance();
     MinRestConstraint c(10000);
 
@@ -140,15 +146,17 @@ TEST_CASE("MinRestConstraint: sufficient rest", "[assignment][constraint]")
     REQUIRE(c.evaluate(data, sched) == 0);
 }
 
-TEST_CASE("MinRestConstraint: insufficient rest", "[assignment][constraint]")
-{
+TEST_CASE("MinRestConstraint: insufficient rest", "[assignment][constraint]") {
     AssignmentData data;
     data.shift_types = {
-        {.name = "Late",  .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6,  .end_hour = 14, .duration_hours = 0},
+        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
+        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
     };
-    data.employees = {{.name = "X", .skills = {}, .max_hours_per_week = 40,
-                       .max_consecutive_days = 7, .min_rest_hours = 11}};
+    data.employees = {{.name = "X",
+                       .skills = {},
+                       .max_hours_per_week = 40,
+                       .max_consecutive_days = 7,
+                       .min_rest_hours = 11}};
     data.horizon = 2;
     data.min_rest_between_shifts = 11;
 
@@ -163,15 +171,17 @@ TEST_CASE("MinRestConstraint: insufficient rest", "[assignment][constraint]")
     REQUIRE(c.evaluate(data, sched) == 10000);
 }
 
-TEST_CASE("MinRestConstraint: delta matches full", "[assignment][constraint]")
-{
+TEST_CASE("MinRestConstraint: delta matches full", "[assignment][constraint]") {
     AssignmentData data;
     data.shift_types = {
-        {.name = "Late",  .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6,  .end_hour = 14, .duration_hours = 0},
+        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
+        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
     };
-    data.employees = {{.name = "X", .skills = {}, .max_hours_per_week = 40,
-                       .max_consecutive_days = 7, .min_rest_hours = 11}};
+    data.employees = {{.name = "X",
+                       .skills = {},
+                       .max_hours_per_week = 40,
+                       .max_consecutive_days = 7,
+                       .min_rest_hours = 11}};
     data.horizon = 3;
     data.min_rest_between_shifts = 11;
 
@@ -196,8 +206,7 @@ TEST_CASE("MinRestConstraint: delta matches full", "[assignment][constraint]")
 //  DemandConstraint
 // ===========================================================================
 
-TEST_CASE("DemandConstraint: empty schedule has understaffing", "[assignment][constraint]")
-{
+TEST_CASE("DemandConstraint: empty schedule has understaffing", "[assignment][constraint]") {
     auto data = make_instance();
     DemandConstraint c(1000, 100);
 
@@ -207,8 +216,7 @@ TEST_CASE("DemandConstraint: empty schedule has understaffing", "[assignment][co
     REQUIRE(c.evaluate(data, sched) == 14 * 1000);
 }
 
-TEST_CASE("DemandConstraint: satisfied demand", "[assignment][constraint]")
-{
+TEST_CASE("DemandConstraint: satisfied demand", "[assignment][constraint]") {
     auto data = make_instance();
     DemandConstraint c(1000, 100);
 
@@ -221,8 +229,7 @@ TEST_CASE("DemandConstraint: satisfied demand", "[assignment][constraint]")
     REQUIRE(c.evaluate(data, sched) == 0);
 }
 
-TEST_CASE("DemandConstraint: overstaffing", "[assignment][constraint]")
-{
+TEST_CASE("DemandConstraint: overstaffing", "[assignment][constraint]") {
     auto data = make_instance();
     DemandConstraint c(1000, 100);
 
@@ -238,8 +245,7 @@ TEST_CASE("DemandConstraint: overstaffing", "[assignment][constraint]")
     REQUIRE(c.evaluate(data, sched) == 100);  // 1 * overstaffing penalty
 }
 
-TEST_CASE("DemandConstraint: delta matches full", "[assignment][constraint]")
-{
+TEST_CASE("DemandConstraint: delta matches full", "[assignment][constraint]") {
     auto data = make_instance();
     DemandConstraint c(1000, 100);
 
@@ -262,8 +268,7 @@ TEST_CASE("DemandConstraint: delta matches full", "[assignment][constraint]")
 //  ForbiddenSequenceConstraint
 // ===========================================================================
 
-TEST_CASE("ForbiddenSequenceConstraint: no forbidden sequences", "[assignment][constraint]")
-{
+TEST_CASE("ForbiddenSequenceConstraint: no forbidden sequences", "[assignment][constraint]") {
     auto data = make_instance();
     data.forbidden_sequences.clear();
     ForbiddenSequenceConstraint c(10000);
@@ -275,8 +280,7 @@ TEST_CASE("ForbiddenSequenceConstraint: no forbidden sequences", "[assignment][c
     REQUIRE(c.evaluate(data, sched) == 0);
 }
 
-TEST_CASE("ForbiddenSequenceConstraint: Night->Day forbidden", "[assignment][constraint]")
-{
+TEST_CASE("ForbiddenSequenceConstraint: Night->Day forbidden", "[assignment][constraint]") {
     auto data = make_instance();
     data.forbidden_sequences = {{1, 0}};  // Night -> Day
     ForbiddenSequenceConstraint c(10000);
@@ -293,8 +297,7 @@ TEST_CASE("ForbiddenSequenceConstraint: Night->Day forbidden", "[assignment][con
     REQUIRE(c.evaluate(data, sched) == 0);
 }
 
-TEST_CASE("ForbiddenSequenceConstraint: delta matches full", "[assignment][constraint]")
-{
+TEST_CASE("ForbiddenSequenceConstraint: delta matches full", "[assignment][constraint]") {
     auto data = make_instance();
     data.forbidden_sequences = {{1, 0}};  // Night -> Day
     ForbiddenSequenceConstraint c(10000);
@@ -318,8 +321,7 @@ TEST_CASE("ForbiddenSequenceConstraint: delta matches full", "[assignment][const
 //  PreferenceConstraint
 // ===========================================================================
 
-TEST_CASE("PreferenceConstraint: satisfied preference", "[assignment][constraint]")
-{
+TEST_CASE("PreferenceConstraint: satisfied preference", "[assignment][constraint]") {
     auto data = make_instance();
     data.preferences = {
         {.employee = 0, .day = 0, .shift_type = 0, .weight = 5},
@@ -332,8 +334,7 @@ TEST_CASE("PreferenceConstraint: satisfied preference", "[assignment][constraint
     REQUIRE(c.evaluate(data, sched) == -5);
 }
 
-TEST_CASE("PreferenceConstraint: unsatisfied preference", "[assignment][constraint]")
-{
+TEST_CASE("PreferenceConstraint: unsatisfied preference", "[assignment][constraint]") {
     auto data = make_instance();
     data.preferences = {
         {.employee = 0, .day = 0, .shift_type = 0, .weight = 5},
@@ -346,8 +347,7 @@ TEST_CASE("PreferenceConstraint: unsatisfied preference", "[assignment][constrai
     REQUIRE(c.evaluate(data, sched) == 0);
 }
 
-TEST_CASE("PreferenceConstraint: delta matches full", "[assignment][constraint]")
-{
+TEST_CASE("PreferenceConstraint: delta matches full", "[assignment][constraint]") {
     auto data = make_instance();
     data.preferences = {
         {.employee = 0, .day = 0, .shift_type = 0, .weight = 5},
@@ -383,12 +383,12 @@ TEST_CASE("PreferenceConstraint: delta matches full", "[assignment][constraint]"
 //  ConstraintEvaluator (composition)
 // ===========================================================================
 
-TEST_CASE("ConstraintEvaluator: composite evaluate", "[assignment][constraint]")
-{
+TEST_CASE("ConstraintEvaluator: composite evaluate", "[assignment][constraint]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
     data.forbidden_sequences = {{1, 0}};
     data.preferences = {
         {.employee = 0, .day = 0, .shift_type = 0, .weight = 5},
@@ -416,12 +416,12 @@ TEST_CASE("ConstraintEvaluator: composite evaluate", "[assignment][constraint]")
     REQUIRE(cost2 == cost - 1000 - 5);
 }
 
-TEST_CASE("ConstraintEvaluator: composite delta matches full", "[assignment][constraint]")
-{
+TEST_CASE("ConstraintEvaluator: composite delta matches full", "[assignment][constraint]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
     data.forbidden_sequences = {{1, 0}};
     data.preferences = {
         {.employee = 0, .day = 0, .shift_type = 0, .weight = 5},
@@ -446,8 +446,8 @@ TEST_CASE("ConstraintEvaluator: composite delta matches full", "[assignment][con
     REQUIRE(delta == expected);
 }
 
-TEST_CASE("ConstraintEvaluator: breakdown reports per-constraint costs", "[assignment][constraint]")
-{
+TEST_CASE("ConstraintEvaluator: breakdown reports per-constraint costs",
+          "[assignment][constraint]") {
     auto data = make_instance();
     data.preferences = {
         {.employee = 0, .day = 0, .shift_type = 0, .weight = 5},
@@ -471,12 +471,12 @@ TEST_CASE("ConstraintEvaluator: breakdown reports per-constraint costs", "[assig
 //  Delta accuracy: multiple consecutive moves
 // ===========================================================================
 
-TEST_CASE("Constraint delta: sequential moves stay accurate", "[assignment][constraint]")
-{
+TEST_CASE("Constraint delta: sequential moves stay accurate", "[assignment][constraint]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
     data.forbidden_sequences = {{1, 0}};
     data.preferences = {
         {.employee = 0, .day = 2, .shift_type = 0, .weight = 10},
@@ -499,12 +499,12 @@ TEST_CASE("Constraint delta: sequential moves stay accurate", "[assignment][cons
         {.employee = 0, .day = 2, .old_shift = -1, .new_shift = 0},  // preferred
         {.employee = 0, .day = 3, .old_shift = -1, .new_shift = 0},  // 4th consec -> violation
         {.employee = 2, .day = 1, .old_shift = -1, .new_shift = 1},
-        {.employee = 0, .day = 3, .old_shift = 0,  .new_shift = -1}, // undo violation
+        {.employee = 0, .day = 3, .old_shift = 0, .new_shift = -1},  // undo violation
     };
 
     for (auto const& m : moves) {
         int before = eval.evaluate(data, sched);
-        int delta  = eval.evaluate_delta(data, sched, m);
+        int delta = eval.evaluate_delta(data, sched, m);
         apply_move(sched, m);
         int after = eval.evaluate(data, sched);
 

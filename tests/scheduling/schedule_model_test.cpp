@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "model/schedule_model.h"
+
 #include "scheduling/schedule_data.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -9,8 +10,7 @@ using namespace coso;
 //  Basic model construction
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleModel: add machines, jobs, operations", "[scheduling]")
-{
+TEST_CASE("ScheduleModel: add machines, jobs, operations", "[scheduling]") {
     ScheduleModel model;
 
     int m0 = model.add_machine({.name = "M0"});
@@ -43,8 +43,7 @@ TEST_CASE("ScheduleModel: add machines, jobs, operations", "[scheduling]")
 //  ScheduleData compilation — JSP (fixed machines)
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: JSP compilation", "[scheduling]")
-{
+TEST_CASE("ScheduleData: JSP compilation", "[scheduling]") {
     ScheduleData::Builder builder;
 
     builder.add_machine({.name = "M0"});
@@ -84,11 +83,11 @@ TEST_CASE("ScheduleData: JSP compilation", "[scheduling]")
     CHECK(data.job(1).operations[1] == 3);
 
     // Check processing times.
-    CHECK(data.processing_time(0, 0) == 3);    // op0 on M0
-    CHECK(data.processing_time(0, 1) == INT_MAX); // op0 cannot run on M1
-    CHECK(data.processing_time(1, 1) == 2);    // op1 on M1
-    CHECK(data.processing_time(2, 1) == 4);    // op2 on M1
-    CHECK(data.processing_time(3, 0) == 1);    // op3 on M0
+    CHECK(data.processing_time(0, 0) == 3);        // op0 on M0
+    CHECK(data.processing_time(0, 1) == INT_MAX);  // op0 cannot run on M1
+    CHECK(data.processing_time(1, 1) == 2);        // op1 on M1
+    CHECK(data.processing_time(2, 1) == 4);        // op2 on M1
+    CHECK(data.processing_time(3, 0) == 1);        // op3 on M0
 
     // Check precedence arcs: J0 has op0 -> op1, J1 has op2 -> op3.
     auto precs = data.precedences();
@@ -111,8 +110,7 @@ TEST_CASE("ScheduleData: JSP compilation", "[scheduling]")
 //  ScheduleData compilation — FJSP (eligible machines)
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: FJSP with eligible machines", "[scheduling]")
-{
+TEST_CASE("ScheduleData: FJSP with eligible machines", "[scheduling]") {
     ScheduleData::Builder builder;
 
     builder.add_machine({.name = "M0"});
@@ -123,9 +121,9 @@ TEST_CASE("ScheduleData: FJSP with eligible machines", "[scheduling]")
 
     // Flexible operation: can run on M0 (dur 5) or M2 (dur 3).
     builder.add_operation(0, {
-        .eligible_machines = {0, 2},
-        .durations_per_machine = {5, 3},
-    });
+                                 .eligible_machines = {0, 2},
+                                 .durations_per_machine = {5, 3},
+                             });
 
     ScheduleData data = builder.build();
 
@@ -149,8 +147,7 @@ TEST_CASE("ScheduleData: FJSP with eligible machines", "[scheduling]")
 //  RCPSP resource constraints
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: RCPSP resources", "[scheduling]")
-{
+TEST_CASE("ScheduleData: RCPSP resources", "[scheduling]") {
     ScheduleData::Builder builder;
 
     builder.add_machine();
@@ -183,8 +180,7 @@ TEST_CASE("ScheduleData: RCPSP resources", "[scheduling]")
 //  Extra precedence constraints
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: extra precedence constraints", "[scheduling]")
-{
+TEST_CASE("ScheduleData: extra precedence constraints", "[scheduling]") {
     ScheduleData::Builder builder;
 
     builder.add_machine();
@@ -220,8 +216,7 @@ TEST_CASE("ScheduleData: extra precedence constraints", "[scheduling]")
 //  Objective setting
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: objective types", "[scheduling]")
-{
+TEST_CASE("ScheduleData: objective types", "[scheduling]") {
     ScheduleData::Builder builder;
     builder.add_machine();
     builder.add_job();
@@ -249,10 +244,10 @@ TEST_CASE("ScheduleData: objective types", "[scheduling]")
 //  ScheduleModel::solve() baseline solve path
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleModel: solve builds a feasible schedule", "[scheduling]")
-{
-    SKIP("ScheduleModel::solve() crashes via construct_neh() when an operation has no "
-         "feasible machine — coso#188");
+TEST_CASE("ScheduleModel: solve builds a feasible schedule", "[scheduling]") {
+    SKIP(
+        "ScheduleModel::solve() crashes via construct_neh() when an operation has no "
+        "feasible machine — coso#188");
     ScheduleModel model;
 
     model.add_machine({.name = "M0"});
@@ -282,8 +277,7 @@ TEST_CASE("ScheduleModel: solve builds a feasible schedule", "[scheduling]")
 //  ScheduleModel: solve with empty model returns default result
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleModel: solve with empty model", "[scheduling]")
-{
+TEST_CASE("ScheduleModel: solve with empty model", "[scheduling]") {
     ScheduleModel model;
     Result result = model.solve(TimeLimit(0.1));
     CHECK_FALSE(result.feasible());
@@ -293,8 +287,7 @@ TEST_CASE("ScheduleModel: solve with empty model", "[scheduling]")
 //  ScheduleModel: warm start
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleModel: set_initial_schedule accepted", "[scheduling]")
-{
+TEST_CASE("ScheduleModel: set_initial_schedule accepted", "[scheduling]") {
     ScheduleModel model;
 
     model.add_machine();
@@ -316,8 +309,7 @@ TEST_CASE("ScheduleModel: set_initial_schedule accepted", "[scheduling]")
 //  ScheduleModel: job metadata (release time, due date, weight)
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleData: job metadata preserved", "[scheduling]")
-{
+TEST_CASE("ScheduleData: job metadata preserved", "[scheduling]") {
     ScheduleData::Builder builder;
 
     builder.add_machine();
@@ -336,13 +328,10 @@ TEST_CASE("ScheduleData: job metadata preserved", "[scheduling]")
 //  Error handling: invalid job index
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ScheduleModel: invalid job index throws", "[scheduling]")
-{
+TEST_CASE("ScheduleModel: invalid job index throws", "[scheduling]") {
     ScheduleModel model;
     model.add_machine();
 
-    CHECK_THROWS_AS(model.add_operation(0, {.machine = 0, .duration = 1}),
-                    std::out_of_range);
-    CHECK_THROWS_AS(model.add_operation(-1, {.machine = 0, .duration = 1}),
-                    std::out_of_range);
+    CHECK_THROWS_AS(model.add_operation(0, {.machine = 0, .duration = 1}), std::out_of_range);
+    CHECK_THROWS_AS(model.add_operation(-1, {.machine = 0, .duration = 1}), std::out_of_range);
 }

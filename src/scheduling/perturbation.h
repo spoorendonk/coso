@@ -32,8 +32,7 @@ public:
     /// minimises the resulting makespan.
     ///
     /// @returns the new makespan after perturbation.
-    static int apply(DisjunctiveGraph& graph, Params const& params,
-                     std::mt19937& rng);
+    static int apply(DisjunctiveGraph& graph, Params const& params, std::mt19937& rng);
 };
 
 // ---------------------------------------------------------------------------
@@ -59,8 +58,7 @@ public:
     /// moves it to a random position on its machine.
     ///
     /// @returns the new makespan after perturbation.
-    static int apply(DisjunctiveGraph& graph, Params const& params,
-                     std::mt19937& rng);
+    static int apply(DisjunctiveGraph& graph, Params const& params, std::mt19937& rng);
 };
 
 // ---------------------------------------------------------------------------
@@ -86,10 +84,8 @@ public:
     ///
     /// @returns the new makespan after perturbation, or -1 if no flexible
     ///          operations exist.
-    static int apply(DisjunctiveGraph& graph,
-                     ScheduleData const& data,
-                     Params const& params,
+    static int apply(DisjunctiveGraph& graph, ScheduleData const& data, Params const& params,
                      std::mt19937& rng);
 };
 
-} // namespace coso
+}  // namespace coso

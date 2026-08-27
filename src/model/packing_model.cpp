@@ -1,4 +1,5 @@
 #include "model/packing_model.h"
+
 #include "common/work_units.h"
 #include "packing/packing_data.h"
 #include "packing/packing_operators.h"
@@ -12,79 +13,74 @@
 
 namespace coso {
 
-int PackingModel::add_bin_type(BinTypeParams p)
-{
+int PackingModel::add_bin_type(BinTypeParams p) {
     int idx = static_cast<int>(bin_types_.size());
 
     // Infer or validate dimensionality.
     int dims = static_cast<int>(p.capacity.size());
-    if (dims == 0)
+    if (dims == 0) {
         throw std::invalid_argument("bin type must have at least one capacity dimension");
+    }
 
     if (num_dims_ == 0) {
         num_dims_ = dims;
     } else if (dims != num_dims_) {
-        throw std::invalid_argument(
-            "bin type capacity has " + std::to_string(dims) +
-            " dimensions, expected " + std::to_string(num_dims_));
+        throw std::invalid_argument("bin type capacity has " + std::to_string(dims) +
+                                    " dimensions, expected " + std::to_string(num_dims_));
     }
 
     bin_types_.push_back(std::move(p));
     return idx;
 }
 
-int PackingModel::add_item(ItemParams p)
-{
+int PackingModel::add_item(ItemParams p) {
     int idx = static_cast<int>(items_.size());
 
     int dims = static_cast<int>(p.size.size());
-    if (dims == 0)
+    if (dims == 0) {
         throw std::invalid_argument("item must have at least one size dimension");
+    }
 
     if (num_dims_ == 0) {
         num_dims_ = dims;
     } else if (dims != num_dims_) {
-        throw std::invalid_argument(
-            "item size has " + std::to_string(dims) +
-            " dimensions, expected " + std::to_string(num_dims_));
+        throw std::invalid_argument("item size has " + std::to_string(dims) +
+                                    " dimensions, expected " + std::to_string(num_dims_));
     }
 
     items_.push_back(std::move(p));
     return idx;
 }
 
-void PackingModel::add_conflict(int item_a, int item_b)
-{
+void PackingModel::add_conflict(int item_a, int item_b) {
     int n = static_cast<int>(items_.size());
-    if (item_a < 0 || item_a >= n || item_b < 0 || item_b >= n)
+    if (item_a < 0 || item_a >= n || item_b < 0 || item_b >= n) {
         throw std::out_of_range("conflict item index out of range");
-    if (item_a == item_b)
+    }
+    if (item_a == item_b) {
         throw std::invalid_argument("an item cannot conflict with itself");
+    }
 
     conflicts_.emplace_back(item_a, item_b);
 }
 
-void PackingModel::minimize_bins()
-{
+void PackingModel::minimize_bins() {
     minimize_bins_ = true;
 }
 
-Result PackingModel::solve(TimeLimit tl)
-{
+Result PackingModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
     StopCriterion stop(tl.seconds);
     stop.set_work_limit(&work, WorkUnits::ticks_from_units(tl.work_units));
-    work.count(static_cast<uint64_t>(bin_types_.size())
-             + static_cast<uint64_t>(items_.size())
-             + static_cast<uint64_t>(conflicts_.size()));
+    work.count(static_cast<uint64_t>(bin_types_.size()) + static_cast<uint64_t>(items_.size()) +
+               static_cast<uint64_t>(conflicts_.size()));
     if (stop.should_stop()) {
         Result result;
         result.work_ticks_ = work.ticks();
         result.work_units_ = work.units();
         auto wall_end = std::chrono::steady_clock::now();
-        result.elapsed_seconds_ = std::chrono::duration<double>(
-            wall_end - wall_start).count();
+        result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
         return result;
     }
 
@@ -94,8 +90,8 @@ Result PackingModel::solve(TimeLimit tl)
     }
 
     PackingData data = PackingData::build(*this);
-    work.count(static_cast<uint64_t>(data.num_items())
-             + static_cast<uint64_t>(data.num_bin_types()));
+    work.count(static_cast<uint64_t>(data.num_items()) +
+               static_cast<uint64_t>(data.num_bin_types()));
 
     PackingSolution sol(data);
     int const N = data.num_items();
@@ -110,26 +106,32 @@ Result PackingModel::solve(TimeLimit tl)
             sa += data.item_size(a, d);
             sb += data.item_size(b, d);
         }
-        if (sa != sb) return sa > sb;
+        if (sa != sb) {
+            return sa > sb;
+        }
         return a < b;
     });
 
     auto assign_unassigned = [&]() {
         bool changed = false;
         for (int item : items) {
-            if (sol.item_bin(item) >= 0)
+            if (sol.item_bin(item) >= 0) {
                 continue;
+            }
 
             int best_bin = -1;
             int best_delta = 0;
             for (int b = 0; b < sol.num_bins(); ++b) {
-                if (!sol.item_fits(item, b))
+                if (!sol.item_fits(item, b)) {
                     continue;
+                }
                 int delta = sol.assign_cost_delta(item, b);
                 if (best_bin < 0 || delta < best_delta) {
                     best_bin = b;
                     best_delta = delta;
-                    if (delta < 0) break;
+                    if (delta < 0) {
+                        break;
+                    }
                 }
             }
             if (best_bin >= 0) {
@@ -212,10 +214,9 @@ Result PackingModel::solve(TimeLimit tl)
     result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
-    result.elapsed_seconds_ = std::chrono::duration<double>(
-        wall_end - wall_start).count();
+    result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
 
     return result;
 }
 
-} // namespace coso
+}  // namespace coso

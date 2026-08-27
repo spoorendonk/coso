@@ -29,42 +29,42 @@ public:
     // -------------------------------------------------------------------
 
     struct ClientData {
-        Coord coord            = {0.0, 0.0};
-        std::vector<int> demand;          ///< N load dimensions
-        std::vector<int> pickup;          ///< backhaul pickup quantities
-        TimeWindow tw          = {0, INT_MAX};
-        std::vector<TimeWindow> extra_tw; ///< additional time windows
-        int service            = 0;
-        int release_time       = 0;
-        int prize              = 0;
-        bool required          = true;
-        int group              = -1;
-        int quantity           = 0;
+        Coord coord = {0.0, 0.0};
+        std::vector<int> demand;  ///< N load dimensions
+        std::vector<int> pickup;  ///< backhaul pickup quantities
+        TimeWindow tw = {0, INT_MAX};
+        std::vector<TimeWindow> extra_tw;  ///< additional time windows
+        int service = 0;
+        int release_time = 0;
+        int prize = 0;
+        bool required = true;
+        int group = -1;
+        int quantity = 0;
         std::vector<std::string> skills;
-        int setup_time         = 0;
-        int location           = -1;
-        int client_type        = -1;  ///< type id for incompatibility (-1 = none)
+        int setup_time = 0;
+        int location = -1;
+        int client_type = -1;  ///< type id for incompatibility (-1 = none)
     };
 
     struct DepotData {
-        Coord coord     = {0.0, 0.0};
-        TimeWindow tw   = {0, INT_MAX};
+        Coord coord = {0.0, 0.0};
+        TimeWindow tw = {0, INT_MAX};
     };
 
     struct VehicleTypeData {
-        int count                = 0;
+        int count = 0;
         std::vector<int> capacity;
-        int max_duration         = 0;       ///< 0 = unlimited
-        int max_distance         = 0;       ///< 0 = unlimited
-        int min_tasks            = 0;       ///< 0 = no minimum
-        int max_tasks            = 0;       ///< 0 = unlimited
-        int max_overtime         = 0;
-        int unit_overtime_cost   = 0;
-        int reload_depot         = -1;
-        int max_reloads          = 0;
+        int max_duration = 0;  ///< 0 = unlimited
+        int max_distance = 0;  ///< 0 = unlimited
+        int min_tasks = 0;     ///< 0 = no minimum
+        int max_tasks = 0;     ///< 0 = unlimited
+        int max_overtime = 0;
+        int unit_overtime_cost = 0;
+        int reload_depot = -1;
+        int max_reloads = 0;
         CostParams cost;
-        int profile              = 0;
-        double speed_factor      = 1.0;
+        int profile = 0;
+        double speed_factor = 1.0;
         std::vector<std::string> skills;
     };
 
@@ -109,14 +109,19 @@ public:
         [[nodiscard]] ProblemData build(int granular_k = 40) const;
 
     private:
-        std::vector<DepotData>       depots_;
-        std::vector<ClientData>      clients_;
+        std::vector<DepotData> depots_;
+        std::vector<ClientData> clients_;
         std::vector<VehicleTypeData> vehicle_types_;
-        std::vector<Request>         requests_;
+        std::vector<Request> requests_;
 
         // Explicit matrices: profile -> flat row-major matrix.
         // Lazily sized when set_distance/set_duration/set_cost is called.
-        struct MatrixEntry { int profile; int from; int to; int value; };
+        struct MatrixEntry {
+            int profile;
+            int from;
+            int to;
+            int value;
+        };
         std::vector<MatrixEntry> dist_entries_;
         std::vector<MatrixEntry> dur_entries_;
         std::vector<MatrixEntry> cost_entries_;
@@ -125,7 +130,9 @@ public:
         int max_profile_ = 0;
 
         void ensure_profile_(int profile) {
-            if (profile > max_profile_) max_profile_ = profile;
+            if (profile > max_profile_) {
+                max_profile_ = profile;
+            }
         }
     };
 
@@ -133,12 +140,12 @@ public:
     //  Accessors (all const — ProblemData is immutable after construction)
     // -------------------------------------------------------------------
 
-    [[nodiscard]] int num_depots()        const noexcept { return num_depots_; }
-    [[nodiscard]] int num_clients()       const noexcept { return num_clients_; }
+    [[nodiscard]] int num_depots() const noexcept { return num_depots_; }
+    [[nodiscard]] int num_clients() const noexcept { return num_clients_; }
     [[nodiscard]] int num_vehicle_types() const noexcept { return num_vehicle_types_; }
-    [[nodiscard]] int num_nodes()         const noexcept { return num_depots_ + num_clients_; }
-    [[nodiscard]] int num_profiles()      const noexcept { return num_profiles_; }
-    [[nodiscard]] int num_load_dims()     const noexcept { return num_load_dims_; }
+    [[nodiscard]] int num_nodes() const noexcept { return num_depots_ + num_clients_; }
+    [[nodiscard]] int num_profiles() const noexcept { return num_profiles_; }
+    [[nodiscard]] int num_load_dims() const noexcept { return num_load_dims_; }
 
     /// Attach a deterministic work counter used by matrix accessors.
     void set_work_units(WorkUnits* work_units) noexcept { work_units_ = work_units; }
@@ -162,9 +169,7 @@ public:
     }
 
     /// Pickup-delivery requests.
-    [[nodiscard]] std::span<Request const> requests() const noexcept {
-        return requests_;
-    }
+    [[nodiscard]] std::span<Request const> requests() const noexcept { return requests_; }
 
     /// Distance from node i to node j under the given profile.
     /// Node numbering: depots 0..num_depots-1, clients num_depots..num_nodes-1.
@@ -172,28 +177,28 @@ public:
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
-        if (work_units_) work_units_->count(1);
+        if (work_units_) {
+            work_units_->count(1);
+        }
         return dist_matrices_[profile * n * n + from * n + to];
     }
 
     /// Distance for the default profile (0).
-    [[nodiscard]] int dist(int from, int to) const {
-        return dist(0, from, to);
-    }
+    [[nodiscard]] int dist(int from, int to) const { return dist(0, from, to); }
 
     /// Duration from node i to node j under the given profile.
     [[nodiscard]] int dur(int profile, int from, int to) const {
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
-        if (work_units_) work_units_->count(1);
+        if (work_units_) {
+            work_units_->count(1);
+        }
         return dur_matrices_[profile * n * n + from * n + to];
     }
 
     /// Duration for the default profile (0).
-    [[nodiscard]] int dur(int from, int to) const {
-        return dur(0, from, to);
-    }
+    [[nodiscard]] int dur(int from, int to) const { return dur(0, from, to); }
 
     /// Cost-matrix entry from node i to node j under the given profile.
     /// Falls back to distance if no explicit cost matrix was provided.
@@ -201,14 +206,14 @@ public:
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
-        if (work_units_) work_units_->count(1);
+        if (work_units_) {
+            work_units_->count(1);
+        }
         return cost_matrices_[profile * n * n + from * n + to];
     }
 
     /// Cost for the default profile (0).
-    [[nodiscard]] int cost(int from, int to) const {
-        return cost(0, from, to);
-    }
+    [[nodiscard]] int cost(int from, int to) const { return cost(0, from, to); }
 
     /// Granular neighbour list for client c (0-based among clients).
     /// Returns a span of node indices (in full node numbering) sorted by
@@ -216,7 +221,7 @@ public:
     [[nodiscard]] std::span<int const> neighbours(int c) const {
         assert(c >= 0 && c < num_clients_);
         int start = c * granular_k_;
-        int end   = start + granular_k_;
+        int end = start + granular_k_;
         return {neighbours_.data() + start, neighbours_.data() + end};
     }
 
@@ -226,31 +231,33 @@ public:
     /// Total number of vehicles across all types.
     [[nodiscard]] int total_vehicles() const noexcept {
         int total = 0;
-        for (auto const& vt : vehicle_types_)
+        for (auto const& vt : vehicle_types_) {
             total += vt.count;
+        }
         return total;
     }
 
     /// Location coordinate for a node (depot or client) in full numbering.
     [[nodiscard]] Coord node_coord(int node) const {
         assert(node >= 0 && node < num_nodes());
-        if (node < num_depots_)
+        if (node < num_depots_) {
             return depots_[node].coord;
+        }
         return clients_[node - num_depots_].coord;
     }
 
 private:
-    int num_depots_        = 0;
-    int num_clients_       = 0;
+    int num_depots_ = 0;
+    int num_clients_ = 0;
     int num_vehicle_types_ = 0;
-    int num_profiles_      = 1;
-    int num_load_dims_     = 0;
-    int granular_k_        = 0;
+    int num_profiles_ = 1;
+    int num_load_dims_ = 0;
+    int granular_k_ = 0;
 
-    std::vector<ClientData>      clients_;
-    std::vector<DepotData>       depots_;
+    std::vector<ClientData> clients_;
+    std::vector<DepotData> depots_;
     std::vector<VehicleTypeData> vehicle_types_;
-    std::vector<Request>         requests_;
+    std::vector<Request> requests_;
 
     // Flat row-major matrices: profile * n * n + from * n + to.
     std::vector<int> dist_matrices_;
@@ -266,4 +273,4 @@ private:
     friend class Builder;
 };
 
-} // namespace coso
+}  // namespace coso

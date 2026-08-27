@@ -37,8 +37,7 @@ public:
     ///
     /// @param data  The compiled problem data.
     /// @param seed  Random seed for perturbation (default: 42).
-    explicit IteratedLocalSearch(ProblemData const& data,
-                                unsigned int seed = 42);
+    explicit IteratedLocalSearch(ProblemData const& data, unsigned int seed = 42);
 
     /// Run ILS until the stop criterion triggers.
     ///
@@ -47,8 +46,7 @@ public:
     /// @param outer_stop  Optional global stop criterion to enforce in
     ///                    addition to the local ILS stop budget.
     /// @return The best solution found during the search.
-    [[nodiscard]] Solution run(CostEvaluator const& eval,
-                               StopCriterion& stop,
+    [[nodiscard]] Solution run(CostEvaluator const& eval, StopCriterion& stop,
                                StopCriterion* outer_stop = nullptr);
 
     /// Set the acceptance criterion. If not called, defaults to LAHC(5000).
@@ -77,8 +75,7 @@ private:
     std::vector<int> ruin_(Solution& sol);
 
     /// Recreate phase: greedily reinsert clients at cheapest positions.
-    void recreate_(Solution& sol, std::vector<int> const& removed,
-                   CostEvaluator const& eval);
+    void recreate_(Solution& sol, std::vector<int> const& removed, CostEvaluator const& eval);
 };
 
-} // namespace coso
+}  // namespace coso

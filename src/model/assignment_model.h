@@ -11,25 +11,25 @@ namespace coso {
 /// Parameters for a shift type.
 struct ShiftTypeParams {
     std::string name;
-    int start_hour     = 0;
-    int end_hour       = 8;
-    int duration_hours = 0;   ///< 0 = computed from start/end
+    int start_hour = 0;
+    int end_hour = 8;
+    int duration_hours = 0;  ///< 0 = computed from start/end
 };
 
 /// Parameters for an employee.
 struct EmployeeParams {
     std::string name;
     std::vector<std::string> skills;
-    int max_hours_per_week  = 40;
+    int max_hours_per_week = 40;
     int max_consecutive_days = 5;
-    int min_rest_hours       = 11;
+    int min_rest_hours = 11;
 };
 
 /// Demand parameters for a shift on a given day.
 struct DemandParams {
-    int min_employees       = 0;
-    int max_employees       = INT_MAX;
-    std::string required_skill;   ///< empty = no skill requirement
+    int min_employees = 0;
+    int max_employees = INT_MAX;
+    std::string required_skill;  ///< empty = no skill requirement
 };
 
 /// Assignment model: declare employees, shifts, demands, constraints, then solve.
@@ -80,8 +80,7 @@ public:
     // -- Warm start / replanning ---------------------------------------------
 
     /// Provide a published schedule: employee x day -> shift type.
-    void set_published_schedule(
-        const std::vector<std::vector<int>>& schedule);
+    void set_published_schedule(const std::vector<std::vector<int>>& schedule);
 
     /// Set the penalty cost per deviation from the published schedule.
     void set_change_penalty(int penalty);
@@ -92,4 +91,4 @@ public:
     Result solve(TimeLimit tl);
 };
 
-} // namespace coso
+}  // namespace coso

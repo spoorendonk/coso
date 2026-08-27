@@ -1,5 +1,3 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/construction.h"
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
@@ -8,21 +6,22 @@
 #include "search/iterated_local_search.h"
 #include "search/stop_criterion.h"
 
+#include <catch2/catch_test_macros.hpp>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
 //  Helper: build a small CVRP instance (6 clients, 1 depot, 2 vehicles cap 20)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_small_cvrp()
-{
+static ProblemData make_small_cvrp() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
 
     // Clients arranged around the depot.
-    b.add_client({10.0, 0.0},  {.demand = {5}});
+    b.add_client({10.0, 0.0}, {.demand = {5}});
     b.add_client({10.0, 10.0}, {.demand = {5}});
-    b.add_client({0.0, 10.0},  {.demand = {5}});
+    b.add_client({0.0, 10.0}, {.demand = {5}});
     b.add_client({-10.0, 0.0}, {.demand = {5}});
     b.add_client({-10.0, -10.0}, {.demand = {5}});
     b.add_client({0.0, -10.0}, {.demand = {5}});
@@ -36,17 +35,15 @@ static ProblemData make_small_cvrp()
 //  Helper: build a larger instance (20 clients)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_medium_cvrp()
-{
+static ProblemData make_medium_cvrp() {
     ProblemData::Builder b;
     b.add_depot({50.0, 50.0});
 
     // 20 clients in a grid pattern.
     for (int i = 0; i < 5; ++i) {
         for (int j = 0; j < 4; ++j) {
-            b.add_client(
-                {static_cast<double>(i * 20), static_cast<double>(j * 25)},
-                {.demand = {3}});
+            b.add_client({static_cast<double>(i * 20), static_cast<double>(j * 25)},
+                         {.demand = {3}});
         }
     }
 
@@ -56,8 +53,7 @@ static ProblemData make_medium_cvrp()
     return b.build();
 }
 
-TEST_CASE("ILS — basic run with iteration limit", "[ils]")
-{
+TEST_CASE("ILS — basic run with iteration limit", "[ils]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -74,8 +70,7 @@ TEST_CASE("ILS — basic run with iteration limit", "[ils]")
     CHECK(cost > 0);
 }
 
-TEST_CASE("ILS — improves over construction heuristic", "[ils]")
-{
+TEST_CASE("ILS — improves over construction heuristic", "[ils]") {
     auto data = make_medium_cvrp();
     CostEvaluator eval;
 
@@ -95,8 +90,7 @@ TEST_CASE("ILS — improves over construction heuristic", "[ils]")
     CHECK(best.num_unassigned() == 0);
 }
 
-TEST_CASE("ILS — time limit stops search", "[ils]")
-{
+TEST_CASE("ILS — time limit stops search", "[ils]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -110,8 +104,7 @@ TEST_CASE("ILS — time limit stops search", "[ils]")
     CHECK(stop.iterations() > 0);
 }
 
-TEST_CASE("ILS — no-improve limit stops search", "[ils]")
-{
+TEST_CASE("ILS — no-improve limit stops search", "[ils]") {
     auto data = make_small_cvrp();
     CostEvaluator eval;
 
@@ -124,8 +117,7 @@ TEST_CASE("ILS — no-improve limit stops search", "[ils]")
     CHECK(stop.iterations_no_improve() >= 20);
 }
 
-TEST_CASE("ILS — different seeds produce different trajectories", "[ils]")
-{
+TEST_CASE("ILS — different seeds produce different trajectories", "[ils]") {
     auto data = make_medium_cvrp();
     CostEvaluator eval;
 
@@ -148,8 +140,7 @@ TEST_CASE("ILS — different seeds produce different trajectories", "[ils]")
     CHECK(sol2.cost(eval) > 0);
 }
 
-TEST_CASE("ILS — single client instance", "[ils]")
-{
+TEST_CASE("ILS — single client instance", "[ils]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({10.0, 0.0}, {.demand = {5}});
@@ -166,8 +157,7 @@ TEST_CASE("ILS — single client instance", "[ils]")
     CHECK(best.num_used_vehicles() == 1);
 }
 
-TEST_CASE("ILS — custom ruin fraction", "[ils]")
-{
+TEST_CASE("ILS — custom ruin fraction", "[ils]") {
     auto data = make_medium_cvrp();
     CostEvaluator eval;
 

@@ -30,12 +30,12 @@ namespace coso {
 /// A feasible route has time_warp == 0.
 struct DurationResource {
     struct State {
-        int earliest   = 0;        ///< Earliest departure from last node.
-        int latest     = INT_MAX;  ///< Latest feasible arrival at first node.
-        int duration   = 0;        ///< Travel + service (no wait) through subseq.
-        int time_warp  = 0;        ///< Total TW violation in this subsequence.
-        int first_node = -1;       ///< Node index of first client (full numbering).
-        int last_node  = -1;       ///< Node index of last client (full numbering).
+        int earliest = 0;      ///< Earliest departure from last node.
+        int latest = INT_MAX;  ///< Latest feasible arrival at first node.
+        int duration = 0;      ///< Travel + service (no wait) through subseq.
+        int time_warp = 0;     ///< Total TW violation in this subsequence.
+        int first_node = -1;   ///< Node index of first client (full numbering).
+        int last_node = -1;    ///< Node index of last client (full numbering).
     };
 
     /// Initialize state for a single client node.
@@ -48,12 +48,12 @@ struct DurationResource {
         auto const& c = data.client(client);
 
         State s;
-        s.earliest   = c.tw.start + c.service;  // earliest departure
-        s.latest     = c.tw.end;                 // latest arrival without warp
-        s.duration   = c.service;
-        s.time_warp  = 0;
+        s.earliest = c.tw.start + c.service;  // earliest departure
+        s.latest = c.tw.end;                  // latest arrival without warp
+        s.duration = c.service;
+        s.time_warp = 0;
         s.first_node = node;
-        s.last_node  = node;
+        s.last_node = node;
 
         return s;
     }
@@ -64,12 +64,12 @@ struct DurationResource {
         auto const& d = data.depot(depot_node);
 
         State s;
-        s.earliest   = d.tw.start;  // earliest departure from depot
-        s.latest     = d.tw.end;    // latest departure from depot
-        s.duration   = 0;
-        s.time_warp  = 0;
+        s.earliest = d.tw.start;  // earliest departure from depot
+        s.latest = d.tw.end;      // latest departure from depot
+        s.duration = 0;
+        s.time_warp = 0;
         s.first_node = depot_node;
-        s.last_node  = depot_node;
+        s.last_node = depot_node;
 
         return s;
     }
@@ -78,12 +78,12 @@ struct DurationResource {
     /// Used as "no clients" sentinel in prefix/suffix arrays.
     [[nodiscard]] static State init_empty() {
         State s;
-        s.earliest   = 0;
-        s.latest     = INT_MAX;
-        s.duration   = 0;
-        s.time_warp  = 0;
+        s.earliest = 0;
+        s.latest = INT_MAX;
+        s.duration = 0;
+        s.time_warp = 0;
         s.first_node = -1;
-        s.last_node  = -1;
+        s.last_node = -1;
         return s;
     }
 
@@ -102,8 +102,7 @@ struct DurationResource {
     ///   L_merged = min(L_left, L_right - D_left - travel_time + W_left)
     ///   D_merged = D_left + travel_time + D_right
     ///   W_merged = W_left + W_right + delta_warp
-    [[nodiscard]] static State merge(State const& left, State const& right,
-                                     int travel_time) {
+    [[nodiscard]] static State merge(State const& left, State const& right, int travel_time) {
         State result;
 
         int arrival = left.earliest + travel_time;
@@ -123,15 +122,14 @@ struct DurationResource {
         // Pushing left's start later by delta shifts arrival at right by delta.
         // The +W_left accounts for time warp already in left that could be
         // "recovered" by arriving later.
-        result.latest = std::min(left.latest,
-                                 right.latest - travel_time
-                                 - left.duration + left.time_warp);
+        result.latest =
+            std::min(left.latest, right.latest - travel_time - left.duration + left.time_warp);
 
-        result.duration  = left.duration + travel_time + right.duration;
+        result.duration = left.duration + travel_time + right.duration;
         result.time_warp = left.time_warp + right.time_warp + warp;
 
         result.first_node = left.first_node;
-        result.last_node  = right.last_node;
+        result.last_node = right.last_node;
 
         return result;
     }
@@ -139,8 +137,8 @@ struct DurationResource {
     /// Merge using the problem data's duration matrix.
     ///
     /// Looks up travel time from left.last_node to right.first_node.
-    [[nodiscard]] static State merge(State const& left, State const& right,
-                                     ProblemData const& data, int profile) {
+    [[nodiscard]] static State merge(State const& left, State const& right, ProblemData const& data,
+                                     int profile) {
         assert(left.last_node >= 0 && right.first_node >= 0);
         int travel = data.dur(profile, left.last_node, right.first_node);
         return merge(left, right, travel);
@@ -150,8 +148,7 @@ struct DurationResource {
     ///
     /// Returns total time warp. Also adds max_duration violation if the
     /// vehicle type has a max_duration constraint.
-    [[nodiscard]] static int excess(State const& state,
-                                    ProblemData::VehicleTypeData const& vt) {
+    [[nodiscard]] static int excess(State const& state, ProblemData::VehicleTypeData const& vt) {
         int total = state.time_warp;
 
         if (vt.max_duration > 0 && state.earliest > vt.max_duration) {
@@ -162,9 +159,7 @@ struct DurationResource {
     }
 
     /// Convenience: just the time warp (no max_duration check).
-    [[nodiscard]] static int time_warp(State const& state) {
-        return state.time_warp;
-    }
+    [[nodiscard]] static int time_warp(State const& state) { return state.time_warp; }
 };
 
-} // namespace coso
+}  // namespace coso

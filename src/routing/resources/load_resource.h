@@ -25,8 +25,8 @@ struct LoadResource {
     /// State for a single load dimension within a subsequence.
     struct DimState {
         int delivery = 0;  ///< Total delivery demand in this subsequence.
-        int pickup   = 0;  ///< Total pickup quantity in this subsequence.
-        int load     = 0;  ///< Maximum load observed in this subsequence.
+        int pickup = 0;    ///< Total pickup quantity in this subsequence.
+        int load = 0;      ///< Maximum load observed in this subsequence.
     };
 
     /// Multi-dimensional state: one DimState per load dimension.
@@ -34,9 +34,7 @@ struct LoadResource {
         std::vector<DimState> dims;
 
         /// Number of load dimensions.
-        [[nodiscard]] int num_dims() const noexcept {
-            return static_cast<int>(dims.size());
-        }
+        [[nodiscard]] int num_dims() const noexcept { return static_cast<int>(dims.size()); }
     };
 
     /// Initialize state for a single client node.
@@ -52,8 +50,8 @@ struct LoadResource {
         s.dims.resize(nd);
         for (int d = 0; d < nd; ++d) {
             s.dims[d].delivery = c.demand[d];
-            s.dims[d].pickup   = c.pickup[d];
-            s.dims[d].load     = c.demand[d] + c.pickup[d];
+            s.dims[d].pickup = c.pickup[d];
+            s.dims[d].load = c.demand[d] + c.pickup[d];
         }
         return s;
     }
@@ -88,19 +86,21 @@ struct LoadResource {
             auto const& r = right.dims[d];
 
             result.dims[d].delivery = l.delivery + r.delivery;
-            result.dims[d].pickup   = l.pickup + r.pickup;
+            result.dims[d].pickup = l.pickup + r.pickup;
 
             // Load at any point in the combined route:
-            // In the left part: load_left(i) = (total_delivery - delivered_left(i)) + picked_up_left(i)
+            // In the left part: load_left(i) = (total_delivery - delivered_left(i)) +
+            // picked_up_left(i)
             //   but we need to account for right's delivery too, since all delivery
             //   is loaded at start: load_left(i) += right.delivery
             // In the right part: load_right(j) adjusted by left's net effect
-            //   load_right(j) = (right.delivery - delivered_right(j)) + picked_up_right(j) + left.pickup
-            //   but right.load already captures max of (right.delivery - del + pick) within right
+            //   load_right(j) = (right.delivery - delivered_right(j)) + picked_up_right(j) +
+            //   left.pickup but right.load already captures max of (right.delivery - del + pick)
+            //   within right
             //
             // Max load in left part = left.load + right.delivery (additional delivery loaded)
             // Max load in right part = right.load + left.pickup (additional pickup accumulated)
-            int max_left  = l.load + r.delivery;
+            int max_left = l.load + r.delivery;
             int max_right = r.load + l.pickup;
             result.dims[d].load = std::max(max_left, max_right);
         }
@@ -122,8 +122,7 @@ struct LoadResource {
     /// within the subsequence itself.
     ///
     /// Thus merge_reverse == merge for LoadResource.
-    [[nodiscard]] static State merge_reverse(State const& left,
-                                             State const& right) {
+    [[nodiscard]] static State merge_reverse(State const& left, State const& right) {
         return merge(left, right);
     }
 
@@ -134,32 +133,30 @@ struct LoadResource {
     ///
     /// @param state         The merged state for the full route.
     /// @param vehicle_type  The vehicle type to check capacity against.
-    [[nodiscard]] static int excess(State const& state,
-                                    ProblemData::VehicleTypeData const& vt) {
+    [[nodiscard]] static int excess(State const& state, ProblemData::VehicleTypeData const& vt) {
         int total_excess = 0;
         int nd = state.num_dims();
         for (int d = 0; d < nd; ++d) {
-            int cap = (d < static_cast<int>(vt.capacity.size()))
-                          ? vt.capacity[d]
-                          : 0;
-            if (state.dims[d].load > cap)
+            int cap = (d < static_cast<int>(vt.capacity.size())) ? vt.capacity[d] : 0;
+            if (state.dims[d].load > cap) {
                 total_excess += state.dims[d].load - cap;
+            }
         }
         return total_excess;
     }
 
     /// Convenience: compute excess from capacity vector directly.
-    [[nodiscard]] static int excess(State const& state,
-                                    std::vector<int> const& capacity) {
+    [[nodiscard]] static int excess(State const& state, std::vector<int> const& capacity) {
         int total_excess = 0;
         int nd = state.num_dims();
         for (int d = 0; d < nd; ++d) {
             int cap = (d < static_cast<int>(capacity.size())) ? capacity[d] : 0;
-            if (state.dims[d].load > cap)
+            if (state.dims[d].load > cap) {
                 total_excess += state.dims[d].load - cap;
+            }
         }
         return total_excess;
     }
 };
 
-} // namespace coso
+}  // namespace coso

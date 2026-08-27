@@ -6,9 +6,7 @@
 
 namespace coso {
 
-LotsizingSolution::LotsizingSolution(LotsizingData const& data)
-    : data_(&data)
-{
+LotsizingSolution::LotsizingSolution(LotsizingData const& data) : data_(&data) {
     int P = data.num_products();
     int T = data.num_periods();
     size_t n = static_cast<size_t>(P) * T;
@@ -29,8 +27,7 @@ LotsizingSolution::LotsizingSolution(LotsizingData const& data)
 //  Modification
 // ---------------------------------------------------------------------------
 
-void LotsizingSolution::set_production(int p, int t, double qty)
-{
+void LotsizingSolution::set_production(int p, int t, double qty) {
     assert(p >= 0 && p < data_->num_products());
     assert(t >= 0 && t < data_->num_periods());
 
@@ -46,8 +43,7 @@ void LotsizingSolution::set_production(int p, int t, double qty)
 //  Cost computation
 // ---------------------------------------------------------------------------
 
-void LotsizingSolution::recompute_costs()
-{
+void LotsizingSolution::recompute_costs() {
     int P = data_->num_products();
     int T = data_->num_periods();
 
@@ -58,10 +54,12 @@ void LotsizingSolution::recompute_costs()
     for (int p = 0; p < P; ++p) {
         for (int t = 0; t < T; ++t) {
             int idx = p * T + t;
-            if (setup_[idx])
+            if (setup_[idx]) {
                 setup_cost_ += data_->setup_cost(p);
-            if (inventory_[idx] > 0.0)
+            }
+            if (inventory_[idx] > 0.0) {
                 holding_cost_ += data_->holding_cost(p) * inventory_[idx];
+            }
             production_cost_ += data_->unit_production_cost(p) * production_[idx];
         }
     }
@@ -73,13 +71,11 @@ void LotsizingSolution::recompute_costs()
 //  Feasibility
 // ---------------------------------------------------------------------------
 
-bool LotsizingSolution::feasible() const noexcept
-{
+bool LotsizingSolution::feasible() const noexcept {
     return !has_demand_violation() && !has_capacity_violation();
 }
 
-double LotsizingSolution::capacity_usage(int t) const
-{
+double LotsizingSolution::capacity_usage(int t) const {
     assert(t >= 0 && t < data_->num_periods());
     int P = data_->num_products();
     int T = data_->num_periods();
@@ -90,45 +86,46 @@ double LotsizingSolution::capacity_usage(int t) const
         // Production time: assuming 1 unit of capacity per unit produced.
         usage += production_[idx];
         // Setup time.
-        if (setup_[idx])
+        if (setup_[idx]) {
             usage += data_->setup_time(p);
+        }
     }
     return usage;
 }
 
-bool LotsizingSolution::has_capacity_violation() const
-{
+bool LotsizingSolution::has_capacity_violation() const {
     int T = data_->num_periods();
     for (int t = 0; t < T; ++t) {
-        if (capacity_usage(t) > data_->capacity(t) + 1e-9)
+        if (capacity_usage(t) > data_->capacity(t) + 1e-9) {
             return true;
-    }
-    return false;
-}
-
-bool LotsizingSolution::has_demand_violation() const
-{
-    int P = data_->num_products();
-    int T = data_->num_periods();
-    for (int p = 0; p < P; ++p) {
-        for (int t = 0; t < T; ++t) {
-            if (inventory_[p * T + t] < -1e-9)
-                return true;
         }
     }
     return false;
 }
 
-double LotsizingSolution::total_backlog() const
-{
+bool LotsizingSolution::has_demand_violation() const {
+    int P = data_->num_products();
+    int T = data_->num_periods();
+    for (int p = 0; p < P; ++p) {
+        for (int t = 0; t < T; ++t) {
+            if (inventory_[p * T + t] < -1e-9) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+double LotsizingSolution::total_backlog() const {
     int P = data_->num_products();
     int T = data_->num_periods();
     double backlog = 0.0;
     for (int p = 0; p < P; ++p) {
         for (int t = 0; t < T; ++t) {
             double inv = inventory_[p * T + t];
-            if (inv < 0.0)
+            if (inv < 0.0) {
                 backlog -= inv;
+            }
         }
     }
     return backlog;
@@ -138,8 +135,7 @@ double LotsizingSolution::total_backlog() const
 //  Internal
 // ---------------------------------------------------------------------------
 
-void LotsizingSolution::recompute_inventory_(int p, int from)
-{
+void LotsizingSolution::recompute_inventory_(int p, int from) {
     int T = data_->num_periods();
 
     for (int t = from; t < T; ++t) {
@@ -156,4 +152,4 @@ void LotsizingSolution::recompute_inventory_(int p, int from)
     }
 }
 
-} // namespace coso
+}  // namespace coso

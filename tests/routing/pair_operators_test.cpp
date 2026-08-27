@@ -1,9 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/operators/pair_operators.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -19,18 +20,17 @@ using namespace coso;
 ///  C4(30,0) pickup   -> C5(30,10) delivery  (request 2)
 ///
 /// 3 vehicles with capacity 20 each.
-static ProblemData make_pd_instance()
-{
+static ProblemData make_pd_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {20}});
 
     b.add_client({10.0, 0.0}, {.demand = {3}});   // 0: pickup for req 0
     b.add_client({20.0, 0.0}, {.demand = {3}});   // 1: delivery for req 0
-    b.add_client({0.0, 10.0}, {.demand = {2}});    // 2: pickup for req 1
-    b.add_client({0.0, 20.0}, {.demand = {2}});    // 3: delivery for req 1
-    b.add_client({30.0, 0.0}, {.demand = {4}});    // 4: pickup for req 2
-    b.add_client({30.0, 10.0}, {.demand = {4}});   // 5: delivery for req 2
+    b.add_client({0.0, 10.0}, {.demand = {2}});   // 2: pickup for req 1
+    b.add_client({0.0, 20.0}, {.demand = {2}});   // 3: delivery for req 1
+    b.add_client({30.0, 0.0}, {.demand = {4}});   // 4: pickup for req 2
+    b.add_client({30.0, 10.0}, {.demand = {4}});  // 5: delivery for req 2
 
     b.add_request(0, 1);  // request 0: pickup=C0, delivery=C1
     b.add_request(2, 3);  // request 1: pickup=C2, delivery=C3
@@ -40,8 +40,7 @@ static ProblemData make_pd_instance()
 }
 
 /// Same as above but with granular neighbours.
-static ProblemData make_pd_granular_instance()
-{
+static ProblemData make_pd_granular_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {20}});
@@ -68,20 +67,19 @@ static ProblemData make_pd_granular_instance()
 /// Pair 1: C2(5,0)  -> C3(15,0)   (near depot, right)
 /// Pair 2: C4(0,50) -> C5(0,60)   (far up)
 /// Pair 3: C6(0,5)  -> C7(0,15)   (near depot, up)
-static ProblemData make_swap_instance()
-{
+static ProblemData make_swap_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {30}});
 
-    b.add_client({50.0, 0.0}, {.demand = {2}});   // 0: pickup req 0
-    b.add_client({60.0, 0.0}, {.demand = {2}});   // 1: delivery req 0
-    b.add_client({5.0, 0.0},  {.demand = {2}});   // 2: pickup req 1
-    b.add_client({15.0, 0.0}, {.demand = {2}});   // 3: delivery req 1
-    b.add_client({0.0, 50.0}, {.demand = {2}});   // 4: pickup req 2
-    b.add_client({0.0, 60.0}, {.demand = {2}});   // 5: delivery req 2
-    b.add_client({0.0, 5.0},  {.demand = {2}});   // 6: pickup req 3
-    b.add_client({0.0, 15.0}, {.demand = {2}});   // 7: delivery req 3
+    b.add_client({50.0, 0.0}, {.demand = {2}});  // 0: pickup req 0
+    b.add_client({60.0, 0.0}, {.demand = {2}});  // 1: delivery req 0
+    b.add_client({5.0, 0.0}, {.demand = {2}});   // 2: pickup req 1
+    b.add_client({15.0, 0.0}, {.demand = {2}});  // 3: delivery req 1
+    b.add_client({0.0, 50.0}, {.demand = {2}});  // 4: pickup req 2
+    b.add_client({0.0, 60.0}, {.demand = {2}});  // 5: delivery req 2
+    b.add_client({0.0, 5.0}, {.demand = {2}});   // 6: pickup req 3
+    b.add_client({0.0, 15.0}, {.demand = {2}});  // 7: delivery req 3
 
     b.add_request(0, 1);
     b.add_request(2, 3);
@@ -93,12 +91,12 @@ static ProblemData make_swap_instance()
 
 /// Build a solution with given route assignments.
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
@@ -107,9 +105,7 @@ static Solution make_solution(ProblemData const& data,
 //  RelocatePair tests
 // ===========================================================================
 
-TEST_CASE("RelocatePair: finds improving inter-route relocate",
-          "[pair_operators][relocate_pair]")
-{
+TEST_CASE("RelocatePair: finds improving inter-route relocate", "[pair_operators][relocate_pair]") {
     auto data = make_pd_instance();
     CostEvaluator eval(100);
 
@@ -133,8 +129,7 @@ TEST_CASE("RelocatePair: finds improving inter-route relocate",
 }
 
 TEST_CASE("RelocatePair: maintains pickup-before-delivery precedence",
-          "[pair_operators][relocate_pair]")
-{
+          "[pair_operators][relocate_pair]") {
     auto data = make_pd_instance();
     CostEvaluator eval(100);
 
@@ -160,8 +155,12 @@ TEST_CASE("RelocatePair: maintains pickup-before-delivery precedence",
                 auto const& route = sol.route(r);
                 int pos_p = -1, pos_d = -1;
                 for (int i = 0; i < route.size(); ++i) {
-                    if (route.client(i) == pickup) pos_p = i;
-                    if (route.client(i) == delivery) pos_d = i;
+                    if (route.client(i) == pickup) {
+                        pos_p = i;
+                    }
+                    if (route.client(i) == delivery) {
+                        pos_d = i;
+                    }
                 }
                 if (pos_p >= 0 && pos_d >= 0) {
                     CHECK(pos_p < pos_d);
@@ -177,8 +176,7 @@ TEST_CASE("RelocatePair: maintains pickup-before-delivery precedence",
 }
 
 TEST_CASE("RelocatePair: no improving move when already optimal",
-          "[pair_operators][relocate_pair]")
-{
+          "[pair_operators][relocate_pair]") {
     auto data = make_pd_instance();
     CostEvaluator eval(100);
 
@@ -196,9 +194,7 @@ TEST_CASE("RelocatePair: no improving move when already optimal",
     }
 }
 
-TEST_CASE("RelocatePair: no requests means no move",
-          "[pair_operators][relocate_pair]")
-{
+TEST_CASE("RelocatePair: no requests means no move", "[pair_operators][relocate_pair]") {
     // Instance without pickup-delivery requests.
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
@@ -214,9 +210,7 @@ TEST_CASE("RelocatePair: no requests means no move",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("RelocatePair: intra-route improvement",
-          "[pair_operators][relocate_pair]")
-{
+TEST_CASE("RelocatePair: intra-route improvement", "[pair_operators][relocate_pair]") {
     auto data = make_pd_instance();
     CostEvaluator eval(100);
 
@@ -240,8 +234,7 @@ TEST_CASE("RelocatePair: intra-route improvement",
 }
 
 TEST_CASE("RelocatePair: delta prediction matches actual cost change",
-          "[pair_operators][relocate_pair]")
-{
+          "[pair_operators][relocate_pair]") {
     auto data = make_pd_instance();
     CostEvaluator eval(100);
 
@@ -260,9 +253,7 @@ TEST_CASE("RelocatePair: delta prediction matches actual cost change",
     }
 }
 
-TEST_CASE("RelocatePair: works with granular neighbours",
-          "[pair_operators][relocate_pair]")
-{
+TEST_CASE("RelocatePair: works with granular neighbours", "[pair_operators][relocate_pair]") {
     auto data = make_pd_granular_instance();
     CostEvaluator eval(100);
 
@@ -283,9 +274,7 @@ TEST_CASE("RelocatePair: works with granular neighbours",
 //  SwapPair tests
 // ===========================================================================
 
-TEST_CASE("SwapPair: finds improving inter-route swap",
-          "[pair_operators][swap_pair]")
-{
+TEST_CASE("SwapPair: finds improving inter-route swap", "[pair_operators][swap_pair]") {
     auto data = make_swap_instance();
     CostEvaluator eval(100);
 
@@ -308,9 +297,7 @@ TEST_CASE("SwapPair: finds improving inter-route swap",
     CHECK(new_cost - old_cost == op.best_delta());
 }
 
-TEST_CASE("SwapPair: maintains pickup-before-delivery after swap",
-          "[pair_operators][swap_pair]")
-{
+TEST_CASE("SwapPair: maintains pickup-before-delivery after swap", "[pair_operators][swap_pair]") {
     auto data = make_swap_instance();
     CostEvaluator eval(100);
 
@@ -331,8 +318,12 @@ TEST_CASE("SwapPair: maintains pickup-before-delivery after swap",
                 auto const& route = sol.route(r);
                 int pos_p = -1, pos_d = -1;
                 for (int i = 0; i < route.size(); ++i) {
-                    if (route.client(i) == pickup) pos_p = i;
-                    if (route.client(i) == delivery) pos_d = i;
+                    if (route.client(i) == pickup) {
+                        pos_p = i;
+                    }
+                    if (route.client(i) == delivery) {
+                        pos_d = i;
+                    }
                 }
                 if (pos_p >= 0 && pos_d >= 0) {
                     CHECK(pos_p < pos_d);
@@ -343,9 +334,7 @@ TEST_CASE("SwapPair: maintains pickup-before-delivery after swap",
     }
 }
 
-TEST_CASE("SwapPair: no move with fewer than 2 requests",
-          "[pair_operators][swap_pair]")
-{
+TEST_CASE("SwapPair: no move with fewer than 2 requests", "[pair_operators][swap_pair]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {20}});
@@ -361,9 +350,7 @@ TEST_CASE("SwapPair: no move with fewer than 2 requests",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("SwapPair: no move when pairs already on optimal routes",
-          "[pair_operators][swap_pair]")
-{
+TEST_CASE("SwapPair: no move when pairs already on optimal routes", "[pair_operators][swap_pair]") {
     auto data = make_swap_instance();
     CostEvaluator eval(100);
 
@@ -380,9 +367,7 @@ TEST_CASE("SwapPair: no move when pairs already on optimal routes",
     }
 }
 
-TEST_CASE("SwapPair: delta prediction matches actual cost change",
-          "[pair_operators][swap_pair]")
-{
+TEST_CASE("SwapPair: delta prediction matches actual cost change", "[pair_operators][swap_pair]") {
     auto data = make_swap_instance();
     CostEvaluator eval(100);
 
@@ -400,9 +385,7 @@ TEST_CASE("SwapPair: delta prediction matches actual cost change",
     }
 }
 
-TEST_CASE("SwapPair: all clients remain assigned after swap",
-          "[pair_operators][swap_pair]")
-{
+TEST_CASE("SwapPair: all clients remain assigned after swap", "[pair_operators][swap_pair]") {
     auto data = make_swap_instance();
     CostEvaluator eval(100);
 
@@ -416,14 +399,13 @@ TEST_CASE("SwapPair: all clients remain assigned after swap",
 
         // All 8 clients should be assigned.
         CHECK(sol.num_unassigned() == 0);
-        for (int c = 0; c < data.num_clients(); ++c)
+        for (int c = 0; c < data.num_clients(); ++c) {
             CHECK(sol.is_assigned(c));
+        }
     }
 }
 
-TEST_CASE("SwapPair: works with granular neighbours",
-          "[pair_operators][swap_pair]")
-{
+TEST_CASE("SwapPair: works with granular neighbours", "[pair_operators][swap_pair]") {
     // Reuse the swap instance but with granular neighbours.
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
@@ -431,11 +413,11 @@ TEST_CASE("SwapPair: works with granular neighbours",
 
     b.add_client({50.0, 0.0}, {.demand = {2}});
     b.add_client({60.0, 0.0}, {.demand = {2}});
-    b.add_client({5.0, 0.0},  {.demand = {2}});
+    b.add_client({5.0, 0.0}, {.demand = {2}});
     b.add_client({15.0, 0.0}, {.demand = {2}});
     b.add_client({0.0, 50.0}, {.demand = {2}});
     b.add_client({0.0, 60.0}, {.demand = {2}});
-    b.add_client({0.0, 5.0},  {.demand = {2}});
+    b.add_client({0.0, 5.0}, {.demand = {2}});
     b.add_client({0.0, 15.0}, {.demand = {2}});
 
     b.add_request(0, 1);
@@ -463,9 +445,7 @@ TEST_CASE("SwapPair: works with granular neighbours",
 //  Repeated application tests
 // ===========================================================================
 
-TEST_CASE("RelocatePair: repeated application converges",
-          "[pair_operators][relocate_pair]")
-{
+TEST_CASE("RelocatePair: repeated application converges", "[pair_operators][relocate_pair]") {
     auto data = make_pd_instance();
     CostEvaluator eval(100);
 
@@ -482,9 +462,7 @@ TEST_CASE("RelocatePair: repeated application converges",
     CHECK(sol.num_unassigned() == 0);
 }
 
-TEST_CASE("SwapPair + RelocatePair combined improvement",
-          "[pair_operators]")
-{
+TEST_CASE("SwapPair + RelocatePair combined improvement", "[pair_operators]") {
     auto data = make_swap_instance();
     CostEvaluator eval(100);
 

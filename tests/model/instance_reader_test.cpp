@@ -1,8 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
-
-#include <model/instance_reader.h>
-
 #include <cmath>
+#include <model/instance_reader.h>
 #include <string>
 
 // =========================================================================
@@ -35,8 +33,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("parse_vrp reads metadata", "[instance_reader]")
-{
+TEST_CASE("parse_vrp reads metadata", "[instance_reader]") {
     auto inst = coso::parse_vrp(SMALL_VRP);
     REQUIRE(inst.name == "test-n5-k2");
     REQUIRE(inst.comment == "Small test instance");
@@ -46,8 +43,7 @@ TEST_CASE("parse_vrp reads metadata", "[instance_reader]")
     REQUIRE(inst.edge_weight_type == coso::EdgeWeightType::EUC_2D);
 }
 
-TEST_CASE("parse_vrp reads coordinates", "[instance_reader]")
-{
+TEST_CASE("parse_vrp reads coordinates", "[instance_reader]") {
     auto inst = coso::parse_vrp(SMALL_VRP);
     REQUIRE(inst.coords.size() == 5);
     // Node 1 (index 0) is at (0, 0).
@@ -61,26 +57,23 @@ TEST_CASE("parse_vrp reads coordinates", "[instance_reader]")
     REQUIRE(inst.coords[4].y == 5.0);
 }
 
-TEST_CASE("parse_vrp reads demands", "[instance_reader]")
-{
+TEST_CASE("parse_vrp reads demands", "[instance_reader]") {
     auto inst = coso::parse_vrp(SMALL_VRP);
     REQUIRE(inst.demands.size() == 5);
-    REQUIRE(inst.demands[0] == 0);   // depot
+    REQUIRE(inst.demands[0] == 0);  // depot
     REQUIRE(inst.demands[1] == 30);
     REQUIRE(inst.demands[2] == 40);
     REQUIRE(inst.demands[3] == 20);
     REQUIRE(inst.demands[4] == 10);
 }
 
-TEST_CASE("parse_vrp reads depot section", "[instance_reader]")
-{
+TEST_CASE("parse_vrp reads depot section", "[instance_reader]") {
     auto inst = coso::parse_vrp(SMALL_VRP);
     REQUIRE(inst.depot_ids.size() == 1);
     REQUIRE(inst.depot_ids[0] == 0);  // 1-based id "1" -> 0-based index 0
 }
 
-TEST_CASE("EUC_2D distance computation", "[instance_reader]")
-{
+TEST_CASE("EUC_2D distance computation", "[instance_reader]") {
     auto inst = coso::parse_vrp(SMALL_VRP);
     // Distance from (0,0) to (10,0) = 10.
     REQUIRE(inst.dist(0, 1) == 10);
@@ -117,8 +110,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("CEIL_2D uses ceiling for distances", "[instance_reader]")
-{
+TEST_CASE("CEIL_2D uses ceiling for distances", "[instance_reader]") {
     auto inst = coso::parse_vrp(CEIL_VRP);
     // Distance from (0,0) to (3,4) = 5.0 (exact).
     REQUIRE(inst.dist(0, 1) == 5);
@@ -148,8 +140,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("EXPLICIT FULL_MATRIX parsing", "[instance_reader]")
-{
+TEST_CASE("EXPLICIT FULL_MATRIX parsing", "[instance_reader]") {
     auto inst = coso::parse_vrp(EXPLICIT_FULL_VRP);
     REQUIRE(inst.edge_weight_type == coso::EdgeWeightType::EXPLICIT);
     REQUIRE(inst.distance_matrix.size() == 9);
@@ -184,8 +175,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("EXPLICIT LOWER_DIAG_ROW parsing", "[instance_reader]")
-{
+TEST_CASE("EXPLICIT LOWER_DIAG_ROW parsing", "[instance_reader]") {
     auto inst = coso::parse_vrp(EXPLICIT_LOWER_DIAG_VRP);
     REQUIRE(inst.dimension == 4);
     REQUIRE(inst.distance_matrix.size() == 16);
@@ -223,8 +213,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("EXPLICIT UPPER_ROW parsing", "[instance_reader]")
-{
+TEST_CASE("EXPLICIT UPPER_ROW parsing", "[instance_reader]") {
     auto inst = coso::parse_vrp(EXPLICIT_UPPER_ROW_VRP);
     REQUIRE(inst.dist(0, 1) == 10);
     REQUIRE(inst.dist(0, 2) == 20);
@@ -257,8 +246,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("EXPLICIT LOWER_ROW parsing", "[instance_reader]")
-{
+TEST_CASE("EXPLICIT LOWER_ROW parsing", "[instance_reader]") {
     auto inst = coso::parse_vrp(EXPLICIT_LOWER_ROW_VRP);
     REQUIRE(inst.dist(1, 0) == 10);
     REQUIRE(inst.dist(2, 0) == 20);
@@ -269,8 +257,7 @@ TEST_CASE("EXPLICIT LOWER_ROW parsing", "[instance_reader]")
 }
 
 // Test that missing DIMENSION throws.
-TEST_CASE("parse_vrp throws on missing dimension", "[instance_reader]")
-{
+TEST_CASE("parse_vrp throws on missing dimension", "[instance_reader]") {
     const std::string bad = R"(
 NAME : bad
 TYPE : CVRP
@@ -289,8 +276,7 @@ EOF
 }
 
 // Test that EXPLICIT without EDGE_WEIGHT_SECTION throws.
-TEST_CASE("parse_vrp throws on missing edge weight section", "[instance_reader]")
-{
+TEST_CASE("parse_vrp throws on missing edge weight section", "[instance_reader]") {
     const std::string bad = R"(
 NAME : bad
 TYPE : CVRP
@@ -311,8 +297,7 @@ EOF
 }
 
 // Test that read_vrp throws on non-existent file.
-TEST_CASE("read_vrp throws on missing file", "[instance_reader]")
-{
+TEST_CASE("read_vrp throws on missing file", "[instance_reader]") {
     REQUIRE_THROWS_AS(coso::read_vrp("nonexistent.vrp"), std::runtime_error);
 }
 
@@ -340,8 +325,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("parse_vrp supports multiple depots", "[instance_reader]")
-{
+TEST_CASE("parse_vrp supports multiple depots", "[instance_reader]") {
     auto inst = coso::parse_vrp(MULTI_DEPOT_VRP);
     REQUIRE(inst.depot_ids.size() == 2);
     REQUIRE(inst.depot_ids[0] == 0);
@@ -371,8 +355,7 @@ DEPOT_SECTION
 EOF
 )";
 
-TEST_CASE("parse_vrp reads optional metadata", "[instance_reader]")
-{
+TEST_CASE("parse_vrp reads optional metadata", "[instance_reader]") {
     auto inst = coso::parse_vrp(META_VRP);
     REQUIRE(inst.vehicles == 5);
     REQUIRE(inst.distance == 123.45);

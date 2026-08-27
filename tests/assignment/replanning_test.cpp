@@ -1,4 +1,5 @@
 #include "assignment/replanning.h"
+
 #include "assignment/assignment_data.h"
 #include "assignment/assignment_solution.h"
 #include "assignment/construction.h"
@@ -17,26 +18,37 @@ using namespace coso;
 
 namespace {
 
-AssignmentData make_replan_instance()
-{
+AssignmentData make_replan_instance() {
     AssignmentData data;
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day",   .start_hour = 8,  .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6,  .duration_hours = 0},
+        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
+        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
     };
 
     // 4 employees.
     data.employees = {
-        {.name = "Alice", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Bob",   .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Carol", .skills = {"nurse", "senior"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Dave",  .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
+        {.name = "Alice",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Bob",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Carol",
+         .skills = {"nurse", "senior"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Dave",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
     };
 
     data.horizon = 14;
@@ -49,21 +61,19 @@ AssignmentData make_replan_instance()
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
 
-    data.max_consecutive_shifts  = 5;
+    data.max_consecutive_shifts = 5;
     data.min_rest_between_shifts = 11;
 
     return data;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ---------------------------------------------------------------------------
 //  LockedCells tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("LockedCells: horizon_start locks early days",
-          "[assignment][replanning]")
-{
+TEST_CASE("LockedCells: horizon_start locks early days", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
@@ -85,9 +95,7 @@ TEST_CASE("LockedCells: horizon_start locks early days",
     }
 }
 
-TEST_CASE("LockedCells: explicit locked assignments",
-          "[assignment][replanning]")
-{
+TEST_CASE("LockedCells: explicit locked assignments", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
@@ -110,16 +118,14 @@ TEST_CASE("LockedCells: explicit locked assignments",
 //  Replanning tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("replan: locked shifts remain unchanged",
-          "[assignment][replanning]")
-{
+TEST_CASE("replan: locked shifts remain unchanged", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
 
     // Record some assignments to lock.
     int alice_day3_shift = sol.get(0, 3);
-    int bob_day5_shift   = sol.get(1, 5);
+    int bob_day5_shift = sol.get(1, 5);
 
     // Force specific assignments if they are unassigned.
     if (alice_day3_shift < 0) {
@@ -144,9 +150,7 @@ TEST_CASE("replan: locked shifts remain unchanged",
     REQUIRE(sol.get(1, 5) == bob_day5_shift);
 }
 
-TEST_CASE("replan: new unavailabilities are respected",
-          "[assignment][replanning]")
-{
+TEST_CASE("replan: new unavailabilities are respected", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
@@ -165,9 +169,7 @@ TEST_CASE("replan: new unavailabilities are respected",
     }
 }
 
-TEST_CASE("replan: partial replanning (only future days change)",
-          "[assignment][replanning]")
-{
+TEST_CASE("replan: partial replanning (only future days change)", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
@@ -193,9 +195,7 @@ TEST_CASE("replan: partial replanning (only future days change)",
     }
 }
 
-TEST_CASE("replan: simple rostering instance end-to-end",
-          "[assignment][replanning]")
-{
+TEST_CASE("replan: simple rostering instance end-to-end", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
@@ -217,16 +217,16 @@ TEST_CASE("replan: simple rostering instance end-to-end",
 }
 
 TEST_CASE("replan: locked assignments are set correctly even if different",
-          "[assignment][replanning]")
-{
+          "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
 
     // Force a specific locked assignment that differs from current.
     // First ensure employee 0 day 10 has shift 0 (Day).
-    if (sol.get(0, 10) >= 0)
+    if (sol.get(0, 10) >= 0) {
         sol.unassign(0, 10);
+    }
     sol.assign(0, 10, 0);
 
     // Now replan with it locked as Night shift (1).
@@ -241,9 +241,7 @@ TEST_CASE("replan: locked assignments are set correctly even if different",
     REQUIRE(sol.get(0, 10) == 1);
 }
 
-TEST_CASE("replan: demand is still met after replanning",
-          "[assignment][replanning]")
-{
+TEST_CASE("replan: demand is still met after replanning", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);
@@ -262,9 +260,7 @@ TEST_CASE("replan: demand is still met after replanning",
     REQUIRE(sol.demand_cost() == 0);
 }
 
-TEST_CASE("replan: new preferences influence solution",
-          "[assignment][replanning]")
-{
+TEST_CASE("replan: new preferences influence solution", "[assignment][replanning]") {
     auto data = make_replan_instance();
 
     // Add a strong preference for Alice on day 10 for Day shift.
@@ -284,9 +280,7 @@ TEST_CASE("replan: new preferences influence solution",
     REQUIRE(sol.get(0, 10) == 0);
 }
 
-TEST_CASE("replan: empty config produces valid solution",
-          "[assignment][replanning]")
-{
+TEST_CASE("replan: empty config produces valid solution", "[assignment][replanning]") {
     auto data = make_replan_instance();
     AssignmentCostEvaluator evaluator(data);
     auto sol = construct_greedy(data, evaluator);

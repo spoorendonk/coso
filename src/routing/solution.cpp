@@ -8,10 +8,7 @@ namespace coso {
 //  Construction
 // ---------------------------------------------------------------------------
 
-Solution::Solution(ProblemData const& data)
-    : data_(&data),
-      assigned_(data.num_clients(), false)
-{
+Solution::Solution(ProblemData const& data) : data_(&data), assigned_(data.num_clients(), false) {
     // Create one Route per vehicle across all vehicle types.
     int num_vt = data.num_vehicle_types();
     for (int t = 0; t < num_vt; ++t) {
@@ -32,12 +29,12 @@ Solution::Solution(ProblemData const& data)
 //  Accessors
 // ---------------------------------------------------------------------------
 
-int Solution::num_used_vehicles() const noexcept
-{
+int Solution::num_used_vehicles() const noexcept {
     int count = 0;
     for (auto const& r : routes_) {
-        if (!r.empty())
+        if (!r.empty()) {
             ++count;
+        }
     }
     return count;
 }
@@ -46,43 +43,43 @@ int Solution::num_used_vehicles() const noexcept
 //  Cost evaluation
 // ---------------------------------------------------------------------------
 
-int64_t Solution::cost(CostEvaluator const& eval) const
-{
+int64_t Solution::cost(CostEvaluator const& eval) const {
     int64_t total = 0;
-    for (auto const& r : routes_)
-        total += eval.route_cost(r);
-    return total;
-}
-
-int64_t Solution::objective(CostEvaluator const& eval) const
-{
-    int64_t total = 0;
-    for (auto const& r : routes_)
-        total += eval.route_objective(r);
-    return total;
-}
-
-int64_t Solution::penalty(CostEvaluator const& eval) const
-{
-    int64_t total = 0;
-    for (auto const& r : routes_)
-        total += eval.route_penalty(r);
-    return total;
-}
-
-int Solution::total_distance() const noexcept
-{
-    int total = 0;
-    for (auto const& r : routes_)
-        total += r.distance();
-    return total;
-}
-
-bool Solution::feasible() const noexcept
-{
     for (auto const& r : routes_) {
-        if (!r.load_feasible())
+        total += eval.route_cost(r);
+    }
+    return total;
+}
+
+int64_t Solution::objective(CostEvaluator const& eval) const {
+    int64_t total = 0;
+    for (auto const& r : routes_) {
+        total += eval.route_objective(r);
+    }
+    return total;
+}
+
+int64_t Solution::penalty(CostEvaluator const& eval) const {
+    int64_t total = 0;
+    for (auto const& r : routes_) {
+        total += eval.route_penalty(r);
+    }
+    return total;
+}
+
+int Solution::total_distance() const noexcept {
+    int total = 0;
+    for (auto const& r : routes_) {
+        total += r.distance();
+    }
+    return total;
+}
+
+bool Solution::feasible() const noexcept {
+    for (auto const& r : routes_) {
+        if (!r.load_feasible()) {
             return false;
+        }
     }
     return true;
 }
@@ -91,8 +88,7 @@ bool Solution::feasible() const noexcept
 //  Modification
 // ---------------------------------------------------------------------------
 
-void Solution::set_route_clients(int vehicle, std::vector<int> clients)
-{
+void Solution::set_route_clients(int vehicle, std::vector<int> clients) {
     assert(vehicle >= 0 && vehicle < num_routes());
 
     // Unmark old clients in this route.
@@ -111,8 +107,7 @@ void Solution::set_route_clients(int vehicle, std::vector<int> clients)
     rebuild_unassigned_();
 }
 
-void Solution::insert_client(int vehicle, int pos, int client)
-{
+void Solution::insert_client(int vehicle, int pos, int client) {
     assert(vehicle >= 0 && vehicle < num_routes());
     assert(client >= 0 && client < data_->num_clients());
     assert(!assigned_[client]);
@@ -128,8 +123,7 @@ void Solution::insert_client(int vehicle, int pos, int client)
     unassigned_.pop_back();
 }
 
-void Solution::remove_client(int vehicle, int pos)
-{
+void Solution::remove_client(int vehicle, int pos) {
     assert(vehicle >= 0 && vehicle < num_routes());
     assert(pos >= 0 && pos < routes_[vehicle].size());
 
@@ -143,13 +137,13 @@ void Solution::remove_client(int vehicle, int pos)
 //  Internal
 // ---------------------------------------------------------------------------
 
-void Solution::rebuild_unassigned_()
-{
+void Solution::rebuild_unassigned_() {
     unassigned_.clear();
     for (int c = 0; c < data_->num_clients(); ++c) {
-        if (!assigned_[c])
+        if (!assigned_[c]) {
             unassigned_.push_back(c);
+        }
     }
 }
 
-} // namespace coso
+}  // namespace coso

@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/resources/loading_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -12,9 +12,8 @@ using namespace coso;
 ///   Request 0: pickup=0, delivery=1
 ///   Request 1: pickup=2, delivery=3
 ///   Request 2: pickup=4, delivery=5
-static std::vector<LoadingResource::ClientInfo> make_loading_info()
-{
-    std::vector<int> pickups   = {0, 2, 4};
+static std::vector<LoadingResource::ClientInfo> make_loading_info() {
+    std::vector<int> pickups = {0, 2, 4};
     std::vector<int> deliveries = {1, 3, 5};
     return LoadingResource::build_lookup(6, pickups, deliveries);
 }
@@ -23,9 +22,7 @@ static std::vector<LoadingResource::ClientInfo> make_loading_info()
 //  Build lookup tests
 // ===========================================================================
 
-TEST_CASE("LoadingResource::build_lookup assigns roles correctly",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource::build_lookup assigns roles correctly", "[loading_resource]") {
     auto info = make_loading_info();
 
     CHECK(info[0].request == 0);
@@ -44,9 +41,7 @@ TEST_CASE("LoadingResource::build_lookup assigns roles correctly",
 //  Init tests
 // ===========================================================================
 
-TEST_CASE("LoadingResource::init for pickup client",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource::init for pickup client", "[loading_resource]") {
     auto info = make_loading_info();
     auto s = LoadingResource::init(info, 0);
     REQUIRE(s.pending.size() == 1);
@@ -55,9 +50,7 @@ TEST_CASE("LoadingResource::init for pickup client",
     CHECK(s.violations == 0);
 }
 
-TEST_CASE("LoadingResource::init for delivery client",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource::init for delivery client", "[loading_resource]") {
     auto info = make_loading_info();
     auto s = LoadingResource::init(info, 1);
     CHECK(s.pending.empty());
@@ -66,9 +59,7 @@ TEST_CASE("LoadingResource::init for delivery client",
     CHECK(s.violations == 0);
 }
 
-TEST_CASE("LoadingResource::init_depot creates empty state",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource::init_depot creates empty state", "[loading_resource]") {
     auto s = LoadingResource::init_depot();
     CHECK(s.pending.empty());
     CHECK(s.needed.empty());
@@ -80,8 +71,7 @@ TEST_CASE("LoadingResource::init_depot creates empty state",
 // ===========================================================================
 
 TEST_CASE("LoadingResource LIFO: correct order (last picked up delivered first)",
-          "[loading_resource]")
-{
+          "[loading_resource]") {
     auto info = make_loading_info();
     auto policy = LoadingResource::Policy::LIFO;
 
@@ -107,9 +97,7 @@ TEST_CASE("LoadingResource LIFO: correct order (last picked up delivered first)"
     CHECK(LoadingResource::excess(m0123) == 0);
 }
 
-TEST_CASE("LoadingResource LIFO: wrong order (delivers in pickup order)",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource LIFO: wrong order (delivers in pickup order)", "[loading_resource]") {
     auto info = make_loading_info();
     auto policy = LoadingResource::Policy::LIFO;
 
@@ -134,8 +122,7 @@ TEST_CASE("LoadingResource LIFO: wrong order (delivers in pickup order)",
 // ===========================================================================
 
 TEST_CASE("LoadingResource FIFO: correct order (first picked up delivered first)",
-          "[loading_resource]")
-{
+          "[loading_resource]") {
     auto info = make_loading_info();
     auto policy = LoadingResource::Policy::FIFO;
 
@@ -155,8 +142,7 @@ TEST_CASE("LoadingResource FIFO: correct order (first picked up delivered first)
 }
 
 TEST_CASE("LoadingResource FIFO: wrong order (delivers in reverse pickup order)",
-          "[loading_resource]")
-{
+          "[loading_resource]") {
     auto info = make_loading_info();
     auto policy = LoadingResource::Policy::FIFO;
 
@@ -179,44 +165,35 @@ TEST_CASE("LoadingResource FIFO: wrong order (delivers in reverse pickup order)"
 //  Edge cases
 // ===========================================================================
 
-TEST_CASE("LoadingResource: single request has no ordering constraint",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource: single request has no ordering constraint", "[loading_resource]") {
     auto info = make_loading_info();
 
     auto sp0 = LoadingResource::init(info, 0);  // pickup req 0
     auto sd0 = LoadingResource::init(info, 1);  // delivery req 0
 
-    auto m_lifo = LoadingResource::merge(sp0, sd0,
-                                         LoadingResource::Policy::LIFO);
+    auto m_lifo = LoadingResource::merge(sp0, sd0, LoadingResource::Policy::LIFO);
     CHECK(m_lifo.violations == 0);
     CHECK(m_lifo.pending.empty());
     CHECK(m_lifo.needed.empty());
 
-    auto m_fifo = LoadingResource::merge(sp0, sd0,
-                                         LoadingResource::Policy::FIFO);
+    auto m_fifo = LoadingResource::merge(sp0, sd0, LoadingResource::Policy::FIFO);
     CHECK(m_fifo.violations == 0);
 }
 
-TEST_CASE("LoadingResource: delivery without pickup yields needed entry",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource: delivery without pickup yields needed entry", "[loading_resource]") {
     auto info = make_loading_info();
 
     auto sd0 = LoadingResource::init(info, 1);  // delivery req 0
 
     // Merging delivery with depot: delivery needs a pickup.
     auto depot = LoadingResource::init_depot();
-    auto m = LoadingResource::merge(depot, sd0,
-                                    LoadingResource::Policy::LIFO);
+    auto m = LoadingResource::merge(depot, sd0, LoadingResource::Policy::LIFO);
 
     CHECK(m.needed.size() == 1);
     CHECK(LoadingResource::excess(m) == 1);
 }
 
-TEST_CASE("LoadingResource: three requests LIFO correct order",
-          "[loading_resource]")
-{
+TEST_CASE("LoadingResource: three requests LIFO correct order", "[loading_resource]") {
     auto info = make_loading_info();
     auto policy = LoadingResource::Policy::LIFO;
 
@@ -228,10 +205,8 @@ TEST_CASE("LoadingResource: three requests LIFO correct order",
     auto sd1 = LoadingResource::init(info, 3);
     auto sd0 = LoadingResource::init(info, 1);
 
-    auto pickups = LoadingResource::merge(
-        LoadingResource::merge(sp0, sp1, policy), sp2, policy);
-    auto deliveries = LoadingResource::merge(
-        LoadingResource::merge(sd2, sd1, policy), sd0, policy);
+    auto pickups = LoadingResource::merge(LoadingResource::merge(sp0, sp1, policy), sp2, policy);
+    auto deliveries = LoadingResource::merge(LoadingResource::merge(sd2, sd1, policy), sd0, policy);
     auto all = LoadingResource::merge(pickups, deliveries, policy);
 
     CHECK(all.violations == 0);

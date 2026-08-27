@@ -6,9 +6,7 @@
 namespace coso {
 
 PackingSolution::PackingSolution(PackingData const& data)
-    : data_(&data)
-    , unassigned_count_(data.num_items())
-{
+    : data_(&data), unassigned_count_(data.num_items()) {
     // Allocate bin slots: for each bin type, use its count (or num_items as
     // upper bound when count is unlimited).
     int total_bins = 0;
@@ -41,33 +39,32 @@ PackingSolution::PackingSolution(PackingData const& data)
 //  Queries
 // ---------------------------------------------------------------------------
 
-bool PackingSolution::item_fits_capacity(int item, int b) const
-{
+bool PackingSolution::item_fits_capacity(int item, int b) const {
     int bt = bin_type_[b];
     int D = data_->num_dims();
     for (int d = 0; d < D; ++d) {
-        if (bin_load_[b * D + d] + data_->item_size(item, d)
-            > data_->bin_capacity(bt, d))
+        if (bin_load_[b * D + d] + data_->item_size(item, d) > data_->bin_capacity(bt, d)) {
             return false;
+        }
     }
     return true;
 }
 
-bool PackingSolution::has_conflict_in_bin(int item, int b) const
-{
+bool PackingSolution::has_conflict_in_bin(int item, int b) const {
     auto const& nbrs = data_->conflicts(item);
-    if (nbrs.empty())
+    if (nbrs.empty()) {
         return false;
+    }
 
     for (int other : bin_items_[b]) {
-        if (data_->has_conflict(item, other))
+        if (data_->has_conflict(item, other)) {
             return true;
+        }
     }
     return false;
 }
 
-bool PackingSolution::item_fits(int item, int b) const
-{
+bool PackingSolution::item_fits(int item, int b) const {
     return item_fits_capacity(item, b) && !has_conflict_in_bin(item, b);
 }
 
@@ -75,8 +72,7 @@ bool PackingSolution::item_fits(int item, int b) const
 //  Modification
 // ---------------------------------------------------------------------------
 
-void PackingSolution::assign(int item, int bin)
-{
+void PackingSolution::assign(int item, int bin) {
     assert(item >= 0 && item < data_->num_items());
     assert(bin >= 0 && bin < num_bins_);
     assert(item_bin_[item] == -1);  // must be unassigned
@@ -95,8 +91,9 @@ void PackingSolution::assign(int item, int bin)
 
     // Update conflict violations.
     for (int other : bin_items_[bin]) {
-        if (data_->has_conflict(item, other))
+        if (data_->has_conflict(item, other)) {
             ++conflict_violations_;
+        }
     }
 
     // Add item to bin.
@@ -111,8 +108,7 @@ void PackingSolution::assign(int item, int bin)
     }
 }
 
-void PackingSolution::unassign(int item)
-{
+void PackingSolution::unassign(int item) {
     assert(item >= 0 && item < data_->num_items());
     int bin = item_bin_[item];
     assert(bin >= 0 && bin < num_bins_);
@@ -122,8 +118,9 @@ void PackingSolution::unassign(int item)
 
     // Remove conflict violations involving this item in its bin.
     for (int other : bin_items_[bin]) {
-        if (other != item && data_->has_conflict(item, other))
+        if (other != item && data_->has_conflict(item, other)) {
             --conflict_violations_;
+        }
     }
 
     // Update load and capacity violations.
@@ -147,8 +144,7 @@ void PackingSolution::unassign(int item)
     }
 }
 
-void PackingSolution::move(int item, int to_bin)
-{
+void PackingSolution::move(int item, int to_bin) {
     assert(item >= 0 && item < data_->num_items());
     assert(to_bin >= 0 && to_bin < num_bins_);
     assert(item_bin_[item] >= 0);  // must be assigned
@@ -162,8 +158,7 @@ void PackingSolution::move(int item, int to_bin)
 //  Delta evaluation
 // ---------------------------------------------------------------------------
 
-int PackingSolution::assign_cost_delta(int item, int b) const
-{
+int PackingSolution::assign_cost_delta(int item, int b) const {
     assert(item >= 0 && item < data_->num_items());
     assert(b >= 0 && b < num_bins_);
     assert(item_bin_[item] == -1);
@@ -176,8 +171,7 @@ int PackingSolution::assign_cost_delta(int item, int b) const
     return 0;
 }
 
-int PackingSolution::move_cost_delta(int item, int to_bin) const
-{
+int PackingSolution::move_cost_delta(int item, int to_bin) const {
     assert(item >= 0 && item < data_->num_items());
     assert(to_bin >= 0 && to_bin < num_bins_);
     int from_bin = item_bin_[item];
@@ -203,35 +197,33 @@ int PackingSolution::move_cost_delta(int item, int to_bin) const
 //  Feasibility
 // ---------------------------------------------------------------------------
 
-bool PackingSolution::feasible() const noexcept
-{
-    return capacity_violations_ == 0 && conflict_violations_ == 0
-        && unassigned_count_ == 0;
+bool PackingSolution::feasible() const noexcept {
+    return capacity_violations_ == 0 && conflict_violations_ == 0 && unassigned_count_ == 0;
 }
 
-int PackingSolution::count_capacity_violations(int b) const
-{
+int PackingSolution::count_capacity_violations(int b) const {
     int bt = bin_type_[b];
     int D = data_->num_dims();
     int violations = 0;
     for (int d = 0; d < D; ++d) {
-        if (bin_load_[b * D + d] > data_->bin_capacity(bt, d))
+        if (bin_load_[b * D + d] > data_->bin_capacity(bt, d)) {
             ++violations;
-    }
-    return violations;
-}
-
-int PackingSolution::count_conflict_violations(int b) const
-{
-    auto const& items = bin_items_[b];
-    int violations = 0;
-    for (int i = 0; i < static_cast<int>(items.size()); ++i) {
-        for (int j = i + 1; j < static_cast<int>(items.size()); ++j) {
-            if (data_->has_conflict(items[i], items[j]))
-                ++violations;
         }
     }
     return violations;
 }
 
-} // namespace coso
+int PackingSolution::count_conflict_violations(int b) const {
+    auto const& items = bin_items_[b];
+    int violations = 0;
+    for (int i = 0; i < static_cast<int>(items.size()); ++i) {
+        for (int j = i + 1; j < static_cast<int>(items.size()); ++j) {
+            if (data_->has_conflict(items[i], items[j])) {
+                ++violations;
+            }
+        }
+    }
+    return violations;
+}
+
+}  // namespace coso

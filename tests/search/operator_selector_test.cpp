@@ -1,16 +1,14 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
-
 #include "search/operator_selector.h"
 
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <set>
 #include <vector>
 
 using namespace coso;
 using Catch::Matchers::WithinAbs;
 
-TEST_CASE("OperatorSelector — construction", "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — construction", "[operator_selector]") {
     OperatorSelector sel(4);
 
     CHECK(sel.num_operators() == 4);
@@ -24,9 +22,7 @@ TEST_CASE("OperatorSelector — construction", "[operator_selector]")
     }
 }
 
-TEST_CASE("OperatorSelector — round-robin for untried operators",
-          "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — round-robin for untried operators", "[operator_selector]") {
     OperatorSelector sel(3);
 
     // First 3 selections should be 0, 1, 2 (each operator tried once).
@@ -41,9 +37,7 @@ TEST_CASE("OperatorSelector — round-robin for untried operators",
     CHECK(selected.size() == 3);
 }
 
-TEST_CASE("OperatorSelector — prefers high-reward operator",
-          "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — prefers high-reward operator", "[operator_selector]") {
     // With exploration = 0, selector is purely greedy.
     OperatorSelector sel(3, 0.0);
 
@@ -59,15 +53,14 @@ TEST_CASE("OperatorSelector — prefers high-reward operator",
     }
 }
 
-TEST_CASE("OperatorSelector — exploration boosts under-tried operators",
-          "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — exploration boosts under-tried operators", "[operator_selector]") {
     // High exploration parameter to make it explore.
     OperatorSelector sel(3, 100.0);
 
     // Give operator 0 many tries, operator 2 very few.
-    for (int i = 0; i < 100; ++i)
+    for (int i = 0; i < 100; ++i) {
         sel.update(0, 1.0);
+    }
     sel.update(1, 0.5);
     sel.update(2, 0.5);
 
@@ -77,8 +70,7 @@ TEST_CASE("OperatorSelector — exploration boosts under-tried operators",
     CHECK(op != 0);
 }
 
-TEST_CASE("OperatorSelector — update tracks statistics", "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — update tracks statistics", "[operator_selector]") {
     OperatorSelector sel(2);
 
     sel.update(0, 5.0);
@@ -99,13 +91,12 @@ TEST_CASE("OperatorSelector — update tracks statistics", "[operator_selector]"
     CHECK_THAT(sel.avg_reward(1), WithinAbs(2.0, 1e-12));
 }
 
-TEST_CASE("OperatorSelector — reset clears all statistics",
-          "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — reset clears all statistics", "[operator_selector]") {
     OperatorSelector sel(3);
 
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 3; ++i) {
         sel.update(i, static_cast<double>(i + 1));
+    }
 
     CHECK(sel.total_selections() == 3);
 
@@ -119,9 +110,7 @@ TEST_CASE("OperatorSelector — reset clears all statistics",
     }
 }
 
-TEST_CASE("OperatorSelector — single operator always selected",
-          "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — single operator always selected", "[operator_selector]") {
     OperatorSelector sel(1);
 
     CHECK(sel.select() == 0);
@@ -131,9 +120,7 @@ TEST_CASE("OperatorSelector — single operator always selected",
     CHECK(sel.select() == 0);
 }
 
-TEST_CASE("OperatorSelector — UCB1 converges to best operator",
-          "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — UCB1 converges to best operator", "[operator_selector]") {
     // Moderate exploration, operator 0 is clearly the best.
     OperatorSelector sel(4, 1.0);
 
@@ -159,9 +146,7 @@ TEST_CASE("OperatorSelector — UCB1 converges to best operator",
     CHECK(sel.selections(0) > 800);
 }
 
-TEST_CASE("OperatorSelector — custom exploration parameter",
-          "[operator_selector]")
-{
+TEST_CASE("OperatorSelector — custom exploration parameter", "[operator_selector]") {
     // Very low exploration: should be nearly greedy after initialization.
     OperatorSelector sel(2, 0.01);
 
@@ -172,7 +157,9 @@ TEST_CASE("OperatorSelector — custom exploration parameter",
     int count_1 = 0;
     for (int i = 0; i < 50; ++i) {
         int op = sel.select();
-        if (op == 1) count_1++;
+        if (op == 1) {
+            count_1++;
+        }
         sel.update(op, op == 1 ? 100.0 : 1.0);
     }
     CHECK(count_1 > 45);

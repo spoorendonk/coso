@@ -5,36 +5,34 @@
 
 namespace coso {
 
-SolutionAnalysis analyze(Solution const& sol,
-                         CostEvaluator const& eval,
-                         ProblemData const& data)
-{
+SolutionAnalysis analyze(Solution const& sol, CostEvaluator const& eval, ProblemData const& data) {
     SolutionAnalysis result;
     result.total_objective = 0;
-    result.total_penalty   = 0;
+    result.total_penalty = 0;
     result.num_routes_used = 0;
-    result.num_unserved    = sol.num_unassigned();
-    result.feasible        = sol.feasible();
+    result.num_unserved = sol.num_unassigned();
+    result.feasible = sol.feasible();
 
     int num_dims = data.num_load_dims();
 
     for (int r = 0; r < sol.num_routes(); ++r) {
         auto const& route = sol.route(r);
-        if (route.empty())
+        if (route.empty()) {
             continue;
+        }
 
         ++result.num_routes_used;
 
         RouteAnalysis ra;
-        ra.route_idx   = r;
+        ra.route_idx = r;
         ra.vehicle_type = route.vehicle_type();
-        ra.distance    = route.distance();
+        ra.distance = route.distance();
         ra.load_excess = route.load_excess();
 
         auto const& vt = data.vehicle_type(route.vehicle_type());
-        ra.fixed_cost  = vt.cost.fixed_cost;
-        ra.objective   = eval.route_objective(route);
-        ra.penalty     = eval.route_penalty(route);
+        ra.fixed_cost = vt.cost.fixed_cost;
+        ra.objective = eval.route_objective(route);
+        ra.penalty = eval.route_penalty(route);
 
         // Client list.
         ra.clients.assign(route.clients().begin(), route.clients().end());
@@ -53,7 +51,7 @@ SolutionAnalysis analyze(Solution const& sol,
         ra.capacity.resize(num_dims, 0);
 
         result.total_objective += ra.objective;
-        result.total_penalty   += ra.penalty;
+        result.total_penalty += ra.penalty;
         result.routes.push_back(std::move(ra));
     }
 
@@ -61,8 +59,7 @@ SolutionAnalysis analyze(Solution const& sol,
     return result;
 }
 
-std::string SolutionAnalysis::to_string() const
-{
+std::string SolutionAnalysis::to_string() const {
     std::ostringstream os;
 
     os << std::format("=== Solution Analysis ===\n");
@@ -75,11 +72,12 @@ std::string SolutionAnalysis::to_string() const
     os << '\n';
 
     for (auto const& ra : routes) {
-        os << std::format("--- Route {} (vehicle type {}) ---\n",
-                          ra.route_idx, ra.vehicle_type);
+        os << std::format("--- Route {} (vehicle type {}) ---\n", ra.route_idx, ra.vehicle_type);
         os << "  Clients: [";
         for (size_t i = 0; i < ra.clients.size(); ++i) {
-            if (i > 0) os << ", ";
+            if (i > 0) {
+                os << ", ";
+            }
             os << ra.clients[i];
         }
         os << "]\n";
@@ -91,12 +89,11 @@ std::string SolutionAnalysis::to_string() const
 
         for (size_t d = 0; d < ra.total_demand.size(); ++d) {
             int cap = (d < ra.capacity.size()) ? ra.capacity[d] : 0;
-            double pct = cap > 0
-                             ? 100.0 * static_cast<double>(ra.total_demand[d])
-                                   / static_cast<double>(cap)
-                             : 0.0;
-            os << std::format("  Dim {}: demand={} capacity={} ({:.1f}%)\n",
-                              d, ra.total_demand[d], cap, pct);
+            double pct =
+                cap > 0 ? 100.0 * static_cast<double>(ra.total_demand[d]) / static_cast<double>(cap)
+                        : 0.0;
+            os << std::format("  Dim {}: demand={} capacity={} ({:.1f}%)\n", d, ra.total_demand[d],
+                              cap, pct);
         }
         os << '\n';
     }
@@ -104,4 +101,4 @@ std::string SolutionAnalysis::to_string() const
     return os.str();
 }
 
-} // namespace coso
+}  // namespace coso

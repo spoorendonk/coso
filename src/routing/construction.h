@@ -26,8 +26,7 @@ namespace construction {
 /// @param data  The problem instance.
 /// @param eval  Cost evaluator (used for distance profile selection).
 /// @return A Solution with clients assigned to routes.
-[[nodiscard]] Solution nearest_neighbour(ProblemData const& data,
-                                         CostEvaluator const& eval);
+[[nodiscard]] Solution nearest_neighbour(ProblemData const& data, CostEvaluator const& eval);
 
 /// Clarke-Wright savings construction heuristic.
 ///
@@ -45,8 +44,7 @@ namespace construction {
 /// @param data  The problem instance.
 /// @param eval  Cost evaluator (used for distance profile selection).
 /// @return A Solution with clients assigned to routes.
-[[nodiscard]] Solution clarke_wright(ProblemData const& data,
-                                     CostEvaluator const& eval);
+[[nodiscard]] Solution clarke_wright(ProblemData const& data, CostEvaluator const& eval);
 
-} // namespace construction
-} // namespace coso
+}  // namespace construction
+}  // namespace coso

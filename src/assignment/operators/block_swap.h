@@ -19,10 +19,10 @@ namespace coso {
 class BlockSwap {
 public:
     struct Move {
-        int emp1  = -1;
-        int emp2  = -1;
+        int emp1 = -1;
+        int emp2 = -1;
         int start = -1;  ///< First day of the block.
-        int len   = -1;  ///< Number of consecutive days.
+        int len = -1;    ///< Number of consecutive days.
         int delta = 0;
     };
 
@@ -32,11 +32,10 @@ public:
     /// Scan all block-swap moves and find the best improving one.
     ///
     /// @return true if an improving move was found (delta < 0).
-    [[nodiscard]] bool find_best_move(AssignmentSolution const& sol)
-    {
+    [[nodiscard]] bool find_best_move(AssignmentSolution const& sol) {
         best_ = Move{};
         int const ne = sol.num_employees();
-        int const H  = sol.horizon();
+        int const H = sol.horizon();
 
         for (int e1 = 0; e1 < ne; ++e1) {
             for (int e2 = e1 + 1; e2 < ne; ++e2) {
@@ -51,8 +50,9 @@ public:
                                 break;
                             }
                         }
-                        if (!differs)
+                        if (!differs) {
                             continue;
+                        }
 
                         int delta = evaluate(sol, e1, e2, start, len);
                         if (delta < best_.delta) {
@@ -68,8 +68,7 @@ public:
 
     /// Apply the stored best move to the solution.
     /// Precondition: find_best_move() returned true.
-    void apply(AssignmentSolution& sol) const
-    {
+    void apply(AssignmentSolution& sol) const {
         for (int d = best_.start; d < best_.start + best_.len; ++d) {
             sol.swap(best_.emp1, best_.emp2, d);
         }
@@ -79,10 +78,8 @@ public:
     /// between emp1 and emp2.
     ///
     /// Temporarily applies all swaps in the block and reverts them.
-    [[nodiscard]] static int evaluate(AssignmentSolution const& sol,
-                                      int emp1, int emp2,
-                                      int start, int len)
-    {
+    [[nodiscard]] static int evaluate(AssignmentSolution const& sol, int emp1, int emp2, int start,
+                                      int len) {
         auto& mut = const_cast<AssignmentSolution&>(sol);
 
         // Apply all swaps in the block, accumulating the delta.
@@ -107,12 +104,11 @@ public:
     [[nodiscard]] int best_delta() const noexcept { return best_.delta; }
 
     /// Enumerate all valid block-swap moves.
-    [[nodiscard]] static std::vector<Move> enumerate(
-        AssignmentSolution const& sol, int max_len = 7)
-    {
+    [[nodiscard]] static std::vector<Move> enumerate(AssignmentSolution const& sol,
+                                                     int max_len = 7) {
         std::vector<Move> moves;
         int const ne = sol.num_employees();
-        int const H  = sol.horizon();
+        int const H = sol.horizon();
 
         for (int e1 = 0; e1 < ne; ++e1) {
             for (int e2 = e1 + 1; e2 < ne; ++e2) {
@@ -126,8 +122,9 @@ public:
                                 break;
                             }
                         }
-                        if (!differs)
+                        if (!differs) {
                             continue;
+                        }
 
                         int delta = evaluate(sol, e1, e2, start, len);
                         moves.push_back(Move{e1, e2, start, len, delta});
@@ -142,4 +139,4 @@ private:
     Move best_;
 };
 
-} // namespace coso
+}  // namespace coso

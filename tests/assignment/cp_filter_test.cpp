@@ -1,6 +1,7 @@
+#include "assignment/cp_filter.h"
+
 #include "assignment/assignment_data.h"
 #include "assignment/constraints/constraint.h"
-#include "assignment/cp_filter.h"
 
 #include <catch2/catch_test_macros.hpp>
 #include <climits>
@@ -14,22 +15,30 @@ using namespace coso;
 
 namespace {
 
-AssignmentData make_instance()
-{
+AssignmentData make_instance() {
     AssignmentData data;
 
     data.shift_types = {
-        {.name = "Day",   .start_hour = 8,  .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6,  .duration_hours = 0},
+        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
+        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
     };
 
     data.employees = {
-        {.name = "Alice", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Bob",   .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Carol", .skills = {"nurse", "senior"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
+        {.name = "Alice",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Bob",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Carol",
+         .skills = {"nurse", "senior"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
     };
 
     data.horizon = 7;
@@ -41,25 +50,24 @@ AssignmentData make_instance()
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
 
-    data.max_consecutive_shifts  = 5;
+    data.max_consecutive_shifts = 5;
     data.min_rest_between_shifts = 11;
 
     return data;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ===========================================================================
 //  Max consecutive pruning
 // ===========================================================================
 
-TEST_CASE("CPFilter: max consecutive prunes gap in long run",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: max consecutive prunes gap in long run", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
 
     CPFilter filter(data);
 
@@ -84,13 +92,12 @@ TEST_CASE("CPFilter: max consecutive prunes gap in long run",
     REQUIRE(filter.domain_size(0, 6) == 2);
 }
 
-TEST_CASE("CPFilter: max consecutive allows within limit",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: max consecutive allows within limit", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
 
     CPFilter filter(data);
 
@@ -111,16 +118,17 @@ TEST_CASE("CPFilter: max consecutive allows within limit",
 //  Min rest pruning
 // ===========================================================================
 
-TEST_CASE("CPFilter: min rest prunes early shift after late shift",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: min rest prunes early shift after late shift", "[assignment][cp_filter]") {
     AssignmentData data;
     data.shift_types = {
-        {.name = "Late",  .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6,  .end_hour = 14, .duration_hours = 0},
+        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
+        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
     };
-    data.employees = {{.name = "X", .skills = {}, .max_hours_per_week = 40,
-                       .max_consecutive_days = 7, .min_rest_hours = 11}};
+    data.employees = {{.name = "X",
+                       .skills = {},
+                       .max_hours_per_week = 40,
+                       .max_consecutive_days = 7,
+                       .min_rest_hours = 11}};
     data.horizon = 3;
     data.min_rest_between_shifts = 11;
 
@@ -135,20 +143,21 @@ TEST_CASE("CPFilter: min rest prunes early shift after late shift",
     filter.propagate(sched);
 
     REQUIRE(filter.is_feasible(0, 1, 0) == true);   // Late->Late ok
-    REQUIRE(filter.is_feasible(0, 1, 1) == false);   // Late->Early pruned
+    REQUIRE(filter.is_feasible(0, 1, 1) == false);  // Late->Early pruned
     REQUIRE(filter.domain_size(0, 1) == 1);
 }
 
-TEST_CASE("CPFilter: min rest prunes based on successor shift",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: min rest prunes based on successor shift", "[assignment][cp_filter]") {
     AssignmentData data;
     data.shift_types = {
-        {.name = "Late",  .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6,  .end_hour = 14, .duration_hours = 0},
+        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
+        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
     };
-    data.employees = {{.name = "X", .skills = {}, .max_hours_per_week = 40,
-                       .max_consecutive_days = 7, .min_rest_hours = 11}};
+    data.employees = {{.name = "X",
+                       .skills = {},
+                       .max_hours_per_week = 40,
+                       .max_consecutive_days = 7,
+                       .min_rest_hours = 11}};
     data.horizon = 3;
     data.min_rest_between_shifts = 11;
 
@@ -170,9 +179,7 @@ TEST_CASE("CPFilter: min rest prunes based on successor shift",
 //  Forbidden sequence pruning
 // ===========================================================================
 
-TEST_CASE("CPFilter: forbidden sequence prunes completing shift",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: forbidden sequence prunes completing shift", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.forbidden_sequences = {{1, 0}};  // Night -> Day is forbidden
 
@@ -189,9 +196,7 @@ TEST_CASE("CPFilter: forbidden sequence prunes completing shift",
     REQUIRE(filter.is_feasible(0, 1, 1) == true);   // Night ok (N->N not forbidden)
 }
 
-TEST_CASE("CPFilter: forbidden sequence prunes first element too",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: forbidden sequence prunes first element too", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.forbidden_sequences = {{1, 0}};  // Night -> Day
 
@@ -212,9 +217,7 @@ TEST_CASE("CPFilter: forbidden sequence prunes first element too",
 //  Demand limit pruning
 // ===========================================================================
 
-TEST_CASE("CPFilter: demand limit prunes when at max",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: demand limit prunes when at max", "[assignment][cp_filter]") {
     auto data = make_instance();
     // Night max = 1 per day.
 
@@ -238,9 +241,7 @@ TEST_CASE("CPFilter: demand limit prunes when at max",
 //  Unavailability pruning
 // ===========================================================================
 
-TEST_CASE("CPFilter: unavailability prunes all shifts",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: unavailability prunes all shifts", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.unavailabilities.insert(AssignmentData::unavail_key(0, 2));
 
@@ -260,13 +261,12 @@ TEST_CASE("CPFilter: unavailability prunes all shifts",
 //  Filtered moves are indeed infeasible
 // ===========================================================================
 
-TEST_CASE("CPFilter: filtered moves violate constraints",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: filtered moves violate constraints", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 3;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
+    }
     data.forbidden_sequences = {{1, 0}};  // Night -> Day
 
     CPFilter filter(data);
@@ -315,13 +315,12 @@ TEST_CASE("CPFilter: filtered moves violate constraints",
 //  Move filtering reduces search space
 // ===========================================================================
 
-TEST_CASE("CPFilter: filter_moves reduces candidate count",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: filter_moves reduces candidate count", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 2;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 2;
+    }
 
     CPFilter filter(data);
 
@@ -353,9 +352,7 @@ TEST_CASE("CPFilter: filter_moves reduces candidate count",
 //  Unassign moves pass through
 // ===========================================================================
 
-TEST_CASE("CPFilter: unassign moves are never filtered",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: unassign moves are never filtered", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.unavailabilities.insert(AssignmentData::unavail_key(0, 0));
 
@@ -377,13 +374,12 @@ TEST_CASE("CPFilter: unassign moves are never filtered",
 //  Combined propagation
 // ===========================================================================
 
-TEST_CASE("CPFilter: multiple rules interact correctly",
-          "[assignment][cp_filter]")
-{
+TEST_CASE("CPFilter: multiple rules interact correctly", "[assignment][cp_filter]") {
     auto data = make_instance();
     data.max_consecutive_shifts = 5;
-    for (auto& e : data.employees)
+    for (auto& e : data.employees) {
         e.max_consecutive_days = 5;
+    }
     data.forbidden_sequences = {{1, 0}};  // Night -> Day
     data.unavailabilities.insert(AssignmentData::unavail_key(2, 3));
 

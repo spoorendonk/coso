@@ -64,25 +64,27 @@ struct TypeIncompatibilityResource {
     /// For up to 64 types, uses a uint64_t bitmask.
     /// For more types, falls back to a vector<bool>.
     struct State {
-        uint64_t type_bits = 0;               ///< Bitmask for types 0..63.
-        std::vector<bool> type_vec;           ///< For types >= 64.
-        int num_types = 0;                    ///< Total number of types in the problem.
+        uint64_t type_bits = 0;      ///< Bitmask for types 0..63.
+        std::vector<bool> type_vec;  ///< For types >= 64.
+        int num_types = 0;           ///< Total number of types in the problem.
 
         /// Check whether a given type is present in this state.
         [[nodiscard]] bool has_type(int t) const {
             assert(t >= 0 && t < num_types);
-            if (t < 64)
+            if (t < 64) {
                 return (type_bits >> t) & 1;
+            }
             return type_vec[t - 64];
         }
 
         /// Set a type as present.
         void add_type(int t) {
             assert(t >= 0 && t < num_types);
-            if (t < 64)
+            if (t < 64) {
                 type_bits |= (uint64_t{1} << t);
-            else
+            } else {
                 type_vec[t - 64] = true;
+            }
         }
     };
 
@@ -97,23 +99,25 @@ struct TypeIncompatibilityResource {
         int nt = matrix.num_types();
         State s;
         s.num_types = nt;
-        if (nt > 64)
+        if (nt > 64) {
             s.type_vec.resize(nt - 64, false);
+        }
 
         int ct = data.client(client).client_type;
-        if (ct >= 0 && ct < nt)
+        if (ct >= 0 && ct < nt) {
             s.add_type(ct);
+        }
         return s;
     }
 
     /// Initialize empty state at depot (no types present).
-    [[nodiscard]] static State init_depot(
-            TypeIncompatibilityMatrix const& matrix) {
+    [[nodiscard]] static State init_depot(TypeIncompatibilityMatrix const& matrix) {
         int nt = matrix.num_types();
         State s;
         s.num_types = nt;
-        if (nt > 64)
+        if (nt > 64) {
             s.type_vec.resize(nt - 64, false);
+        }
         return s;
     }
 
@@ -127,8 +131,9 @@ struct TypeIncompatibilityResource {
 
         if (!left.type_vec.empty()) {
             result.type_vec.resize(left.type_vec.size(), false);
-            for (size_t i = 0; i < left.type_vec.size(); ++i)
+            for (size_t i = 0; i < left.type_vec.size(); ++i) {
                 result.type_vec[i] = left.type_vec[i] || right.type_vec[i];
+            }
         }
         return result;
     }
@@ -136,8 +141,7 @@ struct TypeIncompatibilityResource {
     /// Merge when the right subsequence is reversed.
     ///
     /// Type sets are order-independent, so merge_reverse == merge.
-    [[nodiscard]] static State merge_reverse(State const& left,
-                                             State const& right) {
+    [[nodiscard]] static State merge_reverse(State const& left, State const& right) {
         return merge(left, right);
     }
 
@@ -145,8 +149,7 @@ struct TypeIncompatibilityResource {
     ///
     /// Returns the count of incompatible (type_a, type_b) pairs where both
     /// type_a and type_b are present in the state. Each pair is counted once.
-    [[nodiscard]] static int excess(State const& state,
-                                    TypeIncompatibilityMatrix const& matrix) {
+    [[nodiscard]] static int excess(State const& state, TypeIncompatibilityMatrix const& matrix) {
         int nt = matrix.num_types();
         int count = 0;
 
@@ -154,15 +157,17 @@ struct TypeIncompatibilityResource {
         // For small type counts this is fast; for large counts the bitmask
         // iteration is still efficient.
         for (int a = 0; a < nt; ++a) {
-            if (!state.has_type(a))
+            if (!state.has_type(a)) {
                 continue;
+            }
             for (int b = a + 1; b < nt; ++b) {
-                if (state.has_type(b) && matrix.incompatible(a, b))
+                if (state.has_type(b) && matrix.incompatible(a, b)) {
                     ++count;
+                }
             }
         }
         return count;
     }
 };
 
-} // namespace coso
+}  // namespace coso

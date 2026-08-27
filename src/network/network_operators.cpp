@@ -11,14 +11,16 @@ namespace coso {
 //  RerouteFlow
 // ---------------------------------------------------------------------------
 
-std::vector<RerouteFlowMove>
-RerouteFlow::enumerate(NetworkData const& data, NetworkSolution const& sol) {
+std::vector<RerouteFlowMove> RerouteFlow::enumerate(NetworkData const& data,
+                                                    NetworkSolution const& sol) {
     std::vector<RerouteFlowMove> moves;
     int const na = data.num_arcs();
     int const nn = data.num_nodes();
 
     for (int a = 0; a < na; ++a) {
-        if (sol.flow(a) <= 0) continue;
+        if (sol.flow(a) <= 0) {
+            continue;
+        }
 
         int tail = data.arc(a).tail;
         int head = data.arc(a).head;
@@ -37,13 +39,21 @@ RerouteFlow::enumerate(NetworkData const& data, NetworkSolution const& sol) {
         while (!pq.empty()) {
             auto [d, u] = pq.top();
             pq.pop();
-            if (d > dist[u]) continue;
-            if (u == head) break;
+            if (d > dist[u]) {
+                continue;
+            }
+            if (u == head) {
+                break;
+            }
 
             for (int a2 : data.outgoing(u)) {
-                if (a2 == a) continue;  // skip the arc being rerouted
+                if (a2 == a) {
+                    continue;  // skip the arc being rerouted
+                }
                 int res = data.arc(a2).upper_cap - sol.flow(a2);
-                if (res <= 0) continue;
+                if (res <= 0) {
+                    continue;
+                }
                 int v = data.arc(a2).head;
                 long long nd = dist[u] + data.arc(a2).cost;
                 if (nd < dist[v]) {
@@ -54,10 +64,14 @@ RerouteFlow::enumerate(NetworkData const& data, NetworkSolution const& sol) {
             }
         }
 
-        if (dist[head] == LLONG_MAX) continue;
+        if (dist[head] == LLONG_MAX) {
+            continue;
+        }
 
         // Check if alternative path is cheaper.
-        if (dist[head] >= arc_cost) continue;
+        if (dist[head] >= arc_cost) {
+            continue;
+        }
 
         // Build the move.
         RerouteFlowMove move;
@@ -100,12 +114,10 @@ void RerouteFlow::apply(NetworkSolution& sol, RerouteFlowMove const& move) {
     }
 }
 
-long long RerouteFlow::evaluate(
-    NetworkData const& data,
-    NetworkSolution const& sol,
-    int arc)
-{
-    if (sol.flow(arc) <= 0) return 0;
+long long RerouteFlow::evaluate(NetworkData const& data, NetworkSolution const& sol, int arc) {
+    if (sol.flow(arc) <= 0) {
+        return 0;
+    }
 
     int tail = data.arc(arc).tail;
     int head = data.arc(arc).head;
@@ -122,13 +134,21 @@ long long RerouteFlow::evaluate(
     while (!pq.empty()) {
         auto [d, u] = pq.top();
         pq.pop();
-        if (d > dist[u]) continue;
-        if (u == head) break;
+        if (d > dist[u]) {
+            continue;
+        }
+        if (u == head) {
+            break;
+        }
 
         for (int a : data.outgoing(u)) {
-            if (a == arc) continue;
+            if (a == arc) {
+                continue;
+            }
             int res = data.arc(a).upper_cap - sol.flow(a);
-            if (res <= 0) continue;
+            if (res <= 0) {
+                continue;
+            }
             int v = data.arc(a).head;
             long long nd = dist[u] + data.arc(a).cost;
             if (nd < dist[v]) {
@@ -138,7 +158,9 @@ long long RerouteFlow::evaluate(
         }
     }
 
-    if (dist[head] == LLONG_MAX) return 0;
+    if (dist[head] == LLONG_MAX) {
+        return 0;
+    }
     return dist[head] - data.arc(arc).cost;
 }
 
@@ -146,8 +168,8 @@ long long RerouteFlow::evaluate(
 //  AdjustCapacity
 // ---------------------------------------------------------------------------
 
-std::vector<AdjustCapacityMove>
-AdjustCapacity::enumerate(NetworkData const& data, NetworkSolution const& sol) {
+std::vector<AdjustCapacityMove> AdjustCapacity::enumerate(NetworkData const& data,
+                                                          NetworkSolution const& sol) {
     std::vector<AdjustCapacityMove> moves;
 
     for (int a = 0; a < data.num_arcs(); ++a) {
@@ -176,8 +198,7 @@ AdjustCapacity::enumerate(NetworkData const& data, NetworkSolution const& sol) {
     return moves;
 }
 
-void AdjustCapacity::apply(NetworkSolution& sol,
-                           AdjustCapacityMove const& move) {
+void AdjustCapacity::apply(NetworkSolution& sol, AdjustCapacityMove const& move) {
     sol.set_flow(move.arc, move.new_flow);
 }
 
@@ -185,9 +206,8 @@ void AdjustCapacity::apply(NetworkSolution& sol,
 //  CycleCancel
 // ---------------------------------------------------------------------------
 
-CycleCancelMove
-CycleCancel::find_negative_cycle(NetworkData const& data,
-                                 NetworkSolution const& sol) {
+CycleCancelMove CycleCancel::find_negative_cycle(NetworkData const& data,
+                                                 NetworkSolution const& sol) {
     int const nn = data.num_nodes();
     int const na = data.num_arcs();
 
@@ -208,7 +228,9 @@ CycleCancel::find_negative_cycle(NetworkData const& data,
         // Forward arcs.
         for (int a = 0; a < na; ++a) {
             int res = data.arc(a).upper_cap - sol.flow(a);
-            if (res <= 0) continue;
+            if (res <= 0) {
+                continue;
+            }
             int u = data.arc(a).tail;
             int v = data.arc(a).head;
             long long nd = dist[u] + data.arc(a).cost;
@@ -223,7 +245,9 @@ CycleCancel::find_negative_cycle(NetworkData const& data,
         // Backward arcs.
         for (int a = 0; a < na; ++a) {
             int res = sol.flow(a) - data.arc(a).lower_cap;
-            if (res <= 0) continue;
+            if (res <= 0) {
+                continue;
+            }
             int u = data.arc(a).head;  // backward: from head to tail
             int v = data.arc(a).tail;
             long long nd = dist[u] - data.arc(a).cost;
@@ -237,7 +261,9 @@ CycleCancel::find_negative_cycle(NetworkData const& data,
     }
 
     CycleCancelMove move;
-    if (last_relaxed < 0) return move;  // no negative cycle
+    if (last_relaxed < 0) {
+        return move;  // no negative cycle
+    }
 
     // Trace back the cycle.
     std::vector<bool> visited(nn, false);
@@ -301,7 +327,9 @@ int CycleCancel::cancel_all(NetworkData const& data, NetworkSolution& sol) {
 
     for (int iter = 0; iter < max_iter; ++iter) {
         auto move = find_negative_cycle(data, sol);
-        if (move.amount <= 0) break;
+        if (move.amount <= 0) {
+            break;
+        }
         apply(data, sol, move);
         ++count;
     }
@@ -309,4 +337,4 @@ int CycleCancel::cancel_all(NetworkData const& data, NetworkSolution& sol) {
     return count;
 }
 
-} // namespace coso
+}  // namespace coso

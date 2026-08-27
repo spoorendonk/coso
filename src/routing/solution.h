@@ -38,9 +38,7 @@ public:
     [[nodiscard]] ProblemData const& data() const noexcept { return *data_; }
 
     /// Number of routes (= total vehicles).
-    [[nodiscard]] int num_routes() const noexcept {
-        return static_cast<int>(routes_.size());
-    }
+    [[nodiscard]] int num_routes() const noexcept { return static_cast<int>(routes_.size()); }
 
     /// Access route by vehicle index.
     [[nodiscard]] Route const& route(int vehicle) const {
@@ -55,9 +53,7 @@ public:
     }
 
     /// Read-only access to all routes.
-    [[nodiscard]] std::span<Route const> routes() const noexcept {
-        return routes_;
-    }
+    [[nodiscard]] std::span<Route const> routes() const noexcept { return routes_; }
 
     /// Number of unassigned clients.
     [[nodiscard]] int num_unassigned() const noexcept {
@@ -65,9 +61,7 @@ public:
     }
 
     /// The set of unassigned client indices (unsorted).
-    [[nodiscard]] std::span<int const> unassigned() const noexcept {
-        return unassigned_;
-    }
+    [[nodiscard]] std::span<int const> unassigned() const noexcept { return unassigned_; }
 
     /// Whether a client is currently assigned to some route.
     [[nodiscard]] bool is_assigned(int client) const {
@@ -118,11 +112,11 @@ public:
 private:
     ProblemData const* data_;
     std::vector<Route> routes_;
-    std::vector<int> unassigned_;     ///< Unassigned client indices.
-    std::vector<bool> assigned_;      ///< assigned_[client] = true if in some route.
+    std::vector<int> unassigned_;  ///< Unassigned client indices.
+    std::vector<bool> assigned_;   ///< assigned_[client] = true if in some route.
 
     /// Rebuild the unassigned_ list from the assigned_ flags.
     void rebuild_unassigned_();
 };
 
-} // namespace coso
+}  // namespace coso

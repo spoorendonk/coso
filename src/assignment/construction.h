@@ -21,4 +21,4 @@ AssignmentSolution construct_ffd(AssignmentData const& data,
 AssignmentSolution construct_greedy(AssignmentData const& data,
                                     AssignmentCostEvaluator const& evaluator);
 
-} // namespace coso
+}  // namespace coso

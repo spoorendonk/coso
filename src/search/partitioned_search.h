@@ -13,11 +13,11 @@ namespace coso {
 
 /// Configuration for partitioned search.
 struct PartitionConfig {
-    int num_partitions  = 4;    ///< Number of partitions (clusters).
+    int num_partitions = 4;     ///< Number of partitions (clusters).
     double overlap_frac = 0.1;  ///< Fraction of boundary clients shared between
                                 ///< adjacent partitions (0.0 = no overlap).
-    int max_iterations  = 10;   ///< Maximum partitioned-search iterations.
-    int kmeans_iters    = 20;   ///< K-means iterations for clustering.
+    int max_iterations = 10;    ///< Maximum partitioned-search iterations.
+    int kmeans_iters = 20;      ///< K-means iterations for clustering.
 };
 
 /// Result of partitioning clients into clusters.
@@ -29,9 +29,7 @@ struct Partition {
     std::vector<std::vector<int>> clusters;
 
     /// Number of clusters.
-    [[nodiscard]] int num_clusters() const noexcept {
-        return static_cast<int>(clusters.size());
-    }
+    [[nodiscard]] int num_clusters() const noexcept { return static_cast<int>(clusters.size()); }
 };
 
 /// Partitioned (decomposition-based) search for large routing instances.
@@ -66,8 +64,7 @@ public:
     ///
     /// @param data   The compiled problem data.
     /// @param seed   Random seed for k-means initialization.
-    explicit PartitionedSearch(ProblemData const& data,
-                               unsigned int seed = 42);
+    explicit PartitionedSearch(ProblemData const& data, unsigned int seed = 42);
 
     /// Run the partitioned search.
     ///
@@ -76,8 +73,7 @@ public:
     /// @param local_search  Callable that improves a sub-solution in place.
     /// @param config    Partition configuration.
     /// @return The best solution found.
-    [[nodiscard]] Solution run(Solution const& initial,
-                               CostEvaluator const& eval,
+    [[nodiscard]] Solution run(Solution const& initial, CostEvaluator const& eval,
                                LocalSearchFn const& local_search,
                                PartitionConfig const& config = {});
 
@@ -96,8 +92,8 @@ public:
     /// @param part          The base partition.
     /// @param overlap_frac  Fraction of overlap (0.0 to 1.0).
     /// @return Expanded clusters (may have duplicates across clusters).
-    [[nodiscard]] std::vector<std::vector<int>> expand_with_overlap(
-        Partition const& part, double overlap_frac) const;
+    [[nodiscard]] std::vector<std::vector<int>> expand_with_overlap(Partition const& part,
+                                                                    double overlap_frac) const;
 
 private:
     ProblemData const* data_;
@@ -105,17 +101,15 @@ private:
 
     /// Extract a sub-solution: only clients in the given set are assigned;
     /// all others are removed from routes.
-    [[nodiscard]] Solution extract_sub_solution_(
-        Solution const& global,
-        std::vector<int> const& clients) const;
+    [[nodiscard]] Solution extract_sub_solution_(Solution const& global,
+                                                 std::vector<int> const& clients) const;
 
     /// Merge sub-solutions back into a single global solution.
     /// Each client is placed in the route (from any sub-solution) where
     /// it appeared; conflicts (overlap clients) resolved by lowest cost.
     [[nodiscard]] Solution merge_sub_solutions_(
-        std::vector<Solution> const& subs,
-        std::vector<std::vector<int>> const& expanded_clusters,
+        std::vector<Solution> const& subs, std::vector<std::vector<int>> const& expanded_clusters,
         CostEvaluator const& eval) const;
 };
 
-} // namespace coso
+}  // namespace coso

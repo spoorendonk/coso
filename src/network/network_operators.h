@@ -13,17 +13,17 @@ namespace coso {
 /// Reroute flow along an alternative path between two nodes.
 struct RerouteFlowMove {
     int source_node = -1;       ///< start of the reroute segment
-    int sink_node   = -1;       ///< end of the reroute segment
-    int amount      = 0;        ///< flow to reroute
+    int sink_node = -1;         ///< end of the reroute segment
+    int amount = 0;             ///< flow to reroute
     std::vector<int> old_arcs;  ///< arcs losing flow
     std::vector<int> new_arcs;  ///< arcs gaining flow
-    long long delta  = 0;       ///< cost change (negative = improvement)
+    long long delta = 0;        ///< cost change (negative = improvement)
 };
 
 /// Adjust flow on a single arc within its capacity bounds.
 struct AdjustCapacityMove {
-    int arc       = -1;
-    int new_flow  = 0;
+    int arc = -1;
+    int new_flow = 0;
     long long delta = 0;
 };
 
@@ -45,17 +45,15 @@ struct CycleCancelMove {
 class RerouteFlow {
 public:
     /// Find all improving reroute moves.
-    [[nodiscard]] static std::vector<RerouteFlowMove>
-    enumerate(NetworkData const& data, NetworkSolution const& sol);
+    [[nodiscard]] static std::vector<RerouteFlowMove> enumerate(NetworkData const& data,
+                                                                NetworkSolution const& sol);
 
     /// Apply a reroute move.
     static void apply(NetworkSolution& sol, RerouteFlowMove const& move);
 
     /// Evaluate the cost delta of rerouting without applying.
-    [[nodiscard]] static long long evaluate(
-        NetworkData const& data,
-        NetworkSolution const& sol,
-        int arc);
+    [[nodiscard]] static long long evaluate(NetworkData const& data, NetworkSolution const& sol,
+                                            int arc);
 };
 
 // ---------------------------------------------------------------------------
@@ -67,8 +65,8 @@ public:
 class AdjustCapacity {
 public:
     /// Find all improving single-arc adjustment moves.
-    [[nodiscard]] static std::vector<AdjustCapacityMove>
-    enumerate(NetworkData const& data, NetworkSolution const& sol);
+    [[nodiscard]] static std::vector<AdjustCapacityMove> enumerate(NetworkData const& data,
+                                                                   NetworkSolution const& sol);
 
     /// Apply an adjustment move. Note: this may violate flow conservation;
     /// caller is responsible for rebalancing.
@@ -88,16 +86,15 @@ class CycleCancel {
 public:
     /// Find a negative-cost cycle in the residual graph, if one exists.
     /// Returns an empty move (amount == 0) if no negative cycle exists.
-    [[nodiscard]] static CycleCancelMove
-    find_negative_cycle(NetworkData const& data, NetworkSolution const& sol);
+    [[nodiscard]] static CycleCancelMove find_negative_cycle(NetworkData const& data,
+                                                             NetworkSolution const& sol);
 
     /// Apply a cycle-cancel move.
-    static void apply(NetworkData const& data, NetworkSolution& sol,
-                      CycleCancelMove const& move);
+    static void apply(NetworkData const& data, NetworkSolution& sol, CycleCancelMove const& move);
 
     /// Repeatedly cancel negative cycles until none remain.
     /// Returns the number of cycles cancelled.
     static int cancel_all(NetworkData const& data, NetworkSolution& sol);
 };
 
-} // namespace coso
+}  // namespace coso

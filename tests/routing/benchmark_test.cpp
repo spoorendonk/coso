@@ -1,9 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "model/instance_reader.h"
 #include "model/routing_model.h"
 #include "model/types.h"
 
+#include <catch2/catch_test_macros.hpp>
 #include <cstdlib>
 #include <filesystem>
 #include <iostream>
@@ -16,8 +15,7 @@ namespace fs = std::filesystem;
 //  via the COSO_DATA_DIR environment variable.
 // ---------------------------------------------------------------------------
 
-static std::string data_dir()
-{
+static std::string data_dir() {
     if (auto const* env = std::getenv("COSO_DATA_DIR"); env && *env) {
         return env;
     }
@@ -26,21 +24,20 @@ static std::string data_dir()
     // CMake typically puts test executables in build/ or build/tests/.
     for (auto p = fs::current_path(); p != p.root_path(); p = p.parent_path()) {
         auto candidate = p / "tests" / "data";
-        if (fs::is_directory(candidate))
+        if (fs::is_directory(candidate)) {
             return candidate.string();
+        }
     }
 
     // Fallback: relative path (works when run from repo root).
     return "tests/data";
 }
 
-static std::string instance_path(const std::string& filename)
-{
+static std::string instance_path(const std::string& filename) {
     return data_dir() + "/" + filename;
 }
 
-static bool instance_exists(const std::string& filename)
-{
+static bool instance_exists(const std::string& filename) {
     return fs::is_regular_file(instance_path(filename));
 }
 
@@ -49,12 +46,12 @@ static bool instance_exists(const std::string& filename)
 //  Each test SKIPs when the benchmark instance file is not present.
 // ---------------------------------------------------------------------------
 
-TEST_CASE("X-n101-k25 end-to-end benchmark", "[benchmark][routing]")
-{
+TEST_CASE("X-n101-k25 end-to-end benchmark", "[benchmark][routing]") {
     const std::string file = "X-n101-k25.vrp";
 
     if (!instance_exists(file)) {
-        SKIP("Benchmark instance " + file + " not found. "
+        SKIP("Benchmark instance " + file +
+             " not found. "
              "Run tests/data/download_benchmarks.sh first.");
     }
 
@@ -98,12 +95,12 @@ TEST_CASE("X-n101-k25 end-to-end benchmark", "[benchmark][routing]")
     }
 }
 
-TEST_CASE("X-n106-k14 end-to-end benchmark", "[benchmark][routing]")
-{
+TEST_CASE("X-n106-k14 end-to-end benchmark", "[benchmark][routing]") {
     const std::string file = "X-n106-k14.vrp";
 
     if (!instance_exists(file)) {
-        SKIP("Benchmark instance " + file + " not found. "
+        SKIP("Benchmark instance " + file +
+             " not found. "
              "Run tests/data/download_benchmarks.sh first.");
     }
 
@@ -136,12 +133,12 @@ TEST_CASE("X-n106-k14 end-to-end benchmark", "[benchmark][routing]")
     }
 }
 
-TEST_CASE("X-n110-k13 end-to-end benchmark", "[benchmark][routing]")
-{
+TEST_CASE("X-n110-k13 end-to-end benchmark", "[benchmark][routing]") {
     const std::string file = "X-n110-k13.vrp";
 
     if (!instance_exists(file)) {
-        SKIP("Benchmark instance " + file + " not found. "
+        SKIP("Benchmark instance " + file +
+             " not found. "
              "Run tests/data/download_benchmarks.sh first.");
     }
 

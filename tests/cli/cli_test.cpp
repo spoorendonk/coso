@@ -1,6 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include <array>
+#include <catch2/catch_test_macros.hpp>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -13,8 +12,7 @@ struct CmdResult {
     std::string output;
 };
 
-CmdResult run_cmd(const std::string& cmd)
-{
+CmdResult run_cmd(const std::string& cmd) {
     std::string full_cmd = cmd + " 2>&1";
     FILE* raw = popen(full_cmd.c_str(), "r");
     REQUIRE(raw);
@@ -32,8 +30,7 @@ CmdResult run_cmd(const std::string& cmd)
 }
 
 // Path to the coso-solve binary (set by CMake or found relative to test binary).
-std::string coso_solve_path()
-{
+std::string coso_solve_path() {
     // The binary is built alongside the test in the build directory.
     // CMake sets COSO_SOLVE_PATH environment variable for convenience.
     if (const char* p = std::getenv("COSO_SOLVE_PATH")) {
@@ -43,10 +40,9 @@ std::string coso_solve_path()
     return "./coso-solve";
 }
 
-} // namespace
+}  // namespace
 
-TEST_CASE("CLI: --help prints usage", "[cli]")
-{
+TEST_CASE("CLI: --help prints usage", "[cli]") {
     auto r = run_cmd(coso_solve_path() + " --help");
     CHECK(r.exit_code == 0);
     CHECK(r.output.find("Usage:") != std::string::npos);
@@ -55,44 +51,38 @@ TEST_CASE("CLI: --help prints usage", "[cli]")
     CHECK(r.output.find("--verbose") != std::string::npos);
 }
 
-TEST_CASE("CLI: no arguments prints error", "[cli]")
-{
+TEST_CASE("CLI: no arguments prints error", "[cli]") {
     auto r = run_cmd(coso_solve_path());
     CHECK(r.exit_code == 1);
     CHECK(r.output.find("Error:") != std::string::npos);
 }
 
-TEST_CASE("CLI: unknown option prints error", "[cli]")
-{
+TEST_CASE("CLI: unknown option prints error", "[cli]") {
     auto r = run_cmd(coso_solve_path() + " --bogus");
     CHECK(r.exit_code == 1);
     CHECK(r.output.find("Error:") != std::string::npos);
 }
 
-TEST_CASE("CLI: missing file produces error output", "[cli]")
-{
+TEST_CASE("CLI: missing file produces error output", "[cli]") {
     auto r = run_cmd(coso_solve_path() + " nonexistent_file.vrp --time-limit 1");
     // The solve function returns an empty (infeasible) result for missing files,
     // so the CLI should still run but report infeasible.
     CHECK(r.output.find("Feasible: no") != std::string::npos);
 }
 
-TEST_CASE("CLI: invalid time limit", "[cli]")
-{
+TEST_CASE("CLI: invalid time limit", "[cli]") {
     auto r = run_cmd(coso_solve_path() + " foo.vrp --time-limit abc");
     CHECK(r.exit_code == 1);
     CHECK(r.output.find("Error:") != std::string::npos);
 }
 
-TEST_CASE("CLI: negative time limit", "[cli]")
-{
+TEST_CASE("CLI: negative time limit", "[cli]") {
     auto r = run_cmd(coso_solve_path() + " foo.vrp --time-limit -5");
     CHECK(r.exit_code == 1);
     CHECK(r.output.find("Error:") != std::string::npos);
 }
 
-TEST_CASE("CLI: negative work limit", "[cli]")
-{
+TEST_CASE("CLI: negative work limit", "[cli]") {
     auto r = run_cmd(coso_solve_path() + " foo.vrp --work-limit -1");
     CHECK(r.exit_code == 1);
     CHECK(r.output.find("Error:") != std::string::npos);

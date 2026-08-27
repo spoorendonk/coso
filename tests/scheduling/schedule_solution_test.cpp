@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
+#include "scheduling/schedule_solution.h"
 
 #include "scheduling/schedule_data.h"
-#include "scheduling/schedule_solution.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -13,8 +14,7 @@ using namespace coso;
 //  Job 2: (M1, 4) -> (M2, 3) -> (M0, 1)                                     //
 // ========================================================================== //
 
-static ScheduleData make_3x3_jsp()
-{
+static ScheduleData make_3x3_jsp() {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_machine({.name = "M1"});
@@ -42,8 +42,7 @@ static ScheduleData make_3x3_jsp()
     return b.build();
 }
 
-TEST_CASE("ScheduleSolution: empty solution is infeasible", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: empty solution is infeasible", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
 
@@ -53,8 +52,7 @@ TEST_CASE("ScheduleSolution: empty solution is infeasible", "[scheduling]")
     CHECK(sol.makespan() == 0);
 }
 
-TEST_CASE("ScheduleSolution: assign and unassign", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: assign and unassign", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
 
@@ -70,8 +68,7 @@ TEST_CASE("ScheduleSolution: assign and unassign", "[scheduling]")
     CHECK(sol.completion_time(0) == -1);
 }
 
-TEST_CASE("ScheduleSolution: reassign updates correctly", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: reassign updates correctly", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
 
@@ -109,26 +106,24 @@ TEST_CASE("ScheduleSolution: reassign updates correctly", "[scheduling]")
 //  Makespan = 12                                                              //
 // ========================================================================== //
 
-static void build_feasible_schedule(ScheduleSolution& sol)
-{
+static void build_feasible_schedule(ScheduleSolution& sol) {
     // Job 0: op0(M0,3), op1(M1,2), op2(M2,2)
-    sol.assign(0, 0, 0);    // [0, 3)
-    sol.assign(1, 1, 4);    // [4, 6)
-    sol.assign(2, 2, 6);    // [6, 8)
+    sol.assign(0, 0, 0);  // [0, 3)
+    sol.assign(1, 1, 4);  // [4, 6)
+    sol.assign(2, 2, 6);  // [6, 8)
 
     // Job 1: op3(M0,2), op4(M2,1), op5(M1,4)
-    sol.assign(3, 0, 3);    // [3, 5)
-    sol.assign(4, 2, 5);    // [5, 6)
-    sol.assign(5, 1, 6);    // [6, 10)
+    sol.assign(3, 0, 3);  // [3, 5)
+    sol.assign(4, 2, 5);  // [5, 6)
+    sol.assign(5, 1, 6);  // [6, 10)
 
     // Job 2: op6(M1,4), op7(M2,3), op8(M0,1)
-    sol.assign(6, 1, 0);    // [0, 4)
-    sol.assign(7, 2, 8);    // [8, 11)
-    sol.assign(8, 0, 11);   // [11, 12)
+    sol.assign(6, 1, 0);   // [0, 4)
+    sol.assign(7, 2, 8);   // [8, 11)
+    sol.assign(8, 0, 11);  // [11, 12)
 }
 
-TEST_CASE("ScheduleSolution: feasible schedule", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: feasible schedule", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
     build_feasible_schedule(sol);
@@ -140,8 +135,7 @@ TEST_CASE("ScheduleSolution: feasible schedule", "[scheduling]")
     CHECK(sol.num_assigned() == 9);
 }
 
-TEST_CASE("ScheduleSolution: makespan computation", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: makespan computation", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
     build_feasible_schedule(sol);
@@ -150,8 +144,7 @@ TEST_CASE("ScheduleSolution: makespan computation", "[scheduling]")
     CHECK(sol.makespan() == 12);
 }
 
-TEST_CASE("ScheduleSolution: job completion times", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: job completion times", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
     build_feasible_schedule(sol);
@@ -161,8 +154,7 @@ TEST_CASE("ScheduleSolution: job completion times", "[scheduling]")
     CHECK(sol.job_completion_time(2) == 12);  // op8 ends at 12
 }
 
-TEST_CASE("ScheduleSolution: total flow time", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: total flow time", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
     build_feasible_schedule(sol);
@@ -171,8 +163,7 @@ TEST_CASE("ScheduleSolution: total flow time", "[scheduling]")
     CHECK(sol.total_flow_time() == 30);
 }
 
-TEST_CASE("ScheduleSolution: weighted tardiness", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: weighted tardiness", "[scheduling]") {
     // Build a problem with due dates and weights.
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
@@ -211,8 +202,7 @@ TEST_CASE("ScheduleSolution: weighted tardiness", "[scheduling]")
     CHECK(sol.objective() == 2);
 }
 
-TEST_CASE("ScheduleSolution: machine overlap detection", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: machine overlap detection", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
 
@@ -233,15 +223,14 @@ TEST_CASE("ScheduleSolution: machine overlap detection", "[scheduling]")
     CHECK_FALSE(sol.feasible());
 }
 
-TEST_CASE("ScheduleSolution: precedence violation detection", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: precedence violation detection", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
 
     // Job 0: op0 -> op1 -> op2.
     // Violate: op1 starts before op0 finishes.
-    sol.assign(0, 0, 5);   // [5, 8)
-    sol.assign(1, 1, 3);   // [3, 5) — starts before op0 finishes at 8!
+    sol.assign(0, 0, 5);  // [5, 8)
+    sol.assign(1, 1, 3);  // [3, 5) — starts before op0 finishes at 8!
     sol.assign(2, 2, 10);
 
     sol.assign(3, 0, 0);
@@ -255,8 +244,7 @@ TEST_CASE("ScheduleSolution: precedence violation detection", "[scheduling]")
     CHECK_FALSE(sol.feasible());
 }
 
-TEST_CASE("ScheduleSolution: machine_operations returns sorted", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: machine_operations returns sorted", "[scheduling]") {
     auto data = make_3x3_jsp();
     ScheduleSolution sol(data);
     build_feasible_schedule(sol);
@@ -276,8 +264,7 @@ TEST_CASE("ScheduleSolution: machine_operations returns sorted", "[scheduling]")
     CHECK(m1_ops[2] == 5);
 }
 
-TEST_CASE("ScheduleSolution: FJSP with flexible machine assignment", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: FJSP with flexible machine assignment", "[scheduling]") {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_machine({.name = "M1"});
@@ -286,9 +273,9 @@ TEST_CASE("ScheduleSolution: FJSP with flexible machine assignment", "[schedulin
 
     // Single flexible operation: can run on M0 (dur 5) or M1 (dur 3).
     b.add_operation(0, {
-        .eligible_machines = {0, 1},
-        .durations_per_machine = {5, 3},
-    });
+                           .eligible_machines = {0, 1},
+                           .durations_per_machine = {5, 3},
+                       });
 
     auto data = b.build();
     ScheduleSolution sol(data);
@@ -306,8 +293,7 @@ TEST_CASE("ScheduleSolution: FJSP with flexible machine assignment", "[schedulin
     CHECK(sol.makespan() == 5);
 }
 
-TEST_CASE("ScheduleSolution: objective dispatch", "[scheduling]")
-{
+TEST_CASE("ScheduleSolution: objective dispatch", "[scheduling]") {
     auto data = make_3x3_jsp();
     // Default objective is Makespan.
     ScheduleSolution sol(data);

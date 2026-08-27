@@ -9,10 +9,8 @@ namespace coso {
 //  RouteSplit — split a route into two at the optimal point
 // ===========================================================================
 
-bool RouteSplit::find_best_move(Solution const& sol,
-                                CostEvaluator const& eval,
-                                ProblemData const& data)
-{
+bool RouteSplit::find_best_move(Solution const& sol, CostEvaluator const& eval,
+                                ProblemData const& data) {
     best_delta_ = 0;
     source_route_ = -1;
 
@@ -20,26 +18,27 @@ bool RouteSplit::find_best_move(Solution const& sol,
         auto const& route = sol.route(r);
 
         // Need at least 2 clients to split.
-        if (route.size() < 2)
+        if (route.size() < 2) {
             continue;
+        }
 
         int vtype = route.vehicle_type();
 
         // Find an empty vehicle of the same type to receive the second half.
         int empty_vehicle = -1;
         for (int v = 0; v < sol.num_routes(); ++v) {
-            if (v == r)
+            if (v == r) {
                 continue;
-            if (sol.route(v).empty()
-                && sol.route(v).vehicle_type() == vtype)
-            {
+            }
+            if (sol.route(v).empty() && sol.route(v).vehicle_type() == vtype) {
                 empty_vehicle = v;
                 break;
             }
         }
 
-        if (empty_vehicle < 0)
+        if (empty_vehicle < 0) {
             continue;  // no available vehicle slot
+        }
 
         int64_t old_cost = eval.route_cost(route);
         // The empty route has zero cost, so old total is just old_cost.
@@ -50,14 +49,16 @@ bool RouteSplit::find_best_move(Solution const& sol,
             // Build first half.
             std::vector<int> first_half;
             first_half.reserve(p + 1);
-            for (int i = 0; i <= p; ++i)
+            for (int i = 0; i <= p; ++i) {
                 first_half.push_back(route.client(i));
+            }
 
             // Build second half.
             std::vector<int> second_half;
             second_half.reserve(route.size() - p - 1);
-            for (int i = p + 1; i < route.size(); ++i)
+            for (int i = p + 1; i < route.size(); ++i) {
                 second_half.push_back(route.client(i));
+            }
 
             // Evaluate the two new routes.
             Route temp_a(data, vtype);
@@ -80,8 +81,7 @@ bool RouteSplit::find_best_move(Solution const& sol,
     return best_delta_ < 0;
 }
 
-void RouteSplit::apply(Solution& sol) const
-{
+void RouteSplit::apply(Solution& sol) const {
     assert(source_route_ >= 0);
     assert(target_route_ >= 0);
     assert(sol.route(target_route_).empty());
@@ -91,13 +91,15 @@ void RouteSplit::apply(Solution& sol) const
     // Build the two halves.
     std::vector<int> first_half;
     first_half.reserve(split_pos_ + 1);
-    for (int i = 0; i <= split_pos_; ++i)
+    for (int i = 0; i <= split_pos_; ++i) {
         first_half.push_back(route.client(i));
+    }
 
     std::vector<int> second_half;
     second_half.reserve(route.size() - split_pos_ - 1);
-    for (int i = split_pos_ + 1; i < route.size(); ++i)
+    for (int i = split_pos_ + 1; i < route.size(); ++i) {
         second_half.push_back(route.client(i));
+    }
 
     // Clear the source route, then assign both halves.
     sol.set_route_clients(source_route_, {});
@@ -105,4 +107,4 @@ void RouteSplit::apply(Solution& sol) const
     sol.set_route_clients(target_route_, std::move(second_half));
 }
 
-} // namespace coso
+}  // namespace coso

@@ -1,5 +1,6 @@
-#include "assignment/assignment_data.h"
 #include "assignment/constraints/automaton.h"
+
+#include "assignment/assignment_data.h"
 #include "assignment/constraints/constraint.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -14,23 +15,31 @@ using namespace coso;
 
 namespace {
 
-AssignmentData make_instance()
-{
+AssignmentData make_instance() {
     AssignmentData data;
 
     data.shift_types = {
-        {.name = "Day",     .start_hour = 8,  .end_hour = 16, .duration_hours = 0},
-        {.name = "Night",   .start_hour = 22, .end_hour = 6,  .duration_hours = 0},
+        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
+        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
         {.name = "Evening", .start_hour = 16, .end_hour = 22, .duration_hours = 0},
     };
 
     data.employees = {
-        {.name = "Alice", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 7, .min_rest_hours = 11},
-        {.name = "Bob",   .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 7, .min_rest_hours = 11},
-        {.name = "Carol", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 7, .min_rest_hours = 11},
+        {.name = "Alice",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 7,
+         .min_rest_hours = 11},
+        {.name = "Bob",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 7,
+         .min_rest_hours = 11},
+        {.name = "Carol",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 7,
+         .min_rest_hours = 11},
     };
 
     data.horizon = 7;
@@ -38,21 +47,18 @@ AssignmentData make_instance()
 }
 
 /// Apply a move to a schedule in-place.
-void apply_move(std::vector<std::vector<int>>& schedule,
-                AssignmentMove const& move)
-{
+void apply_move(std::vector<std::vector<int>>& schedule, AssignmentMove const& move) {
     schedule[move.employee][move.day] = move.new_shift;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ===========================================================================
 //  build_max_consecutive_dfa
 // ===========================================================================
 
 TEST_CASE("AutomatonConstraint: max 2 consecutive night shifts — no violation",
-          "[assignment][automaton]")
-{
+          "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     auto dfa = build_max_consecutive_dfa(NIGHT, 2, data.num_shift_types());
@@ -67,8 +73,7 @@ TEST_CASE("AutomatonConstraint: max 2 consecutive night shifts — no violation"
 }
 
 TEST_CASE("AutomatonConstraint: max 2 consecutive night shifts — violation on 3rd",
-          "[assignment][automaton]")
-{
+          "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     auto dfa = build_max_consecutive_dfa(NIGHT, 2, data.num_shift_types());
@@ -84,8 +89,7 @@ TEST_CASE("AutomatonConstraint: max 2 consecutive night shifts — violation on 
 }
 
 TEST_CASE("AutomatonConstraint: max 2 consecutive — 4 in a row counts 2 violations",
-          "[assignment][automaton]")
-{
+          "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     auto dfa = build_max_consecutive_dfa(NIGHT, 2, data.num_shift_types());
@@ -101,9 +105,7 @@ TEST_CASE("AutomatonConstraint: max 2 consecutive — 4 in a row counts 2 violat
     REQUIRE(c.evaluate(data, sched) == 2 * 10000);
 }
 
-TEST_CASE("AutomatonConstraint: max consecutive resets after break",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: max consecutive resets after break", "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     auto dfa = build_max_consecutive_dfa(NIGHT, 2, data.num_shift_types());
@@ -121,8 +123,7 @@ TEST_CASE("AutomatonConstraint: max consecutive resets after break",
 }
 
 TEST_CASE("AutomatonConstraint: max consecutive — other shifts don't count",
-          "[assignment][automaton]")
-{
+          "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     int const DAY = 0;
@@ -143,9 +144,7 @@ TEST_CASE("AutomatonConstraint: max consecutive — other shifts don't count",
 //  build_forbidden_pattern_dfa
 // ===========================================================================
 
-TEST_CASE("AutomatonConstraint: forbidden Night->Day pattern",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: forbidden Night->Day pattern", "[assignment][automaton]") {
     auto data = make_instance();
     int const DAY = 0;
     int const NIGHT = 1;
@@ -160,9 +159,7 @@ TEST_CASE("AutomatonConstraint: forbidden Night->Day pattern",
     REQUIRE(c.evaluate(data, sched) == 10000);
 }
 
-TEST_CASE("AutomatonConstraint: forbidden pattern — Day->Night is OK",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: forbidden pattern — Day->Night is OK", "[assignment][automaton]") {
     auto data = make_instance();
     int const DAY = 0;
     int const NIGHT = 1;
@@ -177,9 +174,7 @@ TEST_CASE("AutomatonConstraint: forbidden pattern — Day->Night is OK",
     REQUIRE(c.evaluate(data, sched) == 0);
 }
 
-TEST_CASE("AutomatonConstraint: forbidden 3-symbol pattern",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: forbidden 3-symbol pattern", "[assignment][automaton]") {
     auto data = make_instance();
     int const DAY = 0;
     int const NIGHT = 1;
@@ -202,8 +197,7 @@ TEST_CASE("AutomatonConstraint: forbidden 3-symbol pattern",
 }
 
 TEST_CASE("AutomatonConstraint: forbidden pattern — multiple occurrences",
-          "[assignment][automaton]")
-{
+          "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     int const DAY = 0;
@@ -213,9 +207,9 @@ TEST_CASE("AutomatonConstraint: forbidden pattern — multiple occurrences",
     // Two occurrences of Night->Day.
     std::vector<std::vector<int>> sched(3, std::vector<int>(7, -1));
     sched[0][0] = NIGHT;
-    sched[0][1] = DAY;    // First violation.
+    sched[0][1] = DAY;  // First violation.
     sched[0][2] = NIGHT;
-    sched[0][3] = DAY;    // Second violation.
+    sched[0][3] = DAY;  // Second violation.
 
     REQUIRE(c.evaluate(data, sched) == 2 * 10000);
 }
@@ -224,9 +218,7 @@ TEST_CASE("AutomatonConstraint: forbidden pattern — multiple occurrences",
 //  Delta evaluation
 // ===========================================================================
 
-TEST_CASE("AutomatonConstraint: delta matches full — max consecutive",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: delta matches full — max consecutive", "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     auto dfa = build_max_consecutive_dfa(NIGHT, 2, data.num_shift_types());
@@ -249,8 +241,7 @@ TEST_CASE("AutomatonConstraint: delta matches full — max consecutive",
 }
 
 TEST_CASE("AutomatonConstraint: delta matches full — forbidden pattern",
-          "[assignment][automaton]")
-{
+          "[assignment][automaton]") {
     auto data = make_instance();
     int const DAY = 0;
     int const NIGHT = 1;
@@ -272,9 +263,7 @@ TEST_CASE("AutomatonConstraint: delta matches full — forbidden pattern",
     REQUIRE(delta == 10000);
 }
 
-TEST_CASE("AutomatonConstraint: delta — removing violation",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: delta — removing violation", "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     auto dfa = build_max_consecutive_dfa(NIGHT, 2, data.num_shift_types());
@@ -301,8 +290,7 @@ TEST_CASE("AutomatonConstraint: delta — removing violation",
 }
 
 TEST_CASE("AutomatonConstraint: delta — sequential moves stay accurate",
-          "[assignment][automaton]")
-{
+          "[assignment][automaton]") {
     auto data = make_instance();
     int const DAY = 0;
     int const NIGHT = 1;
@@ -316,14 +304,14 @@ TEST_CASE("AutomatonConstraint: delta — sequential moves stay accurate",
         {.employee = 0, .day = 1, .old_shift = -1, .new_shift = NIGHT},
         {.employee = 0, .day = 2, .old_shift = -1, .new_shift = NIGHT},  // violation
         {.employee = 1, .day = 0, .old_shift = -1, .new_shift = NIGHT},
-        {.employee = 0, .day = 2, .old_shift = NIGHT, .new_shift = DAY}, // undo violation
+        {.employee = 0, .day = 2, .old_shift = NIGHT, .new_shift = DAY},  // undo violation
         {.employee = 0, .day = 3, .old_shift = -1, .new_shift = NIGHT},
         {.employee = 0, .day = 4, .old_shift = -1, .new_shift = NIGHT},
     };
 
     for (auto const& m : moves) {
         int before = c.evaluate(data, sched);
-        int delta  = c.evaluate_delta(data, sched, m);
+        int delta = c.evaluate_delta(data, sched, m);
         apply_move(sched, m);
         int after_cost = c.evaluate(data, sched);
 
@@ -335,9 +323,7 @@ TEST_CASE("AutomatonConstraint: delta — sequential moves stay accurate",
 //  Multiple employees
 // ===========================================================================
 
-TEST_CASE("AutomatonConstraint: violations across multiple employees",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: violations across multiple employees", "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
     auto dfa = build_max_consecutive_dfa(NIGHT, 2, data.num_shift_types());
@@ -367,9 +353,7 @@ TEST_CASE("AutomatonConstraint: violations across multiple employees",
 //  Integration with ConstraintEvaluator
 // ===========================================================================
 
-TEST_CASE("AutomatonConstraint: works in ConstraintEvaluator",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: works in ConstraintEvaluator", "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
 
@@ -398,9 +382,7 @@ TEST_CASE("AutomatonConstraint: works in ConstraintEvaluator",
 //  DFA with "off" in forbidden pattern
 // ===========================================================================
 
-TEST_CASE("AutomatonConstraint: forbidden pattern including off day",
-          "[assignment][automaton]")
-{
+TEST_CASE("AutomatonConstraint: forbidden pattern including off day", "[assignment][automaton]") {
     auto data = make_instance();
     int const NIGHT = 1;
 

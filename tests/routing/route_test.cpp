@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/route.h"
+
 #include "routing/resources/load_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -11,44 +12,41 @@ using namespace coso;
 
 /// 1 depot at (0,0), clients at (10,0), (20,0), (30,0), (0,10).
 /// Single vehicle type with capacity 10, 1 load dimension.
-static ProblemData make_small_instance()
-{
+static ProblemData make_small_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});   // client 2
-    b.add_client({0.0, 10.0}, {.demand = {2}});   // client 3
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});  // client 2
+    b.add_client({0.0, 10.0}, {.demand = {2}});  // client 3
 
     return b.build(0);  // no granular neighbours
 }
 
 /// Multi-dimensional load: 1 depot, 3 clients, capacity {10, 8}.
-static ProblemData make_multidim_instance()
-{
+static ProblemData make_multidim_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {10, 8}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3, 2}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4, 5}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {5, 3}});   // client 2
+    b.add_client({10.0, 0.0}, {.demand = {3, 2}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {4, 5}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {5, 3}});  // client 2
 
     return b.build(0);
 }
 
 /// Instance with pickup quantities.
-static ProblemData make_pickup_instance()
-{
+static ProblemData make_pickup_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}, .pickup = {1}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4}, .pickup = {2}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {2}, .pickup = {3}});   // client 2
+    b.add_client({10.0, 0.0}, {.demand = {3}, .pickup = {1}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {4}, .pickup = {2}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {2}, .pickup = {3}});  // client 2
 
     return b.build(0);
 }
@@ -57,9 +55,7 @@ static ProblemData make_pickup_instance()
 //  LoadResource tests
 // ===========================================================================
 
-TEST_CASE("LoadResource::init creates correct single-client state",
-          "[load_resource]")
-{
+TEST_CASE("LoadResource::init creates correct single-client state", "[load_resource]") {
     auto data = make_small_instance();
 
     auto s0 = LoadResource::init(data, 0);
@@ -73,8 +69,7 @@ TEST_CASE("LoadResource::init creates correct single-client state",
     CHECK(s2.dims[0].load == 5);
 }
 
-TEST_CASE("LoadResource::init_depot creates empty state", "[load_resource]")
-{
+TEST_CASE("LoadResource::init_depot creates empty state", "[load_resource]") {
     auto data = make_small_instance();
     auto s = LoadResource::init_depot(data);
     REQUIRE(s.num_dims() == 1);
@@ -83,9 +78,7 @@ TEST_CASE("LoadResource::init_depot creates empty state", "[load_resource]")
     CHECK(s.dims[0].load == 0);
 }
 
-TEST_CASE("LoadResource::merge combines two delivery-only subsequences",
-          "[load_resource]")
-{
+TEST_CASE("LoadResource::merge combines two delivery-only subsequences", "[load_resource]") {
     auto data = make_small_instance();
 
     // Clients 0 (demand=3) and 1 (demand=4), total demand = 7.
@@ -101,8 +94,7 @@ TEST_CASE("LoadResource::merge combines two delivery-only subsequences",
     CHECK(merged.dims[0].load == 7);
 }
 
-TEST_CASE("LoadResource::merge three clients", "[load_resource]")
-{
+TEST_CASE("LoadResource::merge three clients", "[load_resource]") {
     auto data = make_small_instance();
 
     // Clients 0 (3), 1 (4), 2 (5) -> total = 12.
@@ -117,8 +109,7 @@ TEST_CASE("LoadResource::merge three clients", "[load_resource]")
     CHECK(m012.dims[0].load == 12);
 }
 
-TEST_CASE("LoadResource::merge with pickups", "[load_resource]")
-{
+TEST_CASE("LoadResource::merge with pickups", "[load_resource]") {
     auto data = make_pickup_instance();
 
     // Client 0: demand=3, pickup=1 -> load=4 (delivery + pickup at that node)
@@ -140,8 +131,7 @@ TEST_CASE("LoadResource::merge with pickups", "[load_resource]")
     CHECK(merged.dims[0].load == 8);
 }
 
-TEST_CASE("LoadResource::excess with single dimension", "[load_resource]")
-{
+TEST_CASE("LoadResource::excess with single dimension", "[load_resource]") {
     auto data = make_small_instance();
 
     // Route with clients 0 (3), 1 (4) -> total load = 7.
@@ -160,9 +150,7 @@ TEST_CASE("LoadResource::excess with single dimension", "[load_resource]")
     CHECK(LoadResource::excess(m012, data.vehicle_type(0)) == 2);
 }
 
-TEST_CASE("LoadResource::excess with multi-dimensional loads",
-          "[load_resource]")
-{
+TEST_CASE("LoadResource::excess with multi-dimensional loads", "[load_resource]") {
     auto data = make_multidim_instance();
 
     // All 3 clients: demand = {3+4+5, 2+5+3} = {12, 10}.
@@ -171,7 +159,7 @@ TEST_CASE("LoadResource::excess with multi-dimensional loads",
     auto s1 = LoadResource::init(data, 1);
     auto s2 = LoadResource::init(data, 2);
 
-    auto m01  = LoadResource::merge(s0, s1);
+    auto m01 = LoadResource::merge(s0, s1);
     auto m012 = LoadResource::merge(m01, s2);
 
     CHECK(m012.dims[0].delivery == 12);
@@ -181,9 +169,7 @@ TEST_CASE("LoadResource::excess with multi-dimensional loads",
     CHECK(LoadResource::excess(m012, data.vehicle_type(0)) == 4);
 }
 
-TEST_CASE("LoadResource::merge_reverse equals merge (direction-independent)",
-          "[load_resource]")
-{
+TEST_CASE("LoadResource::merge_reverse equals merge (direction-independent)", "[load_resource]") {
     auto data = make_pickup_instance();
 
     auto s0 = LoadResource::init(data, 0);
@@ -204,8 +190,7 @@ TEST_CASE("LoadResource::merge_reverse equals merge (direction-independent)",
 //  Route construction and resource tracking tests
 // ===========================================================================
 
-TEST_CASE("Route: empty route has zero load and distance", "[route]")
-{
+TEST_CASE("Route: empty route has zero load and distance", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -216,8 +201,7 @@ TEST_CASE("Route: empty route has zero load and distance", "[route]")
     CHECK(route.distance() == 0);
 }
 
-TEST_CASE("Route: set_clients updates resources correctly", "[route]")
-{
+TEST_CASE("Route: set_clients updates resources correctly", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -234,8 +218,7 @@ TEST_CASE("Route: set_clients updates resources correctly", "[route]")
     CHECK(route.distance() == 40);
 }
 
-TEST_CASE("Route: set_clients with excess load", "[route]")
-{
+TEST_CASE("Route: set_clients with excess load", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -247,8 +230,7 @@ TEST_CASE("Route: set_clients with excess load", "[route]")
     CHECK(route.load_excess() == 2);
 }
 
-TEST_CASE("Route: insert adds client and updates resources", "[route]")
-{
+TEST_CASE("Route: insert adds client and updates resources", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -267,8 +249,7 @@ TEST_CASE("Route: insert adds client and updates resources", "[route]")
     CHECK(route.load_feasible());
 }
 
-TEST_CASE("Route: insert at beginning and end", "[route]")
-{
+TEST_CASE("Route: insert at beginning and end", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -288,8 +269,7 @@ TEST_CASE("Route: insert at beginning and end", "[route]")
     CHECK(route.load_feasible());
 }
 
-TEST_CASE("Route: remove client updates resources", "[route]")
-{
+TEST_CASE("Route: remove client updates resources", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -304,8 +284,7 @@ TEST_CASE("Route: remove client updates resources", "[route]")
     CHECK(route.load_excess() == 0);
 }
 
-TEST_CASE("Route: replace client updates resources", "[route]")
-{
+TEST_CASE("Route: replace client updates resources", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -320,8 +299,7 @@ TEST_CASE("Route: replace client updates resources", "[route]")
     CHECK(route.load_feasible());
 }
 
-TEST_CASE("Route: prefix/suffix arrays are correct", "[route]")
-{
+TEST_CASE("Route: prefix/suffix arrays are correct", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -356,8 +334,7 @@ TEST_CASE("Route: prefix/suffix arrays are correct", "[route]")
 //  O(1) move evaluation tests
 // ===========================================================================
 
-TEST_CASE("Route: eval_insert_load matches actual insert", "[route]")
-{
+TEST_CASE("Route: eval_insert_load matches actual insert", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -376,8 +353,7 @@ TEST_CASE("Route: eval_insert_load matches actual insert", "[route]")
     }
 }
 
-TEST_CASE("Route: eval_remove_load matches actual remove", "[route]")
-{
+TEST_CASE("Route: eval_remove_load matches actual remove", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -394,8 +370,7 @@ TEST_CASE("Route: eval_remove_load matches actual remove", "[route]")
     }
 }
 
-TEST_CASE("Route: eval_insert_distance matches actual insert", "[route]")
-{
+TEST_CASE("Route: eval_insert_distance matches actual insert", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -414,8 +389,7 @@ TEST_CASE("Route: eval_insert_distance matches actual insert", "[route]")
     }
 }
 
-TEST_CASE("Route: eval_remove_distance matches actual remove", "[route]")
-{
+TEST_CASE("Route: eval_remove_distance matches actual remove", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -434,8 +408,7 @@ TEST_CASE("Route: eval_remove_distance matches actual remove", "[route]")
     }
 }
 
-TEST_CASE("Route: eval_insert_load with multi-dim loads", "[route]")
-{
+TEST_CASE("Route: eval_insert_load with multi-dim loads", "[route]") {
     auto data = make_multidim_instance();
     Route route(data, 0);
 
@@ -450,8 +423,7 @@ TEST_CASE("Route: eval_insert_load with multi-dim loads", "[route]")
     CHECK(excess == verify.load_excess());
 }
 
-TEST_CASE("Route: eval_insert_load with pickups", "[route]")
-{
+TEST_CASE("Route: eval_insert_load with pickups", "[route]") {
     auto data = make_pickup_instance();
     Route route(data, 0);
 
@@ -468,8 +440,7 @@ TEST_CASE("Route: eval_insert_load with pickups", "[route]")
     }
 }
 
-TEST_CASE("Route: insert into empty route", "[route]")
-{
+TEST_CASE("Route: insert into empty route", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -482,8 +453,7 @@ TEST_CASE("Route: insert into empty route", "[route]")
     CHECK(route.distance() == 20);
 }
 
-TEST_CASE("Route: eval on empty route", "[route]")
-{
+TEST_CASE("Route: eval on empty route", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -496,8 +466,7 @@ TEST_CASE("Route: eval on empty route", "[route]")
     CHECK(dist_delta == 20);
 }
 
-TEST_CASE("Route: distance computation with collinear clients", "[route]")
-{
+TEST_CASE("Route: distance computation with collinear clients", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 
@@ -509,8 +478,7 @@ TEST_CASE("Route: distance computation with collinear clients", "[route]")
     CHECK(route.distance() == 60);
 }
 
-TEST_CASE("Route: clients() span access", "[route]")
-{
+TEST_CASE("Route: clients() span access", "[route]") {
     auto data = make_small_instance();
     Route route(data, 0);
 

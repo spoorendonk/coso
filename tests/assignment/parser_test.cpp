@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "assignment/parsers.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -8,8 +8,7 @@ using namespace coso;
 //  NRP parser
 // ---------------------------------------------------------------------------
 
-TEST_CASE("parse_nrp - small instance", "[assignment][parser]")
-{
+TEST_CASE("parse_nrp - small instance", "[assignment][parser]") {
     // A small NRP instance with:
     //   - 7-day horizon
     //   - 2 shift types: D (day, 8h) and N (night, 8h), N cannot follow N
@@ -86,12 +85,12 @@ SECTION_COVER
     CHECK(data.employees[2].max_consecutive_days == 3);
 
     // Days off: Alice off on days 0, 6; Bob off on day 5.
-    CHECK(data.is_unavailable(0, 0));       // Alice, day 0
-    CHECK(data.is_unavailable(0, 6));       // Alice, day 6
-    CHECK_FALSE(data.is_unavailable(0, 3)); // Alice, day 3 is fine
-    CHECK(data.is_unavailable(1, 5));       // Bob, day 5
-    CHECK_FALSE(data.is_unavailable(1, 0)); // Bob, day 0 is fine
-    CHECK_FALSE(data.is_unavailable(2, 0)); // Carol has no days off
+    CHECK(data.is_unavailable(0, 0));        // Alice, day 0
+    CHECK(data.is_unavailable(0, 6));        // Alice, day 6
+    CHECK_FALSE(data.is_unavailable(0, 3));  // Alice, day 3 is fine
+    CHECK(data.is_unavailable(1, 5));        // Bob, day 5
+    CHECK_FALSE(data.is_unavailable(1, 0));  // Bob, day 0 is fine
+    CHECK_FALSE(data.is_unavailable(2, 0));  // Carol has no days off
 
     // Shift on requests: Alice wants D on day 1 (weight 3),
     //                    Bob wants N on day 2 (weight 2).
@@ -99,20 +98,20 @@ SECTION_COVER
     REQUIRE(data.preferences.size() == 3);
 
     // On-requests come first in parsing order.
-    CHECK(data.preferences[0].employee == 0);   // Alice
+    CHECK(data.preferences[0].employee == 0);  // Alice
     CHECK(data.preferences[0].day == 1);
-    CHECK(data.preferences[0].shift_type == 0); // D
+    CHECK(data.preferences[0].shift_type == 0);  // D
     CHECK(data.preferences[0].weight == 3);
 
-    CHECK(data.preferences[1].employee == 1);   // Bob
+    CHECK(data.preferences[1].employee == 1);  // Bob
     CHECK(data.preferences[1].day == 2);
-    CHECK(data.preferences[1].shift_type == 1); // N
+    CHECK(data.preferences[1].shift_type == 1);  // N
     CHECK(data.preferences[1].weight == 2);
 
-    CHECK(data.preferences[2].employee == 2);   // Carol
+    CHECK(data.preferences[2].employee == 2);  // Carol
     CHECK(data.preferences[2].day == 3);
-    CHECK(data.preferences[2].shift_type == 1); // N
-    CHECK(data.preferences[2].weight == -4);    // off-request -> negative
+    CHECK(data.preferences[2].shift_type == 1);  // N
+    CHECK(data.preferences[2].weight == -4);     // off-request -> negative
 
     // Cover requirements: day 0, shift D -> 2 required.
     auto d0_d = data.get_demand(0, 0);  // shift D (idx 0), day 0
@@ -131,8 +130,7 @@ SECTION_COVER
     CHECK(data.forbidden_sequences[0][1] == 1);  // N
 }
 
-TEST_CASE("parse_nrp - error on empty input", "[assignment][parser]")
-{
+TEST_CASE("parse_nrp - error on empty input", "[assignment][parser]") {
     // Empty input should parse but yield empty data (horizon 0, no shifts, etc.)
     auto data = parse_nrp("");
     CHECK(data.horizon == 0);
@@ -140,8 +138,7 @@ TEST_CASE("parse_nrp - error on empty input", "[assignment][parser]")
     CHECK(data.num_employees() == 0);
 }
 
-TEST_CASE("parse_nrp - minimal instance", "[assignment][parser]")
-{
+TEST_CASE("parse_nrp - minimal instance", "[assignment][parser]") {
     // Absolute minimal: 1 shift, 1 employee, 1 day.
     std::string content = R"(
 SECTION_HORIZON

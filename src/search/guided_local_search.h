@@ -73,8 +73,7 @@ private:
     /// Collect all edges (as node pairs) used by the solution.
     /// Each edge is (from_node, to_node) in full node numbering,
     /// including depot-to-first-client and last-client-to-depot edges.
-    [[nodiscard]] std::vector<std::pair<int, int>> edges_(
-        Solution const& sol) const;
+    [[nodiscard]] std::vector<std::pair<int, int>> edges_(Solution const& sol) const;
 };
 
-} // namespace coso
+}  // namespace coso

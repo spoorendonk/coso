@@ -33,8 +33,7 @@ public:
     /// Scan the neighbourhood and find the best improving move.
     ///
     /// @return true if an improving move was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best move to the solution.
@@ -47,14 +46,12 @@ public:
 private:
     /// Best insertion position cache entry for one client in one route.
     struct InsertPos {
-        int pos    = -1;     ///< Best insertion position (0..route.size()).
-        int64_t delta = 0;   ///< Cost delta of inserting at that position.
+        int pos = -1;       ///< Best insertion position (0..route.size()).
+        int64_t delta = 0;  ///< Cost delta of inserting at that position.
     };
 
     /// Compute the best insertion position for a client in a route.
-    static InsertPos best_insert(Route const& route,
-                                 CostEvaluator const& eval,
-                                 int client);
+    static InsertPos best_insert(Route const& route, CostEvaluator const& eval, int client);
 
     int64_t best_delta_ = 0;
 
@@ -62,14 +59,14 @@ private:
     enum MoveType { kSwap, kRelocateAtoB, kRelocateBtoA };
 
     MoveType move_type_ = kSwap;
-    int route_a_  = -1;
-    int route_b_  = -1;
+    int route_a_ = -1;
+    int route_b_ = -1;
     int client_u_ = -1;
     int client_v_ = -1;
-    int pos_u_    = -1;
-    int pos_v_    = -1;
+    int pos_u_ = -1;
+    int pos_v_ = -1;
     int insert_u_ = -1;
     int insert_v_ = -1;
 };
 
-} // namespace coso
+}  // namespace coso

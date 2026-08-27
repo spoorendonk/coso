@@ -10,11 +10,9 @@
 
 namespace coso {
 
-GeneticAlgorithm::GeneticAlgorithm(ProblemData const& data)
-    : data_(&data) {}
+GeneticAlgorithm::GeneticAlgorithm(ProblemData const& data) : data_(&data) {}
 
-Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
-{
+Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop) {
     // Set up penalty manager with initial weights from the evaluator.
     PenaltyManager penalties;
 
@@ -28,17 +26,14 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
     LocalSearch ls(*data_);
 
     // Determine initial population size.
-    int init_size = initial_pop_size_ > 0
-                        ? initial_pop_size_
-                        : 4 * max_feasible_;
+    int init_size = initial_pop_size_ > 0 ? initial_pop_size_ : 4 * max_feasible_;
 
     // Seed the population with construction heuristics + education.
     // Alternate between nearest-neighbour and Clarke-Wright for diversity,
     // with random perturbation of the cost evaluator to get varied solutions.
     for (int i = 0; i < init_size && !stop.should_stop(); ++i) {
-        Solution sol = (i % 2 == 0)
-            ? construction::nearest_neighbour(*data_, pen_eval)
-            : construction::clarke_wright(*data_, pen_eval);
+        Solution sol = (i % 2 == 0) ? construction::nearest_neighbour(*data_, pen_eval)
+                                    : construction::clarke_wright(*data_, pen_eval);
 
         // Educate: run local search to a local optimum.
         ls.run(sol, pen_eval, &stop);
@@ -51,9 +46,8 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
     }
 
     // Track the best feasible cost found so far.
-    int64_t best_cost = pop.has_feasible()
-        ? pop.best_feasible().cost(eval)
-        : std::numeric_limits<int64_t>::max();
+    int64_t best_cost =
+        pop.has_feasible() ? pop.best_feasible().cost(eval) : std::numeric_limits<int64_t>::max();
 
     // Main HGS loop.
     while (!stop.should_stop()) {
@@ -74,8 +68,7 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
         auto const& parent2 = pop.select_parent(rng_);
 
         // b. Apply SREX crossover to produce offspring.
-        auto offspring = srex_crossover(parent1, parent2, *data_, pen_eval,
-                                        rng_);
+        auto offspring = srex_crossover(parent1, parent2, *data_, pen_eval, rng_);
 
         // c. Educate: run local search on offspring.
         ls.run(offspring, pen_eval, &stop);
@@ -109,20 +102,17 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop)
     return pop.select_parent(rng_);
 }
 
-void GeneticAlgorithm::set_population_size(int feasible, int infeasible)
-{
+void GeneticAlgorithm::set_population_size(int feasible, int infeasible) {
     max_feasible_ = feasible;
     max_infeasible_ = infeasible;
 }
 
-void GeneticAlgorithm::set_initial_population_size(int n)
-{
+void GeneticAlgorithm::set_initial_population_size(int n) {
     initial_pop_size_ = n;
 }
 
-void GeneticAlgorithm::set_seed(uint64_t seed)
-{
+void GeneticAlgorithm::set_seed(uint64_t seed) {
     rng_.seed(seed);
 }
 
-} // namespace coso
+}  // namespace coso

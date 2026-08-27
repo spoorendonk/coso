@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/resources/precedence_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -11,16 +11,15 @@ using namespace coso;
 /// 1 depot, 4 clients: pickup pair (0->1), pickup pair (2->3).
 /// Client 0 = pickup for request 0, client 1 = delivery for request 0.
 /// Client 2 = pickup for request 1, client 3 = delivery for request 1.
-static ProblemData make_pd_instance()
-{
+static ProblemData make_pd_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {1}});   // client 0 (pickup req 0)
-    b.add_client({20.0, 0.0}, {.demand = {1}});   // client 1 (delivery req 0)
-    b.add_client({30.0, 0.0}, {.demand = {1}});   // client 2 (pickup req 1)
-    b.add_client({40.0, 0.0}, {.demand = {1}});   // client 3 (delivery req 1)
+    b.add_client({10.0, 0.0}, {.demand = {1}});  // client 0 (pickup req 0)
+    b.add_client({20.0, 0.0}, {.demand = {1}});  // client 1 (delivery req 0)
+    b.add_client({30.0, 0.0}, {.demand = {1}});  // client 2 (pickup req 1)
+    b.add_client({40.0, 0.0}, {.demand = {1}});  // client 3 (delivery req 1)
 
     b.add_request(0, 1);  // request 0: pickup=0, delivery=1
     b.add_request(2, 3);  // request 1: pickup=2, delivery=3
@@ -29,15 +28,14 @@ static ProblemData make_pd_instance()
 }
 
 /// 1 depot, 3 clients: only one pickup-delivery pair (0->2), client 1 is normal.
-static ProblemData make_mixed_instance()
-{
+static ProblemData make_mixed_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {1}});   // client 0 (pickup req 0)
-    b.add_client({20.0, 0.0}, {.demand = {1}});   // client 1 (normal)
-    b.add_client({30.0, 0.0}, {.demand = {1}});   // client 2 (delivery req 0)
+    b.add_client({10.0, 0.0}, {.demand = {1}});  // client 0 (pickup req 0)
+    b.add_client({20.0, 0.0}, {.demand = {1}});  // client 1 (normal)
+    b.add_client({30.0, 0.0}, {.demand = {1}});  // client 2 (delivery req 0)
 
     b.add_request(0, 2);  // request 0: pickup=0, delivery=2
 
@@ -48,8 +46,7 @@ static ProblemData make_mixed_instance()
 //  Tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("PrecedenceResource: init for pickup client", "[precedence]")
-{
+TEST_CASE("PrecedenceResource: init for pickup client", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -60,8 +57,7 @@ TEST_CASE("PrecedenceResource: init for pickup client", "[precedence]")
     REQUIRE(PrecedenceResource::excess(s) == 0);
 }
 
-TEST_CASE("PrecedenceResource: init for delivery client", "[precedence]")
-{
+TEST_CASE("PrecedenceResource: init for delivery client", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -72,8 +68,7 @@ TEST_CASE("PrecedenceResource: init for delivery client", "[precedence]")
     REQUIRE(PrecedenceResource::excess(s) == 1);  // violation: no pickup
 }
 
-TEST_CASE("PrecedenceResource: init for normal client", "[precedence]")
-{
+TEST_CASE("PrecedenceResource: init for normal client", "[precedence]") {
     auto data = make_mixed_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -83,17 +78,14 @@ TEST_CASE("PrecedenceResource: init for normal client", "[precedence]")
     REQUIRE(PrecedenceResource::excess(s) == 0);
 }
 
-TEST_CASE("PrecedenceResource: init_depot", "[precedence]")
-{
+TEST_CASE("PrecedenceResource: init_depot", "[precedence]") {
     auto s = PrecedenceResource::init_depot();
     REQUIRE(s.active.empty());
     REQUIRE(s.needed.empty());
     REQUIRE(PrecedenceResource::excess(s) == 0);
 }
 
-TEST_CASE("PrecedenceResource: merge pickup then delivery (feasible)",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: merge pickup then delivery (feasible)", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -106,9 +98,7 @@ TEST_CASE("PrecedenceResource: merge pickup then delivery (feasible)",
     REQUIRE(merged.needed.empty());
 }
 
-TEST_CASE("PrecedenceResource: merge delivery then pickup (infeasible)",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: merge delivery then pickup (infeasible)", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -121,9 +111,7 @@ TEST_CASE("PrecedenceResource: merge delivery then pickup (infeasible)",
     REQUIRE(merged.active.size() == 1);  // pickup still active
 }
 
-TEST_CASE("PrecedenceResource: full feasible route [p0, d0, p1, d1]",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: full feasible route [p0, d0, p1, d1]", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -136,9 +124,7 @@ TEST_CASE("PrecedenceResource: full feasible route [p0, d0, p1, d1]",
     REQUIRE(PrecedenceResource::excess(s) == 0);
 }
 
-TEST_CASE("PrecedenceResource: full feasible interleaved [p0, p1, d0, d1]",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: full feasible interleaved [p0, p1, d0, d1]", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -151,9 +137,7 @@ TEST_CASE("PrecedenceResource: full feasible interleaved [p0, p1, d0, d1]",
     REQUIRE(PrecedenceResource::excess(s) == 0);
 }
 
-TEST_CASE("PrecedenceResource: infeasible route [d0, p0, p1, d1]",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: infeasible route [d0, p0, p1, d1]", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -166,9 +150,7 @@ TEST_CASE("PrecedenceResource: infeasible route [d0, p0, p1, d1]",
     REQUIRE(PrecedenceResource::excess(s) == 1);  // 1 violation (d0 before p0)
 }
 
-TEST_CASE("PrecedenceResource: two violations [d0, d1, p0, p1]",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: two violations [d0, d1, p0, p1]", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -181,9 +163,7 @@ TEST_CASE("PrecedenceResource: two violations [d0, d1, p0, p1]",
     REQUIRE(PrecedenceResource::excess(s) == 2);
 }
 
-TEST_CASE("PrecedenceResource: mixed clients don't cause violations",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: mixed clients don't cause violations", "[precedence]") {
     auto data = make_mixed_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -196,9 +176,7 @@ TEST_CASE("PrecedenceResource: mixed clients don't cause violations",
     REQUIRE(PrecedenceResource::excess(s) == 0);
 }
 
-TEST_CASE("PrecedenceResource: merge subsequences via prefix/suffix",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: merge subsequences via prefix/suffix", "[precedence]") {
     // Test the O(1) merge pattern: build prefix for [p0, p1], suffix for [d0, d1],
     // then merge them.
     auto data = make_pd_instance();
@@ -217,9 +195,7 @@ TEST_CASE("PrecedenceResource: merge subsequences via prefix/suffix",
     REQUIRE(PrecedenceResource::excess(full) == 0);
 }
 
-TEST_CASE("PrecedenceResource: merge subsequences with violation",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: merge subsequences with violation", "[precedence]") {
     auto data = make_pd_instance();
     auto lookup = PrecedenceResource::build_lookup(data);
 
@@ -237,9 +213,7 @@ TEST_CASE("PrecedenceResource: merge subsequences with violation",
     REQUIRE(PrecedenceResource::excess(full) == 1);
 }
 
-TEST_CASE("PrecedenceResource: no requests means no violations",
-          "[precedence]")
-{
+TEST_CASE("PrecedenceResource: no requests means no violations", "[precedence]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {10}});

@@ -17,29 +17,28 @@ namespace {
 /// We detect this by checking: if the graph has at least one operation
 /// with positive duration, then a valid DAG must have makespan > 0.
 /// A makespan of 0 therefore signals a cycle.
-int safe_critical_path(DisjunctiveGraph& graph)
-{
+int safe_critical_path(DisjunctiveGraph& graph) {
     int ms = graph.critical_path();
-    if (ms > 0)
+    if (ms > 0) {
         return ms;
+    }
 
     // Check if any operation has positive duration.
     for (int i = 0; i < graph.num_operations(); ++i) {
-        if (graph.operation(i).duration > 0)
+        if (graph.operation(i).duration > 0) {
             return INT_MAX;  // cycle detected
+        }
     }
     return 0;  // all zero-duration ops — 0 is correct
 }
 
-} // namespace
+}  // namespace
 
 // ===========================================================================
 //  SwapAdjacentOps — N1 neighbourhood
 // ===========================================================================
 
-std::vector<SwapAdjacentMove>
-SwapAdjacentOps::enumerate(DisjunctiveGraph const& graph)
-{
+std::vector<SwapAdjacentMove> SwapAdjacentOps::enumerate(DisjunctiveGraph const& graph) {
     std::vector<SwapAdjacentMove> moves;
     for (int m = 0; m < graph.num_machines(); ++m) {
         auto const& seq = graph.machine_sequence(m);
@@ -50,18 +49,14 @@ SwapAdjacentOps::enumerate(DisjunctiveGraph const& graph)
     return moves;
 }
 
-void SwapAdjacentOps::apply(DisjunctiveGraph& graph,
-                             SwapAdjacentMove const& move)
-{
+void SwapAdjacentOps::apply(DisjunctiveGraph& graph, SwapAdjacentMove const& move) {
     auto seq = graph.machine_sequence(move.machine);
     assert(move.pos >= 0 && move.pos + 1 < static_cast<int>(seq.size()));
     std::swap(seq[move.pos], seq[move.pos + 1]);
     graph.set_sequence(move.machine, seq);
 }
 
-int SwapAdjacentOps::evaluate(DisjunctiveGraph& graph,
-                               SwapAdjacentMove const& move)
-{
+int SwapAdjacentOps::evaluate(DisjunctiveGraph& graph, SwapAdjacentMove const& move) {
     auto original_seq = graph.machine_sequence(move.machine);
 
     apply(graph, move);
@@ -77,9 +72,7 @@ int SwapAdjacentOps::evaluate(DisjunctiveGraph& graph,
 //  InsertOp — N5 neighbourhood
 // ===========================================================================
 
-std::vector<InsertMove>
-InsertOp::enumerate(DisjunctiveGraph const& graph)
-{
+std::vector<InsertMove> InsertOp::enumerate(DisjunctiveGraph const& graph) {
     std::vector<InsertMove> moves;
     for (int m = 0; m < graph.num_machines(); ++m) {
         auto const& seq = graph.machine_sequence(m);
@@ -89,36 +82,33 @@ InsertOp::enumerate(DisjunctiveGraph const& graph)
             // to_pos ranges over 0..(n-2).
             for (int to = 0; to < n - 1; ++to) {
                 // Skip no-op moves.
-                if (to == from)
+                if (to == from) {
                     continue;
-                if (from > 0 && to == from - 1)
+                }
+                if (from > 0 && to == from - 1) {
                     continue;
-                moves.push_back(
-                    {.machine = m, .from_pos = from, .to_pos = to});
+                }
+                moves.push_back({.machine = m, .from_pos = from, .to_pos = to});
             }
         }
     }
     return moves;
 }
 
-void InsertOp::apply(DisjunctiveGraph& graph, InsertMove const& move)
-{
+void InsertOp::apply(DisjunctiveGraph& graph, InsertMove const& move) {
     auto seq = graph.machine_sequence(move.machine);
-    assert(move.from_pos >= 0 &&
-           move.from_pos < static_cast<int>(seq.size()));
+    assert(move.from_pos >= 0 && move.from_pos < static_cast<int>(seq.size()));
 
     int op = seq[move.from_pos];
     seq.erase(seq.begin() + move.from_pos);
 
-    assert(move.to_pos >= 0 &&
-           move.to_pos <= static_cast<int>(seq.size()));
+    assert(move.to_pos >= 0 && move.to_pos <= static_cast<int>(seq.size()));
     seq.insert(seq.begin() + move.to_pos, op);
 
     graph.set_sequence(move.machine, seq);
 }
 
-int InsertOp::evaluate(DisjunctiveGraph& graph, InsertMove const& move)
-{
+int InsertOp::evaluate(DisjunctiveGraph& graph, InsertMove const& move) {
     auto original_seq = graph.machine_sequence(move.machine);
 
     apply(graph, move);
@@ -133,14 +123,13 @@ int InsertOp::evaluate(DisjunctiveGraph& graph, InsertMove const& move)
 //  BlockReverse — N7 neighbourhood
 // ===========================================================================
 
-std::vector<BlockReverseMove>
-BlockReverse::enumerate_critical(DisjunctiveGraph& graph)
-{
+std::vector<BlockReverseMove> BlockReverse::enumerate_critical(DisjunctiveGraph& graph) {
     auto crit_ops = graph.critical_path_ops();
 
     std::vector<bool> on_critical(graph.num_operations(), false);
-    for (int op : crit_ops)
+    for (int op : crit_ops) {
         on_critical[op] = true;
+    }
 
     std::vector<BlockReverseMove> moves;
     for (int m = 0; m < graph.num_machines(); ++m) {
@@ -151,13 +140,12 @@ BlockReverse::enumerate_critical(DisjunctiveGraph& graph)
         for (int p = 0; p <= n; ++p) {
             bool is_crit = (p < n) && on_critical[seq[p]];
             if (is_crit) {
-                if (block_start < 0)
+                if (block_start < 0) {
                     block_start = p;
+                }
             } else {
                 if (block_start >= 0 && (p - block_start) >= 2) {
-                    moves.push_back({.machine = m,
-                                     .start_pos = block_start,
-                                     .end_pos = p - 1});
+                    moves.push_back({.machine = m, .start_pos = block_start, .end_pos = p - 1});
                 }
                 block_start = -1;
             }
@@ -167,39 +155,30 @@ BlockReverse::enumerate_critical(DisjunctiveGraph& graph)
     return moves;
 }
 
-std::vector<BlockReverseMove>
-BlockReverse::enumerate_all(DisjunctiveGraph const& graph)
-{
+std::vector<BlockReverseMove> BlockReverse::enumerate_all(DisjunctiveGraph const& graph) {
     std::vector<BlockReverseMove> moves;
     for (int m = 0; m < graph.num_machines(); ++m) {
         auto const& seq = graph.machine_sequence(m);
         int n = static_cast<int>(seq.size());
         for (int s = 0; s < n; ++s) {
             for (int e = s + 1; e < n; ++e) {
-                moves.push_back(
-                    {.machine = m, .start_pos = s, .end_pos = e});
+                moves.push_back({.machine = m, .start_pos = s, .end_pos = e});
             }
         }
     }
     return moves;
 }
 
-void BlockReverse::apply(DisjunctiveGraph& graph,
-                          BlockReverseMove const& move)
-{
+void BlockReverse::apply(DisjunctiveGraph& graph, BlockReverseMove const& move) {
     auto seq = graph.machine_sequence(move.machine);
-    assert(move.start_pos >= 0 &&
-           move.end_pos < static_cast<int>(seq.size()) &&
+    assert(move.start_pos >= 0 && move.end_pos < static_cast<int>(seq.size()) &&
            move.start_pos < move.end_pos);
 
-    std::reverse(seq.begin() + move.start_pos,
-                 seq.begin() + move.end_pos + 1);
+    std::reverse(seq.begin() + move.start_pos, seq.begin() + move.end_pos + 1);
     graph.set_sequence(move.machine, seq);
 }
 
-int BlockReverse::evaluate(DisjunctiveGraph& graph,
-                            BlockReverseMove const& move)
-{
+int BlockReverse::evaluate(DisjunctiveGraph& graph, BlockReverseMove const& move) {
     auto original_seq = graph.machine_sequence(move.machine);
 
     apply(graph, move);
@@ -210,4 +189,4 @@ int BlockReverse::evaluate(DisjunctiveGraph& graph,
     return new_makespan;
 }
 
-} // namespace coso
+}  // namespace coso

@@ -11,9 +11,7 @@ public:
     void set_num_periods(int periods);
 
     /// Add a product and return product index.
-    int add_product(double setup_cost,
-                    double setup_time,
-                    double unit_production_cost,
+    int add_product(double setup_cost, double setup_time, double unit_production_cost,
                     double holding_cost);
 
     /// Set external demand for a product and period.
@@ -51,4 +49,4 @@ private:
     std::vector<BomEntry> bom_;
 };
 
-} // namespace coso
+}  // namespace coso

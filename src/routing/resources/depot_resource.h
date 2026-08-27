@@ -30,11 +30,11 @@ namespace coso {
 /// the optimizer can evaluate reassignment costs.
 struct DepotResource {
     struct State {
-        int depot       = -1;       ///< Depot index (0-based, -1 = unset).
-        int depart      = 0;        ///< Departure time from depot.
-        int arrive_back = 0;        ///< Arrival time back at depot.
-        int tw_open     = 0;        ///< Depot time window open.
-        int tw_close    = INT_MAX;  ///< Depot time window close.
+        int depot = -1;          ///< Depot index (0-based, -1 = unset).
+        int depart = 0;          ///< Departure time from depot.
+        int arrive_back = 0;     ///< Arrival time back at depot.
+        int tw_open = 0;         ///< Depot time window open.
+        int tw_close = INT_MAX;  ///< Depot time window close.
     };
 
     /// Initialize state for a route starting at the given depot.
@@ -46,11 +46,11 @@ struct DepotResource {
         auto const& d = data.depot(depot);
 
         State s;
-        s.depot       = depot;
-        s.depart      = d.tw.start;
+        s.depot = depot;
+        s.depart = d.tw.start;
         s.arrive_back = d.tw.start;  // No clients yet; immediate return.
-        s.tw_open     = d.tw.start;
-        s.tw_close    = d.tw.end;
+        s.tw_open = d.tw.start;
+        s.tw_close = d.tw.end;
         return s;
     }
 
@@ -67,11 +67,11 @@ struct DepotResource {
                                     [[maybe_unused]] int client) {
         // Client nodes don't carry depot information themselves.
         State s;
-        s.depot       = -1;
-        s.depart      = 0;
+        s.depot = -1;
+        s.depart = 0;
         s.arrive_back = 0;
-        s.tw_open     = 0;
-        s.tw_close    = INT_MAX;
+        s.tw_open = 0;
+        s.tw_close = INT_MAX;
         return s;
     }
 
@@ -98,7 +98,7 @@ struct DepotResource {
 
         // Time window is the intersection — the depot must be open for
         // both departure and return.
-        result.tw_open  = (left.depot >= 0) ? left.tw_open : right.tw_open;
+        result.tw_open = (left.depot >= 0) ? left.tw_open : right.tw_open;
         result.tw_close = (left.depot >= 0) ? left.tw_close : right.tw_close;
 
         return result;
@@ -128,12 +128,14 @@ struct DepotResource {
         int total = 0;
 
         // Early departure violation (depart before depot opens).
-        if (state.depart < state.tw_open)
+        if (state.depart < state.tw_open) {
             total += state.tw_open - state.depart;
+        }
 
         // Late return violation (arrive after depot closes).
-        if (state.arrive_back > state.tw_close)
+        if (state.arrive_back > state.tw_close) {
             total += state.arrive_back - state.tw_close;
+        }
 
         return total;
     }
@@ -143,16 +145,13 @@ struct DepotResource {
     /// The vehicle type itself doesn't constrain depot time windows — the
     /// depot does.  This overload ignores the vehicle type and delegates to
     /// the simpler excess(State).
-    [[nodiscard]] static int excess(
-            State const& state,
-            [[maybe_unused]] ProblemData::VehicleTypeData const& vt) {
+    [[nodiscard]] static int excess(State const& state,
+                                    [[maybe_unused]] ProblemData::VehicleTypeData const& vt) {
         return excess(state);
     }
 
     /// Check whether a depot is assigned.
-    [[nodiscard]] static bool has_depot(State const& state) noexcept {
-        return state.depot >= 0;
-    }
+    [[nodiscard]] static bool has_depot(State const& state) noexcept { return state.depot >= 0; }
 
     /// Check whether the route departs and returns within the depot TW.
     [[nodiscard]] static bool is_feasible(State const& state) noexcept {
@@ -160,4 +159,4 @@ struct DepotResource {
     }
 };
 
-} // namespace coso
+}  // namespace coso

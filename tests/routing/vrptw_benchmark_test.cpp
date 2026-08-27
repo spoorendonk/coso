@@ -1,9 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "model/instance_reader.h"
 #include "model/routing_model.h"
 #include "model/types.h"
 
+#include <catch2/catch_test_macros.hpp>
 #include <cmath>
 #include <cstdlib>
 #include <filesystem>
@@ -17,28 +16,26 @@ namespace fs = std::filesystem;
 //  Helper: locate the tests/data/ directory.
 // ---------------------------------------------------------------------------
 
-static std::string data_dir()
-{
+static std::string data_dir() {
     if (auto const* env = std::getenv("COSO_DATA_DIR"); env && *env) {
         return env;
     }
 
     for (auto p = fs::current_path(); p != p.root_path(); p = p.parent_path()) {
         auto candidate = p / "tests" / "data";
-        if (fs::is_directory(candidate))
+        if (fs::is_directory(candidate)) {
             return candidate.string();
+        }
     }
 
     return "tests/data";
 }
 
-static std::string instance_path(const std::string& filename)
-{
+static std::string instance_path(const std::string& filename) {
     return data_dir() + "/" + filename;
 }
 
-static bool instance_exists(const std::string& filename)
-{
+static bool instance_exists(const std::string& filename) {
     return fs::is_regular_file(instance_path(filename));
 }
 
@@ -46,8 +43,7 @@ static bool instance_exists(const std::string& filename)
 //  Helper: build a RoutingModel from a parsed Solomon VrpInstance.
 // ---------------------------------------------------------------------------
 
-static coso::RoutingModel build_vrptw_model(const coso::VrpInstance& inst)
-{
+static coso::RoutingModel build_vrptw_model(const coso::VrpInstance& inst) {
     coso::RoutingModel model;
 
     // Depot is always node 0 in Solomon instances.
@@ -82,15 +78,11 @@ static coso::RoutingModel build_vrptw_model(const coso::VrpInstance& inst)
 //  Helper: run a single VRPTW benchmark test.
 // ---------------------------------------------------------------------------
 
-static void run_vrptw_benchmark(
-    const std::string& file,
-    int expected_dimension,
-    double bks,
-    double max_gap = 0.25,
-    double time_limit_s = 30.0)
-{
+static void run_vrptw_benchmark(const std::string& file, int expected_dimension, double bks,
+                                double max_gap = 0.25, double time_limit_s = 30.0) {
     if (!instance_exists(file)) {
-        SKIP("Benchmark instance " + file + " not found. "
+        SKIP("Benchmark instance " + file +
+             " not found. "
              "Run tests/data/download_benchmarks.sh first.");
     }
 
@@ -137,14 +129,12 @@ static void run_vrptw_benchmark(
 //  BKS values from http://w.cba.neu.edu/~msolomon/problems.htm
 // ---------------------------------------------------------------------------
 
-TEST_CASE("C101 VRPTW benchmark", "[benchmark][vrptw][routing]")
-{
+TEST_CASE("C101 VRPTW benchmark", "[benchmark][vrptw][routing]") {
     // C101: 100 clients + 1 depot = 101 nodes, BKS distance = 828.94
     run_vrptw_benchmark("C101.txt", 101, 828.94);
 }
 
-TEST_CASE("C102 VRPTW benchmark", "[benchmark][vrptw][routing]")
-{
+TEST_CASE("C102 VRPTW benchmark", "[benchmark][vrptw][routing]") {
     // C102: 100 clients + 1 depot = 101 nodes, BKS distance = 828.94
     run_vrptw_benchmark("C102.txt", 101, 828.94);
 }
@@ -153,14 +143,12 @@ TEST_CASE("C102 VRPTW benchmark", "[benchmark][vrptw][routing]")
 //  Solomon R1 instances (random, tight time windows).
 // ---------------------------------------------------------------------------
 
-TEST_CASE("R101 VRPTW benchmark", "[benchmark][vrptw][routing]")
-{
+TEST_CASE("R101 VRPTW benchmark", "[benchmark][vrptw][routing]") {
     // R101: 100 clients + 1 depot = 101 nodes, BKS distance = 1645.79
     run_vrptw_benchmark("R101.txt", 101, 1645.79);
 }
 
-TEST_CASE("R102 VRPTW benchmark", "[benchmark][vrptw][routing]")
-{
+TEST_CASE("R102 VRPTW benchmark", "[benchmark][vrptw][routing]") {
     // R102: 100 clients + 1 depot = 101 nodes, BKS distance = 1486.12
     run_vrptw_benchmark("R102.txt", 101, 1486.12);
 }
@@ -169,14 +157,12 @@ TEST_CASE("R102 VRPTW benchmark", "[benchmark][vrptw][routing]")
 //  Solomon RC1 instances (mixed random-clustered, tight time windows).
 // ---------------------------------------------------------------------------
 
-TEST_CASE("RC101 VRPTW benchmark", "[benchmark][vrptw][routing]")
-{
+TEST_CASE("RC101 VRPTW benchmark", "[benchmark][vrptw][routing]") {
     // RC101: 100 clients + 1 depot = 101 nodes, BKS distance = 1696.94
     run_vrptw_benchmark("RC101.txt", 101, 1696.94);
 }
 
-TEST_CASE("RC102 VRPTW benchmark", "[benchmark][vrptw][routing]")
-{
+TEST_CASE("RC102 VRPTW benchmark", "[benchmark][vrptw][routing]") {
     // RC102: 100 clients + 1 depot = 101 nodes, BKS distance = 1554.75
     run_vrptw_benchmark("RC102.txt", 101, 1554.75);
 }

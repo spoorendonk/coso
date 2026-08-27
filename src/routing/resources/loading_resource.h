@@ -39,7 +39,7 @@ struct LoadingResource {
 
     /// Per-client role in loading requests.
     struct ClientInfo {
-        int request = -1;       ///< Request index, or -1 if not part of any.
+        int request = -1;  ///< Request index, or -1 if not part of any.
         bool is_pickup = false;
         bool is_delivery = false;
     };
@@ -49,11 +49,9 @@ struct LoadingResource {
     /// @param num_clients   Total number of clients.
     /// @param pickups       pickups[r] = client index of request r's pickup.
     /// @param deliveries    deliveries[r] = client index of request r's delivery.
-    [[nodiscard]] static std::vector<ClientInfo>
-    build_lookup(int num_clients,
-                 std::vector<int> const& pickups,
-                 std::vector<int> const& deliveries)
-    {
+    [[nodiscard]] static std::vector<ClientInfo> build_lookup(int num_clients,
+                                                              std::vector<int> const& pickups,
+                                                              std::vector<int> const& deliveries) {
         assert(pickups.size() == deliveries.size());
         int nr = static_cast<int>(pickups.size());
 
@@ -88,26 +86,25 @@ struct LoadingResource {
     };
 
     /// Initialize state for a single client node.
-    [[nodiscard]] static State init(std::vector<ClientInfo> const& lookup,
-                                    int client) {
-        assert(client >= 0
-               && client < static_cast<int>(lookup.size()));
+    [[nodiscard]] static State init(std::vector<ClientInfo> const& lookup, int client) {
+        assert(client >= 0 && client < static_cast<int>(lookup.size()));
         State s;
         auto const& info = lookup[client];
-        if (info.request < 0)
+        if (info.request < 0) {
             return s;
+        }
 
-        if (info.is_pickup)
+        if (info.is_pickup) {
             s.pending.push_back(info.request);
-        if (info.is_delivery)
+        }
+        if (info.is_delivery) {
             s.needed.push_back(info.request);
+        }
         return s;
     }
 
     /// Initialize empty state at depot.
-    [[nodiscard]] static State init_depot() {
-        return State{};
-    }
+    [[nodiscard]] static State init_depot() { return State{}; }
 
     /// Merge two adjacent subsequence states.
     ///
@@ -119,8 +116,7 @@ struct LoadingResource {
     /// @param left    Left (earlier) subsequence state.
     /// @param right   Right (later) subsequence state.
     /// @param policy  LIFO or FIFO.
-    [[nodiscard]] static State merge(State const& left, State const& right,
-                                     Policy policy) {
+    [[nodiscard]] static State merge(State const& left, State const& right, Policy policy) {
         State result;
         result.violations = left.violations + right.violations;
 
@@ -138,12 +134,13 @@ struct LoadingResource {
             // Build set of left.pending for O(1) lookup.
             // Using a simple scan since lists are typically small.
             auto in_pending = [&](int req) {
-                return std::find(left.pending.begin(), left.pending.end(), req)
-                       != left.pending.end();
+                return std::find(left.pending.begin(), left.pending.end(), req) !=
+                       left.pending.end();
             };
             for (int req : right.needed) {
-                if (in_pending(req))
+                if (in_pending(req)) {
                     resolved_delivery_order.push_back(req);
+                }
             }
         }
 
@@ -151,13 +148,13 @@ struct LoadingResource {
         std::vector<int> resolved_pickup_order;
         {
             auto in_resolved = [&](int req) {
-                return std::find(resolved_delivery_order.begin(),
-                                 resolved_delivery_order.end(), req)
-                       != resolved_delivery_order.end();
+                return std::find(resolved_delivery_order.begin(), resolved_delivery_order.end(),
+                                 req) != resolved_delivery_order.end();
             };
             for (int req : left.pending) {
-                if (in_resolved(req))
+                if (in_resolved(req)) {
                     resolved_pickup_order.push_back(req);
+                }
             }
         }
 
@@ -167,8 +164,7 @@ struct LoadingResource {
         if (resolved_pickup_order.size() >= 2) {
             std::vector<int> expected;
             if (policy == Policy::LIFO) {
-                expected.assign(resolved_pickup_order.rbegin(),
-                                resolved_pickup_order.rend());
+                expected.assign(resolved_pickup_order.rbegin(), resolved_pickup_order.rend());
             } else {
                 expected = resolved_pickup_order;
             }
@@ -176,30 +172,33 @@ struct LoadingResource {
             // Count violations: number of positions where delivery order
             // disagrees with expected order.
             for (size_t i = 0; i < expected.size(); ++i) {
-                if (resolved_delivery_order[i] != expected[i])
+                if (resolved_delivery_order[i] != expected[i]) {
                     ++result.violations;
+                }
             }
         }
 
         // Propagate unresolved right.needed + all left.needed.
-        for (int req : left.needed)
+        for (int req : left.needed) {
             result.needed.push_back(req);
+        }
         for (int req : right.needed) {
-            if (std::find(resolved_delivery_order.begin(),
-                          resolved_delivery_order.end(), req)
-                == resolved_delivery_order.end())
+            if (std::find(resolved_delivery_order.begin(), resolved_delivery_order.end(), req) ==
+                resolved_delivery_order.end()) {
                 result.needed.push_back(req);
+            }
         }
 
         // Propagate left.pending not consumed + all right.pending.
         for (int req : left.pending) {
-            if (std::find(resolved_pickup_order.begin(),
-                          resolved_pickup_order.end(), req)
-                == resolved_pickup_order.end())
+            if (std::find(resolved_pickup_order.begin(), resolved_pickup_order.end(), req) ==
+                resolved_pickup_order.end()) {
                 result.pending.push_back(req);
+            }
         }
-        for (int req : right.pending)
+        for (int req : right.pending) {
             result.pending.push_back(req);
+        }
 
         return result;
     }
@@ -213,4 +212,4 @@ struct LoadingResource {
     }
 };
 
-} // namespace coso
+}  // namespace coso

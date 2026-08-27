@@ -1,11 +1,11 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "search/daemon.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 #include "search/stop_criterion.h"
 
+#include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <thread>
 
@@ -16,8 +16,7 @@ using namespace coso;
 // --------------------------------------------------------------------------- //
 
 /// 1 depot at (0,0), 6 clients in a line, 2 vehicles with capacity 20.
-static ProblemData make_small_instance()
-{
+static ProblemData make_small_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {20}});
@@ -33,8 +32,7 @@ static ProblemData make_small_instance()
 }
 
 /// Build a modified version of the small instance with an extra client.
-static ProblemData make_modified_instance()
-{
+static ProblemData make_modified_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {20}});
@@ -54,9 +52,7 @@ static ProblemData make_modified_instance()
 //  Start/stop lifecycle                                                        //
 // =========================================================================== //
 
-TEST_CASE("Daemon: start and stop without error",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: start and stop without error", "[search][daemon]") {
     auto data = make_small_instance();
     CostEvaluator eval;
     StopCriterion stop(2.0);  // 2 second time limit
@@ -75,9 +71,7 @@ TEST_CASE("Daemon: start and stop without error",
     CHECK_FALSE(daemon.running());
 }
 
-TEST_CASE("Daemon: destructor stops the solver",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: destructor stops the solver", "[search][daemon]") {
     auto data = make_small_instance();
     CostEvaluator eval;
     StopCriterion stop(5.0);
@@ -90,9 +84,7 @@ TEST_CASE("Daemon: destructor stops the solver",
     }
 }
 
-TEST_CASE("Daemon: double start is safe",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: double start is safe", "[search][daemon]") {
     auto data = make_small_instance();
     CostEvaluator eval;
     StopCriterion stop(2.0);
@@ -110,9 +102,7 @@ TEST_CASE("Daemon: double start is safe",
 //  current_solution returns valid results                                      //
 // =========================================================================== //
 
-TEST_CASE("Daemon: current_solution is nullopt before start",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: current_solution is nullopt before start", "[search][daemon]") {
     auto data = make_small_instance();
     Daemon daemon(data);
 
@@ -120,9 +110,7 @@ TEST_CASE("Daemon: current_solution is nullopt before start",
     CHECK_FALSE(sol.has_value());
 }
 
-TEST_CASE("Daemon: current_solution returns a valid solution after running",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: current_solution returns a valid solution after running", "[search][daemon]") {
     auto data = make_small_instance();
     CostEvaluator eval;
     StopCriterion stop(0.0, 200, 0);  // iteration-limited
@@ -143,9 +131,7 @@ TEST_CASE("Daemon: current_solution returns a valid solution after running",
 //  current_solution is available while still running                           //
 // =========================================================================== //
 
-TEST_CASE("Daemon: current_solution available during execution",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: current_solution available during execution", "[search][daemon]") {
     auto data = make_small_instance();
     CostEvaluator eval;
     StopCriterion stop(3.0);
@@ -157,8 +143,9 @@ TEST_CASE("Daemon: current_solution available during execution",
     std::optional<Solution> sol;
     for (int i = 0; i < 200; ++i) {
         sol = daemon.current_solution();
-        if (sol.has_value())
+        if (sol.has_value()) {
             break;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
@@ -172,9 +159,7 @@ TEST_CASE("Daemon: current_solution available during execution",
 //  Updates are applied                                                         //
 // =========================================================================== //
 
-TEST_CASE("Daemon: update changes the problem data",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: update changes the problem data", "[search][daemon]") {
     auto data = make_small_instance();
     CostEvaluator eval;
     StopCriterion stop(3.0);
@@ -184,8 +169,9 @@ TEST_CASE("Daemon: update changes the problem data",
 
     // Wait for initial solution.
     for (int i = 0; i < 200; ++i) {
-        if (daemon.current_solution().has_value())
+        if (daemon.current_solution().has_value()) {
             break;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
@@ -195,16 +181,15 @@ TEST_CASE("Daemon: update changes the problem data",
     CHECK(daemon.current_solution()->num_unassigned() == 0);
 
     // Apply an update that adds a 7th client.
-    daemon.update([](ProblemData const& /*old_data*/) {
-        return make_modified_instance();
-    });
+    daemon.update([](ProblemData const& /*old_data*/) { return make_modified_instance(); });
 
     // Wait for a new solution after update.
     std::optional<Solution> sol;
     for (int i = 0; i < 200; ++i) {
         sol = daemon.current_solution();
-        if (sol.has_value())
+        if (sol.has_value()) {
             break;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
@@ -225,9 +210,7 @@ TEST_CASE("Daemon: update changes the problem data",
 //  Stop criterion triggers automatically                                       //
 // =========================================================================== //
 
-TEST_CASE("Daemon: stops when stop criterion triggers",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: stops when stop criterion triggers", "[search][daemon]") {
     auto data = make_small_instance();
     CostEvaluator eval;
     StopCriterion stop(0.0, 100, 0);  // 100 iterations max
@@ -240,8 +223,9 @@ TEST_CASE("Daemon: stops when stop criterion triggers",
     while (daemon.running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
         auto elapsed = std::chrono::steady_clock::now() - start_time;
-        if (elapsed > std::chrono::seconds(5))
+        if (elapsed > std::chrono::seconds(5)) {
             break;  // safety timeout
+        }
     }
 
     CHECK_FALSE(daemon.running());
@@ -254,9 +238,7 @@ TEST_CASE("Daemon: stops when stop criterion triggers",
 //  Update on stopped daemon is a no-op                                         //
 // =========================================================================== //
 
-TEST_CASE("Daemon: update on stopped daemon is safe",
-          "[search][daemon]")
-{
+TEST_CASE("Daemon: update on stopped daemon is safe", "[search][daemon]") {
     auto data = make_small_instance();
 
     Daemon daemon(data);

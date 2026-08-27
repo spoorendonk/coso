@@ -1,10 +1,11 @@
 #include "model/schedule_model.h"
+
 #include "common/work_units.h"
-#include "search/stop_criterion.h"
 #include "scheduling/construction.h"
 #include "scheduling/parsers.h"
 #include "scheduling/schedule_data.h"
 #include "scheduling/schedule_solution.h"
+#include "search/stop_criterion.h"
 
 #include <chrono>
 #include <limits>
@@ -16,25 +17,23 @@ namespace coso {
 //  Machine / Job / Operation registration
 // ---------------------------------------------------------------------------
 
-int ScheduleModel::add_machine(MachineParams p)
-{
+int ScheduleModel::add_machine(MachineParams p) {
     int idx = static_cast<int>(machines_.size());
     machines_.push_back(std::move(p));
     return idx;
 }
 
-int ScheduleModel::add_job(JobParams p)
-{
+int ScheduleModel::add_job(JobParams p) {
     int idx = static_cast<int>(jobs_.size());
     jobs_.push_back(std::move(p));
     job_operations_.emplace_back();  // empty operation list for this job
     return idx;
 }
 
-int ScheduleModel::add_operation(int job, OperationParams p)
-{
-    if (job < 0 || job >= static_cast<int>(jobs_.size()))
+int ScheduleModel::add_operation(int job, OperationParams p) {
+    if (job < 0 || job >= static_cast<int>(jobs_.size())) {
         throw std::out_of_range("ScheduleModel::add_operation: invalid job index");
+    }
 
     int idx = static_cast<int>(operations_.size());
     operations_.push_back({.job = job, .params = std::move(p)});
@@ -49,23 +48,24 @@ int ScheduleModel::add_operation(int job, OperationParams p)
 //  Resources (RCPSP)
 // ---------------------------------------------------------------------------
 
-int ScheduleModel::add_resource(int capacity)
-{
+int ScheduleModel::add_resource(int capacity) {
     int idx = static_cast<int>(resource_capacities_.size());
     resource_capacities_.push_back(capacity);
     return idx;
 }
 
-void ScheduleModel::set_resource_usage(int operation, int resource, int amount)
-{
-    if (operation < 0 || operation >= static_cast<int>(operations_.size()))
+void ScheduleModel::set_resource_usage(int operation, int resource, int amount) {
+    if (operation < 0 || operation >= static_cast<int>(operations_.size())) {
         throw std::out_of_range("ScheduleModel::set_resource_usage: invalid operation");
-    if (resource < 0 || resource >= static_cast<int>(resource_capacities_.size()))
+    }
+    if (resource < 0 || resource >= static_cast<int>(resource_capacities_.size())) {
         throw std::out_of_range("ScheduleModel::set_resource_usage: invalid resource");
+    }
 
     auto& usage = resource_usage_[operation];
-    if (static_cast<int>(usage.size()) <= resource)
+    if (static_cast<int>(usage.size()) <= resource) {
         usage.resize(resource + 1, 0);
+    }
     usage[resource] = amount;
 }
 
@@ -73,8 +73,7 @@ void ScheduleModel::set_resource_usage(int operation, int resource, int amount)
 //  Precedence
 // ---------------------------------------------------------------------------
 
-void ScheduleModel::add_precedence(int op_before, int op_after)
-{
+void ScheduleModel::add_precedence(int op_before, int op_after) {
     extra_precedences_.push_back({op_before, op_after});
 }
 
@@ -82,13 +81,11 @@ void ScheduleModel::add_precedence(int op_before, int op_after)
 //  Objective
 // ---------------------------------------------------------------------------
 
-void ScheduleModel::set_objective(ScheduleObjective obj)
-{
+void ScheduleModel::set_objective(ScheduleObjective obj) {
     objective_ = obj;
 }
 
-void ScheduleModel::minimize_makespan()
-{
+void ScheduleModel::minimize_makespan() {
     objective_ = ScheduleObjective::Makespan;
 }
 
@@ -96,9 +93,7 @@ void ScheduleModel::minimize_makespan()
 //  Warm start
 // ---------------------------------------------------------------------------
 
-void ScheduleModel::set_initial_schedule(
-    const std::vector<std::pair<int, int>>& op_assignments)
-{
+void ScheduleModel::set_initial_schedule(const std::vector<std::pair<int, int>>& op_assignments) {
     initial_schedule_ = op_assignments;
 }
 
@@ -106,8 +101,7 @@ void ScheduleModel::set_initial_schedule(
 //  solve()
 // ---------------------------------------------------------------------------
 
-Result ScheduleModel::solve(TimeLimit tl)
-{
+Result ScheduleModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
     StopCriterion stop(tl.seconds);
@@ -165,15 +159,14 @@ Result ScheduleModel::solve(TimeLimit tl)
     work.count(1);
 
     ScheduleData data = builder.build();
-    work.count(static_cast<uint64_t>(data.num_operations())
-             + static_cast<uint64_t>(data.num_machines()));
+    work.count(static_cast<uint64_t>(data.num_operations()) +
+               static_cast<uint64_t>(data.num_machines()));
     if (stop.should_stop()) {
         Result result;
         result.work_ticks_ = work.ticks();
         result.work_units_ = work.units();
         auto wall_end = std::chrono::steady_clock::now();
-        result.elapsed_seconds_ = std::chrono::duration<double>(
-            wall_end - wall_start).count();
+        result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
         return result;
     }
 
@@ -201,7 +194,9 @@ Result ScheduleModel::solve(TimeLimit tl)
     };
 
     auto better = [](Result const& a, Result const& b) {
-        if (a.feasible_ != b.feasible_) return a.feasible_;
+        if (a.feasible_ != b.feasible_) {
+            return a.feasible_;
+        }
         return a.cost_ < b.cost_;
     };
 
@@ -229,8 +224,8 @@ Result ScheduleModel::solve(TimeLimit tl)
         work.count(2);
     }
 
-    if (!stop.should_stop() && initial_schedule_.size()
-        == static_cast<size_t>(data.num_operations())) {
+    if (!stop.should_stop() &&
+        initial_schedule_.size() == static_cast<size_t>(data.num_operations())) {
         Result warm;
         warm.schedule_.resize(initial_schedule_.size());
         for (size_t i = 0; i < initial_schedule_.size(); ++i) {
@@ -249,8 +244,7 @@ Result ScheduleModel::solve(TimeLimit tl)
     result.work_units_ = work.units();
 
     auto wall_end = std::chrono::steady_clock::now();
-    result.elapsed_seconds_ = std::chrono::duration<double>(
-        wall_end - wall_start).count();
+    result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
 
     return result;
 }
@@ -259,8 +253,7 @@ Result ScheduleModel::solve(TimeLimit tl)
 //  Free function: solve from JSP file (Taillard format)
 // ---------------------------------------------------------------------------
 
-Result solve_jsp(const std::string& instance_path, TimeLimit /*tl*/)
-{
+Result solve_jsp(const std::string& instance_path, TimeLimit /*tl*/) {
     try {
         // Keep solve_jsp as a convenience wrapper around parsed data.
         // For baseline behavior we use dispatch construction.
@@ -280,4 +273,4 @@ Result solve_jsp(const std::string& instance_path, TimeLimit /*tl*/)
     }
 }
 
-} // namespace coso
+}  // namespace coso

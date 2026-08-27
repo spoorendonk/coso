@@ -1,11 +1,11 @@
-#include <catch2/catch_test_macros.hpp>
+#include "search/crossover.h"
 
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
-#include "search/crossover.h"
 
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <random>
 #include <set>
 #include <vector>
@@ -17,49 +17,49 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 1 depot at (0,0), 8 clients in a grid, 4 vehicles with capacity 20.
-static ProblemData make_crossover_instance()
-{
+static ProblemData make_crossover_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(4, {.capacity = {20}});
 
     // 8 clients with small demands.
-    b.add_client({10.0, 0.0},  {.demand = {3}});  // 0
-    b.add_client({20.0, 0.0},  {.demand = {4}});  // 1
-    b.add_client({30.0, 0.0},  {.demand = {2}});  // 2
-    b.add_client({0.0, 10.0},  {.demand = {5}});  // 3
+    b.add_client({10.0, 0.0}, {.demand = {3}});   // 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});   // 1
+    b.add_client({30.0, 0.0}, {.demand = {2}});   // 2
+    b.add_client({0.0, 10.0}, {.demand = {5}});   // 3
     b.add_client({10.0, 10.0}, {.demand = {3}});  // 4
     b.add_client({20.0, 10.0}, {.demand = {4}});  // 5
     b.add_client({30.0, 10.0}, {.demand = {2}});  // 6
-    b.add_client({0.0, 20.0},  {.demand = {1}});  // 7
+    b.add_client({0.0, 20.0}, {.demand = {1}});   // 7
 
     return b.build(0);
 }
 
 /// Helper: collect all assigned clients in a solution, sorted.
-static std::vector<int> all_assigned(Solution const& sol, int num_clients)
-{
+static std::vector<int> all_assigned(Solution const& sol, int num_clients) {
     std::vector<int> result;
     for (int c = 0; c < num_clients; ++c) {
-        if (sol.is_assigned(c))
+        if (sol.is_assigned(c)) {
             result.push_back(c);
+        }
     }
     return result;
 }
 
 /// Helper: check no client appears in more than one route.
-static bool no_duplicates(Solution const& sol, int num_clients)
-{
+static bool no_duplicates(Solution const& sol, int num_clients) {
     std::vector<int> count(num_clients, 0);
     for (int v = 0; v < sol.num_routes(); ++v) {
         auto const& route = sol.route(v);
         for (int i = 0; i < route.size(); ++i) {
             int c = route.client(i);
-            if (c < 0 || c >= num_clients)
+            if (c < 0 || c >= num_clients) {
                 return false;
+            }
             count[c]++;
-            if (count[c] > 1)
+            if (count[c] > 1) {
                 return false;
+            }
         }
     }
     return true;
@@ -69,8 +69,7 @@ static bool no_duplicates(Solution const& sol, int num_clients)
 //  SREX crossover tests
 // ===========================================================================
 
-TEST_CASE("srex_crossover: offspring contains all clients", "[crossover]")
-{
+TEST_CASE("srex_crossover: offspring contains all clients", "[crossover]") {
     auto data = make_crossover_instance();
     CostEvaluator eval;
 
@@ -99,8 +98,7 @@ TEST_CASE("srex_crossover: offspring contains all clients", "[crossover]")
     CHECK(assigned == expected);
 }
 
-TEST_CASE("srex_crossover: no duplicate clients", "[crossover]")
-{
+TEST_CASE("srex_crossover: no duplicate clients", "[crossover]") {
     auto data = make_crossover_instance();
     CostEvaluator eval;
 
@@ -126,9 +124,7 @@ TEST_CASE("srex_crossover: no duplicate clients", "[crossover]")
     }
 }
 
-TEST_CASE("srex_crossover: inherits at least one route from parent1",
-          "[crossover]")
-{
+TEST_CASE("srex_crossover: inherits at least one route from parent1", "[crossover]") {
     auto data = make_crossover_instance();
     CostEvaluator eval;
 
@@ -153,11 +149,13 @@ TEST_CASE("srex_crossover: inherits at least one route from parent1",
         std::vector<std::set<int>> offspring_routes;
         for (int v = 0; v < offspring.num_routes(); ++v) {
             auto const& r = offspring.route(v);
-            if (r.empty())
+            if (r.empty()) {
                 continue;
+            }
             std::set<int> s;
-            for (int i = 0; i < r.size(); ++i)
+            for (int i = 0; i < r.size(); ++i) {
                 s.insert(r.client(i));
+            }
             offspring_routes.push_back(s);
         }
 
@@ -167,11 +165,13 @@ TEST_CASE("srex_crossover: inherits at least one route from parent1",
         bool found_inherited = false;
         for (int v = 0; v < p1.num_routes(); ++v) {
             auto const& r = p1.route(v);
-            if (r.empty())
+            if (r.empty()) {
                 continue;
+            }
             std::set<int> p1_set;
-            for (int i = 0; i < r.size(); ++i)
+            for (int i = 0; i < r.size(); ++i) {
                 p1_set.insert(r.client(i));
+            }
 
             for (auto const& os : offspring_routes) {
                 if (os == p1_set) {
@@ -179,17 +179,16 @@ TEST_CASE("srex_crossover: inherits at least one route from parent1",
                     break;
                 }
             }
-            if (found_inherited)
+            if (found_inherited) {
                 break;
+            }
         }
 
         CHECK(found_inherited);
     }
 }
 
-TEST_CASE("srex_crossover: identical parents produce valid offspring",
-          "[crossover]")
-{
+TEST_CASE("srex_crossover: identical parents produce valid offspring", "[crossover]") {
     auto data = make_crossover_instance();
     CostEvaluator eval;
 
@@ -207,9 +206,7 @@ TEST_CASE("srex_crossover: identical parents produce valid offspring",
     CHECK(assigned.size() == 8);
 }
 
-TEST_CASE("srex_crossover: empty parent1 returns copy of parent2",
-          "[crossover]")
-{
+TEST_CASE("srex_crossover: empty parent1 returns copy of parent2", "[crossover]") {
     auto data = make_crossover_instance();
     CostEvaluator eval;
 
@@ -228,9 +225,7 @@ TEST_CASE("srex_crossover: empty parent1 returns copy of parent2",
     }
 }
 
-TEST_CASE("srex_crossover: max_routes=1 selects exactly one route",
-          "[crossover]")
-{
+TEST_CASE("srex_crossover: max_routes=1 selects exactly one route", "[crossover]") {
     auto data = make_crossover_instance();
     CostEvaluator eval;
 
@@ -255,18 +250,24 @@ TEST_CASE("srex_crossover: max_routes=1 selects exactly one route",
         int inherited_count = 0;
         for (int v = 0; v < p1.num_routes(); ++v) {
             auto const& r = p1.route(v);
-            if (r.empty()) continue;
+            if (r.empty()) {
+                continue;
+            }
 
             std::set<int> p1_set;
-            for (int i = 0; i < r.size(); ++i)
+            for (int i = 0; i < r.size(); ++i) {
                 p1_set.insert(r.client(i));
+            }
 
             for (int ov = 0; ov < offspring.num_routes(); ++ov) {
                 auto const& or_ = offspring.route(ov);
-                if (or_.empty()) continue;
+                if (or_.empty()) {
+                    continue;
+                }
                 std::set<int> os;
-                for (int i = 0; i < or_.size(); ++i)
+                for (int i = 0; i < or_.size(); ++i) {
                     os.insert(or_.client(i));
+                }
                 if (os == p1_set) {
                     inherited_count++;
                     break;
@@ -279,9 +280,7 @@ TEST_CASE("srex_crossover: max_routes=1 selects exactly one route",
     }
 }
 
-TEST_CASE("srex_crossover: tight capacity still produces valid solution",
-          "[crossover]")
-{
+TEST_CASE("srex_crossover: tight capacity still produces valid solution", "[crossover]") {
     // Instance with tight capacity: 4 clients, demand=5 each, vehicle cap=10.
     // Need at least 2 routes.
     ProblemData::Builder b;

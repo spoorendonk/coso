@@ -25,8 +25,8 @@ struct DistanceResource {
     struct State {
         int distance = 0;  ///< Total distance in this subsequence.
         int duration = 0;  ///< Total duration (travel + service) in this subsequence.
-        int first    = -1; ///< First node index in this subsequence (-1 = empty/depot).
-        int last     = -1; ///< Last node index in this subsequence (-1 = empty/depot).
+        int first = -1;    ///< First node index in this subsequence (-1 = empty/depot).
+        int last = -1;     ///< Last node index in this subsequence (-1 = empty/depot).
     };
 
     /// Initialize state for a single client node.
@@ -44,8 +44,8 @@ struct DistanceResource {
         State s;
         s.distance = 0;
         s.duration = c.service;
-        s.first    = node;
-        s.last     = node;
+        s.first = node;
+        s.last = node;
         return s;
     }
 
@@ -56,8 +56,8 @@ struct DistanceResource {
         State s;
         s.distance = 0;
         s.duration = 0;
-        s.first    = depot_node;
-        s.last     = depot_node;
+        s.first = depot_node;
+        s.last = depot_node;
         return s;
     }
 
@@ -70,18 +70,18 @@ struct DistanceResource {
     /// @param right    Right subsequence state.
     /// @param data     Problem data (for distance/duration lookup).
     /// @param profile  Distance profile to use.
-    [[nodiscard]] static State merge(State const& left, State const& right,
-                                     ProblemData const& data, int profile) {
+    [[nodiscard]] static State merge(State const& left, State const& right, ProblemData const& data,
+                                     int profile) {
         State result;
 
         // Travel from end of left to start of right.
         int edge_dist = data.dist(profile, left.last, right.first);
-        int edge_dur  = data.dur(profile, left.last, right.first);
+        int edge_dur = data.dur(profile, left.last, right.first);
 
         result.distance = left.distance + edge_dist + right.distance;
         result.duration = left.duration + edge_dur + right.duration;
-        result.first    = left.first;
-        result.last     = right.last;
+        result.first = left.first;
+        result.last = right.last;
 
         return result;
     }
@@ -93,18 +93,19 @@ struct DistanceResource {
     ///
     /// @param state         The merged state for the full route (depot->clients->depot).
     /// @param vehicle_type  The vehicle type to check constraints against.
-    [[nodiscard]] static int excess(State const& state,
-                                    ProblemData::VehicleTypeData const& vt) {
+    [[nodiscard]] static int excess(State const& state, ProblemData::VehicleTypeData const& vt) {
         int total_excess = 0;
 
-        if (vt.max_distance > 0 && state.distance > vt.max_distance)
+        if (vt.max_distance > 0 && state.distance > vt.max_distance) {
             total_excess += state.distance - vt.max_distance;
+        }
 
-        if (vt.max_duration > 0 && state.duration > vt.max_duration)
+        if (vt.max_duration > 0 && state.duration > vt.max_duration) {
             total_excess += state.duration - vt.max_duration;
+        }
 
         return total_excess;
     }
 };
 
-} // namespace coso
+}  // namespace coso

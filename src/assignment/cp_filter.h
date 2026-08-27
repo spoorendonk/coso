@@ -33,20 +33,16 @@ namespace coso {
 class CPFilter {
 public:
     explicit CPFilter(AssignmentData const& data)
-        : data_(data)
-        , num_shifts_(data.num_shift_types())
-        , all_shifts_mask_((1u << data.num_shift_types()) - 1u)
-        , domains_(data.num_employees(),
-                   std::vector<unsigned>(data.horizon, 0))
-    {
-    }
+        : data_(data),
+          num_shifts_(data.num_shift_types()),
+          all_shifts_mask_((1u << data.num_shift_types()) - 1u),
+          domains_(data.num_employees(), std::vector<unsigned>(data.horizon, 0)) {}
 
     /// Run constraint propagation on the given schedule.
     ///
     /// Resets all domains to "all shifts feasible" and then prunes according
     /// to each propagation rule.
-    void propagate(std::vector<std::vector<int>> const& schedule)
-    {
+    void propagate(std::vector<std::vector<int>> const& schedule) {
         reset_domains();
         prune_unavailabilities();
         prune_max_consecutive(schedule);
@@ -59,12 +55,13 @@ public:
     /// according to the propagated domains.
     ///
     /// A shift value of -1 (unassign) is always considered feasible.
-    [[nodiscard]] bool is_feasible(int employee, int day, int shift) const
-    {
-        if (shift < 0)
+    [[nodiscard]] bool is_feasible(int employee, int day, int shift) const {
+        if (shift < 0) {
             return true;  // Unassigning is always OK.
-        if (shift >= num_shifts_)
+        }
+        if (shift >= num_shifts_) {
             return false;
+        }
         return (domains_[employee][day] & (1u << shift)) != 0;
     }
 
@@ -72,98 +69,98 @@ public:
     ///
     /// Moves with new_shift == -1 (unassign) are never removed.
     /// Returns the number of moves removed.
-    int filter_moves(std::vector<AssignmentMove>& moves) const
-    {
+    int filter_moves(std::vector<AssignmentMove>& moves) const {
         auto original_size = static_cast<int>(moves.size());
-        moves.erase(
-            std::remove_if(moves.begin(), moves.end(),
-                           [this](AssignmentMove const& m) {
-                               return !is_feasible(m.employee, m.day,
-                                                   m.new_shift);
-                           }),
-            moves.end());
+        moves.erase(std::remove_if(moves.begin(), moves.end(),
+                                   [this](AssignmentMove const& m) {
+                                       return !is_feasible(m.employee, m.day, m.new_shift);
+                                   }),
+                    moves.end());
         return original_size - static_cast<int>(moves.size());
     }
 
     /// Read-only access to the domain of a cell (bitmask of feasible shifts).
-    [[nodiscard]] unsigned domain(int employee, int day) const
-    {
-        return domains_[employee][day];
-    }
+    [[nodiscard]] unsigned domain(int employee, int day) const { return domains_[employee][day]; }
 
     /// Number of feasible shifts for a cell.
-    [[nodiscard]] int domain_size(int employee, int day) const
-    {
+    [[nodiscard]] int domain_size(int employee, int day) const {
         return __builtin_popcount(domains_[employee][day]);
     }
 
 private:
-    void reset_domains()
-    {
-        for (auto& row : domains_)
+    void reset_domains() {
+        for (auto& row : domains_) {
             std::fill(row.begin(), row.end(), all_shifts_mask_);
+        }
     }
 
-    void prune_unavailabilities()
-    {
+    void prune_unavailabilities() {
         int const ne = data_.num_employees();
-        int const H  = data_.horizon;
-
-        for (int e = 0; e < ne; ++e)
-            for (int d = 0; d < H; ++d)
-                if (data_.is_unavailable(e, d))
-                    domains_[e][d] = 0;
-    }
-
-    void prune_max_consecutive(std::vector<std::vector<int>> const& schedule)
-    {
-        int const ne = data_.num_employees();
-        int const H  = data_.horizon;
+        int const H = data_.horizon;
 
         for (int e = 0; e < ne; ++e) {
-            int max_consec = std::min(data_.max_consecutive_shifts,
-                                      data_.employees[e].max_consecutive_days);
-            if (max_consec >= H)
-                continue;  // Can never violate.
-
-            // For each unassigned day, check if assigning any shift there
-            // would create a consecutive run exceeding max_consec.
             for (int d = 0; d < H; ++d) {
-                if (schedule[e][d] >= 0)
-                    continue;  // Already assigned, skip.
-
-                // Count consecutive assigned days before d.
-                int before = 0;
-                for (int b = d - 1; b >= 0 && schedule[e][b] >= 0; --b)
-                    ++before;
-
-                // Count consecutive assigned days after d.
-                int after = 0;
-                for (int a = d + 1; a < H && schedule[e][a] >= 0; ++a)
-                    ++after;
-
-                // If placing any shift here creates run > max_consec, prune all.
-                if (before + 1 + after > max_consec)
+                if (data_.is_unavailable(e, d)) {
                     domains_[e][d] = 0;
+                }
             }
         }
     }
 
-    void prune_min_rest(std::vector<std::vector<int>> const& schedule)
-    {
-        if (data_.min_rest_between_shifts <= 0)
-            return;
-
+    void prune_max_consecutive(std::vector<std::vector<int>> const& schedule) {
         int const ne = data_.num_employees();
-        int const H  = data_.horizon;
+        int const H = data_.horizon;
 
         for (int e = 0; e < ne; ++e) {
-            int min_rest = std::max(data_.min_rest_between_shifts,
-                                    data_.employees[e].min_rest_hours);
+            int max_consec =
+                std::min(data_.max_consecutive_shifts, data_.employees[e].max_consecutive_days);
+            if (max_consec >= H) {
+                continue;  // Can never violate.
+            }
+
+            // For each unassigned day, check if assigning any shift there
+            // would create a consecutive run exceeding max_consec.
+            for (int d = 0; d < H; ++d) {
+                if (schedule[e][d] >= 0) {
+                    continue;  // Already assigned, skip.
+                }
+
+                // Count consecutive assigned days before d.
+                int before = 0;
+                for (int b = d - 1; b >= 0 && schedule[e][b] >= 0; --b) {
+                    ++before;
+                }
+
+                // Count consecutive assigned days after d.
+                int after = 0;
+                for (int a = d + 1; a < H && schedule[e][a] >= 0; ++a) {
+                    ++after;
+                }
+
+                // If placing any shift here creates run > max_consec, prune all.
+                if (before + 1 + after > max_consec) {
+                    domains_[e][d] = 0;
+                }
+            }
+        }
+    }
+
+    void prune_min_rest(std::vector<std::vector<int>> const& schedule) {
+        if (data_.min_rest_between_shifts <= 0) {
+            return;
+        }
+
+        int const ne = data_.num_employees();
+        int const H = data_.horizon;
+
+        for (int e = 0; e < ne; ++e) {
+            int min_rest =
+                std::max(data_.min_rest_between_shifts, data_.employees[e].min_rest_hours);
 
             for (int d = 0; d < H; ++d) {
-                if (schedule[e][d] >= 0)
+                if (schedule[e][d] >= 0) {
                     continue;  // Already assigned.
+                }
 
                 // Check against predecessor shift (day d-1).
                 if (d > 0 && schedule[e][d - 1] >= 0) {
@@ -173,8 +170,9 @@ private:
                     for (int s = 0; s < num_shifts_; ++s) {
                         int start_s = data_.shift_types[s].start_hour;
                         int rest = (24 - end_prev) + start_s;
-                        if (rest < min_rest)
+                        if (rest < min_rest) {
                             domains_[e][d] &= ~(1u << s);
+                        }
                     }
                 }
 
@@ -186,27 +184,28 @@ private:
                     for (int s = 0; s < num_shifts_; ++s) {
                         int end_s = data_.shift_types[s].end_hour;
                         int rest = (24 - end_s) + start_next;
-                        if (rest < min_rest)
+                        if (rest < min_rest) {
                             domains_[e][d] &= ~(1u << s);
+                        }
                     }
                 }
             }
         }
     }
 
-    void prune_forbidden_sequences(
-        std::vector<std::vector<int>> const& schedule)
-    {
-        if (data_.forbidden_sequences.empty())
+    void prune_forbidden_sequences(std::vector<std::vector<int>> const& schedule) {
+        if (data_.forbidden_sequences.empty()) {
             return;
+        }
 
         int const ne = data_.num_employees();
-        int const H  = data_.horizon;
+        int const H = data_.horizon;
 
         for (auto const& seq : data_.forbidden_sequences) {
             int const len = static_cast<int>(seq.size());
-            if (len < 2)
+            if (len < 2) {
                 continue;
+            }
 
             for (int e = 0; e < ne; ++e) {
                 // For each position in the sequence, check if placing a
@@ -238,38 +237,42 @@ private:
                         // would complete the forbidden sequence.
                         int d = start + free_pos;
                         int forbidden_shift = seq[free_pos];
-                        if (forbidden_shift >= 0 && forbidden_shift < num_shifts_)
+                        if (forbidden_shift >= 0 && forbidden_shift < num_shifts_) {
                             domains_[e][d] &= ~(1u << forbidden_shift);
+                        }
                     }
                 }
             }
         }
     }
 
-    void prune_demand_limits(std::vector<std::vector<int>> const& schedule)
-    {
+    void prune_demand_limits(std::vector<std::vector<int>> const& schedule) {
         int const ne = data_.num_employees();
-        int const H  = data_.horizon;
+        int const H = data_.horizon;
 
         // Count current assignments per (shift, day).
         // Only prune if we know the max is already met.
         for (int s = 0; s < num_shifts_; ++s) {
             for (int d = 0; d < H; ++d) {
                 auto dem = data_.get_demand(s, d);
-                if (dem.max_employees >= INT_MAX)
+                if (dem.max_employees >= INT_MAX) {
                     continue;  // No cap.
+                }
 
                 int count = 0;
-                for (int e = 0; e < ne; ++e)
-                    if (schedule[e][d] == s)
+                for (int e = 0; e < ne; ++e) {
+                    if (schedule[e][d] == s) {
                         ++count;
+                    }
+                }
 
                 if (count >= dem.max_employees) {
                     // At or over max: prune this shift for all unassigned
                     // employees on this day.
                     for (int e = 0; e < ne; ++e) {
-                        if (schedule[e][d] < 0)
+                        if (schedule[e][d] < 0) {
                             domains_[e][d] &= ~(1u << s);
+                        }
                     }
                 }
             }
@@ -285,4 +288,4 @@ private:
     std::vector<std::vector<unsigned>> domains_;
 };
 
-} // namespace coso
+}  // namespace coso

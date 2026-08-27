@@ -7,8 +7,7 @@
 namespace coso::e2e {
 namespace {
 
-bool is_known_check(std::string const& check_name)
-{
+bool is_known_check(std::string const& check_name) {
     static constexpr std::array<char const*, 3> kKnownChecks = {
         "feasible",
         "nonnegative_cost",
@@ -22,16 +21,14 @@ bool is_known_check(std::string const& check_name)
     return false;
 }
 
-bool requested(std::set<std::string> const& checks, std::string const& name)
-{
+bool requested(std::set<std::string> const& checks, std::string const& name) {
     return checks.contains(name);
 }
 
-} // namespace
+}  // namespace
 
 Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
-                           SolveFn const& solve_once)
-{
+                           SolveFn const& solve_once) {
     Evaluation eval{.result = solve_once(), .checks = {}};
 
     for (std::string const& check_name : requested_checks) {
@@ -53,13 +50,12 @@ Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
 
     if (requested(requested_checks, "deterministic_work")) {
         coso::Result const rerun = solve_once();
-        eval.checks.deterministic_work =
-            (eval.result.work_ticks() == rerun.work_ticks())
-            && (eval.result.work_units() == rerun.work_units());
+        eval.checks.deterministic_work = (eval.result.work_ticks() == rerun.work_ticks()) &&
+                                         (eval.result.work_units() == rerun.work_units());
         eval.checks.pass = eval.checks.pass && eval.checks.deterministic_work;
     }
 
     return eval;
 }
 
-} // namespace coso::e2e
+}  // namespace coso::e2e

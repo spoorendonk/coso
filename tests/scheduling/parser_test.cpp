@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "scheduling/parsers.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -8,8 +8,7 @@ using namespace coso;
 //  Taillard JSP parser
 // ---------------------------------------------------------------------------
 
-TEST_CASE("parse_taillard_jsp - small 2x3 instance", "[scheduling][parser]")
-{
+TEST_CASE("parse_taillard_jsp - small 2x3 instance", "[scheduling][parser]") {
     // 2 jobs, 3 machines.
     // Job 0: op(m=0,d=3), op(m=1,d=2), op(m=2,d=4)
     // Job 1: op(m=1,d=5), op(m=2,d=1), op(m=0,d=6)
@@ -57,8 +56,7 @@ TEST_CASE("parse_taillard_jsp - small 2x3 instance", "[scheduling][parser]")
     CHECK(data.objective() == ScheduleObjective::Makespan);
 }
 
-TEST_CASE("parse_taillard_jsp - error on empty input", "[scheduling][parser]")
-{
+TEST_CASE("parse_taillard_jsp - error on empty input", "[scheduling][parser]") {
     CHECK_THROWS_AS(parse_taillard_jsp(""), std::runtime_error);
     CHECK_THROWS_AS(parse_taillard_jsp("# just comments\n"), std::runtime_error);
 }
@@ -67,8 +65,7 @@ TEST_CASE("parse_taillard_jsp - error on empty input", "[scheduling][parser]")
 //  PSPLIB RCPSP parser
 // ---------------------------------------------------------------------------
 
-TEST_CASE("parse_psplib - small RCPSP instance", "[scheduling][parser]")
-{
+TEST_CASE("parse_psplib - small RCPSP instance", "[scheduling][parser]") {
     // Minimal PSPLIB .sm file with 4 "jobs" (activities):
     //   1 = source (dummy), 4 = sink (dummy)
     //   2 and 3 are real activities.
@@ -143,8 +140,7 @@ RESOURCEAVAILABILITIES:
 //  FJSP parser
 // ---------------------------------------------------------------------------
 
-TEST_CASE("parse_fjsp - small FJSP instance", "[scheduling][parser]")
-{
+TEST_CASE("parse_fjsp - small FJSP instance", "[scheduling][parser]") {
     // 2 jobs, 3 machines.
     // Job 0: 2 operations
     //   Op 0: 2 eligible machines: (m1, d=3) (m3, d=5)  -> 0-based: (0,3) (2,5)
@@ -176,9 +172,9 @@ TEST_CASE("parse_fjsp - small FJSP instance", "[scheduling][parser]")
     CHECK(op0.durations_per_machine[1] == 5);
 
     // Processing time matrix checks.
-    CHECK(data.processing_time(0, 0) == 3);   // machine 0
-    CHECK(data.processing_time(0, 1) == INT_MAX); // machine 1 not eligible
-    CHECK(data.processing_time(0, 2) == 5);   // machine 2
+    CHECK(data.processing_time(0, 0) == 3);        // machine 0
+    CHECK(data.processing_time(0, 1) == INT_MAX);  // machine 1 not eligible
+    CHECK(data.processing_time(0, 2) == 5);        // machine 2
 
     // Op 1: fixed on machine 1, duration 4.
     auto const& op1 = data.operation(1);
@@ -206,7 +202,6 @@ TEST_CASE("parse_fjsp - small FJSP instance", "[scheduling][parser]")
     CHECK(data.objective() == ScheduleObjective::Makespan);
 }
 
-TEST_CASE("parse_fjsp - error on empty input", "[scheduling][parser]")
-{
+TEST_CASE("parse_fjsp - error on empty input", "[scheduling][parser]") {
     CHECK_THROWS_AS(parse_fjsp(""), std::runtime_error);
 }

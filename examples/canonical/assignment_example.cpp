@@ -1,9 +1,8 @@
-#include <iostream>
-
 #include "model/assignment_model.h"
 
-int main()
-{
+#include <iostream>
+
+int main() {
     coso::AssignmentModel model;
     int day_shift = model.add_shift_type({.name = "Day", .start_hour = 8, .end_hour = 16});
     model.add_employee({.name = "Alice"});

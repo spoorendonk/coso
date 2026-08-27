@@ -107,4 +107,4 @@ private:
     std::atomic<bool> running_{false};
 };
 
-} // namespace coso
+}  // namespace coso

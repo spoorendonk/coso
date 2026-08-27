@@ -11,15 +11,15 @@ namespace coso {
 
 /// Result of benchmarking a single VRP instance.
 struct BenchmarkResult {
-    std::string instance;    ///< Instance filename (without path).
-    int bks = 0;             ///< Best known solution cost.
-    int64_t cost = 0;        ///< Solver cost.
-    double gap_pct = 0.0;    ///< Gap to BKS as percentage: (cost - bks) / bks * 100.
-    double elapsed_s = 0.0;  ///< Wall-clock time in seconds.
-    double work_units = 0.0; ///< Deterministic work consumed.
-    uint64_t work_ticks = 0; ///< Raw deterministic ticks consumed.
-    bool feasible = false;   ///< Whether the solution is feasible.
-    int num_routes = 0;      ///< Number of routes in the solution.
+    std::string instance;     ///< Instance filename (without path).
+    int bks = 0;              ///< Best known solution cost.
+    int64_t cost = 0;         ///< Solver cost.
+    double gap_pct = 0.0;     ///< Gap to BKS as percentage: (cost - bks) / bks * 100.
+    double elapsed_s = 0.0;   ///< Wall-clock time in seconds.
+    double work_units = 0.0;  ///< Deterministic work consumed.
+    uint64_t work_ticks = 0;  ///< Raw deterministic ticks consumed.
+    bool feasible = false;    ///< Whether the solution is feasible.
+    int num_routes = 0;       ///< Number of routes in the solution.
 };
 
 /// Automated benchmark runner for CVRP instances.
@@ -57,4 +57,4 @@ private:
     static std::unordered_map<std::string, int> const& bks_table();
 };
 
-} // namespace coso
+}  // namespace coso

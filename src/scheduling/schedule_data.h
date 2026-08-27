@@ -28,10 +28,10 @@ public:
     // -------------------------------------------------------------------
 
     struct OperationData {
-        int job           = -1;    ///< owning job index
-        int fixed_machine = -1;    ///< -1 = flexible (FJSP)
-        int duration      = 0;     ///< fixed duration (when machine is fixed)
-        bool optional     = false;
+        int job = -1;            ///< owning job index
+        int fixed_machine = -1;  ///< -1 = flexible (FJSP)
+        int duration = 0;        ///< fixed duration (when machine is fixed)
+        bool optional = false;
         std::vector<int> eligible_machines;      ///< for FJSP
         std::vector<int> durations_per_machine;  ///< parallel to eligible_machines
     };
@@ -42,9 +42,9 @@ public:
 
     struct JobData {
         std::string name;
-        int release_time  = 0;
-        int due_date      = INT_MAX;
-        int weight        = 1;
+        int release_time = 0;
+        int due_date = INT_MAX;
+        int weight = 1;
         std::vector<int> operations;  ///< operation indices in this job (ordered)
     };
 
@@ -116,20 +116,36 @@ public:
         std::vector<std::vector<int>> resource_usage_;
 
         /// Extra precedence constraints (beyond intra-job).
-        struct Prec { int before; int after; };
+        struct Prec {
+            int before;
+            int after;
+        };
         std::vector<Prec> extra_precedences_;
 
         ScheduleObjective objective_ = ScheduleObjective::Makespan;
 
         /// Setup time entries (deferred until build).
-        struct SetupEntry { int from; int to; int machine; int time; };
+        struct SetupEntry {
+            int from;
+            int to;
+            int machine;
+            int time;
+        };
         std::vector<SetupEntry> setup_entries_;
         bool setup_uniform_ = false;
-        struct SetupUniformEntry { int from; int to; int time; };
+        struct SetupUniformEntry {
+            int from;
+            int to;
+            int time;
+        };
         std::vector<SetupUniformEntry> setup_uniform_entries_;
 
         /// Calendar entries (deferred until build).
-        struct CalendarEntry { int machine; int start; int end; };
+        struct CalendarEntry {
+            int machine;
+            int start;
+            int end;
+        };
         std::vector<CalendarEntry> calendar_entries_;
     };
 
@@ -137,10 +153,10 @@ public:
     //  Accessors (all const — ScheduleData is immutable after construction)
     // -------------------------------------------------------------------
 
-    [[nodiscard]] int num_machines()   const noexcept { return num_machines_; }
-    [[nodiscard]] int num_jobs()       const noexcept { return num_jobs_; }
+    [[nodiscard]] int num_machines() const noexcept { return num_machines_; }
+    [[nodiscard]] int num_jobs() const noexcept { return num_jobs_; }
     [[nodiscard]] int num_operations() const noexcept { return num_operations_; }
-    [[nodiscard]] int num_resources()  const noexcept { return num_resources_; }
+    [[nodiscard]] int num_resources() const noexcept { return num_resources_; }
 
     /// Operation data for operation index o (0-based).
     [[nodiscard]] OperationData const& operation(int o) const {
@@ -182,9 +198,7 @@ public:
     [[nodiscard]] ScheduleObjective objective() const noexcept { return objective_; }
 
     /// Whether setup times are defined.
-    [[nodiscard]] bool has_setup_times() const noexcept {
-        return setup_times_.has_value();
-    }
+    [[nodiscard]] bool has_setup_times() const noexcept { return setup_times_.has_value(); }
 
     /// Setup time matrix (only valid if has_setup_times() is true).
     [[nodiscard]] SetupTimeMatrix const& setup_times() const {
@@ -195,15 +209,14 @@ public:
     /// Setup time from operation `from` to `to` on machine `m`.
     /// Returns 0 if no setup times are defined.
     [[nodiscard]] int setup_time(int from, int to, int m) const {
-        if (!setup_times_.has_value())
+        if (!setup_times_.has_value()) {
             return 0;
+        }
         return setup_times_->setup_time(from, to, m);
     }
 
     /// Whether any machine has calendar restrictions.
-    [[nodiscard]] bool has_calendar() const noexcept {
-        return calendar_.has_value();
-    }
+    [[nodiscard]] bool has_calendar() const noexcept { return calendar_.has_value(); }
 
     /// Machine calendar (only valid if has_calendar() is true).
     [[nodiscard]] MachineCalendar const& calendar() const {
@@ -220,16 +233,16 @@ public:
     }
 
 private:
-    int num_machines_   = 0;
-    int num_jobs_       = 0;
+    int num_machines_ = 0;
+    int num_jobs_ = 0;
     int num_operations_ = 0;
-    int num_resources_  = 0;
+    int num_resources_ = 0;
 
-    std::vector<OperationData>  operations_;
-    std::vector<JobData>        jobs_;
-    std::vector<std::string>    machine_names_;
-    std::vector<PrecedenceArc>  precedences_;
-    std::vector<int>            resource_capacities_;
+    std::vector<OperationData> operations_;
+    std::vector<JobData> jobs_;
+    std::vector<std::string> machine_names_;
+    std::vector<PrecedenceArc> precedences_;
+    std::vector<int> resource_capacities_;
 
     /// Flat row-major matrix: operation * num_machines_ + machine.
     /// INT_MAX means the operation cannot run on that machine.
@@ -251,4 +264,4 @@ private:
     friend class Builder;
 };
 
-} // namespace coso
+}  // namespace coso

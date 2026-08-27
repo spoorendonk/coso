@@ -11,78 +11,71 @@ namespace coso {
 //  Builder methods
 // ---------------------------------------------------------------------------
 
-int ProblemData::Builder::add_depot(Coord coord, DepotParams p)
-{
+int ProblemData::Builder::add_depot(Coord coord, DepotParams p) {
     int idx = static_cast<int>(depots_.size());
     depots_.push_back({.coord = coord, .tw = p.tw});
     return idx;
 }
 
-int ProblemData::Builder::add_client(Coord coord, ClientParams p)
-{
+int ProblemData::Builder::add_client(Coord coord, ClientParams p) {
     int idx = static_cast<int>(clients_.size());
     clients_.push_back({
-        .coord       = coord,
-        .demand      = std::move(p.demand),
-        .pickup      = std::move(p.pickup),
-        .tw          = p.tw,
-        .extra_tw    = std::move(p.extra_tw),
-        .service     = p.service,
+        .coord = coord,
+        .demand = std::move(p.demand),
+        .pickup = std::move(p.pickup),
+        .tw = p.tw,
+        .extra_tw = std::move(p.extra_tw),
+        .service = p.service,
         .release_time = p.release_time,
-        .prize       = p.prize,
-        .required    = p.required,
-        .group       = p.group,
-        .quantity    = p.quantity,
-        .skills      = std::move(p.skills),
-        .setup_time   = p.setup_time,
-        .location     = p.location,
-        .client_type  = p.client_type,
+        .prize = p.prize,
+        .required = p.required,
+        .group = p.group,
+        .quantity = p.quantity,
+        .skills = std::move(p.skills),
+        .setup_time = p.setup_time,
+        .location = p.location,
+        .client_type = p.client_type,
     });
     return idx;
 }
 
-int ProblemData::Builder::add_vehicle_type(int count, VehicleTypeParams p)
-{
+int ProblemData::Builder::add_vehicle_type(int count, VehicleTypeParams p) {
     int idx = static_cast<int>(vehicle_types_.size());
     ensure_profile_(p.profile);
     vehicle_types_.push_back({
-        .count              = count,
-        .capacity           = std::move(p.capacity),
-        .max_duration       = p.max_duration,
-        .max_distance       = p.max_distance,
-        .min_tasks          = p.min_tasks,
-        .max_tasks          = p.max_tasks,
-        .max_overtime       = p.max_overtime,
+        .count = count,
+        .capacity = std::move(p.capacity),
+        .max_duration = p.max_duration,
+        .max_distance = p.max_distance,
+        .min_tasks = p.min_tasks,
+        .max_tasks = p.max_tasks,
+        .max_overtime = p.max_overtime,
         .unit_overtime_cost = p.unit_overtime_cost,
-        .reload_depot       = p.reload_depot,
-        .max_reloads        = p.max_reloads,
-        .cost               = p.cost,
-        .profile            = p.profile,
-        .speed_factor       = p.speed_factor,
-        .skills             = std::move(p.skills),
+        .reload_depot = p.reload_depot,
+        .max_reloads = p.max_reloads,
+        .cost = p.cost,
+        .profile = p.profile,
+        .speed_factor = p.speed_factor,
+        .skills = std::move(p.skills),
     });
     return idx;
 }
 
-void ProblemData::Builder::add_request(int pickup, int delivery)
-{
+void ProblemData::Builder::add_request(int pickup, int delivery) {
     requests_.push_back({pickup, delivery});
 }
 
-void ProblemData::Builder::set_distance(int profile, int from, int to, int dist)
-{
+void ProblemData::Builder::set_distance(int profile, int from, int to, int dist) {
     ensure_profile_(profile);
     dist_entries_.push_back({profile, from, to, dist});
 }
 
-void ProblemData::Builder::set_duration(int profile, int from, int to, int dur)
-{
+void ProblemData::Builder::set_duration(int profile, int from, int to, int dur) {
     ensure_profile_(profile);
     dur_entries_.push_back({profile, from, to, dur});
 }
 
-void ProblemData::Builder::set_cost(int profile, int from, int to, int cost)
-{
+void ProblemData::Builder::set_cost(int profile, int from, int to, int cost) {
     ensure_profile_(profile);
     cost_entries_.push_back({profile, from, to, cost});
 }
@@ -93,40 +86,40 @@ void ProblemData::Builder::set_cost(int profile, int from, int to, int cost)
 
 namespace {
 
-int euclidean(Coord a, Coord b)
-{
+int euclidean(Coord a, Coord b) {
     double dx = a.x - b.x;
     double dy = a.y - b.y;
     return static_cast<int>(std::round(std::sqrt(dx * dx + dy * dy)));
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ---------------------------------------------------------------------------
 //  Builder::build
 // ---------------------------------------------------------------------------
 
-ProblemData ProblemData::Builder::build(int granular_k) const
-{
+ProblemData ProblemData::Builder::build(int granular_k) const {
     ProblemData pd;
 
     // Copy entity data.
-    pd.num_depots_        = static_cast<int>(depots_.size());
-    pd.num_clients_       = static_cast<int>(clients_.size());
+    pd.num_depots_ = static_cast<int>(depots_.size());
+    pd.num_clients_ = static_cast<int>(clients_.size());
     pd.num_vehicle_types_ = static_cast<int>(vehicle_types_.size());
-    pd.num_profiles_      = max_profile_ + 1;
+    pd.num_profiles_ = max_profile_ + 1;
 
-    pd.depots_        = depots_;
-    pd.clients_       = clients_;
+    pd.depots_ = depots_;
+    pd.clients_ = clients_;
     pd.vehicle_types_ = vehicle_types_;
-    pd.requests_      = requests_;
+    pd.requests_ = requests_;
 
     // Determine number of load dimensions (max across clients and vehicle types).
     int max_dim = 0;
-    for (auto const& c : pd.clients_)
+    for (auto const& c : pd.clients_) {
         max_dim = std::max(max_dim, static_cast<int>(c.demand.size()));
-    for (auto const& vt : pd.vehicle_types_)
+    }
+    for (auto const& vt : pd.vehicle_types_) {
         max_dim = std::max(max_dim, static_cast<int>(vt.capacity.size()));
+    }
     pd.num_load_dims_ = max_dim;
 
     // Pad demand/pickup/capacity vectors to num_load_dims_ for uniform access.
@@ -158,8 +151,8 @@ ProblemData ProblemData::Builder::build(int granular_k) const
                 int d = euclidean(ci, cj);
                 int idx = p * n * n + i * n + j;
                 pd.dist_matrices_[idx] = d;
-                pd.dur_matrices_[idx]  = d;   // duration = distance by default
-                pd.cost_matrices_[idx] = d;   // cost = distance by default
+                pd.dur_matrices_[idx] = d;   // duration = distance by default
+                pd.cost_matrices_[idx] = d;  // cost = distance by default
             }
         }
     }
@@ -207,20 +200,17 @@ ProblemData ProblemData::Builder::build(int granular_k) const
             // Build candidate list (all nodes except self).
             sorted_nodes.clear();
             for (int i = 0; i < n; ++i) {
-                if (i != c_node)
+                if (i != c_node) {
                     sorted_nodes.push_back(i);
+                }
             }
 
             // Sort candidates by distance from c_node (profile 0).
-            auto cmp = [&](int a, int b) {
-                return pd.dist(0, c_node, a) < pd.dist(0, c_node, b);
-            };
+            auto cmp = [&](int a, int b) { return pd.dist(0, c_node, a) < pd.dist(0, c_node, b); };
 
             if (static_cast<int>(sorted_nodes.size()) > k) {
-                std::partial_sort(sorted_nodes.begin(),
-                                  sorted_nodes.begin() + k,
-                                  sorted_nodes.end(),
-                                  cmp);
+                std::partial_sort(sorted_nodes.begin(), sorted_nodes.begin() + k,
+                                  sorted_nodes.end(), cmp);
             } else {
                 std::sort(sorted_nodes.begin(), sorted_nodes.end(), cmp);
             }
@@ -239,4 +229,4 @@ ProblemData ProblemData::Builder::build(int granular_k) const
     return pd;
 }
 
-} // namespace coso
+}  // namespace coso

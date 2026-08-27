@@ -1,11 +1,11 @@
-#include <catch2/catch_test_macros.hpp>
+#include "search/solution_finalizer.h"
 
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
-#include "search/solution_finalizer.h"
 #include "search/stop_criterion.h"
 
+#include <catch2/catch_test_macros.hpp>
 #include <vector>
 
 using namespace coso;
@@ -16,19 +16,18 @@ using namespace coso;
 
 /// Build a solution with given route assignments.
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
 
 /// 1 depot at origin, 6 clients, 3 vehicles with capacity 10.
-static ProblemData make_small_instance()
-{
+static ProblemData make_small_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {10}});
@@ -44,8 +43,7 @@ static ProblemData make_small_instance()
 }
 
 /// Instance where one route is overloaded: cap=10, route has demand 16.
-static ProblemData make_overloaded_instance()
-{
+static ProblemData make_overloaded_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {10}});
@@ -64,9 +62,7 @@ static ProblemData make_overloaded_instance()
 //  Basic finalization tests
 // ===========================================================================
 
-TEST_CASE("SolutionFinalizer: feasible solution stays feasible",
-          "[finalizer]")
-{
+TEST_CASE("SolutionFinalizer: feasible solution stays feasible", "[finalizer]") {
     auto data = make_small_instance();
     // All demands fit within capacity 10.
     auto sol = make_solution(data, {{0, 1}, {2, 3}, {4, 5}});
@@ -81,9 +77,7 @@ TEST_CASE("SolutionFinalizer: feasible solution stays feasible",
     CHECK(sol.total_distance() <= old_dist);
 }
 
-TEST_CASE("SolutionFinalizer: improves distance on feasible solution",
-          "[finalizer]")
-{
+TEST_CASE("SolutionFinalizer: improves distance on feasible solution", "[finalizer]") {
     auto data = make_small_instance();
     // Badly ordered but feasible: route 0 has clients from different
     // directions, route 1 has mixed clients.
@@ -99,9 +93,7 @@ TEST_CASE("SolutionFinalizer: improves distance on feasible solution",
     CHECK(sol.total_distance() <= old_dist);
 }
 
-TEST_CASE("SolutionFinalizer: repairs infeasible solution",
-          "[finalizer]")
-{
+TEST_CASE("SolutionFinalizer: repairs infeasible solution", "[finalizer]") {
     auto data = make_overloaded_instance();
 
     // Route 0 = [0, 1, 4] -> demand = 6+6+4 = 16 > cap 10.
@@ -115,9 +107,7 @@ TEST_CASE("SolutionFinalizer: repairs infeasible solution",
     CHECK(sol.feasible());
 }
 
-TEST_CASE("SolutionFinalizer: empty solution stays empty",
-          "[finalizer]")
-{
+TEST_CASE("SolutionFinalizer: empty solution stays empty", "[finalizer]") {
     auto data = make_small_instance();
     Solution sol(data);
 
@@ -128,9 +118,7 @@ TEST_CASE("SolutionFinalizer: empty solution stays empty",
     CHECK(sol.num_unassigned() == data.num_clients());
 }
 
-TEST_CASE("SolutionFinalizer: single-client routes remain feasible",
-          "[finalizer]")
-{
+TEST_CASE("SolutionFinalizer: single-client routes remain feasible", "[finalizer]") {
     auto data = make_small_instance();
     auto sol = make_solution(data, {{0}, {1}, {2}});
     REQUIRE(sol.feasible());
@@ -141,9 +129,7 @@ TEST_CASE("SolutionFinalizer: single-client routes remain feasible",
     CHECK(sol.feasible());
 }
 
-TEST_CASE("SolutionFinalizer: result is locally optimal under high penalty",
-          "[finalizer]")
-{
+TEST_CASE("SolutionFinalizer: result is locally optimal under high penalty", "[finalizer]") {
     auto data = make_small_instance();
     auto sol = make_solution(data, {{2, 3}, {0, 4}, {1, 5}});
 
@@ -162,9 +148,7 @@ TEST_CASE("SolutionFinalizer: result is locally optimal under high penalty",
 //  Stop criterion tests
 // ===========================================================================
 
-TEST_CASE("SolutionFinalizer: respects stop criterion",
-          "[finalizer][stop]")
-{
+TEST_CASE("SolutionFinalizer: respects stop criterion", "[finalizer][stop]") {
     auto data = make_small_instance();
     auto sol = make_solution(data, {{2, 3}, {0, 4}, {1, 5}});
     int dist_before = sol.total_distance();
@@ -181,9 +165,7 @@ TEST_CASE("SolutionFinalizer: respects stop criterion",
     CHECK(sol.total_distance() == dist_before);
 }
 
-TEST_CASE("SolutionFinalizer: nullptr stop runs to completion",
-          "[finalizer][stop]")
-{
+TEST_CASE("SolutionFinalizer: nullptr stop runs to completion", "[finalizer][stop]") {
     auto data = make_small_instance();
     auto sol = make_solution(data, {{2, 3}, {0, 4}, {1, 5}});
 

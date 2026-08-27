@@ -15,8 +15,8 @@ using namespace coso;
 /// Clients: 3 clients with unit demand.
 static ProblemData make_two_depot_problem() {
     ProblemData::Builder b;
-    b.add_depot({0.0, 0.0}, {{100, 500}});  // depot 0
-    b.add_depot({10.0, 0.0}, {{200, 800}}); // depot 1
+    b.add_depot({0.0, 0.0}, {{100, 500}});   // depot 0
+    b.add_depot({10.0, 0.0}, {{200, 800}});  // depot 1
     b.add_client({1.0, 0.0}, {.demand = {1}});
     b.add_client({2.0, 0.0}, {.demand = {1}});
     b.add_client({3.0, 0.0}, {.demand = {1}});
@@ -90,7 +90,7 @@ TEST_CASE("DepotResource: init for client has no depot", "[depot_resource]") {
 TEST_CASE("DepotResource: merge prefers left depot", "[depot_resource]") {
     auto data = make_two_depot_problem();
 
-    auto left  = DepotResource::init_depot(data, 0);
+    auto left = DepotResource::init_depot(data, 0);
     auto right = DepotResource::init_depot(data, 1);
 
     auto merged = DepotResource::merge(left, right);
@@ -102,7 +102,7 @@ TEST_CASE("DepotResource: merge prefers left depot", "[depot_resource]") {
 TEST_CASE("DepotResource: merge with unassigned left uses right", "[depot_resource]") {
     auto data = make_two_depot_problem();
 
-    auto left  = DepotResource::init(data, 0);  // no depot
+    auto left = DepotResource::init(data, 0);  // no depot
     auto right = DepotResource::init_depot(data, 1);
 
     auto merged = DepotResource::merge(left, right);
@@ -114,7 +114,7 @@ TEST_CASE("DepotResource: merge with unassigned left uses right", "[depot_resour
 TEST_CASE("DepotResource: merge two unassigned states", "[depot_resource]") {
     auto data = make_two_depot_problem();
 
-    auto left  = DepotResource::init(data, 0);
+    auto left = DepotResource::init(data, 0);
     auto right = DepotResource::init(data, 1);
 
     auto merged = DepotResource::merge(left, right);
@@ -147,7 +147,7 @@ TEST_CASE("DepotResource: with_return_time updates arrival", "[depot_resource]")
 
     auto updated = DepotResource::with_return_time(s, 450);
     REQUIRE(updated.arrive_back == 450);
-    REQUIRE(updated.depot == 0);  // unchanged
+    REQUIRE(updated.depot == 0);     // unchanged
     REQUIRE(updated.depart == 100);  // unchanged
 }
 
@@ -207,22 +207,22 @@ TEST_CASE("DepotResource: early departure excess", "[depot_resource]") {
 
     // Manually construct a state with departure before open.
     DepotResource::State s;
-    s.depot       = 0;
-    s.depart      = 50;   // before tw_open = 100
+    s.depot = 0;
+    s.depart = 50;  // before tw_open = 100
     s.arrive_back = 400;
-    s.tw_open     = 100;
-    s.tw_close    = 500;
+    s.tw_open = 100;
+    s.tw_close = 500;
 
     REQUIRE(DepotResource::excess(s) == 50);
 }
 
 TEST_CASE("DepotResource: both early departure and late return", "[depot_resource]") {
     DepotResource::State s;
-    s.depot       = 0;
-    s.depart      = 50;
+    s.depot = 0;
+    s.depart = 50;
     s.arrive_back = 600;
-    s.tw_open     = 100;
-    s.tw_close    = 500;
+    s.tw_open = 100;
+    s.tw_close = 500;
 
     // Early: 100 - 50 = 50, Late: 600 - 500 = 100
     REQUIRE(DepotResource::excess(s) == 150);
@@ -256,7 +256,8 @@ TEST_CASE("DepotResource: has_depot checks assignment", "[depot_resource]") {
     REQUIRE_FALSE(DepotResource::has_depot(unassigned));
 }
 
-TEST_CASE("DepotResource: unassigned state is feasible (no depot TW to violate)", "[depot_resource]") {
+TEST_CASE("DepotResource: unassigned state is feasible (no depot TW to violate)",
+          "[depot_resource]") {
     auto data = make_two_depot_problem();
     auto s = DepotResource::init(data, 0);
     REQUIRE(DepotResource::is_feasible(s));

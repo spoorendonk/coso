@@ -17,8 +17,7 @@ public:
     int add_node(int supply = 0, std::string name = "");
 
     /// Add an arc between nodes.
-    int add_arc(int tail, int head, int cost = 0,
-                int lower_cap = 0, int upper_cap = INT_MAX);
+    int add_arc(int tail, int head, int cost = 0, int lower_cap = 0, int upper_cap = INT_MAX);
 
     /// Add a global resource with an upper bound.
     int add_resource(std::string name = "", int upper_bound = INT_MAX);
@@ -52,4 +51,4 @@ private:
     std::vector<std::vector<int>> resource_usage_;
 };
 
-} // namespace coso
+}  // namespace coso

@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/resources/break_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -11,8 +11,7 @@ using namespace coso;
 /// 1 depot at (0,0), 4 clients on a line, each with service time 30.
 /// Distances (and durations) are Euclidean so travel between adjacent
 /// clients = 10.  Depot-to-first and last-to-depot = 10.
-static ProblemData make_break_instance()
-{
+static ProblemData make_break_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {100}});
@@ -28,8 +27,7 @@ static ProblemData make_break_instance()
 }
 
 /// Instance with varying service times for more nuanced tests.
-static ProblemData make_varied_instance()
-{
+static ProblemData make_varied_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {100}});
@@ -45,9 +43,7 @@ static ProblemData make_varied_instance()
 //  Init tests
 // ===========================================================================
 
-TEST_CASE("BreakResource::init creates state with service time as driving",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::init creates state with service time as driving", "[break_resource]") {
     auto data = make_break_instance();
     BreakResource::Rule rule{.max_driving = 100, .break_duration = 15};
 
@@ -60,9 +56,7 @@ TEST_CASE("BreakResource::init creates state with service time as driving",
     CHECK(s.can_break == true);
 }
 
-TEST_CASE("BreakResource::init_depot creates empty state",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::init_depot creates empty state", "[break_resource]") {
     auto data = make_break_instance();
     BreakResource::Rule rule{.max_driving = 100, .break_duration = 15};
 
@@ -75,9 +69,7 @@ TEST_CASE("BreakResource::init_depot creates empty state",
     CHECK(s.can_break == true);
 }
 
-TEST_CASE("BreakResource::init with service exceeding max_driving",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::init with service exceeding max_driving", "[break_resource]") {
     auto data = make_break_instance();
     // Max driving is 20, but service is 30.
     // Init does NOT charge excess; it is detected by excess() on the
@@ -95,9 +87,7 @@ TEST_CASE("BreakResource::init with service exceeding max_driving",
 //  Merge tests
 // ===========================================================================
 
-TEST_CASE("BreakResource::merge two clients within limit",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::merge two clients within limit", "[break_resource]") {
     auto data = make_break_instance();
     // Service = 30 each, travel = 10 between adjacent clients.
     // Total driving: 30 + 10 + 30 = 70.
@@ -113,9 +103,7 @@ TEST_CASE("BreakResource::merge two clients within limit",
     CHECK(merged.breaks == 0);
 }
 
-TEST_CASE("BreakResource::merge accumulates driving with no break rule",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::merge accumulates driving with no break rule", "[break_resource]") {
     auto data = make_break_instance();
     // No break rule (max_driving = 0 means unlimited).
     BreakResource::Rule rule{.max_driving = 0, .break_duration = 15};
@@ -128,9 +116,7 @@ TEST_CASE("BreakResource::merge accumulates driving with no break rule",
     CHECK(merged.excess == 0);
 }
 
-TEST_CASE("BreakResource::merge detects excess when bridge exceeds limit",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::merge detects excess when bridge exceeds limit", "[break_resource]") {
     auto data = make_break_instance();
     // Max driving = 50. Client 0 service=30, travel=10 -> bridge=40.
     // bridge + right's driving would be 40 + 30 = 70 > 50.
@@ -149,9 +135,7 @@ TEST_CASE("BreakResource::merge detects excess when bridge exceeds limit",
     CHECK(BreakResource::excess(merged, rule) == 0);
 }
 
-TEST_CASE("BreakResource::merge with bridge exceeding max_driving",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::merge with bridge exceeding max_driving", "[break_resource]") {
     auto data = make_break_instance();
     // Max driving = 35. Client 0 service=30, travel=10 -> bridge=40 > 35.
     // Excess = 40 - 35 = 5. Break forced at right. driving = 30.
@@ -166,9 +150,7 @@ TEST_CASE("BreakResource::merge with bridge exceeding max_driving",
     CHECK(merged.driving == 30);  // reset after break
 }
 
-TEST_CASE("BreakResource::merge three clients chain",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::merge three clients chain", "[break_resource]") {
     auto data = make_break_instance();
     // Each service = 30, travel = 10 between adjacent.
     // Max driving = 60. Break duration = 15.
@@ -190,9 +172,7 @@ TEST_CASE("BreakResource::merge three clients chain",
     CHECK(BreakResource::excess(m012, rule) == 0);
 }
 
-TEST_CASE("BreakResource::merge three clients with violations",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::merge three clients with violations", "[break_resource]") {
     auto data = make_break_instance();
     // Max driving = 25. Each service=30 already exceeds limit.
     // Client 0: driving=30, excess = 30-25 = 5.
@@ -224,33 +204,27 @@ TEST_CASE("BreakResource::merge three clients with violations",
 //  Excess computation tests
 // ===========================================================================
 
-TEST_CASE("BreakResource::excess with no rule returns zero",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::excess with no rule returns zero", "[break_resource]") {
     BreakResource::Rule rule{.max_driving = 0, .break_duration = 15};
     BreakResource::State s{.driving = 999, .excess = 0};
 
     CHECK(BreakResource::excess(s, rule) == 0);
 }
 
-TEST_CASE("BreakResource::excess adds final segment violation",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::excess adds final segment violation", "[break_resource]") {
     BreakResource::Rule rule{.max_driving = 50, .break_duration = 15};
     BreakResource::State s;
     s.driving = 70;  // 20 over limit
-    s.excess  = 10;  // already accumulated
+    s.excess = 10;   // already accumulated
 
     CHECK(BreakResource::excess(s, rule) == 30);  // 10 + 20
 }
 
-TEST_CASE("BreakResource::excess with driving within limit",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::excess with driving within limit", "[break_resource]") {
     BreakResource::Rule rule{.max_driving = 50, .break_duration = 15};
     BreakResource::State s;
     s.driving = 40;
-    s.excess  = 5;
+    s.excess = 5;
 
     CHECK(BreakResource::excess(s, rule) == 5);  // only accumulated excess
 }
@@ -259,9 +233,7 @@ TEST_CASE("BreakResource::excess with driving within limit",
 //  Merge reverse tests
 // ===========================================================================
 
-TEST_CASE("BreakResource::merge_reverse swaps driving directions",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource::merge_reverse swaps driving directions", "[break_resource]") {
     auto data = make_varied_instance();
     // Client 0: service=20, Client 1: service=50.
     BreakResource::Rule rule{.max_driving = 100, .break_duration = 15};
@@ -278,9 +250,7 @@ TEST_CASE("BreakResource::merge_reverse swaps driving directions",
 //  Integration-style tests: building full routes
 // ===========================================================================
 
-TEST_CASE("BreakResource: full route feasible with generous limit",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource: full route feasible with generous limit", "[break_resource]") {
     auto data = make_break_instance();
     BreakResource::Rule rule{.max_driving = 500, .break_duration = 15};
 
@@ -303,9 +273,7 @@ TEST_CASE("BreakResource: full route feasible with generous limit",
     CHECK(BreakResource::excess(full, rule) == 0);
 }
 
-TEST_CASE("BreakResource: full route with tight limit causes excess",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource: full route with tight limit causes excess", "[break_resource]") {
     auto data = make_break_instance();
     // Max 45 driving. Service=30, travel=10. Bridge after first client = 40.
     // After c0: driving=30 < 45. Merge with c1 (travel=10): bridge=40 < 45.
@@ -340,13 +308,11 @@ TEST_CASE("BreakResource: full route with tight limit causes excess",
     tm = BreakResource::merge(tm, t2, 10, tight);
     tm = BreakResource::merge(tm, t3, 10, tight);
 
-    CHECK(tm.excess == 15);        // 3 bridges * 5 excess each
+    CHECK(tm.excess == 15);                         // 3 bridges * 5 excess each
     CHECK(BreakResource::excess(tm, tight) == 15);  // final driving=30 < 35
 }
 
-TEST_CASE("BreakResource: varied service times with breaks",
-          "[break_resource]")
-{
+TEST_CASE("BreakResource: varied service times with breaks", "[break_resource]") {
     auto data = make_varied_instance();
     // Client 0: service=20, Client 1: service=50, Client 2: service=10.
     // Travel = 10 between adjacent.
@@ -362,15 +328,15 @@ TEST_CASE("BreakResource: varied service times with breaks",
     auto s1 = BreakResource::init(data, 1, rule);
 
     auto m = BreakResource::merge(s0, s1, 10, rule);
-    CHECK(m.excess == 0);     // bridge=30 < 40, no bridge excess
-    CHECK(m.driving == 50);   // right.driving = client 1 service
+    CHECK(m.excess == 0);                         // bridge=30 < 40, no bridge excess
+    CHECK(m.driving == 50);                       // right.driving = client 1 service
     CHECK(BreakResource::excess(m, rule) == 10);  // final: 50 - 40 = 10
 
     // Add client 2 (service=10, travel=10): bridge = 50+10 = 60 > 40.
     // Excess += 60 - 40 = 20, break forced. driving = 10.
     auto s2 = BreakResource::init(data, 2, rule);
     auto m2 = BreakResource::merge(m, s2, 10, rule);
-    CHECK(m2.excess == 20);   // bridge 60 - 40
-    CHECK(m2.driving == 10);  // reset after break
+    CHECK(m2.excess == 20);                        // bridge 60 - 40
+    CHECK(m2.driving == 10);                       // reset after break
     CHECK(BreakResource::excess(m2, rule) == 20);  // 10 < 40, no final excess
 }

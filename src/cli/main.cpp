@@ -15,10 +15,8 @@ struct Options {
     bool verbose = false;
 };
 
-void print_usage(const char* prog)
-{
-    std::cerr << "Usage: " << prog
-              << " <instance.vrp> [--time-limit <seconds>] [-v|--verbose]\n"
+void print_usage(const char* prog) {
+    std::cerr << "Usage: " << prog << " <instance.vrp> [--time-limit <seconds>] [-v|--verbose]\n"
               << "\n"
               << "Solve a CVRPLIB .vrp instance using COSO.\n"
               << "\n"
@@ -33,8 +31,7 @@ void print_usage(const char* prog)
 }
 
 /// Parse command-line arguments. Returns true on success.
-bool parse_args(int argc, char* argv[], Options& opts)
-{
+bool parse_args(int argc, char* argv[], Options& opts) {
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
 
@@ -109,10 +106,9 @@ bool parse_args(int argc, char* argv[], Options& opts)
     return true;
 }
 
-} // namespace
+}  // namespace
 
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
     Options opts;
     if (!parse_args(argc, argv, opts)) {
         std::cerr << "\n";
@@ -129,8 +125,7 @@ int main(int argc, char* argv[])
 
     coso::Result result;
     try {
-        result = coso::solve(opts.instance_path,
-                             coso::TimeLimit(opts.time_limit, opts.work_limit));
+        result = coso::solve(opts.instance_path, coso::TimeLimit(opts.time_limit, opts.work_limit));
     } catch (std::exception const& e) {
         std::cerr << "Error: " << e.what() << "\n";
         return 1;
@@ -139,15 +134,13 @@ int main(int argc, char* argv[])
     // Print summary.
     std::cout << "\n";
     std::cout << "Feasible: " << (result.feasible() ? "yes" : "no") << "\n";
-    std::cout << "Cost:     " << std::fixed << std::setprecision(0)
-              << result.cost() << "\n";
+    std::cout << "Cost:     " << std::fixed << std::setprecision(0) << result.cost() << "\n";
     std::cout << "Routes:   " << result.routes().size() << "\n";
-    std::cout << "Elapsed:  " << std::fixed << std::setprecision(2)
-              << result.elapsed_seconds() << "s\n";
+    std::cout << "Elapsed:  " << std::fixed << std::setprecision(2) << result.elapsed_seconds()
+              << "s\n";
     std::cout << "Iters:    " << result.iterations() << "\n";
-    std::cout << "Work:     " << std::fixed << std::setprecision(2)
-              << result.work_units() << " (" << result.work_ticks()
-              << " ticks)\n";
+    std::cout << "Work:     " << std::fixed << std::setprecision(2) << result.work_units() << " ("
+              << result.work_ticks() << " ticks)\n";
 
     if (!result.unserved().empty()) {
         std::cout << "Unserved: " << result.unserved().size() << " clients\n";
@@ -160,7 +153,9 @@ int main(int argc, char* argv[])
         for (auto const& route : result.routes()) {
             std::cout << "  Route " << idx++ << ": ";
             for (size_t i = 0; i < route.size(); ++i) {
-                if (i > 0) std::cout << " -> ";
+                if (i > 0) {
+                    std::cout << " -> ";
+                }
                 std::cout << route[i];
             }
             std::cout << "\n";

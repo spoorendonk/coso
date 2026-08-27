@@ -14,8 +14,7 @@ namespace coso::debug {
 //  Route consistency
 // ---------------------------------------------------------------------------
 
-void assert_route_consistency(Route const& route, ProblemData const& data)
-{
+void assert_route_consistency(Route const& route, ProblemData const& data) {
     int n = route.size();
 
     // Recompute load prefix from scratch.
@@ -61,8 +60,7 @@ void assert_route_consistency(Route const& route, ProblemData const& data)
     // Recompute load excess.
     int expected_excess = 0;
     if (n > 0) {
-        expected_excess = LoadResource::excess(
-            prefix[n], data.vehicle_type(route.vehicle_type()));
+        expected_excess = LoadResource::excess(prefix[n], data.vehicle_type(route.vehicle_type()));
     }
     assert(route.load_excess() == expected_excess);
 
@@ -72,11 +70,11 @@ void assert_route_consistency(Route const& route, ProblemData const& data)
     int expected_dist = 0;
     if (n > 0) {
         int first_node = data.num_depots() + route.client(0);
-        int last_node  = data.num_depots() + route.client(n - 1);
+        int last_node = data.num_depots() + route.client(n - 1);
         expected_dist += data.dist(profile, depot, first_node);
         for (int i = 0; i + 1 < n; ++i) {
             int from = data.num_depots() + route.client(i);
-            int to   = data.num_depots() + route.client(i + 1);
+            int to = data.num_depots() + route.client(i + 1);
             expected_dist += data.dist(profile, from, to);
         }
         expected_dist += data.dist(profile, last_node, depot);
@@ -88,10 +86,8 @@ void assert_route_consistency(Route const& route, ProblemData const& data)
 //  Solution consistency
 // ---------------------------------------------------------------------------
 
-void assert_solution_consistency(Solution const& sol,
-                                 CostEvaluator const& eval,
-                                 ProblemData const& data)
-{
+void assert_solution_consistency(Solution const& sol, CostEvaluator const& eval,
+                                 ProblemData const& data) {
     int num_clients = data.num_clients();
 
     // Track which clients appear in routes.
@@ -125,8 +121,9 @@ void assert_solution_consistency(Solution const& sol,
     // Verify unassigned count matches.
     int expected_unassigned = 0;
     for (int c = 0; c < num_clients; ++c) {
-        if (client_count[c] == 0)
+        if (client_count[c] == 0) {
             expected_unassigned++;
+        }
     }
     assert(sol.num_unassigned() == expected_unassigned);
 
@@ -152,16 +149,14 @@ void assert_solution_consistency(Solution const& sol,
 //  Cost delta
 // ---------------------------------------------------------------------------
 
-void assert_cost_delta(int64_t predicted, int64_t actual,
-                       std::string_view context)
-{
+void assert_cost_delta(int64_t predicted, int64_t actual, std::string_view context) {
     if (predicted != actual) {
         std::ostringstream oss;
-        oss << "Score corruption: predicted delta = " << predicted
-            << ", actual delta = " << actual
+        oss << "Score corruption: predicted delta = " << predicted << ", actual delta = " << actual
             << ", difference = " << (predicted - actual);
-        if (!context.empty())
+        if (!context.empty()) {
             oss << " [" << context << "]";
+        }
         // In debug builds this will abort; the message is for diagnostics.
         assert(false && "score delta mismatch");
         // Fallback for NDEBUG builds where assert is compiled out:
@@ -170,4 +165,4 @@ void assert_cost_delta(int64_t predicted, int64_t actual,
     }
 }
 
-} // namespace coso::debug
+}  // namespace coso::debug

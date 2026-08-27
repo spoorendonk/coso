@@ -12,8 +12,7 @@
 
 namespace coso {
 
-void LotSizingModel::set_num_periods(int periods)
-{
+void LotSizingModel::set_num_periods(int periods) {
     if (periods <= 0) {
         throw std::invalid_argument("LotSizingModel::set_num_periods: periods must be > 0");
     }
@@ -23,11 +22,8 @@ void LotSizingModel::set_num_periods(int periods)
     capacities_.assign(static_cast<size_t>(num_periods_), 0.0);
 }
 
-int LotSizingModel::add_product(double setup_cost,
-                                double setup_time,
-                                double unit_production_cost,
-                                double holding_cost)
-{
+int LotSizingModel::add_product(double setup_cost, double setup_time, double unit_production_cost,
+                                double holding_cost) {
     int idx = num_products_++;
     products_.push_back(ProductEntry{
         .setup_cost = setup_cost,
@@ -45,8 +41,7 @@ int LotSizingModel::add_product(double setup_cost,
     return idx;
 }
 
-void LotSizingModel::set_demand(int product, int period, double demand)
-{
+void LotSizingModel::set_demand(int product, int period, double demand) {
     if (product < 0 || product >= num_products_) {
         throw std::out_of_range("LotSizingModel::set_demand: invalid product index");
     }
@@ -56,18 +51,15 @@ void LotSizingModel::set_demand(int product, int period, double demand)
     demands_[product][period] = demand;
 }
 
-void LotSizingModel::set_capacity(int period, double capacity)
-{
+void LotSizingModel::set_capacity(int period, double capacity) {
     if (period < 0 || period >= num_periods_) {
         throw std::out_of_range("LotSizingModel::set_capacity: invalid period index");
     }
     capacities_[period] = capacity;
 }
 
-void LotSizingModel::add_bom(int parent, int child, double quantity)
-{
-    if (parent < 0 || parent >= num_products_
-        || child < 0 || child >= num_products_) {
+void LotSizingModel::add_bom(int parent, int child, double quantity) {
+    if (parent < 0 || parent >= num_products_ || child < 0 || child >= num_products_) {
         throw std::out_of_range("LotSizingModel::add_bom: invalid product index");
     }
     if (parent == child) {
@@ -76,8 +68,7 @@ void LotSizingModel::add_bom(int parent, int child, double quantity)
     bom_.push_back({parent, child, quantity});
 }
 
-Result LotSizingModel::solve(TimeLimit tl)
-{
+Result LotSizingModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
     StopCriterion stop(tl.seconds);
@@ -92,8 +83,7 @@ Result LotSizingModel::solve(TimeLimit tl)
     work.count(1);
 
     for (auto const& p : products_) {
-        builder.add_product(p.setup_cost, p.setup_time,
-                            p.unit_production_cost, p.holding_cost);
+        builder.add_product(p.setup_cost, p.setup_time, p.unit_production_cost, p.holding_cost);
         work.count(1);
     }
     for (int p = 0; p < num_products_; ++p) {
@@ -116,14 +106,13 @@ Result LotSizingModel::solve(TimeLimit tl)
         result.work_ticks_ = work.ticks();
         result.work_units_ = work.units();
         auto wall_end = std::chrono::steady_clock::now();
-        result.elapsed_seconds_ =
-            std::chrono::duration<double>(wall_end - wall_start).count();
+        result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
         return result;
     }
 
     LotsizingData data = builder.build();
-    work.count(static_cast<uint64_t>(data.num_products())
-             + static_cast<uint64_t>(data.num_periods()));
+    work.count(static_cast<uint64_t>(data.num_products()) +
+               static_cast<uint64_t>(data.num_periods()));
 
     LotsizingSolution best = lot_for_lot(data);
     work.count(static_cast<uint64_t>(data.num_products()) * data.num_periods());
@@ -133,8 +122,7 @@ Result LotSizingModel::solve(TimeLimit tl)
             best = candidate;
             return;
         }
-        if (candidate.feasible() == best.feasible()
-            && candidate.cost() + 1e-9 < best.cost()) {
+        if (candidate.feasible() == best.feasible() && candidate.cost() + 1e-9 < best.cost()) {
             best = candidate;
         }
     };
@@ -225,10 +213,9 @@ Result LotSizingModel::solve(TimeLimit tl)
     }
 
     auto wall_end = std::chrono::steady_clock::now();
-    result.elapsed_seconds_ =
-        std::chrono::duration<double>(wall_end - wall_start).count();
+    result.elapsed_seconds_ = std::chrono::duration<double>(wall_end - wall_start).count();
 
     return result;
 }
 
-} // namespace coso
+}  // namespace coso

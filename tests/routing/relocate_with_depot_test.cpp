@@ -1,9 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/operators/relocate_with_depot.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -20,16 +21,15 @@ using namespace coso;
 /// A single trip can serve at most 1 client pair (demand 6 > capacity 5),
 /// so a vehicle needs depot reloads to serve all 4 clients.
 /// Actually with capacity=5, each trip serves 1 client (demand 3 fits).
-static ProblemData make_multi_trip_instance()
-{
+static ProblemData make_multi_trip_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     // 2 vehicles, capacity=5, reload enabled.
     b.add_vehicle_type(2, {
-        .capacity = {5},
-        .reload_depot = 0,
-        .max_reloads = 3,
-    });
+                              .capacity = {5},
+                              .reload_depot = 0,
+                              .max_reloads = 3,
+                          });
 
     b.add_client({10.0, 0.0}, {.demand = {3}});  // 0
     b.add_client({20.0, 0.0}, {.demand = {3}});  // 1
@@ -46,16 +46,15 @@ static ProblemData make_multi_trip_instance()
 ///
 /// A single route [0,1,2,3] has load 16 > capacity 8 (excess = 8).
 /// Split into [0,1] (load=8) + [2,3] (load=8) eliminates the excess.
-static ProblemData make_overloaded_instance()
-{
+static ProblemData make_overloaded_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     // 2 vehicles to allow split, capacity=8, reload enabled.
     b.add_vehicle_type(2, {
-        .capacity = {8},
-        .reload_depot = 0,
-        .max_reloads = 3,
-    });
+                              .capacity = {8},
+                              .reload_depot = 0,
+                              .max_reloads = 3,
+                          });
 
     b.add_client({10.0, 0.0}, {.demand = {4}});  // 0
     b.add_client({20.0, 0.0}, {.demand = {4}});  // 1
@@ -72,15 +71,14 @@ static ProblemData make_overloaded_instance()
 ///
 /// Two routes [0,1] and [2] can merge into [0,1,2] to save the extra
 /// depot return/depart cost.
-static ProblemData make_mergeable_instance()
-{
+static ProblemData make_mergeable_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {
-        .capacity = {10},
-        .reload_depot = 0,
-        .max_reloads = 3,
-    });
+                              .capacity = {10},
+                              .reload_depot = 0,
+                              .max_reloads = 3,
+                          });
 
     b.add_client({10.0, 0.0}, {.demand = {2}});  // 0
     b.add_client({20.0, 0.0}, {.demand = {2}});  // 1
@@ -90,14 +88,13 @@ static ProblemData make_mergeable_instance()
 }
 
 /// Instance without multi-trip support (reload_depot = -1).
-static ProblemData make_no_reload_instance()
-{
+static ProblemData make_no_reload_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {
-        .capacity = {5},
-        // reload_depot defaults to -1 (no reload).
-    });
+                              .capacity = {5},
+                              // reload_depot defaults to -1 (no reload).
+                          });
 
     b.add_client({10.0, 0.0}, {.demand = {3}});
     b.add_client({20.0, 0.0}, {.demand = {3}});
@@ -107,12 +104,12 @@ static ProblemData make_no_reload_instance()
 
 /// Build a solution with given route assignments.
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
@@ -121,9 +118,7 @@ static Solution make_solution(ProblemData const& data,
 //  DEPOT_VISIT sentinel tests
 // ===========================================================================
 
-TEST_CASE("DEPOT_VISIT sentinel value and is_depot_visit",
-          "[relocate_with_depot]")
-{
+TEST_CASE("DEPOT_VISIT sentinel value and is_depot_visit", "[relocate_with_depot]") {
     REQUIRE(DEPOT_VISIT == -1);
     REQUIRE(is_depot_visit(DEPOT_VISIT));
     REQUIRE_FALSE(is_depot_visit(0));
@@ -136,8 +131,7 @@ TEST_CASE("DEPOT_VISIT sentinel value and is_depot_visit",
 // ===========================================================================
 
 TEST_CASE("RelocateWithDepot: splits overloaded route to reduce penalty",
-          "[relocate_with_depot][split]")
-{
+          "[relocate_with_depot][split]") {
     auto data = make_overloaded_instance();
     CostEvaluator eval(100);  // high load penalty
 
@@ -160,14 +154,13 @@ TEST_CASE("RelocateWithDepot: splits overloaded route to reduce penalty",
 
     // Both routes should be load-feasible (or at least less excess).
     int total_excess = 0;
-    for (int r = 0; r < sol.num_routes(); ++r)
+    for (int r = 0; r < sol.num_routes(); ++r) {
         total_excess += sol.route(r).load_excess();
+    }
     REQUIRE(total_excess < 8);
 }
 
-TEST_CASE("RelocateWithDepot: split at optimal position",
-          "[relocate_with_depot][split]")
-{
+TEST_CASE("RelocateWithDepot: split at optimal position", "[relocate_with_depot][split]") {
     auto data = make_overloaded_instance();
     CostEvaluator eval(100);
 
@@ -191,8 +184,7 @@ TEST_CASE("RelocateWithDepot: split at optimal position",
 }
 
 TEST_CASE("RelocateWithDepot: no split when no empty vehicle slot",
-          "[relocate_with_depot][split]")
-{
+          "[relocate_with_depot][split]") {
     auto data = make_overloaded_instance();
     CostEvaluator eval(100);
 
@@ -203,11 +195,12 @@ TEST_CASE("RelocateWithDepot: no split when no empty vehicle slot",
 
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_vehicle_type(1, {  // only 1 vehicle
-        .capacity = {8},
-        .reload_depot = 0,
-        .max_reloads = 3,
-    });
+    b.add_vehicle_type(1, {
+                              // only 1 vehicle
+                              .capacity = {8},
+                              .reload_depot = 0,
+                              .max_reloads = 3,
+                          });
     b.add_client({10.0, 0.0}, {.demand = {4}});
     b.add_client({20.0, 0.0}, {.demand = {4}});
     b.add_client({30.0, 0.0}, {.demand = {4}});
@@ -226,9 +219,7 @@ TEST_CASE("RelocateWithDepot: no split when no empty vehicle slot",
 //  Merge (remove depot visit) tests
 // ===========================================================================
 
-TEST_CASE("RelocateWithDepot: merges two routes to save distance",
-          "[relocate_with_depot][merge]")
-{
+TEST_CASE("RelocateWithDepot: merges two routes to save distance", "[relocate_with_depot][merge]") {
     auto data = make_mergeable_instance();
     CostEvaluator eval(100);
 
@@ -249,15 +240,15 @@ TEST_CASE("RelocateWithDepot: merges two routes to save distance",
 
     // Should have 1 non-empty route now.
     int num_nonempty = 0;
-    for (int r = 0; r < sol.num_routes(); ++r)
-        if (!sol.route(r).empty())
+    for (int r = 0; r < sol.num_routes(); ++r) {
+        if (!sol.route(r).empty()) {
             num_nonempty++;
+        }
+    }
     REQUIRE(num_nonempty == 1);
 }
 
-TEST_CASE("RelocateWithDepot: merge preserves all clients",
-          "[relocate_with_depot][merge]")
-{
+TEST_CASE("RelocateWithDepot: merge preserves all clients", "[relocate_with_depot][merge]") {
     auto data = make_mergeable_instance();
     CostEvaluator eval(100);
 
@@ -275,9 +266,7 @@ TEST_CASE("RelocateWithDepot: merge preserves all clients",
 //  No-op / edge case tests
 // ===========================================================================
 
-TEST_CASE("RelocateWithDepot: no moves when reload not supported",
-          "[relocate_with_depot]")
-{
+TEST_CASE("RelocateWithDepot: no moves when reload not supported", "[relocate_with_depot]") {
     auto data = make_no_reload_instance();
     CostEvaluator eval(100);
 
@@ -288,9 +277,7 @@ TEST_CASE("RelocateWithDepot: no moves when reload not supported",
     REQUIRE_FALSE(found);
 }
 
-TEST_CASE("RelocateWithDepot: no moves on empty solution",
-          "[relocate_with_depot]")
-{
+TEST_CASE("RelocateWithDepot: no moves on empty solution", "[relocate_with_depot]") {
     auto data = make_multi_trip_instance();
     CostEvaluator eval(100);
 
@@ -301,9 +288,7 @@ TEST_CASE("RelocateWithDepot: no moves on empty solution",
     REQUIRE_FALSE(found);
 }
 
-TEST_CASE("RelocateWithDepot: single-client route cannot be split",
-          "[relocate_with_depot]")
-{
+TEST_CASE("RelocateWithDepot: single-client route cannot be split", "[relocate_with_depot]") {
     auto data = make_multi_trip_instance();
     CostEvaluator eval(100);
 
@@ -318,17 +303,15 @@ TEST_CASE("RelocateWithDepot: single-client route cannot be split",
     (void)found;
 }
 
-TEST_CASE("RelocateWithDepot: max_reloads limits splits",
-          "[relocate_with_depot]")
-{
+TEST_CASE("RelocateWithDepot: max_reloads limits splits", "[relocate_with_depot]") {
     // Instance with max_reloads=1: only 1 depot visit allowed (2 trips max).
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {
-        .capacity = {4},
-        .reload_depot = 0,
-        .max_reloads = 1,  // only 1 reload allowed (2 trips)
-    });
+                              .capacity = {4},
+                              .reload_depot = 0,
+                              .max_reloads = 1,  // only 1 reload allowed (2 trips)
+                          });
     b.add_client({10.0, 0.0}, {.demand = {3}});
     b.add_client({20.0, 0.0}, {.demand = {3}});
     b.add_client({30.0, 0.0}, {.demand = {3}});
@@ -363,9 +346,7 @@ TEST_CASE("RelocateWithDepot: max_reloads limits splits",
     (void)found2;
 }
 
-TEST_CASE("RelocateWithDepot: split then merge round-trips correctly",
-          "[relocate_with_depot]")
-{
+TEST_CASE("RelocateWithDepot: split then merge round-trips correctly", "[relocate_with_depot]") {
     auto data = make_mergeable_instance();
     CostEvaluator eval(1000);  // high penalty to motivate splits
 
@@ -404,9 +385,7 @@ TEST_CASE("RelocateWithDepot: split then merge round-trips correctly",
 //  Delta accuracy tests
 // ===========================================================================
 
-TEST_CASE("RelocateWithDepot: delta matches actual cost change",
-          "[relocate_with_depot]")
-{
+TEST_CASE("RelocateWithDepot: delta matches actual cost change", "[relocate_with_depot]") {
     auto data = make_overloaded_instance();
     CostEvaluator eval(100);
 
@@ -423,9 +402,7 @@ TEST_CASE("RelocateWithDepot: delta matches actual cost change",
     REQUIRE(new_cost - old_cost == reported_delta);
 }
 
-TEST_CASE("RelocateWithDepot: merge delta matches actual cost change",
-          "[relocate_with_depot]")
-{
+TEST_CASE("RelocateWithDepot: merge delta matches actual cost change", "[relocate_with_depot]") {
     auto data = make_mergeable_instance();
     CostEvaluator eval(100);
 

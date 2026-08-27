@@ -1,10 +1,11 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include "packing/bin_capacity.h"
 
 #include "model/packing_model.h"
-#include "packing/bin_capacity.h"
 #include "packing/packing_data.h"
 #include "packing/packing_solution.h"
+
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 using namespace coso;
 using Catch::Matchers::WithinAbs;
@@ -13,8 +14,7 @@ using Catch::Matchers::WithinAbs;
 //  Helpers
 // ---------------------------------------------------------------------------
 
-static PackingData make_1d()
-{
+static PackingData make_1d() {
     PackingModel model;
     model.add_bin_type({.capacity = {10}});
     model.add_item({.size = {3}});  // 0
@@ -25,8 +25,7 @@ static PackingData make_1d()
     return PackingData::build(model);
 }
 
-static PackingData make_2d()
-{
+static PackingData make_2d() {
     PackingModel model;
     model.add_bin_type({.capacity = {10, 20}});
     model.add_item({.size = {3, 8}});   // 0
@@ -35,8 +34,7 @@ static PackingData make_2d()
     return PackingData::build(model);
 }
 
-static PackingData make_3d()
-{
+static PackingData make_3d() {
     PackingModel model;
     model.add_bin_type({.capacity = {10, 20, 30}});
     model.add_item({.size = {3, 8, 10}});   // 0
@@ -49,8 +47,7 @@ static PackingData make_3d()
 //  1D capacity tracking
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BinCapacity: 1D add and remove items", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: 1D add and remove items", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -81,8 +78,7 @@ TEST_CASE("BinCapacity: 1D add and remove items", "[packing][bin_capacity]")
 //  Multi-dimensional (2D) tracking
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BinCapacity: 2D capacity tracking", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: 2D capacity tracking", "[packing][bin_capacity]") {
     auto data = make_2d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -114,8 +110,7 @@ TEST_CASE("BinCapacity: 2D capacity tracking", "[packing][bin_capacity]")
 //  3D capacity tracking
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BinCapacity: 3D capacity tracking", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: 3D capacity tracking", "[packing][bin_capacity]") {
     auto data = make_3d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -141,8 +136,7 @@ TEST_CASE("BinCapacity: 3D capacity tracking", "[packing][bin_capacity]")
 //  Best-fit heuristic
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BinCapacity: best_fit finds tightest bin", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: best_fit finds tightest bin", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -158,8 +152,7 @@ TEST_CASE("BinCapacity: best_fit finds tightest bin", "[packing][bin_capacity]")
     REQUIRE(bf == 0);
 }
 
-TEST_CASE("BinCapacity: best_fit returns -1 when nothing fits", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: best_fit returns -1 when nothing fits", "[packing][bin_capacity]") {
     PackingModel model;
     model.add_bin_type({.capacity = {5}, .count = 2});
     model.add_item({.size = {3}});  // 0
@@ -177,8 +170,7 @@ TEST_CASE("BinCapacity: best_fit returns -1 when nothing fits", "[packing][bin_c
     REQUIRE(cap.best_fit(2) == -1);
 }
 
-TEST_CASE("BinCapacity: best_fit 2D picks tightest total residual", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: best_fit 2D picks tightest total residual", "[packing][bin_capacity]") {
     auto data = make_2d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -199,8 +191,7 @@ TEST_CASE("BinCapacity: best_fit 2D picks tightest total residual", "[packing][b
 //  First-fit heuristic
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BinCapacity: first_fit returns first feasible bin", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: first_fit returns first feasible bin", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -213,8 +204,7 @@ TEST_CASE("BinCapacity: first_fit returns first feasible bin", "[packing][bin_ca
     REQUIRE(ff == 1);
 }
 
-TEST_CASE("BinCapacity: first_fit returns -1 when nothing fits", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: first_fit returns -1 when nothing fits", "[packing][bin_capacity]") {
     PackingModel model;
     model.add_bin_type({.capacity = {3}, .count = 1});
     model.add_item({.size = {5}});  // too big for any bin
@@ -226,8 +216,7 @@ TEST_CASE("BinCapacity: first_fit returns -1 when nothing fits", "[packing][bin_
     REQUIRE(cap.first_fit(0) == -1);
 }
 
-TEST_CASE("BinCapacity: first_fit on empty bins returns bin 0", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: first_fit on empty bins returns bin 0", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -241,8 +230,7 @@ TEST_CASE("BinCapacity: first_fit on empty bins returns bin 0", "[packing][bin_c
 //  Lower bound
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BinCapacity: continuous lower bound 1D", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: continuous lower bound 1D", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -251,8 +239,7 @@ TEST_CASE("BinCapacity: continuous lower bound 1D", "[packing][bin_capacity]")
     REQUIRE(cap.continuous_lower_bound() == 3);
 }
 
-TEST_CASE("BinCapacity: continuous lower bound 2D", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: continuous lower bound 2D", "[packing][bin_capacity]") {
     auto data = make_2d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -263,8 +250,7 @@ TEST_CASE("BinCapacity: continuous lower bound 2D", "[packing][bin_capacity]")
     REQUIRE(cap.continuous_lower_bound() == 2);
 }
 
-TEST_CASE("BinCapacity: continuous lower bound exact", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: continuous lower bound exact", "[packing][bin_capacity]") {
     PackingModel model;
     model.add_bin_type({.capacity = {10}});
     model.add_item({.size = {10}});
@@ -283,8 +269,7 @@ TEST_CASE("BinCapacity: continuous lower bound exact", "[packing][bin_capacity]"
 //  Utilization
 // ---------------------------------------------------------------------------
 
-TEST_CASE("BinCapacity: utilization of empty bin is 0", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: utilization of empty bin is 0", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -292,8 +277,7 @@ TEST_CASE("BinCapacity: utilization of empty bin is 0", "[packing][bin_capacity]
     REQUIRE_THAT(cap.utilization(0), WithinAbs(0.0, 1e-9));
 }
 
-TEST_CASE("BinCapacity: utilization 1D", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: utilization 1D", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -305,8 +289,7 @@ TEST_CASE("BinCapacity: utilization 1D", "[packing][bin_capacity]")
     REQUIRE_THAT(cap.utilization(0), WithinAbs(1.0, 1e-9));
 }
 
-TEST_CASE("BinCapacity: utilization 2D", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: utilization 2D", "[packing][bin_capacity]") {
     auto data = make_2d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -316,8 +299,7 @@ TEST_CASE("BinCapacity: utilization 2D", "[packing][bin_capacity]")
     REQUIRE_THAT(cap.utilization(0), WithinAbs(0.35, 1e-9));
 }
 
-TEST_CASE("BinCapacity: total utilization", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: total utilization", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);
@@ -329,8 +311,7 @@ TEST_CASE("BinCapacity: total utilization", "[packing][bin_capacity]")
     REQUIRE_THAT(cap.total_utilization(), WithinAbs(0.6, 1e-9));
 }
 
-TEST_CASE("BinCapacity: total utilization with no items is 0", "[packing][bin_capacity]")
-{
+TEST_CASE("BinCapacity: total utilization with no items is 0", "[packing][bin_capacity]") {
     auto data = make_1d();
     PackingSolution sol(data);
     BinCapacity cap(sol);

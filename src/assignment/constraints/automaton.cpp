@@ -8,8 +8,7 @@ namespace coso {
 //  DFA builders                                                                //
 // --------------------------------------------------------------------------- //
 
-DFA build_max_consecutive_dfa(int shift_type, int max_consec, int num_shift_types)
-{
+DFA build_max_consecutive_dfa(int shift_type, int max_consec, int num_shift_types) {
     // Alphabet: index 0 = off, index 1..num_shift_types = shift types.
     int const alpha = num_shift_types + 1;
     int const target_sym = shift_type + 1;  // Symbol index for the target shift.
@@ -26,16 +25,18 @@ DFA build_max_consecutive_dfa(int shift_type, int max_consec, int num_shift_type
     dfa.transitions.assign(num_states * alpha, -1);
 
     // Accepting states: 0 through max_consec.
-    for (int s = 0; s <= max_consec; ++s)
+    for (int s = 0; s <= max_consec; ++s) {
         dfa.accepting_states.push_back(s);
+    }
 
     for (int state = 0; state <= max_consec; ++state) {
         for (int sym = 0; sym < alpha; ++sym) {
             if (sym == target_sym) {
                 // Matching the target shift: advance the consecutive counter.
                 int next = state + 1;
-                if (next > max_consec)
+                if (next > max_consec) {
                     next = sink;  // Exceeded max -> rejecting sink.
+                }
                 dfa.transitions[state * alpha + sym] = next;
             } else {
                 // Any other symbol resets the counter.
@@ -47,17 +48,17 @@ DFA build_max_consecutive_dfa(int shift_type, int max_consec, int num_shift_type
     // Sink state: seeing the target shift stays in sink (still consecutive),
     // but any other symbol resets back to state 0.
     for (int sym = 0; sym < alpha; ++sym) {
-        if (sym == target_sym)
+        if (sym == target_sym) {
             dfa.transitions[sink * alpha + sym] = sink;
-        else
+        } else {
             dfa.transitions[sink * alpha + sym] = 0;
+        }
     }
 
     return dfa;
 }
 
-DFA build_forbidden_pattern_dfa(std::vector<int> const& pattern, int num_shift_types)
-{
+DFA build_forbidden_pattern_dfa(std::vector<int> const& pattern, int num_shift_types) {
     int const len = static_cast<int>(pattern.size());
     int const alpha = num_shift_types + 1;
 
@@ -73,13 +74,15 @@ DFA build_forbidden_pattern_dfa(std::vector<int> const& pattern, int num_shift_t
     dfa.transitions.assign(num_states * alpha, -1);
 
     // All states except sink are accepting.
-    for (int s = 0; s < len; ++s)
+    for (int s = 0; s < len; ++s) {
         dfa.accepting_states.push_back(s);
+    }
 
     // Convert pattern to symbol indices.
     std::vector<int> pat_sym(len);
-    for (int i = 0; i < len; ++i)
+    for (int i = 0; i < len; ++i) {
         pat_sym[i] = pattern[i] + 1;  // off(-1)->0, shift 0->1, etc.
+    }
 
     // Build transitions using a simplified failure-function approach.
     // For each state (number of matched symbols) and each input symbol,
@@ -126,8 +129,9 @@ DFA build_forbidden_pattern_dfa(std::vector<int> const& pattern, int num_shift_t
 
     // Sink state: after a violation, reset to allow detecting further
     // occurrences.  Transitions mirror state 0 (fresh start).
-    for (int sym = 0; sym < alpha; ++sym)
+    for (int sym = 0; sym < alpha; ++sym) {
         dfa.transitions[sink * alpha + sym] = dfa.transitions[0 * alpha + sym];
+    }
 
     return dfa;
 }
@@ -136,40 +140,36 @@ DFA build_forbidden_pattern_dfa(std::vector<int> const& pattern, int num_shift_t
 //  AutomatonConstraint                                                         //
 // --------------------------------------------------------------------------- //
 
-int AutomatonConstraint::employee_cost(
-    std::vector<int> const& row, int horizon) const
-{
-    int cost  = 0;
+int AutomatonConstraint::employee_cost(std::vector<int> const& row, int horizon) const {
+    int cost = 0;
     int state = dfa_.start_state;
 
     for (int d = 0; d < horizon; ++d) {
         int sym = to_symbol(row[d]);
         state = dfa_.next(state, sym);
-        if (state < 0 || !dfa_.is_accepting(state))
+        if (state < 0 || !dfa_.is_accepting(state)) {
             cost += penalty_;
+        }
     }
     return cost;
 }
 
-int AutomatonConstraint::evaluate(
-    AssignmentData const& data,
-    std::vector<std::vector<int>> const& schedule) const
-{
+int AutomatonConstraint::evaluate(AssignmentData const& data,
+                                  std::vector<std::vector<int>> const& schedule) const {
     int cost = 0;
     int const ne = data.num_employees();
-    int const H  = data.horizon;
+    int const H = data.horizon;
 
-    for (int e = 0; e < ne; ++e)
+    for (int e = 0; e < ne; ++e) {
         cost += employee_cost(schedule[e], H);
+    }
 
     return cost;
 }
 
-int AutomatonConstraint::evaluate_delta(
-    AssignmentData const& data,
-    std::vector<std::vector<int>> const& schedule,
-    AssignmentMove const& move) const
-{
+int AutomatonConstraint::evaluate_delta(AssignmentData const& data,
+                                        std::vector<std::vector<int>> const& schedule,
+                                        AssignmentMove const& move) const {
     // Only the affected employee's row changes.
     int e = move.employee;
     int H = data.horizon;
@@ -183,4 +183,4 @@ int AutomatonConstraint::evaluate_delta(
     return after - before;
 }
 
-} // namespace coso
+}  // namespace coso

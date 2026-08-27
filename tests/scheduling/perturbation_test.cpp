@@ -1,9 +1,9 @@
-#include <catch2/catch_test_macros.hpp>
+#include "scheduling/perturbation.h"
 
 #include "scheduling/disjunctive_graph.h"
-#include "scheduling/perturbation.h"
 #include "scheduling/schedule_data.h"
 
+#include <catch2/catch_test_macros.hpp>
 #include <climits>
 #include <random>
 
@@ -25,8 +25,7 @@ using namespace coso;
 
 namespace {
 
-DisjunctiveGraph make_3x3()
-{
+DisjunctiveGraph make_3x3() {
     DisjunctiveGraph g(3, 3);
 
     g.add_operation(0, 0, 3);  // op 0
@@ -49,8 +48,7 @@ DisjunctiveGraph make_3x3()
 }
 
 /// Build a 4x3 JSP instance (4 jobs, 3 machines) for larger tests.
-DisjunctiveGraph make_4x3()
-{
+DisjunctiveGraph make_4x3() {
     DisjunctiveGraph g(4, 3);
 
     // Job 0: M0(2) -> M1(3) -> M2(1)
@@ -91,8 +89,7 @@ struct FJSPInstance {
     DisjunctiveGraph graph;
 };
 
-FJSPInstance make_fjsp()
-{
+FJSPInstance make_fjsp() {
     ScheduleData::Builder builder;
     builder.add_machine();  // M0
     builder.add_machine();  // M1
@@ -146,30 +143,30 @@ FJSPInstance make_fjsp()
 
 /// Check that all job-precedence constraints are respected in the graph.
 /// For each job, operations must appear in order of their job index.
-bool check_no_cycles(DisjunctiveGraph& graph)
-{
+bool check_no_cycles(DisjunctiveGraph& graph) {
     int ms = graph.critical_path();
     if (ms <= 0) {
         // Check if any operation has positive duration (ms=0 with positive
         // durations means cycle).
-        for (int i = 0; i < graph.num_operations(); ++i)
-            if (graph.operation(i).duration > 0)
+        for (int i = 0; i < graph.num_operations(); ++i) {
+            if (graph.operation(i).duration > 0) {
                 return false;
+            }
+        }
     }
     return true;
 }
 
-} // namespace
+}  // namespace
 
 // ===========================================================================
 //  RandomBlockRemoval tests
 // ===========================================================================
 
-TEST_CASE("RandomBlockRemoval: produces valid schedule on 3x3",
-          "[scheduling][perturbation]")
-{
-    SKIP("RandomBlockRemoval can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("RandomBlockRemoval: produces valid schedule on 3x3", "[scheduling][perturbation]") {
+    SKIP(
+        "RandomBlockRemoval can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto graph = make_3x3();
     int original_ms = graph.critical_path();
     REQUIRE(original_ms > 0);
@@ -184,34 +181,35 @@ TEST_CASE("RandomBlockRemoval: produces valid schedule on 3x3",
     // Machine sequences should still contain all original operations.
     std::vector<bool> seen(graph.num_operations(), false);
     for (int m = 0; m < graph.num_machines(); ++m) {
-        for (int op : graph.machine_sequence(m))
+        for (int op : graph.machine_sequence(m)) {
             seen[op] = true;
+        }
     }
-    for (int i = 0; i < graph.num_operations(); ++i)
+    for (int i = 0; i < graph.num_operations(); ++i) {
         CHECK(seen[i]);
+    }
 }
 
-TEST_CASE("RandomBlockRemoval: changes the solution on 4x3",
-          "[scheduling][perturbation]")
-{
-    SKIP("RandomBlockRemoval can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("RandomBlockRemoval: changes the solution on 4x3", "[scheduling][perturbation]") {
+    SKIP(
+        "RandomBlockRemoval can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto graph = make_4x3();
     int original_ms = graph.critical_path();
     REQUIRE(original_ms > 0);
 
     // Save original sequences.
     std::vector<std::vector<int>> original_seqs;
-    for (int m = 0; m < graph.num_machines(); ++m)
+    for (int m = 0; m < graph.num_machines(); ++m) {
         original_seqs.push_back(graph.machine_sequence(m));
+    }
 
     // Apply perturbation multiple times to check it sometimes changes things.
     bool changed = false;
     for (int trial = 0; trial < 20; ++trial) {
         auto g = make_4x3();
         std::mt19937 rng(trial);
-        RandomBlockRemoval::Params params{
-            .min_block_size = 2, .max_block_size = 4};
+        RandomBlockRemoval::Params params{.min_block_size = 2, .max_block_size = 4};
         RandomBlockRemoval::apply(g, params, rng);
 
         for (int m = 0; m < g.num_machines(); ++m) {
@@ -220,17 +218,17 @@ TEST_CASE("RandomBlockRemoval: changes the solution on 4x3",
                 break;
             }
         }
-        if (changed)
+        if (changed) {
             break;
+        }
     }
     CHECK(changed);
 }
 
-TEST_CASE("RandomBlockRemoval: respects min/max block size bounds",
-          "[scheduling][perturbation]")
-{
-    SKIP("RandomBlockRemoval can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("RandomBlockRemoval: respects min/max block size bounds", "[scheduling][perturbation]") {
+    SKIP(
+        "RandomBlockRemoval can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto graph = make_3x3();
 
     // With min=max=2, should always remove exactly 2 ops.
@@ -245,9 +243,7 @@ TEST_CASE("RandomBlockRemoval: respects min/max block size bounds",
 //  CriticalPathShake tests
 // ===========================================================================
 
-TEST_CASE("CriticalPathShake: produces valid schedule on 3x3",
-          "[scheduling][perturbation]")
-{
+TEST_CASE("CriticalPathShake: produces valid schedule on 3x3", "[scheduling][perturbation]") {
     auto graph = make_3x3();
     int original_ms = graph.critical_path();
     REQUIRE(original_ms > 0);
@@ -261,23 +257,26 @@ TEST_CASE("CriticalPathShake: produces valid schedule on 3x3",
 
     // All operations still present.
     std::vector<bool> seen(graph.num_operations(), false);
-    for (int m = 0; m < graph.num_machines(); ++m)
-        for (int op : graph.machine_sequence(m))
+    for (int m = 0; m < graph.num_machines(); ++m) {
+        for (int op : graph.machine_sequence(m)) {
             seen[op] = true;
-    for (int i = 0; i < graph.num_operations(); ++i)
+        }
+    }
+    for (int i = 0; i < graph.num_operations(); ++i) {
         CHECK(seen[i]);
+    }
 }
 
-TEST_CASE("CriticalPathShake: changes the solution",
-          "[scheduling][perturbation]")
-{
-    SKIP("CriticalPathShake can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("CriticalPathShake: changes the solution", "[scheduling][perturbation]") {
+    SKIP(
+        "CriticalPathShake can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     // Save original sequences.
     auto orig_graph = make_3x3();
     std::vector<std::vector<int>> original_seqs;
-    for (int m = 0; m < orig_graph.num_machines(); ++m)
+    for (int m = 0; m < orig_graph.num_machines(); ++m) {
         original_seqs.push_back(orig_graph.machine_sequence(m));
+    }
 
     bool changed = false;
     for (int trial = 0; trial < 20; ++trial) {
@@ -292,18 +291,18 @@ TEST_CASE("CriticalPathShake: changes the solution",
                 break;
             }
         }
-        if (changed)
+        if (changed) {
             break;
+        }
     }
     CHECK(changed);
 }
 
-TEST_CASE("CriticalPathShake: reverts cycle-creating moves",
-          "[scheduling][perturbation]")
-{
-    SKIP("This is the regression test for coso#189: CriticalPathShake can still create a "
-         "cyclic disjunctive graph, aborting in DisjunctiveGraph::topo_sort() (gap in #185's "
-         "fix) rather than being safely reverted.");
+TEST_CASE("CriticalPathShake: reverts cycle-creating moves", "[scheduling][perturbation]") {
+    SKIP(
+        "This is the regression test for coso#189: CriticalPathShake can still create a "
+        "cyclic disjunctive graph, aborting in DisjunctiveGraph::topo_sort() (gap in #185's "
+        "fix) rather than being safely reverted.");
     // Run many perturbations on 4x3 and verify no cycles are introduced.
     for (int trial = 0; trial < 50; ++trial) {
         auto graph = make_4x3();
@@ -314,11 +313,10 @@ TEST_CASE("CriticalPathShake: reverts cycle-creating moves",
     }
 }
 
-TEST_CASE("CriticalPathShake: single perturbation on 4x3",
-          "[scheduling][perturbation]")
-{
-    SKIP("CriticalPathShake can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("CriticalPathShake: single perturbation on 4x3", "[scheduling][perturbation]") {
+    SKIP(
+        "CriticalPathShake can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     auto graph = make_4x3();
     int original_ms = graph.critical_path();
     REQUIRE(original_ms > 0);
@@ -334,9 +332,7 @@ TEST_CASE("CriticalPathShake: single perturbation on 4x3",
 //  MachineReassignment tests
 // ===========================================================================
 
-TEST_CASE("MachineReassignment: produces valid schedule on FJSP",
-          "[scheduling][perturbation]")
-{
+TEST_CASE("MachineReassignment: produces valid schedule on FJSP", "[scheduling][perturbation]") {
     auto [data, graph] = make_fjsp();
     int original_ms = graph.critical_path();
     REQUIRE(original_ms > 0);
@@ -350,26 +346,29 @@ TEST_CASE("MachineReassignment: produces valid schedule on FJSP",
 
     // All operations still present in some machine sequence.
     std::vector<bool> seen(graph.num_operations(), false);
-    for (int m = 0; m < graph.num_machines(); ++m)
-        for (int op : graph.machine_sequence(m))
+    for (int m = 0; m < graph.num_machines(); ++m) {
+        for (int op : graph.machine_sequence(m)) {
             seen[op] = true;
-    for (int i = 0; i < graph.num_operations(); ++i)
+        }
+    }
+    for (int i = 0; i < graph.num_operations(); ++i) {
         CHECK(seen[i]);
+    }
 }
 
-TEST_CASE("MachineReassignment: changes machine assignments",
-          "[scheduling][perturbation]")
-{
-    SKIP("MachineReassignment can create a cyclic disjunctive graph, aborting in "
-         "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("MachineReassignment: changes machine assignments", "[scheduling][perturbation]") {
+    SKIP(
+        "MachineReassignment can create a cyclic disjunctive graph, aborting in "
+        "DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     bool changed = false;
     for (int trial = 0; trial < 20; ++trial) {
         auto [data, graph] = make_fjsp();
 
         // Record original machines.
         std::vector<int> orig_machines;
-        for (int i = 0; i < graph.num_operations(); ++i)
+        for (int i = 0; i < graph.num_operations(); ++i) {
             orig_machines.push_back(graph.operation(i).machine);
+        }
 
         std::mt19937 rng(trial);
         MachineReassignment::Params params{.num_reassignments = 2};
@@ -381,15 +380,14 @@ TEST_CASE("MachineReassignment: changes machine assignments",
                 break;
             }
         }
-        if (changed)
+        if (changed) {
             break;
+        }
     }
     CHECK(changed);
 }
 
-TEST_CASE("MachineReassignment: returns -1 when no flexible ops",
-          "[scheduling][perturbation]")
-{
+TEST_CASE("MachineReassignment: returns -1 when no flexible ops", "[scheduling][perturbation]") {
     // The 3x3 JSP graph has no flexible operations. Build a ScheduleData
     // with fixed machines only.
     ScheduleData::Builder builder;
@@ -428,19 +426,17 @@ TEST_CASE("MachineReassignment: returns -1 when no flexible ops",
 //  Combined perturbation tests
 // ===========================================================================
 
-TEST_CASE("Multiple perturbations maintain valid schedules",
-          "[scheduling][perturbation]")
-{
-    SKIP("Exercises perturbation operators that can create a cyclic disjunctive graph, "
-         "aborting in DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
+TEST_CASE("Multiple perturbations maintain valid schedules", "[scheduling][perturbation]") {
+    SKIP(
+        "Exercises perturbation operators that can create a cyclic disjunctive graph, "
+        "aborting in DisjunctiveGraph::topo_sort() — coso#189 (gap in #185's fix)");
     // Apply all three perturbation types in sequence on a 4x3 instance
     // and verify validity after each.
     auto graph = make_4x3();
     std::mt19937 rng(42);
 
     for (int iter = 0; iter < 10; ++iter) {
-        RandomBlockRemoval::apply(
-            graph, {.min_block_size = 2, .max_block_size = 3}, rng);
+        RandomBlockRemoval::apply(graph, {.min_block_size = 2, .max_block_size = 3}, rng);
         REQUIRE(check_no_cycles(graph));
         REQUIRE(graph.critical_path() > 0);
 

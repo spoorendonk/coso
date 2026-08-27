@@ -26,8 +26,7 @@ public:
     /// @param target_feasible  Desired fraction of feasible solutions (0..1).
     /// @param adjustment_rate  Multiplicative adjustment step (e.g. 0.1 = 10%).
     /// @param update_interval  Number of registrations between weight updates.
-    explicit PenaltyManager(double target_feasible = 0.5,
-                            double adjustment_rate = 0.1,
+    explicit PenaltyManager(double target_feasible = 0.5, double adjustment_rate = 0.1,
                             int update_interval = 100);
 
     /// Register a solution's feasibility status.
@@ -48,9 +47,7 @@ public:
 
     /// Current feasible fraction in the active window.
     [[nodiscard]] double feasible_fraction() const noexcept {
-        return window_count_ > 0
-            ? static_cast<double>(window_feasible_) / window_count_
-            : 0.0;
+        return window_count_ > 0 ? static_cast<double>(window_feasible_) / window_count_ : 0.0;
     }
 
 private:
@@ -60,13 +57,13 @@ private:
 
     // Penalty weights (double for smooth adjustment, cast to int for CostEvaluator).
     double load_pen_ = 100.0;
-    double tw_pen_   = 100.0;
+    double tw_pen_ = 100.0;
     double dist_pen_ = 100.0;
 
     // Sliding window counters (reset each update interval).
-    int window_count_    = 0;
+    int window_count_ = 0;
     int window_feasible_ = 0;
-    int total_           = 0;
+    int total_ = 0;
 
     static constexpr double kMinPenalty = 1.0;
     static constexpr double kMaxPenalty = 100000.0;
@@ -74,4 +71,4 @@ private:
     void update_penalties_();
 };
 
-} // namespace coso
+}  // namespace coso

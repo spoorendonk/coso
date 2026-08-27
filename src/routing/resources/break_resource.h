@@ -28,21 +28,20 @@ namespace coso {
 /// Break rule configuration is passed as a simple struct rather than stored
 /// in ProblemData, keeping the resource self-contained.
 struct BreakResource {
-
     /// Configuration for the break rule.
     struct Rule {
-        int max_driving    = 0;  ///< Max driving time before a break is needed.
+        int max_driving = 0;     ///< Max driving time before a break is needed.
         int break_duration = 0;  ///< Duration of the mandatory break.
     };
 
     /// State for a subsequence of the route.
     struct State {
-        int driving     = 0;  ///< Driving time since last break (forward).
-        int driving_rev = 0;  ///< Driving time since last break (reversed).
-        int duration    = 0;  ///< Total duration of this subsequence (travel + service).
-        int breaks      = 0;  ///< Number of breaks taken.
-        int excess      = 0;  ///< Accumulated break violation.
-        bool can_break  = false;  ///< Whether a break can be taken in this subsequence.
+        int driving = 0;         ///< Driving time since last break (forward).
+        int driving_rev = 0;     ///< Driving time since last break (reversed).
+        int duration = 0;        ///< Total duration of this subsequence (travel + service).
+        int breaks = 0;          ///< Number of breaks taken.
+        int excess = 0;          ///< Accumulated break violation.
+        bool can_break = false;  ///< Whether a break can be taken in this subsequence.
     };
 
     /// Initialize state for a single client node.
@@ -54,16 +53,15 @@ struct BreakResource {
     /// @param data    Problem data (for service time lookup).
     /// @param client  Client index (0-based among clients).
     /// @param rule    The break rule configuration.
-    [[nodiscard]] static State init(ProblemData const& data, int client,
-                                    Rule const& rule) {
+    [[nodiscard]] static State init(ProblemData const& data, int client, Rule const& rule) {
         assert(client >= 0 && client < data.num_clients());
         auto const& c = data.client(client);
 
         State s;
-        s.driving     = c.service;
+        s.driving = c.service;
         s.driving_rev = c.service;
-        s.duration    = c.service;
-        s.can_break   = true;  // breaks can be taken at any client stop
+        s.duration = c.service;
+        s.can_break = true;  // breaks can be taken at any client stop
 
         // Do not charge excess here; it will be detected by the final
         // excess() call which checks the trailing driving segment.
@@ -72,9 +70,8 @@ struct BreakResource {
     }
 
     /// Initialize empty state at depot (no driving, no break needed).
-    [[nodiscard]] static State init_depot(
-            [[maybe_unused]] ProblemData const& data,
-            [[maybe_unused]] Rule const& rule) {
+    [[nodiscard]] static State init_depot([[maybe_unused]] ProblemData const& data,
+                                          [[maybe_unused]] Rule const& rule) {
         State s;
         s.can_break = true;  // depot is a valid break location
         return s;
@@ -94,17 +91,17 @@ struct BreakResource {
     ///    driver resets their driving counter after a break.
     /// 3. Excess accumulates when driving exceeds max_driving without a
     ///    break opportunity.
-    [[nodiscard]] static State merge(State const& left, State const& right,
-                                     int travel, Rule const& rule) {
+    [[nodiscard]] static State merge(State const& left, State const& right, int travel,
+                                     Rule const& rule) {
         State result;
-        result.duration  = left.duration + travel + right.duration;
-        result.breaks    = left.breaks + right.breaks;
-        result.excess    = left.excess + right.excess;
+        result.duration = left.duration + travel + right.duration;
+        result.breaks = left.breaks + right.breaks;
+        result.excess = left.excess + right.excess;
         result.can_break = left.can_break || right.can_break;
 
         if (rule.max_driving <= 0) {
             // No break rule active — just accumulate durations.
-            result.driving     = left.driving + travel + right.driving;
+            result.driving = left.driving + travel + right.driving;
             result.driving_rev = right.driving_rev + travel + left.driving_rev;
             return result;
         }
@@ -171,9 +168,8 @@ struct BreakResource {
     /// @param data        Problem data (for duration lookup).
     /// @param profile     Duration matrix profile.
     /// @param rule        Break rule configuration.
-    [[nodiscard]] static State merge(State const& left, State const& right,
-                                     int left_last, int right_first,
-                                     ProblemData const& data, int profile,
+    [[nodiscard]] static State merge(State const& left, State const& right, int left_last,
+                                     int right_first, ProblemData const& data, int profile,
                                      Rule const& rule) {
         int travel = data.dur(profile, left_last, right_first);
         return merge(left, right, travel, rule);
@@ -183,9 +179,8 @@ struct BreakResource {
     ///
     /// When reversed, the right subsequence's forward driving becomes its
     /// reverse and vice versa.
-    [[nodiscard]] static State merge_reverse(State const& left,
-                                             State const& right,
-                                             int travel, Rule const& rule) {
+    [[nodiscard]] static State merge_reverse(State const& left, State const& right, int travel,
+                                             Rule const& rule) {
         // Swap driving and driving_rev for the reversed right subsequence.
         State right_rev = right;
         std::swap(right_rev.driving, right_rev.driving_rev);
@@ -200,18 +195,20 @@ struct BreakResource {
     /// @param state  The merged state for the full route.
     /// @param rule   The break rule configuration.
     [[nodiscard]] static int excess(State const& state, Rule const& rule) {
-        if (rule.max_driving <= 0)
+        if (rule.max_driving <= 0) {
             return 0;
+        }
 
         int total = state.excess;
 
         // The final driving segment (from last break to end of route)
         // may also exceed the limit.
-        if (state.driving > rule.max_driving)
+        if (state.driving > rule.max_driving) {
             total += state.driving - rule.max_driving;
+        }
 
         return total;
     }
 };
 
-} // namespace coso
+}  // namespace coso

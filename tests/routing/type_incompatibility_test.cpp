@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/resources/type_incompatibility.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -9,30 +9,28 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 1 depot, 4 clients with types 0, 1, 0, 2.  Single vehicle type.
-static ProblemData make_typed_instance()
-{
+static ProblemData make_typed_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {100}});
 
-    b.add_client({10.0, 0.0}, {.demand = {1}, .client_type = 0});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {1}, .client_type = 1});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {1}, .client_type = 0});   // client 2
-    b.add_client({40.0, 0.0}, {.demand = {1}, .client_type = 2});   // client 3
+    b.add_client({10.0, 0.0}, {.demand = {1}, .client_type = 0});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {1}, .client_type = 1});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {1}, .client_type = 0});  // client 2
+    b.add_client({40.0, 0.0}, {.demand = {1}, .client_type = 2});  // client 3
 
     return b.build(0);
 }
 
 /// Instance with some clients having no type (-1).
-static ProblemData make_mixed_type_instance()
-{
+static ProblemData make_mixed_type_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {100}});
 
-    b.add_client({10.0, 0.0}, {.demand = {1}, .client_type = 0});    // client 0
-    b.add_client({20.0, 0.0}, {.demand = {1}, .client_type = -1});   // client 1 (no type)
-    b.add_client({30.0, 0.0}, {.demand = {1}, .client_type = 1});    // client 2
+    b.add_client({10.0, 0.0}, {.demand = {1}, .client_type = 0});   // client 0
+    b.add_client({20.0, 0.0}, {.demand = {1}, .client_type = -1});  // client 1 (no type)
+    b.add_client({30.0, 0.0}, {.demand = {1}, .client_type = 1});   // client 2
 
     return b.build(0);
 }
@@ -41,9 +39,7 @@ static ProblemData make_mixed_type_instance()
 //  TypeIncompatibilityMatrix tests
 // ===========================================================================
 
-TEST_CASE("TypeIncompatibilityMatrix: default is all compatible",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityMatrix: default is all compatible", "[type_incompatibility]") {
     TypeIncompatibilityMatrix m(3);
 
     CHECK_FALSE(m.incompatible(0, 1));
@@ -51,9 +47,7 @@ TEST_CASE("TypeIncompatibilityMatrix: default is all compatible",
     CHECK_FALSE(m.incompatible(1, 2));
 }
 
-TEST_CASE("TypeIncompatibilityMatrix: set_incompatible is symmetric",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityMatrix: set_incompatible is symmetric", "[type_incompatibility]") {
     TypeIncompatibilityMatrix m(3);
     m.set_incompatible(0, 2);
 
@@ -63,9 +57,7 @@ TEST_CASE("TypeIncompatibilityMatrix: set_incompatible is symmetric",
     CHECK_FALSE(m.incompatible(1, 2));
 }
 
-TEST_CASE("TypeIncompatibilityMatrix: multiple incompatible pairs",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityMatrix: multiple incompatible pairs", "[type_incompatibility]") {
     TypeIncompatibilityMatrix m(4);
     m.set_incompatible(0, 1);
     m.set_incompatible(2, 3);
@@ -80,9 +72,7 @@ TEST_CASE("TypeIncompatibilityMatrix: multiple incompatible pairs",
 //  TypeIncompatibilityResource::init tests
 // ===========================================================================
 
-TEST_CASE("TypeIncompatibilityResource::init sets correct type",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::init sets correct type", "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
 
@@ -98,8 +88,7 @@ TEST_CASE("TypeIncompatibilityResource::init sets correct type",
 }
 
 TEST_CASE("TypeIncompatibilityResource::init with no type (-1) sets no bits",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     auto data = make_mixed_type_instance();
     TypeIncompatibilityMatrix m(2);
 
@@ -108,9 +97,7 @@ TEST_CASE("TypeIncompatibilityResource::init with no type (-1) sets no bits",
     CHECK_FALSE(s1.has_type(1));
 }
 
-TEST_CASE("TypeIncompatibilityResource::init_depot has no types",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::init_depot has no types", "[type_incompatibility]") {
     TypeIncompatibilityMatrix m(3);
     auto s = TypeIncompatibilityResource::init_depot(m);
 
@@ -123,9 +110,7 @@ TEST_CASE("TypeIncompatibilityResource::init_depot has no types",
 //  TypeIncompatibilityResource::merge tests
 // ===========================================================================
 
-TEST_CASE("TypeIncompatibilityResource::merge unions type sets",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::merge unions type sets", "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
 
@@ -138,9 +123,7 @@ TEST_CASE("TypeIncompatibilityResource::merge unions type sets",
     CHECK_FALSE(merged.has_type(2));
 }
 
-TEST_CASE("TypeIncompatibilityResource::merge with duplicate types",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::merge with duplicate types", "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
 
@@ -155,8 +138,7 @@ TEST_CASE("TypeIncompatibilityResource::merge with duplicate types",
 }
 
 TEST_CASE("TypeIncompatibilityResource::merge three clients accumulates all types",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
 
@@ -164,7 +146,7 @@ TEST_CASE("TypeIncompatibilityResource::merge three clients accumulates all type
     auto s1 = TypeIncompatibilityResource::init(data, 1, m);  // type 1
     auto s3 = TypeIncompatibilityResource::init(data, 3, m);  // type 2
 
-    auto m01  = TypeIncompatibilityResource::merge(s0, s1);
+    auto m01 = TypeIncompatibilityResource::merge(s0, s1);
     auto m013 = TypeIncompatibilityResource::merge(m01, s3);
 
     CHECK(m013.has_type(0));
@@ -172,9 +154,7 @@ TEST_CASE("TypeIncompatibilityResource::merge three clients accumulates all type
     CHECK(m013.has_type(2));
 }
 
-TEST_CASE("TypeIncompatibilityResource::merge with untyped client",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::merge with untyped client", "[type_incompatibility]") {
     auto data = make_mixed_type_instance();
     TypeIncompatibilityMatrix m(2);
 
@@ -186,9 +166,7 @@ TEST_CASE("TypeIncompatibilityResource::merge with untyped client",
     CHECK_FALSE(merged.has_type(1));
 }
 
-TEST_CASE("TypeIncompatibilityResource::merge_reverse equals merge",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::merge_reverse equals merge", "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
 
@@ -206,8 +184,7 @@ TEST_CASE("TypeIncompatibilityResource::merge_reverse equals merge",
 // ===========================================================================
 
 TEST_CASE("TypeIncompatibilityResource::excess with no incompatibilities",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
     // No pairs marked as incompatible.
@@ -220,8 +197,7 @@ TEST_CASE("TypeIncompatibilityResource::excess with no incompatibilities",
 }
 
 TEST_CASE("TypeIncompatibilityResource::excess detects one incompatible pair",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
     m.set_incompatible(0, 1);
@@ -235,8 +211,7 @@ TEST_CASE("TypeIncompatibilityResource::excess detects one incompatible pair",
 }
 
 TEST_CASE("TypeIncompatibilityResource::excess with compatible same-type clients",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
     m.set_incompatible(0, 1);
@@ -250,8 +225,7 @@ TEST_CASE("TypeIncompatibilityResource::excess with compatible same-type clients
 }
 
 TEST_CASE("TypeIncompatibilityResource::excess with multiple incompatible pairs",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
     m.set_incompatible(0, 1);
@@ -263,15 +237,14 @@ TEST_CASE("TypeIncompatibilityResource::excess with multiple incompatible pairs"
     auto s1 = TypeIncompatibilityResource::init(data, 1, m);  // type 1
     auto s3 = TypeIncompatibilityResource::init(data, 3, m);  // type 2
 
-    auto m01  = TypeIncompatibilityResource::merge(s0, s1);
+    auto m01 = TypeIncompatibilityResource::merge(s0, s1);
     auto m013 = TypeIncompatibilityResource::merge(m01, s3);
 
     CHECK(TypeIncompatibilityResource::excess(m013, m) == 3);
 }
 
 TEST_CASE("TypeIncompatibilityResource::excess with untyped clients is zero",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     auto data = make_mixed_type_instance();
     TypeIncompatibilityMatrix m(2);
     m.set_incompatible(0, 1);
@@ -284,9 +257,7 @@ TEST_CASE("TypeIncompatibilityResource::excess with untyped clients is zero",
     CHECK(TypeIncompatibilityResource::excess(merged, m) == 0);
 }
 
-TEST_CASE("TypeIncompatibilityResource::excess on depot-only is zero",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::excess on depot-only is zero", "[type_incompatibility]") {
     TypeIncompatibilityMatrix m(3);
     m.set_incompatible(0, 1);
 
@@ -294,9 +265,7 @@ TEST_CASE("TypeIncompatibilityResource::excess on depot-only is zero",
     CHECK(TypeIncompatibilityResource::excess(s, m) == 0);
 }
 
-TEST_CASE("TypeIncompatibilityResource::excess single client is zero",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource::excess single client is zero", "[type_incompatibility]") {
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
     m.set_incompatible(0, 1);
@@ -310,8 +279,7 @@ TEST_CASE("TypeIncompatibilityResource::excess single client is zero",
 // ===========================================================================
 
 TEST_CASE("TypeIncompatibilityResource: prefix/suffix merge for insert eval",
-          "[type_incompatibility]")
-{
+          "[type_incompatibility]") {
     // Simulate evaluating the effect of inserting a client into a route
     // using prefix/suffix arrays (as Route does for LoadResource).
     auto data = make_typed_instance();
@@ -340,9 +308,7 @@ TEST_CASE("TypeIncompatibilityResource: prefix/suffix merge for insert eval",
     CHECK(TypeIncompatibilityResource::excess(full, m) == 1);
 }
 
-TEST_CASE("TypeIncompatibilityResource: partial incompatibility",
-          "[type_incompatibility]")
-{
+TEST_CASE("TypeIncompatibilityResource: partial incompatibility", "[type_incompatibility]") {
     // Only some pairs are incompatible; verify partial detection.
     auto data = make_typed_instance();
     TypeIncompatibilityMatrix m(3);
@@ -354,7 +320,7 @@ TEST_CASE("TypeIncompatibilityResource: partial incompatibility",
     auto s1 = TypeIncompatibilityResource::init(data, 1, m);  // type 1
     auto s3 = TypeIncompatibilityResource::init(data, 3, m);  // type 2
 
-    auto m01  = TypeIncompatibilityResource::merge(s0, s1);
+    auto m01 = TypeIncompatibilityResource::merge(s0, s1);
     auto m013 = TypeIncompatibilityResource::merge(m01, s3);
 
     // Only pair (0,1) is incompatible.

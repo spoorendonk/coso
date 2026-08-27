@@ -39,10 +39,9 @@ private:
         std::vector<long long> dist;
     };
 
-    [[nodiscard]] static PathResult find_shortest_path(
-        NetworkData const& data,
-        NetworkSolution const& sol,
-        int src, int dst);
+    [[nodiscard]] static PathResult find_shortest_path(NetworkData const& data,
+                                                       NetworkSolution const& sol, int src,
+                                                       int dst);
 };
 
-} // namespace coso
+}  // namespace coso

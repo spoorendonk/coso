@@ -39,8 +39,7 @@ struct SolutionAnalysis {
 };
 
 /// Analyze a solution and produce a detailed cost breakdown.
-[[nodiscard]] SolutionAnalysis analyze(Solution const& sol,
-                                       CostEvaluator const& eval,
+[[nodiscard]] SolutionAnalysis analyze(Solution const& sol, CostEvaluator const& eval,
                                        ProblemData const& data);
 
-} // namespace coso
+}  // namespace coso

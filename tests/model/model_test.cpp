@@ -1,11 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
-
-#include <model/routing_model.h>
-#include <model/network_model.h>
-#include <model/lotsizing_model.h>
-#include <model/schedule_model.h>
 #include <model/assignment_model.h>
+#include <model/lotsizing_model.h>
+#include <model/network_model.h>
 #include <model/packing_model.h>
+#include <model/routing_model.h>
+#include <model/schedule_model.h>
 
 // =========================================================================
 //  API contract tests
@@ -19,8 +18,7 @@
 //  Shared types
 // --------------------------------------------------------------------------
 
-TEST_CASE("Result default-constructs to infeasible with zero cost", "[types]")
-{
+TEST_CASE("Result default-constructs to infeasible with zero cost", "[types]") {
     coso::Result r;
     REQUIRE_FALSE(r.feasible());
     REQUIRE(r.cost() == 0.0);
@@ -39,14 +37,12 @@ TEST_CASE("Result default-constructs to infeasible with zero cost", "[types]")
     REQUIRE(r.flows().empty());
 }
 
-TEST_CASE("TimeLimit stores seconds", "[types]")
-{
+TEST_CASE("TimeLimit stores seconds", "[types]") {
     coso::TimeLimit tl(30.0);
     REQUIRE(tl.seconds == 30.0);
 }
 
-TEST_CASE("CostParams has sensible defaults", "[types]")
-{
+TEST_CASE("CostParams has sensible defaults", "[types]") {
     coso::CostParams cp;
     REQUIRE(cp.fixed_cost == 0);
     REQUIRE(cp.unit_distance_cost == 1);
@@ -57,49 +53,42 @@ TEST_CASE("CostParams has sensible defaults", "[types]")
 //  RoutingModel
 // --------------------------------------------------------------------------
 
-TEST_CASE("RoutingModel can be default-constructed", "[routing]")
-{
+TEST_CASE("RoutingModel can be default-constructed", "[routing]") {
     coso::RoutingModel m;
     (void)m;
 }
 
-TEST_CASE("RoutingModel add_depot with coordinates", "[routing]")
-{
+TEST_CASE("RoutingModel add_depot with coordinates", "[routing]") {
     coso::RoutingModel m;
     int depot = m.add_depot(10.0, 20.0);
     REQUIRE(depot >= 0);
 }
 
-TEST_CASE("RoutingModel add_depot with explicit id", "[routing]")
-{
+TEST_CASE("RoutingModel add_depot with explicit id", "[routing]") {
     coso::RoutingModel m;
     int depot = m.add_depot(0, coso::DepotParams{.tw = {0, 1000}});
     REQUIRE(depot >= 0);
 }
 
-TEST_CASE("RoutingModel add_vehicle_type", "[routing]")
-{
+TEST_CASE("RoutingModel add_vehicle_type", "[routing]") {
     coso::RoutingModel m;
     int vt = m.add_vehicle_type(4, {.capacity = {15}});
     REQUIRE(vt >= 0);
 }
 
-TEST_CASE("RoutingModel add_client with coordinates", "[routing]")
-{
+TEST_CASE("RoutingModel add_client with coordinates", "[routing]") {
     coso::RoutingModel m;
     int c = m.add_client(1.0, 2.0, {.demand = {5}});
     REQUIRE(c >= 0);
 }
 
-TEST_CASE("RoutingModel add_client with explicit id", "[routing]")
-{
+TEST_CASE("RoutingModel add_client with explicit id", "[routing]") {
     coso::RoutingModel m;
     int c = m.add_client(42);
     REQUIRE(c >= 0);
 }
 
-TEST_CASE("RoutingModel pickup-delivery workflow", "[routing]")
-{
+TEST_CASE("RoutingModel pickup-delivery workflow", "[routing]") {
     coso::RoutingModel m;
     m.add_depot(0.0, 0.0);
     int p = m.add_pickup(1.0, 0.0, {.quantity = 3});
@@ -109,15 +98,13 @@ TEST_CASE("RoutingModel pickup-delivery workflow", "[routing]")
     m.add_pickup_delivery(p, d);
 }
 
-TEST_CASE("RoutingModel client groups", "[routing]")
-{
+TEST_CASE("RoutingModel client groups", "[routing]") {
     coso::RoutingModel m;
     int g = m.add_client_group();
     REQUIRE(g >= 0);
 }
 
-TEST_CASE("RoutingModel distance and duration setters", "[routing]")
-{
+TEST_CASE("RoutingModel distance and duration setters", "[routing]") {
     coso::RoutingModel m;
     m.set_distance(0, 1, 100);
     m.set_duration(0, 1, 50);
@@ -127,15 +114,13 @@ TEST_CASE("RoutingModel distance and duration setters", "[routing]")
     m.set_cost_matrix(0, 0, 1, 150);
 }
 
-TEST_CASE("RoutingModel warm start and pin", "[routing]")
-{
+TEST_CASE("RoutingModel warm start and pin", "[routing]") {
     coso::RoutingModel m;
     m.set_initial_routes({{1, 2, 3}, {4, 5}});
     m.pin(1);
 }
 
-TEST_CASE("RoutingModel solve returns a Result", "[routing]")
-{
+TEST_CASE("RoutingModel solve returns a Result", "[routing]") {
     coso::RoutingModel m;
     m.add_depot(0.0, 0.0);
     m.add_vehicle_type(1, {.capacity = {10}});
@@ -153,16 +138,14 @@ TEST_CASE("RoutingModel solve returns a Result", "[routing]")
     REQUIRE(r.work_units() > 0.0);
 }
 
-TEST_CASE("Free function solve(instance_path, tl) links", "[routing]")
-{
+TEST_CASE("Free function solve(instance_path, tl) links", "[routing]") {
     // Nonexistent file should return empty/infeasible result (no crash).
     coso::Result r = coso::solve("nonexistent.vrp", coso::TimeLimit(1.0));
     REQUIRE(r.cost() >= 0.0);
     REQUIRE_FALSE(r.feasible());
 }
 
-TEST_CASE("RoutingModel solves small CVRP", "[routing][integration]")
-{
+TEST_CASE("RoutingModel solves small CVRP", "[routing][integration]") {
     // Small CVRP instance: 1 depot at origin, 4 clients in a square.
     // Capacity 10, each client demands 3.  One vehicle of capacity 10
     // can serve at most 3 clients.  Two vehicles needed.
@@ -170,18 +153,19 @@ TEST_CASE("RoutingModel solves small CVRP", "[routing][integration]")
     m.add_depot(0.0, 0.0);
     m.add_vehicle_type(2, {.capacity = {10}});
 
-    m.add_client(10.0,  0.0, {.demand = {3}});
+    m.add_client(10.0, 0.0, {.demand = {3}});
     m.add_client(10.0, 10.0, {.demand = {3}});
-    m.add_client( 0.0, 10.0, {.demand = {3}});
-    m.add_client(20.0,  0.0, {.demand = {3}});
+    m.add_client(0.0, 10.0, {.demand = {3}});
+    m.add_client(20.0, 0.0, {.demand = {3}});
 
     coso::Result r = m.solve(coso::TimeLimit(2.0));
 
     REQUIRE(r.feasible());
     // All 4 clients should be served.
     int total_served = 0;
-    for (auto const& route : r.routes())
+    for (auto const& route : r.routes()) {
         total_served += static_cast<int>(route.size());
+    }
     REQUIRE(total_served == 4);
     REQUIRE(r.unserved().empty());
     REQUIRE(r.cost() > 0.0);
@@ -189,8 +173,7 @@ TEST_CASE("RoutingModel solves small CVRP", "[routing][integration]")
     REQUIRE(r.iterations() >= 0);
 }
 
-TEST_CASE("RoutingModel with explicit distances", "[routing][integration]")
-{
+TEST_CASE("RoutingModel with explicit distances", "[routing][integration]") {
     // 1 depot, 2 clients, explicit distances.
     coso::RoutingModel m;
     m.add_depot(0.0, 0.0);
@@ -213,14 +196,14 @@ TEST_CASE("RoutingModel with explicit distances", "[routing][integration]")
     REQUIRE(r.feasible());
     // Both clients should be served.
     int total_served = 0;
-    for (auto const& route : r.routes())
+    for (auto const& route : r.routes()) {
         total_served += static_cast<int>(route.size());
+    }
     REQUIRE(total_served == 2);
     REQUIRE(r.cost() > 0.0);
 }
 
-TEST_CASE("RoutingModel deterministic work units with work limit", "[routing][work_units]")
-{
+TEST_CASE("RoutingModel deterministic work units with work limit", "[routing][work_units]") {
     coso::RoutingModel m;
     m.add_depot(0.0, 0.0);
     m.add_vehicle_type(2, {.capacity = {10}});
@@ -237,8 +220,7 @@ TEST_CASE("RoutingModel deterministic work units with work limit", "[routing][wo
     REQUIRE(r1.work_units() == r2.work_units());
 }
 
-TEST_CASE("RoutingModel no depot returns empty result", "[routing]")
-{
+TEST_CASE("RoutingModel no depot returns empty result", "[routing]") {
     coso::RoutingModel m;
     m.add_vehicle_type(1, {.capacity = {10}});
     m.add_client(1.0, 0.0, {.demand = {1}});
@@ -247,8 +229,7 @@ TEST_CASE("RoutingModel no depot returns empty result", "[routing]")
     REQUIRE_FALSE(r.feasible());
 }
 
-TEST_CASE("RoutingModel no vehicle type returns empty result", "[routing]")
-{
+TEST_CASE("RoutingModel no vehicle type returns empty result", "[routing]") {
     coso::RoutingModel m;
     m.add_depot(0.0, 0.0);
     m.add_client(1.0, 0.0, {.demand = {1}});
@@ -261,14 +242,12 @@ TEST_CASE("RoutingModel no vehicle type returns empty result", "[routing]")
 //  NetworkModel
 // --------------------------------------------------------------------------
 
-TEST_CASE("NetworkModel can be default-constructed", "[network]")
-{
+TEST_CASE("NetworkModel can be default-constructed", "[network]") {
     coso::NetworkModel m;
     (void)m;
 }
 
-TEST_CASE("NetworkModel add nodes, arcs, and resources", "[network]")
-{
+TEST_CASE("NetworkModel add nodes, arcs, and resources", "[network]") {
     coso::NetworkModel m;
     int src = m.add_node(5, "src");
     int mid = m.add_node(0, "mid");
@@ -287,8 +266,7 @@ TEST_CASE("NetworkModel add nodes, arcs, and resources", "[network]")
     m.set_resource_usage(a0, r, 3);
 }
 
-TEST_CASE("NetworkModel solve returns flow result", "[network]")
-{
+TEST_CASE("NetworkModel solve returns flow result", "[network]") {
     coso::NetworkModel m;
     int src = m.add_node(5, "src");
     int dst = m.add_node(-5, "dst");
@@ -306,14 +284,12 @@ TEST_CASE("NetworkModel solve returns flow result", "[network]")
 //  LotSizingModel
 // --------------------------------------------------------------------------
 
-TEST_CASE("LotSizingModel can be default-constructed", "[lotsizing]")
-{
+TEST_CASE("LotSizingModel can be default-constructed", "[lotsizing]") {
     coso::LotSizingModel m;
     (void)m;
 }
 
-TEST_CASE("LotSizingModel add products and demand", "[lotsizing]")
-{
+TEST_CASE("LotSizingModel add products and demand", "[lotsizing]") {
     coso::LotSizingModel m;
     m.set_num_periods(3);
     int p0 = m.add_product(100.0, 2.0, 1.0, 2.0);
@@ -326,8 +302,7 @@ TEST_CASE("LotSizingModel add products and demand", "[lotsizing]")
     m.set_capacity(2, 50.0);
 }
 
-TEST_CASE("LotSizingModel solve returns typed production output", "[lotsizing]")
-{
+TEST_CASE("LotSizingModel solve returns typed production output", "[lotsizing]") {
     coso::LotSizingModel m;
     m.set_num_periods(3);
     int p0 = m.add_product(100.0, 2.0, 1.0, 2.0);
@@ -351,21 +326,18 @@ TEST_CASE("LotSizingModel solve returns typed production output", "[lotsizing]")
 //  ScheduleModel
 // --------------------------------------------------------------------------
 
-TEST_CASE("ScheduleModel can be default-constructed", "[scheduling]")
-{
+TEST_CASE("ScheduleModel can be default-constructed", "[scheduling]") {
     coso::ScheduleModel m;
     (void)m;
 }
 
-TEST_CASE("ScheduleModel add_machine", "[scheduling]")
-{
+TEST_CASE("ScheduleModel add_machine", "[scheduling]") {
     coso::ScheduleModel m;
     int mach = m.add_machine({.name = "M1"});
     REQUIRE(mach >= 0);
 }
 
-TEST_CASE("ScheduleModel add_job and add_operation", "[scheduling]")
-{
+TEST_CASE("ScheduleModel add_job and add_operation", "[scheduling]") {
     coso::ScheduleModel m;
     int j = m.add_job({.name = "Job0", .weight = 2});
     REQUIRE(j >= 0);
@@ -373,21 +345,19 @@ TEST_CASE("ScheduleModel add_job and add_operation", "[scheduling]")
     REQUIRE(op >= 0);
 }
 
-TEST_CASE("ScheduleModel FJSP flexible operations", "[scheduling]")
-{
+TEST_CASE("ScheduleModel FJSP flexible operations", "[scheduling]") {
     coso::ScheduleModel m;
     m.add_machine({.name = "M1"});
     m.add_machine({.name = "M2"});
     int j = m.add_job();
     int op = m.add_operation(j, {
-        .eligible_machines = {0, 1},
-        .durations_per_machine = {5, 8},
-    });
+                                    .eligible_machines = {0, 1},
+                                    .durations_per_machine = {5, 8},
+                                });
     REQUIRE(op >= 0);
 }
 
-TEST_CASE("ScheduleModel resource constraints (RCPSP)", "[scheduling]")
-{
+TEST_CASE("ScheduleModel resource constraints (RCPSP)", "[scheduling]") {
     coso::ScheduleModel m;
     int res = m.add_resource(3);
     REQUIRE(res >= 0);
@@ -396,8 +366,7 @@ TEST_CASE("ScheduleModel resource constraints (RCPSP)", "[scheduling]")
     m.set_resource_usage(op, res, 2);
 }
 
-TEST_CASE("ScheduleModel precedence constraints", "[scheduling]")
-{
+TEST_CASE("ScheduleModel precedence constraints", "[scheduling]") {
     coso::ScheduleModel m;
     int j = m.add_job();
     int op1 = m.add_operation(j, {.duration = 3});
@@ -405,8 +374,7 @@ TEST_CASE("ScheduleModel precedence constraints", "[scheduling]")
     m.add_precedence(op1, op2);
 }
 
-TEST_CASE("ScheduleModel objectives", "[scheduling]")
-{
+TEST_CASE("ScheduleModel objectives", "[scheduling]") {
     coso::ScheduleModel m;
     m.set_objective(coso::ScheduleObjective::Makespan);
     m.set_objective(coso::ScheduleObjective::TotalWeightedTardiness);
@@ -414,14 +382,12 @@ TEST_CASE("ScheduleModel objectives", "[scheduling]")
     m.minimize_makespan();
 }
 
-TEST_CASE("ScheduleModel warm start", "[scheduling]")
-{
+TEST_CASE("ScheduleModel warm start", "[scheduling]") {
     coso::ScheduleModel m;
     m.set_initial_schedule({{0, 0}, {1, 5}});
 }
 
-TEST_CASE("ScheduleModel solve returns a Result", "[scheduling]")
-{
+TEST_CASE("ScheduleModel solve returns a Result", "[scheduling]") {
     coso::ScheduleModel m;
     m.add_machine();
     int j = m.add_job();
@@ -432,8 +398,7 @@ TEST_CASE("ScheduleModel solve returns a Result", "[scheduling]")
     REQUIRE(r.work_units() > 0.0);
 }
 
-TEST_CASE("Free function solve_jsp links", "[scheduling]")
-{
+TEST_CASE("Free function solve_jsp links", "[scheduling]") {
     coso::Result r = coso::solve_jsp("nonexistent.txt", coso::TimeLimit(1.0));
     REQUIRE(r.cost() >= 0.0);
 }
@@ -442,14 +407,12 @@ TEST_CASE("Free function solve_jsp links", "[scheduling]")
 //  AssignmentModel
 // --------------------------------------------------------------------------
 
-TEST_CASE("AssignmentModel can be default-constructed", "[assignment]")
-{
+TEST_CASE("AssignmentModel can be default-constructed", "[assignment]") {
     coso::AssignmentModel m;
     (void)m;
 }
 
-TEST_CASE("AssignmentModel add_shift_type and add_employee", "[assignment]")
-{
+TEST_CASE("AssignmentModel add_shift_type and add_employee", "[assignment]") {
     coso::AssignmentModel m;
     int s = m.add_shift_type({.name = "Morning", .start_hour = 6, .end_hour = 14});
     REQUIRE(s >= 0);
@@ -457,17 +420,15 @@ TEST_CASE("AssignmentModel add_shift_type and add_employee", "[assignment]")
     REQUIRE(e >= 0);
 }
 
-TEST_CASE("AssignmentModel planning horizon and demand", "[assignment]")
-{
+TEST_CASE("AssignmentModel planning horizon and demand", "[assignment]") {
     coso::AssignmentModel m;
     int s = m.add_shift_type({.name = "Day"});
     m.set_horizon(7);
     m.add_demand(s, 0, {.min_employees = 2});
-    m.add_demand(s, {.min_employees = 1}); // all days
+    m.add_demand(s, {.min_employees = 1});  // all days
 }
 
-TEST_CASE("AssignmentModel hard constraints", "[assignment]")
-{
+TEST_CASE("AssignmentModel hard constraints", "[assignment]") {
     coso::AssignmentModel m;
     m.set_max_consecutive_shifts(5);
     m.set_min_rest_between_shifts(11);
@@ -476,8 +437,7 @@ TEST_CASE("AssignmentModel hard constraints", "[assignment]")
     m.add_forbidden_sequence({s1, s2});
 }
 
-TEST_CASE("AssignmentModel soft constraints", "[assignment]")
-{
+TEST_CASE("AssignmentModel soft constraints", "[assignment]") {
     coso::AssignmentModel m;
     int s = m.add_shift_type({.name = "Day"});
     int e = m.add_employee({.name = "Bob"});
@@ -486,15 +446,13 @@ TEST_CASE("AssignmentModel soft constraints", "[assignment]")
     m.add_unavailability(e, 3);
 }
 
-TEST_CASE("AssignmentModel warm start and replanning", "[assignment]")
-{
+TEST_CASE("AssignmentModel warm start and replanning", "[assignment]") {
     coso::AssignmentModel m;
     m.set_published_schedule({{0, 1}, {1, 0}});
     m.set_change_penalty(50);
 }
 
-TEST_CASE("AssignmentModel solve returns a Result", "[assignment]")
-{
+TEST_CASE("AssignmentModel solve returns a Result", "[assignment]") {
     coso::AssignmentModel m;
     m.add_shift_type({.name = "Day"});
     m.add_employee({.name = "Alice"});
@@ -509,42 +467,36 @@ TEST_CASE("AssignmentModel solve returns a Result", "[assignment]")
 //  PackingModel
 // --------------------------------------------------------------------------
 
-TEST_CASE("PackingModel can be default-constructed", "[packing]")
-{
+TEST_CASE("PackingModel can be default-constructed", "[packing]") {
     coso::PackingModel m;
     (void)m;
 }
 
-TEST_CASE("PackingModel add_bin_type", "[packing]")
-{
+TEST_CASE("PackingModel add_bin_type", "[packing]") {
     coso::PackingModel m;
     int bt = m.add_bin_type({.capacity = {100}, .cost = 1});
     REQUIRE(bt >= 0);
 }
 
-TEST_CASE("PackingModel add_item", "[packing]")
-{
+TEST_CASE("PackingModel add_item", "[packing]") {
     coso::PackingModel m;
     int it = m.add_item({.size = {25}});
     REQUIRE(it >= 0);
 }
 
-TEST_CASE("PackingModel conflicts", "[packing]")
-{
+TEST_CASE("PackingModel conflicts", "[packing]") {
     coso::PackingModel m;
     int a = m.add_item({.size = {10}});
     int b = m.add_item({.size = {20}});
     m.add_conflict(a, b);
 }
 
-TEST_CASE("PackingModel minimize_bins", "[packing]")
-{
+TEST_CASE("PackingModel minimize_bins", "[packing]") {
     coso::PackingModel m;
     m.minimize_bins();
 }
 
-TEST_CASE("PackingModel solve returns a Result", "[packing]")
-{
+TEST_CASE("PackingModel solve returns a Result", "[packing]") {
     coso::PackingModel m;
     m.add_bin_type({.capacity = {100}});
     m.add_item({.size = {30}});
@@ -555,11 +507,11 @@ TEST_CASE("PackingModel solve returns a Result", "[packing]")
     REQUIRE(r.work_units() > 0.0);
 }
 
-TEST_CASE("Deterministic stop parity across model APIs", "[model][work_units]")
-{
+TEST_CASE("Deterministic stop parity across model APIs", "[model][work_units]") {
     SECTION("ScheduleModel") {
-        SKIP("ScheduleModel::solve() crashes via construct_neh() when an operation has no "
-             "feasible machine — coso#188");
+        SKIP(
+            "ScheduleModel::solve() crashes via construct_neh() when an operation has no "
+            "feasible machine — coso#188");
         coso::ScheduleModel m;
         m.add_machine();
         int j0 = m.add_job();

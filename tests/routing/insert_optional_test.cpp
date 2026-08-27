@@ -1,9 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/operators/insert_optional.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -18,33 +19,32 @@ using namespace coso;
 ///  Optional: C4(5,5) prize=100, C5(15,15) prize=5
 ///
 /// C4 has a high prize (worth inserting), C5 has a low prize (may not be worth it).
-static ProblemData make_optional_instance()
-{
+static ProblemData make_optional_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {20}});
 
     // Required clients.
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // 0 - required
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // 1 - required
-    b.add_client({0.0, 10.0}, {.demand = {2}});   // 2 - required
-    b.add_client({0.0, 20.0}, {.demand = {3}});   // 3 - required
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // 0 - required
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // 1 - required
+    b.add_client({0.0, 10.0}, {.demand = {2}});  // 2 - required
+    b.add_client({0.0, 20.0}, {.demand = {3}});  // 3 - required
 
     // Optional clients.
-    b.add_client({5.0, 5.0}, {.demand = {1}, .prize = 100, .required = false});   // 4 - high prize
-    b.add_client({15.0, 15.0}, {.demand = {1}, .prize = 5, .required = false});   // 5 - low prize
+    b.add_client({5.0, 5.0}, {.demand = {1}, .prize = 100, .required = false});  // 4 - high prize
+    b.add_client({15.0, 15.0}, {.demand = {1}, .prize = 5, .required = false});  // 5 - low prize
 
     return b.build(0);
 }
 
 /// Build a solution with given route assignments.
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
@@ -53,9 +53,7 @@ static Solution make_solution(ProblemData const& data,
 //  InsertOptional tests
 // ===========================================================================
 
-TEST_CASE("InsertOptional: inserts high-prize optional client",
-          "[insert_optional]")
-{
+TEST_CASE("InsertOptional: inserts high-prize optional client", "[insert_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -81,9 +79,7 @@ TEST_CASE("InsertOptional: inserts high-prize optional client",
     CHECK(sol.num_unassigned() == 1);
 }
 
-TEST_CASE("InsertOptional: does not insert when prize is too low",
-          "[insert_optional]")
-{
+TEST_CASE("InsertOptional: does not insert when prize is too low", "[insert_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -101,9 +97,7 @@ TEST_CASE("InsertOptional: does not insert when prize is too low",
     CHECK_FALSE(found);
 }
 
-TEST_CASE("InsertOptional: no move when no unassigned optional clients",
-          "[insert_optional]")
-{
+TEST_CASE("InsertOptional: no move when no unassigned optional clients", "[insert_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -115,9 +109,7 @@ TEST_CASE("InsertOptional: no move when no unassigned optional clients",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("InsertOptional: no move when only required clients unassigned",
-          "[insert_optional]")
-{
+TEST_CASE("InsertOptional: no move when only required clients unassigned", "[insert_optional]") {
     // Instance with no optional clients at all.
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
@@ -136,9 +128,7 @@ TEST_CASE("InsertOptional: no move when only required clients unassigned",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("InsertOptional: delta matches actual cost change",
-          "[insert_optional]")
-{
+TEST_CASE("InsertOptional: delta matches actual cost change", "[insert_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -154,9 +144,7 @@ TEST_CASE("InsertOptional: delta matches actual cost change",
     }
 }
 
-TEST_CASE("InsertOptional: iterates until no more insertions",
-          "[insert_optional][iterate]")
-{
+TEST_CASE("InsertOptional: iterates until no more insertions", "[insert_optional][iterate]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -174,9 +162,7 @@ TEST_CASE("InsertOptional: iterates until no more insertions",
     CHECK(sol.is_assigned(4));
 }
 
-TEST_CASE("InsertOptional: chooses best position across routes",
-          "[insert_optional]")
-{
+TEST_CASE("InsertOptional: chooses best position across routes", "[insert_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -189,12 +175,16 @@ TEST_CASE("InsertOptional: chooses best position across routes",
     // Verify this is indeed the best possible insertion by trying all.
     int64_t best_delta = 0;
     for (int c : sol.unassigned()) {
-        if (data.client(c).required) continue;
+        if (data.client(c).required) {
+            continue;
+        }
         for (int r = 0; r < sol.num_routes(); ++r) {
             auto const& route = sol.route(r);
             for (int p = 0; p <= route.size(); ++p) {
                 int64_t d = eval.eval_insert_cost(route, p, c);
-                if (d < best_delta) best_delta = d;
+                if (d < best_delta) {
+                    best_delta = d;
+                }
             }
         }
     }
@@ -205,9 +195,7 @@ TEST_CASE("InsertOptional: chooses best position across routes",
 //  RemoveOptional tests
 // ===========================================================================
 
-TEST_CASE("RemoveOptional: removes low-prize optional client",
-          "[remove_optional]")
-{
+TEST_CASE("RemoveOptional: removes low-prize optional client", "[remove_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -228,9 +216,7 @@ TEST_CASE("RemoveOptional: removes low-prize optional client",
     CHECK(new_cost - old_cost == op.best_delta());
 }
 
-TEST_CASE("RemoveOptional: does not remove high-prize client",
-          "[remove_optional]")
-{
+TEST_CASE("RemoveOptional: does not remove high-prize client", "[remove_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -247,9 +233,7 @@ TEST_CASE("RemoveOptional: does not remove high-prize client",
     CHECK_FALSE(found);
 }
 
-TEST_CASE("RemoveOptional: no move when no optional clients served",
-          "[remove_optional]")
-{
+TEST_CASE("RemoveOptional: no move when no optional clients served", "[remove_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -260,9 +244,7 @@ TEST_CASE("RemoveOptional: no move when no optional clients served",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("RemoveOptional: does not remove required clients",
-          "[remove_optional]")
-{
+TEST_CASE("RemoveOptional: does not remove required clients", "[remove_optional]") {
     // Instance with only required clients.
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
@@ -278,9 +260,7 @@ TEST_CASE("RemoveOptional: does not remove required clients",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("RemoveOptional: delta matches actual cost change",
-          "[remove_optional]")
-{
+TEST_CASE("RemoveOptional: delta matches actual cost change", "[remove_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -296,9 +276,7 @@ TEST_CASE("RemoveOptional: delta matches actual cost change",
     }
 }
 
-TEST_CASE("RemoveOptional: iterates until no more removals",
-          "[remove_optional][iterate]")
-{
+TEST_CASE("RemoveOptional: iterates until no more removals", "[remove_optional][iterate]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -320,8 +298,7 @@ TEST_CASE("RemoveOptional: iterates until no more removals",
 // ===========================================================================
 
 TEST_CASE("InsertOptional + RemoveOptional: round-trip stability",
-          "[insert_optional][remove_optional]")
-{
+          "[insert_optional][remove_optional]") {
     auto data = make_optional_instance();
     CostEvaluator eval(100);
 
@@ -330,16 +307,16 @@ TEST_CASE("InsertOptional + RemoveOptional: round-trip stability",
 
     // Insert all profitable optional clients.
     InsertOptional ins;
-    while (ins.find_best_move(sol, eval, data))
+    while (ins.find_best_move(sol, eval, data)) {
         ins.apply(sol);
+    }
 
     // Now try removing -- nothing should improve (insert was already optimal).
     RemoveOptional rem;
     CHECK_FALSE(rem.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("InsertOptional: empty routes", "[insert_optional]")
-{
+TEST_CASE("InsertOptional: empty routes", "[insert_optional]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {20}});
@@ -358,9 +335,7 @@ TEST_CASE("InsertOptional: empty routes", "[insert_optional]")
     CHECK(sol.is_assigned(0));
 }
 
-TEST_CASE("RemoveOptional: removes last client from route",
-          "[remove_optional]")
-{
+TEST_CASE("RemoveOptional: removes last client from route", "[remove_optional]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {20}});

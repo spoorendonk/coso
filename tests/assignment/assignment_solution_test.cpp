@@ -1,5 +1,6 @@
-#include "assignment/assignment_data.h"
 #include "assignment/assignment_solution.h"
+
+#include "assignment/assignment_data.h"
 #include "assignment/cost_evaluator.h"
 
 #include <catch2/catch_test_macros.hpp>
@@ -14,24 +15,32 @@ using namespace coso;
 
 namespace {
 
-AssignmentData make_small_instance()
-{
+AssignmentData make_small_instance() {
     AssignmentData data;
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day",   .start_hour = 8,  .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6,  .duration_hours = 0},
+        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
+        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
     };
 
     // 3 employees with default constraints.
     data.employees = {
-        {.name = "Alice", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Bob",   .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Carol", .skills = {"nurse", "senior"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
+        {.name = "Alice",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Bob",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Carol",
+         .skills = {"nurse", "senior"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
     };
 
     data.horizon = 7;
@@ -45,20 +54,19 @@ AssignmentData make_small_instance()
     }
 
     // Global hard constraints.
-    data.max_consecutive_shifts  = 5;
+    data.max_consecutive_shifts = 5;
     data.min_rest_between_shifts = 11;
 
     return data;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ---------------------------------------------------------------------------
 //  Test: empty solution
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: empty solution", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: empty solution", "[assignment]") {
     auto data = make_small_instance();
     AssignmentCostEvaluator evaluator(data);
     AssignmentSolution sol(data, evaluator);
@@ -67,9 +75,11 @@ TEST_CASE("AssignmentSolution: empty solution", "[assignment]")
     REQUIRE(sol.horizon() == 7);
 
     // All cells should be -1 (unassigned).
-    for (int e = 0; e < 3; ++e)
-        for (int d = 0; d < 7; ++d)
+    for (int e = 0; e < 3; ++e) {
+        for (int d = 0; d < 7; ++d) {
             REQUIRE(sol.get(e, d) == -1);
+        }
+    }
 
     // Empty schedule has demand violations (understaffing).
     REQUIRE(sol.demand_cost() > 0);
@@ -79,8 +89,7 @@ TEST_CASE("AssignmentSolution: empty solution", "[assignment]")
 //  Test: assign and unassign
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: assign and unassign", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: assign and unassign", "[assignment]") {
     auto data = make_small_instance();
     AssignmentCostEvaluator evaluator(data);
     AssignmentSolution sol(data, evaluator);
@@ -106,8 +115,7 @@ TEST_CASE("AssignmentSolution: assign and unassign", "[assignment]")
 //  Test: demand violation computation
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: demand violations", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: demand violations", "[assignment]") {
     auto data = make_small_instance();
     AssignmentCostEvaluator evaluator(data);
     AssignmentSolution sol(data, evaluator);
@@ -131,8 +139,7 @@ TEST_CASE("AssignmentSolution: demand violations", "[assignment]")
 //  Test: overstaffing penalty
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: overstaffing penalty", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: overstaffing penalty", "[assignment]") {
     auto data = make_small_instance();
     AssignmentCostEvaluator evaluator(data);
     AssignmentSolution sol(data, evaluator);
@@ -159,8 +166,7 @@ TEST_CASE("AssignmentSolution: overstaffing penalty", "[assignment]")
 //  Test: consecutive shift constraint
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: max consecutive shifts", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: max consecutive shifts", "[assignment]") {
     auto data = make_small_instance();
     // Tighten: max 3 consecutive.
     data.max_consecutive_shifts = 3;
@@ -170,8 +176,9 @@ TEST_CASE("AssignmentSolution: max consecutive shifts", "[assignment]")
     AssignmentSolution sol(data, evaluator);
 
     // Assign Alice to Day shift 4 days in a row -> violation on day 4.
-    for (int d = 0; d < 4; ++d)
+    for (int d = 0; d < 4; ++d) {
         sol.assign(0, d, 0);
+    }
 
     REQUIRE(sol.hard_constraint_cost() > 0);
     REQUIRE_FALSE(sol.is_feasible());
@@ -186,8 +193,7 @@ TEST_CASE("AssignmentSolution: max consecutive shifts", "[assignment]")
 //  Test: minimum rest between shifts
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: min rest between shifts", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: min rest between shifts", "[assignment]") {
     auto data = make_small_instance();
     data.min_rest_between_shifts = 11;
 
@@ -212,11 +218,14 @@ TEST_CASE("AssignmentSolution: min rest between shifts", "[assignment]")
     // Rest = (24 - 20) + 6 = 10 hours < 11 -> violation.
     AssignmentData data2;
     data2.shift_types = {
-        {.name = "Late",  .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6,  .end_hour = 14, .duration_hours = 0},
+        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
+        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
     };
-    data2.employees = {{.name = "X", .skills = {}, .max_hours_per_week = 40,
-                         .max_consecutive_days = 7, .min_rest_hours = 11}};
+    data2.employees = {{.name = "X",
+                        .skills = {},
+                        .max_hours_per_week = 40,
+                        .max_consecutive_days = 7,
+                        .min_rest_hours = 11}};
     data2.horizon = 2;
     data2.min_rest_between_shifts = 11;
 
@@ -231,8 +240,7 @@ TEST_CASE("AssignmentSolution: min rest between shifts", "[assignment]")
 //  Test: forbidden sequences
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: forbidden shift sequences", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: forbidden shift sequences", "[assignment]") {
     auto data = make_small_instance();
     // Forbid Night -> Day sequence.
     data.forbidden_sequences = {{1, 0}};
@@ -257,8 +265,7 @@ TEST_CASE("AssignmentSolution: forbidden shift sequences", "[assignment]")
 //  Test: unavailability
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: unavailability", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: unavailability", "[assignment]") {
     auto data = make_small_instance();
     // Alice is unavailable on day 3.
     data.unavailabilities.insert(AssignmentData::unavail_key(0, 3));
@@ -279,8 +286,7 @@ TEST_CASE("AssignmentSolution: unavailability", "[assignment]")
 //  Test: preference costs
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: preference costs", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: preference costs", "[assignment]") {
     auto data = make_small_instance();
     // Alice prefers Day shift on Monday (day 0), weight = 5.
     data.preferences = {
@@ -307,8 +313,7 @@ TEST_CASE("AssignmentSolution: preference costs", "[assignment]")
 //  Test: swap operation
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: swap employees", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: swap employees", "[assignment]") {
     auto data = make_small_instance();
     AssignmentCostEvaluator evaluator(data);
     AssignmentSolution sol(data, evaluator);
@@ -329,8 +334,7 @@ TEST_CASE("AssignmentSolution: swap employees", "[assignment]")
 //  Test: recompute_cost consistency
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: recompute_cost matches incremental", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: recompute_cost matches incremental", "[assignment]") {
     auto data = make_small_instance();
     AssignmentCostEvaluator evaluator(data);
     AssignmentSolution sol(data, evaluator);
@@ -350,8 +354,7 @@ TEST_CASE("AssignmentSolution: recompute_cost matches incremental", "[assignment
 //  Test: skill-based demand
 // ---------------------------------------------------------------------------
 
-TEST_CASE("AssignmentSolution: skill-based demand", "[assignment]")
-{
+TEST_CASE("AssignmentSolution: skill-based demand", "[assignment]") {
     auto data = make_small_instance();
     // Override day 0 day-shift demand to require "senior" skill.
     data.demand[AssignmentData::demand_key(0, 0)] = {

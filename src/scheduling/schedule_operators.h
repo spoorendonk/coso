@@ -13,22 +13,22 @@ namespace coso {
 
 /// Move for SwapAdjacentOps: swap positions pos and pos+1 on a machine.
 struct SwapAdjacentMove {
-    int machine;   ///< machine index
-    int pos;       ///< position in the machine sequence (swap pos with pos+1)
+    int machine;  ///< machine index
+    int pos;      ///< position in the machine sequence (swap pos with pos+1)
 };
 
 /// Move for InsertOp: remove the operation at from_pos and insert at to_pos.
 struct InsertMove {
-    int machine   = -1;  ///< machine index
-    int from_pos  = -1;  ///< position to remove from
-    int to_pos    = -1;  ///< position to insert at (after removal)
+    int machine = -1;   ///< machine index
+    int from_pos = -1;  ///< position to remove from
+    int to_pos = -1;    ///< position to insert at (after removal)
 };
 
 /// Move for BlockReverse: reverse operations in [start_pos, end_pos] on a machine.
 struct BlockReverseMove {
-    int machine    = -1;  ///< machine index
-    int start_pos  = -1;  ///< first position of the block (inclusive)
-    int end_pos    = -1;  ///< last position of the block (inclusive)
+    int machine = -1;    ///< machine index
+    int start_pos = -1;  ///< first position of the block (inclusive)
+    int end_pos = -1;    ///< last position of the block (inclusive)
 };
 
 // ---------------------------------------------------------------------------
@@ -42,8 +42,7 @@ struct BlockReverseMove {
 class SwapAdjacentOps {
 public:
     /// Enumerate all valid swap moves for the current graph state.
-    [[nodiscard]] static std::vector<SwapAdjacentMove>
-    enumerate(DisjunctiveGraph const& graph);
+    [[nodiscard]] static std::vector<SwapAdjacentMove> enumerate(DisjunctiveGraph const& graph);
 
     /// Apply a swap move: modifies the machine sequence in the graph.
     static void apply(DisjunctiveGraph& graph, SwapAdjacentMove const& move);
@@ -51,8 +50,7 @@ public:
     /// Evaluate the makespan after applying the move, without permanently
     /// modifying the graph.  Returns the new makespan, or INT_MAX if the
     /// move creates a cycle.
-    [[nodiscard]] static int evaluate(DisjunctiveGraph& graph,
-                                      SwapAdjacentMove const& move);
+    [[nodiscard]] static int evaluate(DisjunctiveGraph& graph, SwapAdjacentMove const& move);
 };
 
 // ---------------------------------------------------------------------------
@@ -71,16 +69,14 @@ public:
 class InsertOp {
 public:
     /// Enumerate all valid insert moves.
-    [[nodiscard]] static std::vector<InsertMove>
-    enumerate(DisjunctiveGraph const& graph);
+    [[nodiscard]] static std::vector<InsertMove> enumerate(DisjunctiveGraph const& graph);
 
     /// Apply an insert move.
     static void apply(DisjunctiveGraph& graph, InsertMove const& move);
 
     /// Evaluate the makespan after applying the move without permanently
     /// modifying the graph.  Returns INT_MAX if the move creates a cycle.
-    [[nodiscard]] static int evaluate(DisjunctiveGraph& graph,
-                                      InsertMove const& move);
+    [[nodiscard]] static int evaluate(DisjunctiveGraph& graph, InsertMove const& move);
 };
 
 // ---------------------------------------------------------------------------
@@ -97,21 +93,18 @@ public:
     /// Find critical blocks: maximal sequences of consecutive critical-path
     /// operations on the same machine.  Returns a list of BlockReverseMoves
     /// (one per critical block of size >= 2).
-    [[nodiscard]] static std::vector<BlockReverseMove>
-    enumerate_critical(DisjunctiveGraph& graph);
+    [[nodiscard]] static std::vector<BlockReverseMove> enumerate_critical(DisjunctiveGraph& graph);
 
     /// Enumerate all possible block reversals (not just critical blocks).
     /// For each machine, every sub-sequence of length >= 2 is a candidate.
-    [[nodiscard]] static std::vector<BlockReverseMove>
-    enumerate_all(DisjunctiveGraph const& graph);
+    [[nodiscard]] static std::vector<BlockReverseMove> enumerate_all(DisjunctiveGraph const& graph);
 
     /// Apply a block-reverse move.
     static void apply(DisjunctiveGraph& graph, BlockReverseMove const& move);
 
     /// Evaluate the makespan after applying the move without permanently
     /// modifying the graph.  Returns INT_MAX if the move creates a cycle.
-    [[nodiscard]] static int evaluate(DisjunctiveGraph& graph,
-                                      BlockReverseMove const& move);
+    [[nodiscard]] static int evaluate(DisjunctiveGraph& graph, BlockReverseMove const& move);
 };
 
-} // namespace coso
+}  // namespace coso

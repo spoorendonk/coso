@@ -49,9 +49,7 @@ public:
     [[nodiscard]] int iterations() const noexcept { return iter_; }
 
     /// Iterations since last improvement.
-    [[nodiscard]] int iterations_no_improve() const noexcept {
-        return iter_ - last_improve_iter_;
-    }
+    [[nodiscard]] int iterations_no_improve() const noexcept { return iter_ - last_improve_iter_; }
 
     /// Elapsed wall-clock time in seconds since construction.
     [[nodiscard]] double elapsed() const;
@@ -59,12 +57,8 @@ public:
     /// Deterministic work consumed (0 if no work counter is attached).
     [[nodiscard]] uint64_t work_ticks() const noexcept;
     [[nodiscard]] double work_units() const noexcept;
-    [[nodiscard]] bool has_work_limit() const noexcept {
-        return work_ && max_work_ticks_ > 0;
-    }
-    [[nodiscard]] uint64_t max_work_ticks() const noexcept {
-        return max_work_ticks_;
-    }
+    [[nodiscard]] bool has_work_limit() const noexcept { return work_ && max_work_ticks_ > 0; }
+    [[nodiscard]] uint64_t max_work_ticks() const noexcept { return max_work_ticks_; }
 
 private:
     using Clock = std::chrono::steady_clock;
@@ -80,4 +74,4 @@ private:
     int last_improve_iter_ = 0;
 };
 
-} // namespace coso
+}  // namespace coso

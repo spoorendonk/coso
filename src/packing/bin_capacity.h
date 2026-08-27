@@ -72,12 +72,10 @@ public:
 
     /// The underlying solution.
     [[nodiscard]] PackingSolution& solution() noexcept { return *sol_; }
-    [[nodiscard]] PackingSolution const& solution() const noexcept {
-        return *sol_;
-    }
+    [[nodiscard]] PackingSolution const& solution() const noexcept { return *sol_; }
 
 private:
     PackingSolution* sol_;
 };
 
-} // namespace coso
+}  // namespace coso

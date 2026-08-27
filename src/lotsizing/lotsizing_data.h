@@ -23,8 +23,8 @@ public:
     /// Bill-of-materials entry: producing one unit of `parent` requires
     /// `quantity` units of `child`.
     struct BomEntry {
-        int parent   = -1;
-        int child    = -1;
+        int parent = -1;
+        int child = -1;
         double quantity = 1.0;
     };
 
@@ -46,11 +46,8 @@ public:
         /// @param setup_time  Time consumed by a setup (in capacity units)
         /// @param unit_production_cost  Variable cost per unit produced
         /// @param holding_cost  Holding cost per unit per period
-        int add_product(double setup_cost,
-                        double setup_time,
-                        double unit_production_cost,
-                        double holding_cost)
-        {
+        int add_product(double setup_cost, double setup_time, double unit_production_cost,
+                        double holding_cost) {
             int idx = static_cast<int>(setup_costs_.size());
             setup_costs_.push_back(setup_cost);
             setup_times_.push_back(setup_time);
@@ -68,8 +65,9 @@ public:
 
         /// Set production capacity for period t.
         Builder& set_capacity(int t, double capacity) {
-            if (t >= static_cast<int>(capacities_.size()))
+            if (t >= static_cast<int>(capacities_.size())) {
                 capacities_.resize(t + 1, 0.0);
+            }
             capacities_[t] = capacity;
             return *this;
         }
@@ -92,7 +90,7 @@ public:
         std::vector<double> setup_times_;
         std::vector<double> unit_prod_costs_;
         std::vector<double> holding_costs_;
-        std::vector<double> demands_;     // flat: [p * max_periods_ + t]
+        std::vector<double> demands_;  // flat: [p * max_periods_ + t]
         std::vector<double> capacities_;
         std::vector<BomEntry> bom_;
 
@@ -103,20 +101,20 @@ public:
                 int old_max = max_periods_;
                 int num_products = static_cast<int>(setup_costs_.size());
                 max_periods_ = needed_periods;
-                std::vector<double> new_demands(
-                    static_cast<size_t>(num_products) * max_periods_, 0.0);
+                std::vector<double> new_demands(static_cast<size_t>(num_products) * max_periods_,
+                                                0.0);
                 for (int pp = 0; pp < num_products; ++pp) {
                     for (int tt = 0; tt < old_max; ++tt) {
-                        new_demands[pp * max_periods_ + tt] =
-                            demands_[pp * old_max + tt];
+                        new_demands[pp * max_periods_ + tt] = demands_[pp * old_max + tt];
                     }
                 }
                 demands_ = std::move(new_demands);
             }
             int num_products = static_cast<int>(setup_costs_.size());
             size_t needed = static_cast<size_t>(num_products) * max_periods_;
-            if (demands_.size() < needed)
+            if (demands_.size() < needed) {
                 demands_.resize(needed, 0.0);
+            }
         }
     };
 
@@ -125,7 +123,7 @@ public:
     // -------------------------------------------------------------------
 
     [[nodiscard]] int num_products() const noexcept { return num_products_; }
-    [[nodiscard]] int num_periods()  const noexcept { return num_periods_; }
+    [[nodiscard]] int num_periods() const noexcept { return num_periods_; }
 
     /// External demand for product p in period t.
     [[nodiscard]] double demand(int p, int t) const {
@@ -137,8 +135,9 @@ public:
     [[nodiscard]] double total_demand(int p) const {
         assert(p >= 0 && p < num_products_);
         double sum = 0.0;
-        for (int t = 0; t < num_periods_; ++t)
+        for (int t = 0; t < num_periods_; ++t) {
             sum += demands_[p * num_periods_ + t];
+        }
         return sum;
     }
 
@@ -173,9 +172,7 @@ public:
     }
 
     /// Number of BOM entries.
-    [[nodiscard]] int num_bom_entries() const noexcept {
-        return static_cast<int>(bom_.size());
-    }
+    [[nodiscard]] int num_bom_entries() const noexcept { return static_cast<int>(bom_.size()); }
 
     /// BOM entry at index i.
     [[nodiscard]] BomEntry const& bom_entry(int i) const {
@@ -184,23 +181,23 @@ public:
     }
 
     /// All BOM entries.
-    [[nodiscard]] std::vector<BomEntry> const& bom() const noexcept {
-        return bom_;
-    }
+    [[nodiscard]] std::vector<BomEntry> const& bom() const noexcept { return bom_; }
 
     /// Children of product p (with quantities). Returns pairs of (child, qty).
     [[nodiscard]] std::vector<std::pair<int, double>> children(int p) const {
         std::vector<std::pair<int, double>> result;
-        for (auto const& e : children_[p])
+        for (auto const& e : children_[p]) {
             result.emplace_back(e.child, e.quantity);
+        }
         return result;
     }
 
     /// Parents of product p (with quantities). Returns pairs of (parent, qty).
     [[nodiscard]] std::vector<std::pair<int, double>> parents(int p) const {
         std::vector<std::pair<int, double>> result;
-        for (auto const& e : parents_[p])
+        for (auto const& e : parents_[p]) {
             result.emplace_back(e.parent, e.quantity);
+        }
         return result;
     }
 
@@ -211,19 +208,17 @@ public:
     }
 
     /// Whether this is a multi-level problem (has BOM entries).
-    [[nodiscard]] bool is_multi_level() const noexcept {
-        return !bom_.empty();
-    }
+    [[nodiscard]] bool is_multi_level() const noexcept { return !bom_.empty(); }
 
 private:
     int num_products_ = 0;
-    int num_periods_  = 0;
+    int num_periods_ = 0;
 
     std::vector<double> setup_costs_;
     std::vector<double> setup_times_;
     std::vector<double> unit_prod_costs_;
     std::vector<double> holding_costs_;
-    std::vector<double> demands_;      // flat: [p * num_periods_ + t]
+    std::vector<double> demands_;  // flat: [p * num_periods_ + t]
     std::vector<double> capacities_;
 
     std::vector<BomEntry> bom_;
@@ -232,4 +227,4 @@ private:
     std::vector<std::vector<BomEntry>> parents_;   // parents_[p] = BOM entries where child == p
 };
 
-} // namespace coso
+}  // namespace coso

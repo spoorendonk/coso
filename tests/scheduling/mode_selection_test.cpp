@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "scheduling/mode_selection.h"
+
 #include "scheduling/schedule_data.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -22,8 +23,7 @@ namespace {
 ///
 /// The greedy selector should pick modes that balance duration and resource use.
 /// Mode 1 is faster but uses more resources.
-ScheduleData make_multimode_3ops()
-{
+ScheduleData make_multimode_3ops() {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_machine({.name = "M1"});
@@ -53,8 +53,7 @@ ScheduleData make_multimode_3ops()
 /// Starting with mode 0 for both: total_dur = 18.
 /// After local search swaps to mode 1 for both: total_dur = 9.
 /// Both mode-1 usages (2, 3) are within capacity 4.
-ScheduleData make_multimode_improvable()
-{
+ScheduleData make_multimode_improvable() {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_machine({.name = "M1"});
@@ -78,8 +77,7 @@ ScheduleData make_multimode_improvable()
 ///  Job 0: op0 (M0) — base: (dur=3, res=5)  <-- exceeds capacity!
 ///
 /// Used to test that mode_resource_feasible() detects violations.
-ScheduleData make_infeasible_resource()
-{
+ScheduleData make_infeasible_resource() {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_job({.name = "J0"});
@@ -92,15 +90,13 @@ ScheduleData make_infeasible_resource()
     return b.build();
 }
 
-} // namespace
+}  // namespace
 
 // ---------------------------------------------------------------------------
 //  ModeAssignment construction
 // ---------------------------------------------------------------------------
 
-TEST_CASE("ModeAssignment: construction from ScheduleData",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("ModeAssignment: construction from ScheduleData", "[scheduling][mode_selection]") {
     auto data = make_multimode_3ops();
     ModeAssignment ma(data);
 
@@ -118,9 +114,7 @@ TEST_CASE("ModeAssignment: construction from ScheduleData",
     CHECK(ma.duration(2) == 6);
 }
 
-TEST_CASE("ModeAssignment: add_mode extends available modes",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("ModeAssignment: add_mode extends available modes", "[scheduling][mode_selection]") {
     auto data = make_multimode_3ops();
     ModeAssignment ma(data);
 
@@ -136,9 +130,7 @@ TEST_CASE("ModeAssignment: add_mode extends available modes",
     CHECK(ma.resource_usage(0, 0) == 2);
 }
 
-TEST_CASE("ModeAssignment: total_duration sums selected modes",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("ModeAssignment: total_duration sums selected modes", "[scheduling][mode_selection]") {
     auto data = make_multimode_3ops();
     ModeAssignment ma(data);
 
@@ -153,9 +145,7 @@ TEST_CASE("ModeAssignment: total_duration sums selected modes",
     CHECK(ma.total_duration() == 12);
 }
 
-TEST_CASE("ModeAssignment: total_resource_usage",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("ModeAssignment: total_resource_usage", "[scheduling][mode_selection]") {
     auto data = make_multimode_3ops();
     ModeAssignment ma(data);
 
@@ -163,9 +153,7 @@ TEST_CASE("ModeAssignment: total_resource_usage",
     CHECK(ma.total_resource_usage(0) == 3);
 }
 
-TEST_CASE("ModeAssignment: mode_resource_feasible",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("ModeAssignment: mode_resource_feasible", "[scheduling][mode_selection]") {
     SECTION("feasible instance") {
         auto data = make_multimode_3ops();
         ModeAssignment ma(data);
@@ -183,9 +171,7 @@ TEST_CASE("ModeAssignment: mode_resource_feasible",
 //  Greedy mode selection
 // ---------------------------------------------------------------------------
 
-TEST_CASE("greedy_mode_selection: picks valid modes",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("greedy_mode_selection: picks valid modes", "[scheduling][mode_selection]") {
     auto data = make_multimode_3ops();
     auto ma = greedy_mode_selection(data);
 
@@ -199,9 +185,7 @@ TEST_CASE("greedy_mode_selection: picks valid modes",
     CHECK(ma.mode_resource_feasible(data));
 }
 
-TEST_CASE("greedy_mode_selection: skips infeasible modes",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("greedy_mode_selection: skips infeasible modes", "[scheduling][mode_selection]") {
     auto data = make_multimode_3ops();
     ModeAssignment ma(data);
 
@@ -215,9 +199,7 @@ TEST_CASE("greedy_mode_selection: skips infeasible modes",
     CHECK(greedy.mode_resource_feasible(data));
 }
 
-TEST_CASE("greedy_mode_selection: prefers lower cost modes",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("greedy_mode_selection: prefers lower cost modes", "[scheduling][mode_selection]") {
     // Build instance with FJSP-style eligible machines (creates multiple modes).
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
@@ -225,8 +207,7 @@ TEST_CASE("greedy_mode_selection: prefers lower cost modes",
     b.add_job({.name = "J0"});
 
     // Operation with 2 eligible machines: M0 (dur=10), M1 (dur=3).
-    b.add_operation(0, {.eligible_machines = {0, 1},
-                        .durations_per_machine = {10, 3}});
+    b.add_operation(0, {.eligible_machines = {0, 1}, .durations_per_machine = {10, 3}});
 
     int r = b.add_resource(5);
     b.set_resource_usage(0, r, 1);
@@ -244,14 +225,13 @@ TEST_CASE("greedy_mode_selection: prefers lower cost modes",
 // ---------------------------------------------------------------------------
 
 TEST_CASE("local_search_modes: improves total duration via mode swaps",
-          "[scheduling][mode_selection]")
-{
+          "[scheduling][mode_selection]") {
     auto data = make_multimode_improvable();
     ModeAssignment ma(data);
 
     // Add faster modes for both operations.
-    ma.add_mode(0, {.duration = 5, .resource_usage = {2}});   // mode 1 for op 0
-    ma.add_mode(1, {.duration = 4, .resource_usage = {3}});   // mode 1 for op 1
+    ma.add_mode(0, {.duration = 5, .resource_usage = {2}});  // mode 1 for op 0
+    ma.add_mode(1, {.duration = 4, .resource_usage = {3}});  // mode 1 for op 1
 
     // Start with mode 0 for both: total_dur = 10 + 8 = 18.
     int before = ma.total_duration();
@@ -267,9 +247,7 @@ TEST_CASE("local_search_modes: improves total duration via mode swaps",
     CHECK(ma.mode_resource_feasible(data));
 }
 
-TEST_CASE("local_search_modes: does not worsen solution",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("local_search_modes: does not worsen solution", "[scheduling][mode_selection]") {
     auto data = make_multimode_3ops();
     ModeAssignment ma(data);
 
@@ -281,9 +259,7 @@ TEST_CASE("local_search_modes: does not worsen solution",
     CHECK(ma.mode_resource_feasible(data));
 }
 
-TEST_CASE("local_search_modes: respects resource capacity",
-          "[scheduling][mode_selection]")
-{
+TEST_CASE("local_search_modes: respects resource capacity", "[scheduling][mode_selection]") {
     // Instance where the faster mode exceeds capacity.
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
@@ -308,8 +284,7 @@ TEST_CASE("local_search_modes: respects resource capacity",
 }
 
 TEST_CASE("local_search_modes: single operation with multiple modes",
-          "[scheduling][mode_selection]")
-{
+          "[scheduling][mode_selection]") {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_job({.name = "J0"});
@@ -323,7 +298,7 @@ TEST_CASE("local_search_modes: single operation with multiple modes",
 
     // Add 3 alternative modes.
     ma.add_mode(0, {.duration = 15, .resource_usage = {3}});
-    ma.add_mode(0, {.duration = 8,  .resource_usage = {5}});
+    ma.add_mode(0, {.duration = 8, .resource_usage = {5}});
     ma.add_mode(0, {.duration = 12, .resource_usage = {4}});
 
     // Start at mode 0 (dur=20). Local search should find mode 2 (dur=8).

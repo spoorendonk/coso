@@ -1,10 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
-#include "network/network_data.h"
-#include "network/network_solution.h"
-#include "network/mcf_solver.h"
 #include "network/construction.h"
+#include "network/mcf_solver.h"
+#include "network/network_data.h"
 #include "network/network_operators.h"
+#include "network/network_solution.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -21,10 +21,10 @@ using namespace coso;
 
 static NetworkData build_simple_network() {
     NetworkData::Builder b;
-    b.add_node(10, "source");   // 0
-    b.add_node(0, "relay_a");   // 1
-    b.add_node(0, "relay_b");   // 2
-    b.add_node(-10, "sink");    // 3
+    b.add_node(10, "source");  // 0
+    b.add_node(0, "relay_a");  // 1
+    b.add_node(0, "relay_b");  // 2
+    b.add_node(-10, "sink");   // 3
 
     b.add_arc(0, 1, /*cost=*/2, /*lower=*/0, /*upper=*/10);  // arc 0
     b.add_arc(1, 3, /*cost=*/3, /*lower=*/0, /*upper=*/10);  // arc 1
@@ -46,9 +46,9 @@ static NetworkData build_simple_network() {
 
 static NetworkData build_asymmetric_network() {
     NetworkData::Builder b;
-    b.add_node(5, "src");      // 0
-    b.add_node(0, "middle");   // 1
-    b.add_node(-5, "dst");     // 2
+    b.add_node(5, "src");     // 0
+    b.add_node(0, "middle");  // 1
+    b.add_node(-5, "dst");    // 2
 
     b.add_arc(0, 1, /*cost=*/1, 0, 10);   // arc 0: cheap
     b.add_arc(1, 2, /*cost=*/1, 0, 10);   // arc 1: cheap
@@ -83,7 +83,7 @@ static NetworkData build_shipping_network() {
     int a0 = b.add_arc(A, H, /*cost=*/5, 0, 5);   // A -> H
     int a1 = b.add_arc(H, B, /*cost=*/3, 0, 3);   // H -> B
     int a2 = b.add_arc(H, C, /*cost=*/4, 0, 3);   // H -> C
-    int a3 = b.add_arc(A, B, /*cost=*/12, 0, 3);   // direct A -> B (expensive)
+    int a3 = b.add_arc(A, B, /*cost=*/12, 0, 3);  // direct A -> B (expensive)
 
     // Transit times.
     b.set_resource_usage(a0, time_res, 2);  // 2 days A -> H
@@ -234,8 +234,8 @@ TEST_CASE("Flow conservation check", "[network]") {
     SECTION("zero flow satisfies conservation only if no supply/demand") {
         // With supply/demand, zero flow has excess violations.
         REQUIRE_FALSE(sol.flow_conservation());
-        REQUIRE(sol.excess(0) == 10);    // supply not routed
-        REQUIRE(sol.excess(3) == -10);   // demand not met
+        REQUIRE(sol.excess(0) == 10);   // supply not routed
+        REQUIRE(sol.excess(3) == -10);  // demand not met
     }
 
     SECTION("manual flow setting") {
@@ -272,7 +272,7 @@ TEST_CASE("Feasible construction with lower bounds", "[network]") {
     b.add_node(5, "src");
     b.add_node(-5, "dst");
     b.add_arc(0, 1, 3, /*lower=*/2, /*upper=*/5);  // must send at least 2
-    b.add_arc(0, 1, 1, /*lower=*/0, /*upper=*/5);   // cheaper alternative
+    b.add_arc(0, 1, 1, /*lower=*/0, /*upper=*/5);  // cheaper alternative
 
     auto data = b.build();
     auto sol = construct_feasible(data);
@@ -304,7 +304,9 @@ TEST_CASE("RerouteFlow improves cost", "[network]") {
     // Apply the first improving move.
     auto best = moves[0];
     for (auto const& m : moves) {
-        if (m.delta < best.delta) best = m;
+        if (m.delta < best.delta) {
+            best = m;
+        }
     }
     REQUIRE(best.delta < 0);
 
@@ -320,9 +322,9 @@ TEST_CASE("CycleCancel on suboptimal flow", "[network]") {
     b.add_node(0);
     b.add_node(-5);
 
-    b.add_arc(0, 1, 1, 0, 10);  // arc 0: cheap
-    b.add_arc(1, 2, 1, 0, 10);  // arc 1: cheap
-    b.add_arc(0, 2, 10, 0, 10); // arc 2: expensive
+    b.add_arc(0, 1, 1, 0, 10);   // arc 0: cheap
+    b.add_arc(1, 2, 1, 0, 10);   // arc 1: cheap
+    b.add_arc(0, 2, 10, 0, 10);  // arc 2: expensive
 
     auto data = b.build();
     NetworkSolution sol(data);
@@ -434,6 +436,8 @@ TEST_CASE("Balanced multi-commodity flow", "[network]") {
 
     // Total flow through node 2 should be 5.
     int in_flow = 0;
-    for (int a : data.incoming(2)) in_flow += sol.flow(a);
+    for (int a : data.incoming(2)) {
+        in_flow += sol.flow(a);
+    }
     REQUIRE(in_flow == 5);
 }

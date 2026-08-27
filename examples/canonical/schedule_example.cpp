@@ -1,9 +1,8 @@
-#include <iostream>
-
 #include "model/schedule_model.h"
 
-int main()
-{
+#include <iostream>
+
+int main() {
     coso::ScheduleModel model;
     model.add_machine({.name = "M0"});
     int job = model.add_job({.name = "J0"});
@@ -11,8 +10,7 @@ int main()
     model.minimize_makespan();
 
     coso::Result result = model.solve(coso::TimeLimit(1.0, 0.05));
-    std::cout << "schedule feasible=" << result.feasible()
-              << " makespan=" << result.makespan()
+    std::cout << "schedule feasible=" << result.feasible() << " makespan=" << result.makespan()
               << " ops=" << result.schedule().size() << "\n";
     return result.feasible() ? 0 : 1;
 }

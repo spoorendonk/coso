@@ -10,19 +10,17 @@ namespace coso {
 //  RandomBlockRemoval
 // ===========================================================================
 
-int RandomBlockRemoval::apply(DisjunctiveGraph& graph, Params const& params,
-                              std::mt19937& rng)
-{
+int RandomBlockRemoval::apply(DisjunctiveGraph& graph, Params const& params, std::mt19937& rng) {
     // Pick a random machine that has enough operations.
     std::vector<int> candidates;
     for (int m = 0; m < graph.num_machines(); ++m) {
-        if (static_cast<int>(graph.machine_sequence(m).size())
-            >= params.min_block_size) {
+        if (static_cast<int>(graph.machine_sequence(m).size()) >= params.min_block_size) {
             candidates.push_back(m);
         }
     }
-    if (candidates.empty())
+    if (candidates.empty()) {
         return graph.critical_path();
+    }
 
     int machine = candidates[std::uniform_int_distribution<int>(
         0, static_cast<int>(candidates.size()) - 1)(rng)];
@@ -39,8 +37,7 @@ int RandomBlockRemoval::apply(DisjunctiveGraph& graph, Params const& params,
     int start = std::uniform_int_distribution<int>(0, n - block_size)(rng);
 
     // Extract the block.
-    std::vector<int> removed(seq.begin() + start,
-                             seq.begin() + start + block_size);
+    std::vector<int> removed(seq.begin() + start, seq.begin() + start + block_size);
 
     // Remove the block from the sequence.
     seq.erase(seq.begin() + start, seq.begin() + start + block_size);
@@ -73,27 +70,27 @@ int RandomBlockRemoval::apply(DisjunctiveGraph& graph, Params const& params,
 //  CriticalPathShake
 // ===========================================================================
 
-int CriticalPathShake::apply(DisjunctiveGraph& graph, Params const& params,
-                             std::mt19937& rng)
-{
+int CriticalPathShake::apply(DisjunctiveGraph& graph, Params const& params, std::mt19937& rng) {
     for (int step = 0; step < params.num_perturbations; ++step) {
         auto crit_ops = graph.critical_path_ops();
-        if (crit_ops.empty())
+        if (crit_ops.empty()) {
             break;
+        }
 
         // Pick a random critical-path operation.
-        int idx = std::uniform_int_distribution<int>(
-            0, static_cast<int>(crit_ops.size()) - 1)(rng);
+        int idx = std::uniform_int_distribution<int>(0, static_cast<int>(crit_ops.size()) - 1)(rng);
         int op = crit_ops[idx];
 
         int machine = graph.operation(op).machine;
-        if (machine < 0)
+        if (machine < 0) {
             continue;
+        }
 
         auto seq = graph.machine_sequence(machine);
         int n = static_cast<int>(seq.size());
-        if (n < 2)
+        if (n < 2) {
             continue;
+        }
 
         // Find the position of op in the machine sequence.
         int pos = -1;
@@ -103,35 +100,37 @@ int CriticalPathShake::apply(DisjunctiveGraph& graph, Params const& params,
                 break;
             }
         }
-        if (pos < 0)
+        if (pos < 0) {
             continue;
+        }
 
         // Save the current sequence in case the move creates a cycle.
         auto saved_seq = seq;
 
         // Decide: swap with adjacent (coin flip) or move to random position.
-        bool do_swap = (n >= 2)
-            && std::uniform_int_distribution<int>(0, 1)(rng) == 0;
+        bool do_swap = (n >= 2) && std::uniform_int_distribution<int>(0, 1)(rng) == 0;
 
         if (do_swap) {
             // Swap with a random adjacent operation.
-            int adj = (pos == 0) ? 1
-                    : (pos == n - 1) ? pos - 1
-                    : (std::uniform_int_distribution<int>(0, 1)(rng) == 0
-                           ? pos - 1
-                           : pos + 1);
+            int adj =
+                (pos == 0) ? 1
+                : (pos == n - 1)
+                    ? pos - 1
+                    : (std::uniform_int_distribution<int>(0, 1)(rng) == 0 ? pos - 1 : pos + 1);
             std::swap(seq[pos], seq[adj]);
         } else {
             // Move to a random different position.
             int target = pos;
-            while (target == pos)
+            while (target == pos) {
                 target = std::uniform_int_distribution<int>(0, n - 1)(rng);
+            }
 
             int moved_op = seq[pos];
             seq.erase(seq.begin() + pos);
             // Adjust target index after removal.
-            if (target > pos)
+            if (target > pos) {
                 --target;
+            }
             seq.insert(seq.begin() + target, moved_op);
         }
 
@@ -160,24 +159,22 @@ int CriticalPathShake::apply(DisjunctiveGraph& graph, Params const& params,
 //  MachineReassignment
 // ===========================================================================
 
-int MachineReassignment::apply(DisjunctiveGraph& graph,
-                               ScheduleData const& data,
-                               Params const& params,
-                               std::mt19937& rng)
-{
+int MachineReassignment::apply(DisjunctiveGraph& graph, ScheduleData const& data,
+                               Params const& params, std::mt19937& rng) {
     // Find all flexible operations: those with more than one eligible machine.
     std::vector<int> flexible_ops;
     for (int op = 0; op < data.num_operations(); ++op) {
         auto const& opdata = data.operation(op);
-        if (static_cast<int>(opdata.eligible_machines.size()) > 1)
+        if (static_cast<int>(opdata.eligible_machines.size()) > 1) {
             flexible_ops.push_back(op);
+        }
     }
 
-    if (flexible_ops.empty())
+    if (flexible_ops.empty()) {
         return -1;
+    }
 
-    int num = std::min(params.num_reassignments,
-                       static_cast<int>(flexible_ops.size()));
+    int num = std::min(params.num_reassignments, static_cast<int>(flexible_ops.size()));
 
     // Shuffle and pick the first num operations.
     std::shuffle(flexible_ops.begin(), flexible_ops.end(), rng);
@@ -191,11 +188,13 @@ int MachineReassignment::apply(DisjunctiveGraph& graph,
         std::vector<int> alternatives;
         for (size_t j = 0; j < opdata.eligible_machines.size(); ++j) {
             int m = opdata.eligible_machines[j];
-            if (m != current_machine)
+            if (m != current_machine) {
                 alternatives.push_back(static_cast<int>(j));
+            }
         }
-        if (alternatives.empty())
+        if (alternatives.empty()) {
             continue;
+        }
 
         int alt_idx = alternatives[std::uniform_int_distribution<int>(
             0, static_cast<int>(alternatives.size()) - 1)(rng)];
@@ -236,4 +235,4 @@ int MachineReassignment::apply(DisjunctiveGraph& graph,
     return graph.critical_path();
 }
 
-} // namespace coso
+}  // namespace coso

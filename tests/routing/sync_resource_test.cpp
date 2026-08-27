@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/resources/sync_resource.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -12,11 +12,10 @@ using namespace coso;
 ///   Group 0: clients 0,1 (tolerance=10)
 ///   Group 1: clients 2,3 (tolerance=5)
 ///   Clients 4,5 are not in any sync group.
-static std::vector<SyncResource::SyncGroup> make_sync_groups()
-{
+static std::vector<SyncResource::SyncGroup> make_sync_groups() {
     return {
         {0, {0, 1}, 10},
-        {1, {2, 3},  5},
+        {1, {2, 3}, 5},
     };
 }
 
@@ -24,9 +23,7 @@ static std::vector<SyncResource::SyncGroup> make_sync_groups()
 //  Build lookup tests
 // ===========================================================================
 
-TEST_CASE("SyncResource::build_lookup assigns group ids correctly",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::build_lookup assigns group ids correctly", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -42,9 +39,7 @@ TEST_CASE("SyncResource::build_lookup assigns group ids correctly",
 //  Init tests
 // ===========================================================================
 
-TEST_CASE("SyncResource::init for sync group member",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::init for sync group member", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -55,9 +50,7 @@ TEST_CASE("SyncResource::init for sync group member",
     CHECK(s.entries[0].arrival_time == 100);
 }
 
-TEST_CASE("SyncResource::init for non-sync client",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::init for non-sync client", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -65,9 +58,7 @@ TEST_CASE("SyncResource::init for non-sync client",
     CHECK(s.entries.empty());
 }
 
-TEST_CASE("SyncResource::init_depot creates empty state",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::init_depot creates empty state", "[sync_resource]") {
     auto s = SyncResource::init_depot();
     CHECK(s.entries.empty());
 }
@@ -76,9 +67,7 @@ TEST_CASE("SyncResource::init_depot creates empty state",
 //  Merge tests
 // ===========================================================================
 
-TEST_CASE("SyncResource::merge concatenates entries",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::merge concatenates entries", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -91,9 +80,7 @@ TEST_CASE("SyncResource::merge concatenates entries",
     CHECK(merged.entries[1].group_id == 1);
 }
 
-TEST_CASE("SyncResource::merge with depot",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::merge with depot", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -109,9 +96,7 @@ TEST_CASE("SyncResource::merge with depot",
 //  Excess tests
 // ===========================================================================
 
-TEST_CASE("SyncResource::excess with arrivals within tolerance",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::excess with arrivals within tolerance", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -124,9 +109,7 @@ TEST_CASE("SyncResource::excess with arrivals within tolerance",
     CHECK(SyncResource::excess(route_a, route_b, groups) == 0);
 }
 
-TEST_CASE("SyncResource::excess with arrivals beyond tolerance",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::excess with arrivals beyond tolerance", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -140,9 +123,7 @@ TEST_CASE("SyncResource::excess with arrivals beyond tolerance",
     CHECK(SyncResource::excess(route_a, route_b, groups) == 5);
 }
 
-TEST_CASE("SyncResource::excess with no shared groups",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::excess with no shared groups", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -156,9 +137,7 @@ TEST_CASE("SyncResource::excess with no shared groups",
     CHECK(SyncResource::excess(route_a, route_b, groups) == 0);
 }
 
-TEST_CASE("SyncResource::excess with multiple violations",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource::excess with multiple violations", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 
@@ -175,9 +154,7 @@ TEST_CASE("SyncResource::excess with multiple violations",
     CHECK(SyncResource::excess(route_a, route_b, groups) == 15);
 }
 
-TEST_CASE("SyncResource single-route excess is always 0",
-          "[sync_resource]")
-{
+TEST_CASE("SyncResource single-route excess is always 0", "[sync_resource]") {
     auto groups = make_sync_groups();
     auto lookup = SyncResource::build_lookup(6, groups);
 

@@ -38,14 +38,10 @@ public:
     [[nodiscard]] bool is_pinned(int client) const;
 
     /// Return the list of all pinned client indices (sorted).
-    [[nodiscard]] std::vector<int> const& pinned() const noexcept {
-        return pinned_;
-    }
+    [[nodiscard]] std::vector<int> const& pinned() const noexcept { return pinned_; }
 
     /// Number of pinned clients.
-    [[nodiscard]] int size() const noexcept {
-        return static_cast<int>(pinned_.size());
-    }
+    [[nodiscard]] int size() const noexcept { return static_cast<int>(pinned_.size()); }
 
     /// Whether any clients are pinned.
     [[nodiscard]] bool empty() const noexcept { return pinned_.empty(); }
@@ -76,10 +72,8 @@ private:
 /// @param eval    Cost evaluator (for resource recomputation).
 /// @return A fully initialized Solution with resource states computed.
 /// @throws std::invalid_argument on validation failure.
-[[nodiscard]] Solution warm_start(
-    std::vector<std::vector<int>> const& routes,
-    ProblemData const& data,
-    CostEvaluator const& eval);
+[[nodiscard]] Solution warm_start(std::vector<std::vector<int>> const& routes,
+                                  ProblemData const& data, CostEvaluator const& eval);
 
 /// Configuration for replanning an existing routing solution.
 ///
@@ -116,9 +110,7 @@ struct ReplanConfig {
 /// @param data    The compiled problem data.
 /// @param eval    Cost evaluator.
 /// @return The PinSet of pinned clients (for inspection/further use).
-PinSet replan(Solution& sol,
-              ReplanConfig const& config,
-              ProblemData const& data,
+PinSet replan(Solution& sol, ReplanConfig const& config, ProblemData const& data,
               CostEvaluator const& eval);
 
 /// Insert a single unassigned client into the solution at the cheapest
@@ -133,10 +125,7 @@ PinSet replan(Solution& sol,
 /// @param data    The compiled problem data.
 /// @param eval    Cost evaluator for delta evaluation.
 /// @return true if the client was successfully inserted.
-bool cheapest_insert(Solution& sol,
-                     int client,
-                     ProblemData const& data,
-                     CostEvaluator const& eval);
+bool cheapest_insert(Solution& sol, int client, ProblemData const& data, CostEvaluator const& eval);
 
 /// Run local search on a solution, respecting pinned clients.
 ///
@@ -148,9 +137,7 @@ bool cheapest_insert(Solution& sol,
 /// @param pins  Set of pinned (immovable) clients.
 /// @param data  The compiled problem data.
 /// @param eval  Cost evaluator.
-void local_search_with_pins(Solution& sol,
-                            PinSet const& pins,
-                            ProblemData const& data,
+void local_search_with_pins(Solution& sol, PinSet const& pins, ProblemData const& data,
                             CostEvaluator const& eval);
 
-} // namespace coso
+}  // namespace coso

@@ -93,10 +93,8 @@ public:
     /// @param max_overtime    Size of first overtime tier (0 = single tier).
     /// @param excess_rate     Cost per unit beyond max_overtime (if > 0).
     /// @return PiecewiseLinearFunction implementing overtime penalties.
-    static PiecewiseLinearFunction overtime(int normal_limit,
-                                            int overtime_rate,
-                                            int max_overtime = 0,
-                                            int excess_rate = 0);
+    static PiecewiseLinearFunction overtime(int normal_limit, int overtime_rate,
+                                            int max_overtime = 0, int excess_rate = 0);
 
 private:
     std::vector<Breakpoint> breakpoints_;
@@ -107,4 +105,4 @@ private:
     [[nodiscard]] int find_segment_(int x) const;
 };
 
-} // namespace coso
+}  // namespace coso

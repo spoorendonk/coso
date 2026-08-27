@@ -9,25 +9,17 @@
 
 namespace coso {
 
-IteratedLocalSearch::IteratedLocalSearch(ProblemData const& data,
-                                         unsigned int seed)
-    : data_(&data),
-      rng_(seed)
-{
-}
+IteratedLocalSearch::IteratedLocalSearch(ProblemData const& data, unsigned int seed)
+    : data_(&data), rng_(seed) {}
 
-void IteratedLocalSearch::set_acceptance(AcceptanceCriterion criterion)
-{
+void IteratedLocalSearch::set_acceptance(AcceptanceCriterion criterion) {
     acceptance_ = std::move(criterion);
 }
 
-Solution IteratedLocalSearch::run(CostEvaluator const& eval,
-                                  StopCriterion& stop,
-                                  StopCriterion* outer_stop)
-{
+Solution IteratedLocalSearch::run(CostEvaluator const& eval, StopCriterion& stop,
+                                  StopCriterion* outer_stop) {
     auto should_stop = [&]() {
-        return stop.should_stop()
-            || (outer_stop && outer_stop->should_stop());
+        return stop.should_stop() || (outer_stop && outer_stop->should_stop());
     };
 
     // Step 1: Construct initial solution.
@@ -43,8 +35,8 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval,
 
     // Initialize acceptance criterion (default: LAHC with list length 5000).
     int64_t current_cost = current.cost(eval);
-    AcceptanceCriterion acceptance = acceptance_.value_or(
-        AcceptanceCriterion(LateAcceptance(5000)));
+    AcceptanceCriterion acceptance =
+        acceptance_.value_or(AcceptanceCriterion(LateAcceptance(5000)));
     acceptance.init(current_cost);
 
     // Main ILS loop.
@@ -85,17 +77,16 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval,
 //  Perturbation: ruin-and-recreate
 // ---------------------------------------------------------------------------
 
-void IteratedLocalSearch::perturb_(Solution& sol, CostEvaluator const& eval)
-{
+void IteratedLocalSearch::perturb_(Solution& sol, CostEvaluator const& eval) {
     auto removed = ruin_(sol);
     recreate_(sol, removed, eval);
 }
 
-std::vector<int> IteratedLocalSearch::ruin_(Solution& sol)
-{
+std::vector<int> IteratedLocalSearch::ruin_(Solution& sol) {
     int num_clients = data_->num_clients();
-    if (num_clients == 0)
+    if (num_clients == 0) {
         return {};
+    }
 
     // Determine k: random in [ruin_frac_min, ruin_frac_max] * num_clients.
     int k_min = std::max(1, static_cast<int>(ruin_frac_min_ * num_clients));
@@ -107,16 +98,17 @@ std::vector<int> IteratedLocalSearch::ruin_(Solution& sol)
     std::vector<int> assigned;
     assigned.reserve(num_clients);
     for (int c = 0; c < num_clients; ++c) {
-        if (sol.is_assigned(c))
+        if (sol.is_assigned(c)) {
             assigned.push_back(c);
+        }
     }
 
-    if (assigned.empty())
+    if (assigned.empty()) {
         return {};
+    }
 
     // Pick a random seed client.
-    std::uniform_int_distribution<int> seed_dist(
-        0, static_cast<int>(assigned.size()) - 1);
+    std::uniform_int_distribution<int> seed_dist(0, static_cast<int>(assigned.size()) - 1);
     int seed_client = assigned[seed_dist(rng_)];
 
     // Find the k-1 nearest assigned clients to the seed (plus the seed itself).
@@ -152,8 +144,9 @@ std::vector<int> IteratedLocalSearch::ruin_(Solution& sol)
         // Find positions of clients to remove in this route.
         std::vector<int> positions;
         for (int pos = 0; pos < route.size(); ++pos) {
-            if (to_remove.count(route.client(pos)))
+            if (to_remove.count(route.client(pos))) {
                 positions.push_back(pos);
+            }
         }
         // Remove in reverse order to keep positions stable.
         std::sort(positions.rbegin(), positions.rend());
@@ -165,10 +158,8 @@ std::vector<int> IteratedLocalSearch::ruin_(Solution& sol)
     return removed;
 }
 
-void IteratedLocalSearch::recreate_(Solution& sol,
-                                     std::vector<int> const& removed,
-                                     CostEvaluator const& eval)
-{
+void IteratedLocalSearch::recreate_(Solution& sol, std::vector<int> const& removed,
+                                    CostEvaluator const& eval) {
     // Greedy insertion: for each removed client, find the cheapest
     // (vehicle, position) and insert it there.
     // Process in random order for diversity.
@@ -200,4 +191,4 @@ void IteratedLocalSearch::recreate_(Solution& sol,
     }
 }
 
-} // namespace coso
+}  // namespace coso

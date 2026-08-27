@@ -9,8 +9,7 @@ namespace coso {
 // ---------------------------------------------------------------------------
 
 Route::Route(ProblemData const& data, int vehicle_type)
-    : data_(&data), vehicle_type_(vehicle_type)
-{
+    : data_(&data), vehicle_type_(vehicle_type) {
     // Default depot is node 0.
     depot_ = 0;
 
@@ -22,28 +21,24 @@ Route::Route(ProblemData const& data, int vehicle_type)
 //  Modification
 // ---------------------------------------------------------------------------
 
-void Route::set_clients(std::vector<int> clients)
-{
+void Route::set_clients(std::vector<int> clients) {
     clients_ = std::move(clients);
     update_();
 }
 
-void Route::insert(int pos, int client)
-{
+void Route::insert(int pos, int client) {
     assert(pos >= 0 && pos <= size());
     clients_.insert(clients_.begin() + pos, client);
     update_();
 }
 
-void Route::remove(int pos)
-{
+void Route::remove(int pos) {
     assert(pos >= 0 && pos < size());
     clients_.erase(clients_.begin() + pos);
     update_();
 }
 
-void Route::replace(int pos, int new_client)
-{
+void Route::replace(int pos, int new_client) {
     assert(pos >= 0 && pos < size());
     clients_[pos] = new_client;
     update_();
@@ -53,33 +48,30 @@ void Route::replace(int pos, int new_client)
 //  O(1) move evaluation
 // ---------------------------------------------------------------------------
 
-int Route::eval_insert_load(int pos, int client) const
-{
+int Route::eval_insert_load(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
     auto client_state = LoadResource::init(*data_, client);
-    auto const& left  = load_prefix(pos - 1);  // prefix up to pos-1
-    auto const& right = load_suffix(pos);       // suffix from pos onward
+    auto const& left = load_prefix(pos - 1);  // prefix up to pos-1
+    auto const& right = load_suffix(pos);     // suffix from pos onward
 
     auto merged_left = LoadResource::merge(left, client_state);
-    auto merged      = LoadResource::merge(merged_left, right);
+    auto merged = LoadResource::merge(merged_left, right);
 
     return LoadResource::excess(merged, data_->vehicle_type(vehicle_type_));
 }
 
-int Route::eval_remove_load(int pos) const
-{
+int Route::eval_remove_load(int pos) const {
     assert(pos >= 0 && pos < size());
 
-    auto const& left  = load_prefix(pos - 1);  // prefix up to pos-1
-    auto const& right = load_suffix(pos + 1);   // suffix from pos+1 onward
+    auto const& left = load_prefix(pos - 1);   // prefix up to pos-1
+    auto const& right = load_suffix(pos + 1);  // suffix from pos+1 onward
 
     auto merged = LoadResource::merge(left, right);
     return LoadResource::excess(merged, data_->vehicle_type(vehicle_type_));
 }
 
-int Route::eval_insert_distance(int pos, int client) const
-{
+int Route::eval_insert_distance(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
     int profile = data_->vehicle_type(vehicle_type_).profile;
@@ -95,14 +87,13 @@ int Route::eval_insert_distance(int pos, int client) const
     int old_cost = data_->dist(profile, prev_node, next_node);
 
     // New edges: prev -> new -> next.
-    int new_cost = data_->dist(profile, prev_node, new_node)
-                 + data_->dist(profile, new_node, next_node);
+    int new_cost =
+        data_->dist(profile, prev_node, new_node) + data_->dist(profile, new_node, next_node);
 
     return new_cost - old_cost;
 }
 
-int Route::eval_remove_distance(int pos) const
-{
+int Route::eval_remove_distance(int pos) const {
     assert(pos >= 0 && pos < size());
 
     int profile = data_->vehicle_type(vehicle_type_).profile;
@@ -115,8 +106,8 @@ int Route::eval_remove_distance(int pos) const
     int next_node = (pos == size() - 1) ? depot_ : node_(clients_[pos + 1]);
 
     // Old edges: prev -> rem -> next.
-    int old_cost = data_->dist(profile, prev_node, rem_node)
-                 + data_->dist(profile, rem_node, next_node);
+    int old_cost =
+        data_->dist(profile, prev_node, rem_node) + data_->dist(profile, rem_node, next_node);
 
     // New edge: prev -> next.
     int new_cost = data_->dist(profile, prev_node, next_node);
@@ -124,8 +115,7 @@ int Route::eval_remove_distance(int pos) const
     return new_cost - old_cost;
 }
 
-int Route::eval_insert_time_warp(int pos, int client) const
-{
+int Route::eval_insert_time_warp(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
     // The TW merge is not associative, so we cannot use suffix arrays for O(1)
@@ -151,8 +141,7 @@ int Route::eval_insert_time_warp(int pos, int client) const
     return DurationResource::time_warp(state);
 }
 
-int Route::eval_remove_time_warp(int pos) const
-{
+int Route::eval_remove_time_warp(int pos) const {
     assert(pos >= 0 && pos < size());
 
     int profile = data_->vehicle_type(vehicle_type_).profile;
@@ -170,29 +159,27 @@ int Route::eval_remove_time_warp(int pos) const
     return DurationResource::time_warp(state);
 }
 
-int Route::eval_insert_dist_excess(int pos, int client) const
-{
+int Route::eval_insert_dist_excess(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
     int profile = data_->vehicle_type(vehicle_type_).profile;
     auto client_state = DistanceResource::init(*data_, client);
-    auto const& left  = dist_prefix(pos - 1);  // depot -> ... -> c[pos-1]
-    auto const& right = dist_suffix(pos);       // c[pos] -> ... -> depot
+    auto const& left = dist_prefix(pos - 1);  // depot -> ... -> c[pos-1]
+    auto const& right = dist_suffix(pos);     // c[pos] -> ... -> depot
 
     // Full route: depot -> ... -> c[pos-1] -> new_client -> c[pos] -> ... -> depot
     auto merged_left = DistanceResource::merge(left, client_state, *data_, profile);
-    auto full        = DistanceResource::merge(merged_left, right, *data_, profile);
+    auto full = DistanceResource::merge(merged_left, right, *data_, profile);
 
     return DistanceResource::excess(full, data_->vehicle_type(vehicle_type_));
 }
 
-int Route::eval_remove_dist_excess(int pos) const
-{
+int Route::eval_remove_dist_excess(int pos) const {
     assert(pos >= 0 && pos < size());
 
     int profile = data_->vehicle_type(vehicle_type_).profile;
-    auto const& left  = dist_prefix(pos - 1);   // depot -> ... -> c[pos-1]
-    auto const& right = dist_suffix(pos + 1);    // c[pos+1] -> ... -> depot
+    auto const& left = dist_prefix(pos - 1);   // depot -> ... -> c[pos-1]
+    auto const& right = dist_suffix(pos + 1);  // c[pos+1] -> ... -> depot
 
     // Full route: depot -> ... -> c[pos-1] -> c[pos+1] -> ... -> depot
     auto full = DistanceResource::merge(left, right, *data_, profile);
@@ -204,8 +191,7 @@ int Route::eval_remove_dist_excess(int pos) const
 //  Internal: update prefix/suffix arrays
 // ---------------------------------------------------------------------------
 
-void Route::update_()
-{
+void Route::update_() {
     int n = size();
 
     // --- Load prefix ---
@@ -232,8 +218,7 @@ void Route::update_()
 
     // --- Load excess ---
     if (n > 0) {
-        load_excess_ = LoadResource::excess(
-            load_prefix_[n], data_->vehicle_type(vehicle_type_));
+        load_excess_ = LoadResource::excess(load_prefix_[n], data_->vehicle_type(vehicle_type_));
     } else {
         load_excess_ = 0;
     }
@@ -247,8 +232,7 @@ void Route::update_()
     for (int i = 0; i < n; ++i) {
         int cnode = node_(clients_[i]);
         auto cstate = DurationResource::init(*data_, clients_[i], cnode);
-        dur_prefix_[i + 1] = DurationResource::merge(
-            dur_prefix_[i], cstate, *data_, profile);
+        dur_prefix_[i + 1] = DurationResource::merge(dur_prefix_[i], cstate, *data_, profile);
     }
 
     dur_suffix_.resize(n + 1);
@@ -257,15 +241,13 @@ void Route::update_()
     for (int i = n - 1; i >= 0; --i) {
         int cnode = node_(clients_[i]);
         auto cstate = DurationResource::init(*data_, clients_[i], cnode);
-        dur_suffix_[i] = DurationResource::merge(
-            cstate, dur_suffix_[i + 1], *data_, profile);
+        dur_suffix_[i] = DurationResource::merge(cstate, dur_suffix_[i + 1], *data_, profile);
     }
 
     // --- Time warp ---
     if (n > 0) {
         auto depot_end = DurationResource::init_depot(*data_, depot_);
-        auto full_dur = DurationResource::merge(
-            dur_prefix_[n], depot_end, *data_, profile);
+        auto full_dur = DurationResource::merge(dur_prefix_[n], depot_end, *data_, profile);
         time_warp_ = DurationResource::time_warp(full_dur);
     } else {
         time_warp_ = 0;
@@ -281,8 +263,8 @@ void Route::update_()
 
     for (int i = 0; i < n; ++i) {
         auto client_state = DistanceResource::init(*data_, clients_[i]);
-        dist_prefix_[i + 1] = DistanceResource::merge(
-            dist_prefix_[i], client_state, *data_, profile);
+        dist_prefix_[i + 1] =
+            DistanceResource::merge(dist_prefix_[i], client_state, *data_, profile);
     }
 
     // suffix_[n] = depot state.
@@ -293,8 +275,8 @@ void Route::update_()
 
     for (int i = n - 1; i >= 0; --i) {
         auto client_state = DistanceResource::init(*data_, clients_[i]);
-        dist_suffix_[i] = DistanceResource::merge(
-            client_state, dist_suffix_[i + 1], *data_, profile);
+        dist_suffix_[i] =
+            DistanceResource::merge(client_state, dist_suffix_[i + 1], *data_, profile);
     }
 
     // --- Distance, duration, and distance excess ---
@@ -303,13 +285,10 @@ void Route::update_()
         // prefix_[n] has first=depot, last=c[n-1].
         // Merging with depot adds the c[n-1] -> depot edge.
         auto full_state = DistanceResource::merge(
-            dist_prefix_[n],
-            DistanceResource::init_depot(depot_),
-            *data_, profile);
+            dist_prefix_[n], DistanceResource::init_depot(depot_), *data_, profile);
         distance_ = full_state.distance;
         duration_ = full_state.duration;
-        dist_excess_ = DistanceResource::excess(
-            full_state, data_->vehicle_type(vehicle_type_));
+        dist_excess_ = DistanceResource::excess(full_state, data_->vehicle_type(vehicle_type_));
     } else {
         distance_ = 0;
         duration_ = 0;
@@ -317,4 +296,4 @@ void Route::update_()
     }
 }
 
-} // namespace coso
+}  // namespace coso

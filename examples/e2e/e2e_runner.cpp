@@ -29,8 +29,7 @@ struct Scenario {
     std::set<std::string> checks;
 };
 
-std::string read_file(std::filesystem::path const& path)
-{
+std::string read_file(std::filesystem::path const& path) {
     std::ifstream in(path);
     if (!in) {
         throw std::runtime_error("Cannot open scenario file: " + path.string());
@@ -40,9 +39,7 @@ std::string read_file(std::filesystem::path const& path)
     return ss.str();
 }
 
-std::optional<std::string> extract_string(std::string const& text,
-                                          std::string const& key)
-{
+std::optional<std::string> extract_string(std::string const& text, std::string const& key) {
     std::regex re("\"" + key + "\"\\s*:\\s*\"([^\"]+)\"");
     std::smatch m;
     if (std::regex_search(text, m, re) && m.size() >= 2) {
@@ -51,9 +48,7 @@ std::optional<std::string> extract_string(std::string const& text,
     return std::nullopt;
 }
 
-std::optional<double> extract_number(std::string const& text,
-                                     std::string const& key)
-{
+std::optional<double> extract_number(std::string const& text, std::string const& key) {
     std::regex re("\"" + key + "\"\\s*:\\s*(-?[0-9]+(?:\\.[0-9]+)?)");
     std::smatch m;
     if (std::regex_search(text, m, re) && m.size() >= 2) {
@@ -62,8 +57,7 @@ std::optional<double> extract_number(std::string const& text,
     return std::nullopt;
 }
 
-std::set<std::string> extract_checks(std::string const& text)
-{
+std::set<std::string> extract_checks(std::string const& text) {
     std::set<std::string> checks;
     std::regex arr_re("\"checks\"\\s*:\\s*\\[([^\\]]*)\\]");
     std::smatch arr;
@@ -85,8 +79,7 @@ std::set<std::string> extract_checks(std::string const& text)
     return checks;
 }
 
-Scenario parse_scenario(std::filesystem::path const& path)
-{
+Scenario parse_scenario(std::filesystem::path const& path) {
     std::string text = read_file(path);
 
     Scenario s;
@@ -105,8 +98,7 @@ Scenario parse_scenario(std::filesystem::path const& path)
     return s;
 }
 
-coso::Result solve_once(Scenario const& s)
-{
+coso::Result solve_once(Scenario const& s) {
     coso::TimeLimit tl(s.seconds, s.work_units);
 
     if (s.model == "routing") {
@@ -168,15 +160,13 @@ coso::Result solve_once(Scenario const& s)
     throw std::runtime_error("Unsupported model type: " + s.model);
 }
 
-std::string bool_json(bool v)
-{
+std::string bool_json(bool v) {
     return v ? "true" : "false";
 }
 
-} // namespace
+}  // namespace
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     if (argc < 2) {
         std::cerr << "Usage: e2e_runner <scenario.json>\n";
         return 1;
@@ -184,9 +174,8 @@ int main(int argc, char** argv)
 
     try {
         Scenario scenario = parse_scenario(argv[1]);
-        coso::e2e::Evaluation const eval =
-            coso::e2e::evaluate_checks(scenario.checks,
-                                       [&scenario]() { return solve_once(scenario); });
+        coso::e2e::Evaluation const eval = coso::e2e::evaluate_checks(
+            scenario.checks, [&scenario]() { return solve_once(scenario); });
 
         std::cout << "{\n"
                   << "  \"scenario_id\": \"" << scenario.id << "\",\n"
@@ -203,8 +192,8 @@ int main(int argc, char** argv)
                   << "    \"feasible\": " << bool_json(eval.checks.feasible) << ",\n"
                   << "    \"nonnegative_cost\": " << bool_json(eval.checks.nonnegative_cost)
                   << ",\n"
-                  << "    \"deterministic_work\": "
-                  << bool_json(eval.checks.deterministic_work) << "\n"
+                  << "    \"deterministic_work\": " << bool_json(eval.checks.deterministic_work)
+                  << "\n"
                   << "  },\n"
                   << "  \"errors\": [";
         for (std::size_t i = 0; i < eval.checks.errors.size(); ++i) {

@@ -12,8 +12,8 @@ namespace coso {
 /// Each mode defines an alternative way to execute an operation, with its own
 /// duration and resource usage profile.
 struct OperationMode {
-    int duration = 0;                ///< processing time in this mode
-    std::vector<int> resource_usage; ///< usage per resource (indexed by resource id)
+    int duration = 0;                 ///< processing time in this mode
+    std::vector<int> resource_usage;  ///< usage per resource (indexed by resource id)
 };
 
 /// Stores operation -> mode mapping for multi-mode RCPSP.
@@ -64,16 +64,15 @@ public:
     }
 
     /// Duration of the currently selected mode for an operation.
-    [[nodiscard]] int duration(int op) const {
-        return active_mode(op).duration;
-    }
+    [[nodiscard]] int duration(int op) const { return active_mode(op).duration; }
 
     /// Resource usage of the currently selected mode for operation op,
     /// resource r.
     [[nodiscard]] int resource_usage(int op, int r) const {
         auto const& m = active_mode(op);
-        if (r < static_cast<int>(m.resource_usage.size()))
+        if (r < static_cast<int>(m.resource_usage.size())) {
             return m.resource_usage[r];
+        }
         return 0;
     }
 
@@ -104,7 +103,7 @@ public:
 
 private:
     std::vector<std::vector<OperationMode>> modes_;  ///< modes_[op] = list of modes
-    std::vector<int> selected_mode_;                  ///< selected mode per operation
+    std::vector<int> selected_mode_;                 ///< selected mode per operation
 };
 
 /// Greedy mode selection: for each operation, pick the mode that minimises
@@ -119,4 +118,4 @@ private:
 /// Runs until no improving swap is found (steepest descent).
 void local_search_modes(ScheduleData const& data, ModeAssignment& assignment);
 
-} // namespace coso
+}  // namespace coso

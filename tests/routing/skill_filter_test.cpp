@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/resources/skill_filter.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -15,8 +15,7 @@ using namespace coso;
 ///   Client 3: no skills required
 ///   VType 0:  provides {"cold_chain"}         (1 vehicle)
 ///   VType 1:  provides {"cold_chain", "hazmat"} (1 vehicle)
-static ProblemData make_skill_instance()
-{
+static ProblemData make_skill_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
 
@@ -24,16 +23,15 @@ static ProblemData make_skill_instance()
     b.add_vehicle_type(1, {.capacity = {10}, .skills = {"cold_chain", "hazmat"}});
 
     b.add_client({10.0, 0.0}, {.demand = {1}, .skills = {"cold_chain"}});            // 0
-    b.add_client({20.0, 0.0}, {.demand = {1}, .skills = {"hazmat"}});                 // 1
-    b.add_client({30.0, 0.0}, {.demand = {1}, .skills = {"cold_chain", "hazmat"}});   // 2
-    b.add_client({40.0, 0.0}, {.demand = {1}});                                       // 3
+    b.add_client({20.0, 0.0}, {.demand = {1}, .skills = {"hazmat"}});                // 1
+    b.add_client({30.0, 0.0}, {.demand = {1}, .skills = {"cold_chain", "hazmat"}});  // 2
+    b.add_client({40.0, 0.0}, {.demand = {1}});                                      // 3
 
     return b.build(0);
 }
 
 /// Instance with no skills at all.
-static ProblemData make_no_skills_instance()
-{
+static ProblemData make_no_skills_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(1, {.capacity = {10}});
@@ -45,15 +43,12 @@ static ProblemData make_no_skills_instance()
 }
 
 /// Instance with many skills (test up to 5 distinct skills).
-static ProblemData make_many_skills_instance()
-{
+static ProblemData make_many_skills_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
 
-    b.add_vehicle_type(1, {.capacity = {10},
-                           .skills = {"A", "B", "C"}});
-    b.add_vehicle_type(1, {.capacity = {10},
-                           .skills = {"A", "B", "C", "D", "E"}});
+    b.add_vehicle_type(1, {.capacity = {10}, .skills = {"A", "B", "C"}});
+    b.add_vehicle_type(1, {.capacity = {10}, .skills = {"A", "B", "C", "D", "E"}});
 
     b.add_client({10.0, 0.0}, {.demand = {1}, .skills = {"A"}});
     b.add_client({20.0, 0.0}, {.demand = {1}, .skills = {"B", "C"}});
@@ -66,9 +61,7 @@ static ProblemData make_many_skills_instance()
 //  build_skill_data tests
 // ===========================================================================
 
-TEST_CASE("SkillFilter::build_skill_data assigns unique bit indices",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter::build_skill_data assigns unique bit indices", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -81,8 +74,7 @@ TEST_CASE("SkillFilter::build_skill_data assigns unique bit indices",
     CHECK(sd.skill_index.at("cold_chain") != sd.skill_index.at("hazmat"));
 }
 
-TEST_CASE("SkillFilter::build_skill_data with no skills", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::build_skill_data with no skills", "[skill_filter]") {
     auto data = make_no_skills_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -92,9 +84,7 @@ TEST_CASE("SkillFilter::build_skill_data with no skills", "[skill_filter]")
     CHECK(sd.vehicle_mask[0] == 0);
 }
 
-TEST_CASE("SkillFilter::build_skill_data client masks are correct",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter::build_skill_data client masks are correct", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -114,9 +104,7 @@ TEST_CASE("SkillFilter::build_skill_data client masks are correct",
     CHECK(sd.client_mask[3] == 0);
 }
 
-TEST_CASE("SkillFilter::build_skill_data vehicle masks are correct",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter::build_skill_data vehicle masks are correct", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -134,9 +122,7 @@ TEST_CASE("SkillFilter::build_skill_data vehicle masks are correct",
 //  init / merge tests
 // ===========================================================================
 
-TEST_CASE("SkillFilter::init creates correct single-client state",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter::init creates correct single-client state", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -147,14 +133,12 @@ TEST_CASE("SkillFilter::init creates correct single-client state",
     CHECK(s3.required == 0);  // no skills required
 }
 
-TEST_CASE("SkillFilter::init_depot has no required skills", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::init_depot has no required skills", "[skill_filter]") {
     auto s = SkillFilter::init_depot();
     CHECK(s.required == 0);
 }
 
-TEST_CASE("SkillFilter::merge unions required skills", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::merge unions required skills", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -168,9 +152,7 @@ TEST_CASE("SkillFilter::merge unions required skills", "[skill_filter]")
     CHECK(merged.required == ((uint64_t{1} << cc) | (uint64_t{1} << hz)));
 }
 
-TEST_CASE("SkillFilter::merge with no-skill client doesn't add requirements",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter::merge with no-skill client doesn't add requirements", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -181,9 +163,7 @@ TEST_CASE("SkillFilter::merge with no-skill client doesn't add requirements",
     CHECK(merged.required == sd.client_mask[0]);
 }
 
-TEST_CASE("SkillFilter::merge three clients accumulates all skills",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter::merge three clients accumulates all skills", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -191,16 +171,14 @@ TEST_CASE("SkillFilter::merge three clients accumulates all skills",
     auto s1 = SkillFilter::init(sd, 1);
     auto s3 = SkillFilter::init(sd, 3);
 
-    auto m01  = SkillFilter::merge(s0, s1);
+    auto m01 = SkillFilter::merge(s0, s1);
     auto m013 = SkillFilter::merge(m01, s3);
 
     // Adding a no-skill client doesn't change the mask.
     CHECK(m013.required == m01.required);
 }
 
-TEST_CASE("SkillFilter::merge_reverse equals merge (direction-independent)",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter::merge_reverse equals merge (direction-independent)", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -217,8 +195,7 @@ TEST_CASE("SkillFilter::merge_reverse equals merge (direction-independent)",
 //  excess / feasibility tests
 // ===========================================================================
 
-TEST_CASE("SkillFilter::excess reports missing skills", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::excess reports missing skills", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -237,8 +214,7 @@ TEST_CASE("SkillFilter::excess reports missing skills", "[skill_filter]")
     CHECK(SkillFilter::feasible(s1, sd, 1));
 }
 
-TEST_CASE("SkillFilter::excess with multi-skill client", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::excess with multi-skill client", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -252,8 +228,7 @@ TEST_CASE("SkillFilter::excess with multi-skill client", "[skill_filter]")
     CHECK(SkillFilter::excess(s2, sd, 1) == 0);
 }
 
-TEST_CASE("SkillFilter::excess with merged route", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::excess with merged route", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -269,8 +244,7 @@ TEST_CASE("SkillFilter::excess with merged route", "[skill_filter]")
     CHECK(SkillFilter::excess(merged, sd, 1) == 0);
 }
 
-TEST_CASE("SkillFilter::excess with no skills required", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::excess with no skills required", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -280,8 +254,7 @@ TEST_CASE("SkillFilter::excess with no skills required", "[skill_filter]")
     CHECK(SkillFilter::excess(s3, sd, 1) == 0);
 }
 
-TEST_CASE("SkillFilter::excess with no skills in instance", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::excess with no skills in instance", "[skill_filter]") {
     auto data = make_no_skills_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -294,8 +267,7 @@ TEST_CASE("SkillFilter::excess with no skills in instance", "[skill_filter]")
     CHECK(SkillFilter::feasible(merged, sd, 0));
 }
 
-TEST_CASE("SkillFilter::excess with many skills", "[skill_filter]")
-{
+TEST_CASE("SkillFilter::excess with many skills", "[skill_filter]") {
     auto data = make_many_skills_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -306,7 +278,7 @@ TEST_CASE("SkillFilter::excess with many skills", "[skill_filter]")
     auto s1 = SkillFilter::init(sd, 1);
     auto s2 = SkillFilter::init(sd, 2);
 
-    auto m01  = SkillFilter::merge(s0, s1);
+    auto m01 = SkillFilter::merge(s0, s1);
     auto m012 = SkillFilter::merge(m01, s2);
 
     // VType 0 has {A, B, C} -> missing D, E -> excess 2.
@@ -316,9 +288,7 @@ TEST_CASE("SkillFilter::excess with many skills", "[skill_filter]")
     CHECK(SkillFilter::excess(m012, sd, 1) == 0);
 }
 
-TEST_CASE("SkillFilter: depot merge does not add requirements",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter: depot merge does not add requirements", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 
@@ -332,9 +302,7 @@ TEST_CASE("SkillFilter: depot merge does not add requirements",
     CHECK(merged2.required == s0.required);
 }
 
-TEST_CASE("SkillFilter: single client with subset of vehicle skills",
-          "[skill_filter]")
-{
+TEST_CASE("SkillFilter: single client with subset of vehicle skills", "[skill_filter]") {
     auto data = make_skill_instance();
     auto sd = SkillFilter::build_skill_data(data);
 

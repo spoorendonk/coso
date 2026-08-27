@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "scheduling/construction.h"
+
 #include "scheduling/schedule_data.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -12,15 +13,14 @@ using namespace coso;
 namespace {
 
 /// Check that a schedule respects all precedence and machine constraints.
-void check_feasible(ScheduleData const& data, Result const& result)
-{
+void check_feasible(ScheduleData const& data, Result const& result) {
     REQUIRE(result.feasible());
     REQUIRE(static_cast<int>(result.schedule().size()) == data.num_operations());
 
     // Precedence constraints: before must finish <= after starts.
     for (auto const& arc : data.precedences()) {
         auto const& before = result.schedule()[arc.before];
-        auto const& after  = result.schedule()[arc.after];
+        auto const& after = result.schedule()[arc.after];
         int dur_before = data.processing_time(arc.before, before.machine);
         REQUIRE(dur_before < INT_MAX);
         CHECK(before.start_time + dur_before <= after.start_time);
@@ -29,22 +29,23 @@ void check_feasible(ScheduleData const& data, Result const& result)
     // Machine constraints: no two operations overlap on the same machine.
     for (int m = 0; m < data.num_machines(); ++m) {
         // Collect operations on this machine.
-        struct Interval { int start; int end; int op; };
+        struct Interval {
+            int start;
+            int end;
+            int op;
+        };
         std::vector<Interval> intervals;
         for (int o = 0; o < data.num_operations(); ++o) {
             if (result.schedule()[o].machine == m) {
                 int dur = data.processing_time(o, m);
                 REQUIRE(dur < INT_MAX);
-                intervals.push_back({result.schedule()[o].start_time,
-                                     result.schedule()[o].start_time + dur,
-                                     o});
+                intervals.push_back(
+                    {result.schedule()[o].start_time, result.schedule()[o].start_time + dur, o});
             }
         }
         // Sort by start time, check no overlaps.
         std::sort(intervals.begin(), intervals.end(),
-                  [](auto const& a, auto const& b) {
-                      return a.start < b.start;
-                  });
+                  [](auto const& a, auto const& b) { return a.start < b.start; });
         for (int i = 0; i + 1 < static_cast<int>(intervals.size()); ++i) {
             CHECK(intervals[i].end <= intervals[i + 1].start);
         }
@@ -57,10 +58,12 @@ void check_feasible(ScheduleData const& data, Result const& result)
             std::vector<int> usage(ms + 1, 0);
             for (int o = 0; o < data.num_operations(); ++o) {
                 int u = data.resource_usage(o, r);
-                if (u == 0) continue;
-                int m   = result.schedule()[o].machine;
+                if (u == 0) {
+                    continue;
+                }
+                int m = result.schedule()[o].machine;
                 int dur = data.processing_time(o, m);
-                int st  = result.schedule()[o].start_time;
+                int st = result.schedule()[o].start_time;
                 for (int t = st; t < st + dur; ++t) {
                     usage[t] += u;
                     CHECK(usage[t] <= data.resource_capacity(r));
@@ -74,8 +77,7 @@ void check_feasible(ScheduleData const& data, Result const& result)
 ///
 ///  Job 0: M0(3) -> M1(2) -> M2(4)
 ///  Job 1: M1(2) -> M0(3) -> M2(1)
-ScheduleData make_jsp_2x3()
-{
+ScheduleData make_jsp_2x3() {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_machine({.name = "M1"});
@@ -105,8 +107,7 @@ ScheduleData make_jsp_2x3()
 ///  Resource usage = 1 per op, capacity = 2.
 ///  Ops 0 and 2 can run in parallel (different machines, usage 1+1=2 <= cap).
 ///  Then ops 1 and 3 can run in parallel. Optimal makespan = 6.
-ScheduleData make_rcpsp_small()
-{
+ScheduleData make_rcpsp_small() {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_machine({.name = "M1"});
@@ -140,8 +141,7 @@ ScheduleData make_rcpsp_small()
 ///  Job 0: M0(4), M1(3)
 ///  Job 1: M0(2), M1(5)
 ///  Job 2: M0(3), M1(2)
-ScheduleData make_flowshop_3x2()
-{
+ScheduleData make_flowshop_3x2() {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_machine({.name = "M1"});
@@ -165,14 +165,13 @@ ScheduleData make_flowshop_3x2()
     return b.build();
 }
 
-} // namespace
+}  // namespace
 
 // ---------------------------------------------------------------------------
 //  SGS tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("SGS: small JSP instance", "[scheduling][construction]")
-{
+TEST_CASE("SGS: small JSP instance", "[scheduling][construction]") {
     auto data = make_jsp_2x3();
     auto result = construct_sgs(data);
 
@@ -182,8 +181,7 @@ TEST_CASE("SGS: small JSP instance", "[scheduling][construction]")
     CHECK(result.makespan() <= 11);  // SGS should find a reasonable schedule.
 }
 
-TEST_CASE("SGS: RCPSP with resource constraints", "[scheduling][construction]")
-{
+TEST_CASE("SGS: RCPSP with resource constraints", "[scheduling][construction]") {
     auto data = make_rcpsp_small();
     auto result = construct_sgs(data);
 
@@ -197,8 +195,7 @@ TEST_CASE("SGS: RCPSP with resource constraints", "[scheduling][construction]")
 //  NEH tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("NEH: small flow-shop instance", "[scheduling][construction]")
-{
+TEST_CASE("NEH: small flow-shop instance", "[scheduling][construction]") {
     SKIP("construct_neh() crashes when an operation has no feasible machine — coso#188");
     auto data = make_flowshop_3x2();
     auto result = construct_neh(data);
@@ -211,8 +208,7 @@ TEST_CASE("NEH: small flow-shop instance", "[scheduling][construction]")
     CHECK(result.makespan() <= 15);
 }
 
-TEST_CASE("NEH: small JSP instance", "[scheduling][construction]")
-{
+TEST_CASE("NEH: small JSP instance", "[scheduling][construction]") {
     SKIP("construct_neh() crashes when an operation has no feasible machine — coso#188");
     auto data = make_jsp_2x3();
     auto result = construct_neh(data);
@@ -225,8 +221,7 @@ TEST_CASE("NEH: small JSP instance", "[scheduling][construction]")
 //  Dispatching rule tests
 // ---------------------------------------------------------------------------
 
-TEST_CASE("Dispatch SPT: small JSP instance", "[scheduling][construction]")
-{
+TEST_CASE("Dispatch SPT: small JSP instance", "[scheduling][construction]") {
     auto data = make_jsp_2x3();
     auto result = construct_dispatch(data, DispatchRule::SPT);
 
@@ -234,8 +229,7 @@ TEST_CASE("Dispatch SPT: small JSP instance", "[scheduling][construction]")
     CHECK(result.makespan() > 0);
 }
 
-TEST_CASE("Dispatch LPT: small JSP instance", "[scheduling][construction]")
-{
+TEST_CASE("Dispatch LPT: small JSP instance", "[scheduling][construction]") {
     auto data = make_jsp_2x3();
     auto result = construct_dispatch(data, DispatchRule::LPT);
 
@@ -244,8 +238,7 @@ TEST_CASE("Dispatch LPT: small JSP instance", "[scheduling][construction]")
 }
 
 TEST_CASE("Dispatch SPT: RCPSP instance (no resource check in dispatch)",
-          "[scheduling][construction]")
-{
+          "[scheduling][construction]") {
     // Dispatching without resource constraints — uses single machine,
     // so resource constraints are implicitly satisfied by sequencing.
     auto data = make_rcpsp_small();
@@ -256,9 +249,7 @@ TEST_CASE("Dispatch SPT: RCPSP instance (no resource check in dispatch)",
     CHECK(result.makespan() > 0);
 }
 
-TEST_CASE("Dispatch: single job, operations ordered correctly",
-          "[scheduling][construction]")
-{
+TEST_CASE("Dispatch: single job, operations ordered correctly", "[scheduling][construction]") {
     ScheduleData::Builder b;
     b.add_machine({.name = "M0"});
     b.add_job({.name = "J0"});
@@ -281,8 +272,7 @@ TEST_CASE("Dispatch: single job, operations ordered correctly",
 }
 
 TEST_CASE("All heuristics produce feasible schedules on same instance",
-          "[scheduling][construction]")
-{
+          "[scheduling][construction]") {
     SKIP("construct_neh() crashes when an operation has no feasible machine — coso#188");
     auto data = make_jsp_2x3();
 

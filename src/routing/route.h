@@ -40,9 +40,7 @@ public:
     [[nodiscard]] int vehicle_type() const noexcept { return vehicle_type_; }
 
     /// Number of clients currently in the route.
-    [[nodiscard]] int size() const noexcept {
-        return static_cast<int>(clients_.size());
-    }
+    [[nodiscard]] int size() const noexcept { return static_cast<int>(clients_.size()); }
 
     /// Whether the route has no clients.
     [[nodiscard]] bool empty() const noexcept { return clients_.empty(); }
@@ -54,9 +52,7 @@ public:
     }
 
     /// Read-only access to the full client sequence.
-    [[nodiscard]] std::span<int const> clients() const noexcept {
-        return clients_;
-    }
+    [[nodiscard]] std::span<int const> clients() const noexcept { return clients_; }
 
     /// Load resource prefix state at position pos.
     /// prefix(i) is the merged state for clients [0..i].
@@ -78,9 +74,7 @@ public:
     [[nodiscard]] int load_excess() const noexcept { return load_excess_; }
 
     /// Whether the route is load-feasible (no capacity violations).
-    [[nodiscard]] bool load_feasible() const noexcept {
-        return load_excess_ == 0;
-    }
+    [[nodiscard]] bool load_feasible() const noexcept { return load_excess_ == 0; }
 
     /// Total distance of this route (depot -> clients -> depot).
     [[nodiscard]] int distance() const noexcept { return distance_; }
@@ -105,9 +99,7 @@ public:
     [[nodiscard]] int dist_excess() const noexcept { return dist_excess_; }
 
     /// Whether the route satisfies max_distance and max_duration constraints.
-    [[nodiscard]] bool dist_feasible() const noexcept {
-        return dist_excess_ == 0;
-    }
+    [[nodiscard]] bool dist_feasible() const noexcept { return dist_excess_ == 0; }
 
     /// Cumulative duration of this route (travel + service, depot->clients->depot).
     [[nodiscard]] int duration() const noexcept { return duration_; }
@@ -218,17 +210,15 @@ private:
 
     int load_excess_ = 0;
     int dist_excess_ = 0;
-    int time_warp_   = 0;
-    int distance_    = 0;
-    int duration_    = 0;
+    int time_warp_ = 0;
+    int distance_ = 0;
+    int duration_ = 0;
 
     /// Recompute all prefix/suffix arrays and cached values.
     void update_();
 
     /// Convert client index to node index.
-    [[nodiscard]] int node_(int client) const {
-        return data_->num_depots() + client;
-    }
+    [[nodiscard]] int node_(int client) const { return data_->num_depots() + client; }
 };
 
-} // namespace coso
+}  // namespace coso

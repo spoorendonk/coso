@@ -1,9 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/operators/exchange.h"
+
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -17,8 +18,7 @@ using namespace coso;
 ///  Depot(0,0)  C0(10,0)  C1(20,0)  C2(30,0)  C3(0,10)  C4(0,20)  C5(15,15)
 ///
 /// Demands: C0=3, C1=4, C2=5, C3=2, C4=3, C5=6
-static ProblemData make_test_instance()
-{
+static ProblemData make_test_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {15}});
@@ -34,8 +34,7 @@ static ProblemData make_test_instance()
 }
 
 /// Small instance with granular neighbours.
-static ProblemData make_granular_instance()
-{
+static ProblemData make_granular_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(3, {.capacity = {15}});
@@ -52,12 +51,12 @@ static ProblemData make_granular_instance()
 
 /// Build a solution with given route assignments.
 static Solution make_solution(ProblemData const& data,
-                              std::vector<std::vector<int>> const& routes)
-{
+                              std::vector<std::vector<int>> const& routes) {
     Solution sol(data);
     for (int r = 0; r < static_cast<int>(routes.size()); ++r) {
-        if (!routes[r].empty())
+        if (!routes[r].empty()) {
             sol.set_route_clients(r, routes[r]);
+        }
     }
     return sol;
 }
@@ -66,9 +65,7 @@ static Solution make_solution(ProblemData const& data,
 //  Exchange(1,0) -- Relocate tests
 // ===========================================================================
 
-TEST_CASE("Exchange10: finds improving inter-route relocate",
-          "[exchange][exchange10]")
-{
+TEST_CASE("Exchange10: finds improving inter-route relocate", "[exchange][exchange10]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -92,9 +89,7 @@ TEST_CASE("Exchange10: finds improving inter-route relocate",
     }
 }
 
-TEST_CASE("Exchange10: no improving move on optimal 1-client routes",
-          "[exchange][exchange10]")
-{
+TEST_CASE("Exchange10: no improving move on optimal 1-client routes", "[exchange][exchange10]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -114,9 +109,7 @@ TEST_CASE("Exchange10: no improving move on optimal 1-client routes",
     }
 }
 
-TEST_CASE("Exchange10: apply correctness -- inter-route",
-          "[exchange][exchange10]")
-{
+TEST_CASE("Exchange10: apply correctness -- inter-route", "[exchange][exchange10]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -140,14 +133,14 @@ TEST_CASE("Exchange10: apply correctness -- inter-route",
 
         // Total clients across all routes unchanged.
         int total = 0;
-        for (int r = 0; r < sol.num_routes(); ++r)
+        for (int r = 0; r < sol.num_routes(); ++r) {
             total += sol.route(r).size();
+        }
         CHECK(total == 6);
     }
 }
 
-TEST_CASE("Exchange10: intra-route relocate", "[exchange][exchange10]")
-{
+TEST_CASE("Exchange10: intra-route relocate", "[exchange][exchange10]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -167,9 +160,7 @@ TEST_CASE("Exchange10: intra-route relocate", "[exchange][exchange10]")
     }
 }
 
-TEST_CASE("Exchange10: delta matches actual cost change",
-          "[exchange][exchange10]")
-{
+TEST_CASE("Exchange10: delta matches actual cost change", "[exchange][exchange10]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -189,9 +180,7 @@ TEST_CASE("Exchange10: delta matches actual cost change",
 //  Exchange(1,1) -- Swap tests
 // ===========================================================================
 
-TEST_CASE("Exchange11: finds improving inter-route swap",
-          "[exchange][exchange11]")
-{
+TEST_CASE("Exchange11: finds improving inter-route swap", "[exchange][exchange11]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -212,9 +201,7 @@ TEST_CASE("Exchange11: finds improving inter-route swap",
     }
 }
 
-TEST_CASE("Exchange11: delta matches actual cost change",
-          "[exchange][exchange11]")
-{
+TEST_CASE("Exchange11: delta matches actual cost change", "[exchange][exchange11]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -230,8 +217,7 @@ TEST_CASE("Exchange11: delta matches actual cost change",
     }
 }
 
-TEST_CASE("Exchange11: preserves all clients", "[exchange][exchange11]")
-{
+TEST_CASE("Exchange11: preserves all clients", "[exchange][exchange11]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -244,16 +230,18 @@ TEST_CASE("Exchange11: preserves all clients", "[exchange][exchange11]")
         CHECK(sol.num_unassigned() == 0);
         // Verify each client appears exactly once.
         std::vector<int> seen(data.num_clients(), 0);
-        for (int r = 0; r < sol.num_routes(); ++r)
-            for (int i = 0; i < sol.route(r).size(); ++i)
+        for (int r = 0; r < sol.num_routes(); ++r) {
+            for (int i = 0; i < sol.route(r).size(); ++i) {
                 seen[sol.route(r).client(i)]++;
-        for (int c = 0; c < data.num_clients(); ++c)
+            }
+        }
+        for (int c = 0; c < data.num_clients(); ++c) {
             CHECK(seen[c] == 1);
+        }
     }
 }
 
-TEST_CASE("Exchange11: intra-route swap", "[exchange][exchange11]")
-{
+TEST_CASE("Exchange11: intra-route swap", "[exchange][exchange11]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -275,9 +263,7 @@ TEST_CASE("Exchange11: intra-route swap", "[exchange][exchange11]")
 //  Exchange(2,0) -- Relocate pair tests
 // ===========================================================================
 
-TEST_CASE("Exchange20: finds improving pair relocate",
-          "[exchange][exchange20]")
-{
+TEST_CASE("Exchange20: finds improving pair relocate", "[exchange][exchange20]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -298,9 +284,7 @@ TEST_CASE("Exchange20: finds improving pair relocate",
     }
 }
 
-TEST_CASE("Exchange20: delta matches actual cost change",
-          "[exchange][exchange20]")
-{
+TEST_CASE("Exchange20: delta matches actual cost change", "[exchange][exchange20]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -316,8 +300,7 @@ TEST_CASE("Exchange20: delta matches actual cost change",
     }
 }
 
-TEST_CASE("Exchange20: preserves all clients", "[exchange][exchange20]")
-{
+TEST_CASE("Exchange20: preserves all clients", "[exchange][exchange20]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -329,17 +312,18 @@ TEST_CASE("Exchange20: preserves all clients", "[exchange][exchange20]")
 
         CHECK(sol.num_unassigned() == 0);
         std::vector<int> seen(data.num_clients(), 0);
-        for (int r = 0; r < sol.num_routes(); ++r)
-            for (int i = 0; i < sol.route(r).size(); ++i)
+        for (int r = 0; r < sol.num_routes(); ++r) {
+            for (int i = 0; i < sol.route(r).size(); ++i) {
                 seen[sol.route(r).client(i)]++;
-        for (int c = 0; c < data.num_clients(); ++c)
+            }
+        }
+        for (int c = 0; c < data.num_clients(); ++c) {
             CHECK(seen[c] == 1);
+        }
     }
 }
 
-TEST_CASE("Exchange20: no move when routes have < 2 clients",
-          "[exchange][exchange20]")
-{
+TEST_CASE("Exchange20: no move when routes have < 2 clients", "[exchange][exchange20]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -358,8 +342,7 @@ TEST_CASE("Exchange20: no move when routes have < 2 clients",
 //  SwapTails tests
 // ===========================================================================
 
-TEST_CASE("SwapTails: finds improving tail swap", "[exchange][swaptails]")
-{
+TEST_CASE("SwapTails: finds improving tail swap", "[exchange][swaptails]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -382,9 +365,7 @@ TEST_CASE("SwapTails: finds improving tail swap", "[exchange][swaptails]")
     }
 }
 
-TEST_CASE("SwapTails: delta matches actual cost change",
-          "[exchange][swaptails]")
-{
+TEST_CASE("SwapTails: delta matches actual cost change", "[exchange][swaptails]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -400,8 +381,7 @@ TEST_CASE("SwapTails: delta matches actual cost change",
     }
 }
 
-TEST_CASE("SwapTails: preserves all clients", "[exchange][swaptails]")
-{
+TEST_CASE("SwapTails: preserves all clients", "[exchange][swaptails]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -413,11 +393,14 @@ TEST_CASE("SwapTails: preserves all clients", "[exchange][swaptails]")
 
         CHECK(sol.num_unassigned() == 0);
         std::vector<int> seen(data.num_clients(), 0);
-        for (int r = 0; r < sol.num_routes(); ++r)
-            for (int i = 0; i < sol.route(r).size(); ++i)
+        for (int r = 0; r < sol.num_routes(); ++r) {
+            for (int i = 0; i < sol.route(r).size(); ++i) {
                 seen[sol.route(r).client(i)]++;
-        for (int c = 0; c < data.num_clients(); ++c)
+            }
+        }
+        for (int c = 0; c < data.num_clients(); ++c) {
             CHECK(seen[c] == 1);
+        }
     }
 }
 
@@ -425,9 +408,7 @@ TEST_CASE("SwapTails: preserves all clients", "[exchange][swaptails]")
 //  Granular neighbourhood tests
 // ===========================================================================
 
-TEST_CASE("Exchange10: works with granular neighbours",
-          "[exchange][exchange10][granular]")
-{
+TEST_CASE("Exchange10: works with granular neighbours", "[exchange][exchange10][granular]") {
     auto data = make_granular_instance();
     CostEvaluator eval(100);
 
@@ -445,9 +426,7 @@ TEST_CASE("Exchange10: works with granular neighbours",
     }
 }
 
-TEST_CASE("Exchange11: works with granular neighbours",
-          "[exchange][exchange11][granular]")
-{
+TEST_CASE("Exchange11: works with granular neighbours", "[exchange][exchange11][granular]") {
     auto data = make_granular_instance();
     CostEvaluator eval(100);
 
@@ -466,16 +445,14 @@ TEST_CASE("Exchange11: works with granular neighbours",
 //  Capacity-violation tests (penalized moves)
 // ===========================================================================
 
-TEST_CASE("Exchange10: moves that fix capacity violations",
-          "[exchange][exchange10][capacity]")
-{
+TEST_CASE("Exchange10: moves that fix capacity violations", "[exchange][exchange10][capacity]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
-    b.add_client({10.0, 0.0}, {.demand = {6}});  // 0
-    b.add_client({20.0, 0.0}, {.demand = {6}});  // 1
-    b.add_client({10.0, 10.0}, {.demand = {3}}); // 2
-    b.add_client({20.0, 10.0}, {.demand = {3}}); // 3
+    b.add_client({10.0, 0.0}, {.demand = {6}});   // 0
+    b.add_client({20.0, 0.0}, {.demand = {6}});   // 1
+    b.add_client({10.0, 10.0}, {.demand = {3}});  // 2
+    b.add_client({20.0, 10.0}, {.demand = {3}});  // 3
     auto data = b.build(0);
 
     CostEvaluator eval(1000);  // high penalty
@@ -500,8 +477,7 @@ TEST_CASE("Exchange10: moves that fix capacity violations",
 //  Iterated application: apply operators until no improvement
 // ===========================================================================
 
-TEST_CASE("Iterated Exchange10 converges", "[exchange][exchange10][iterate]")
-{
+TEST_CASE("Iterated Exchange10 converges", "[exchange][exchange10][iterate]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -519,8 +495,7 @@ TEST_CASE("Iterated Exchange10 converges", "[exchange][exchange10][iterate]")
     CHECK(sol.num_unassigned() == 0);
 }
 
-TEST_CASE("Iterated Exchange11 converges", "[exchange][exchange11][iterate]")
-{
+TEST_CASE("Iterated Exchange11 converges", "[exchange][exchange11][iterate]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -542,8 +517,7 @@ TEST_CASE("Iterated Exchange11 converges", "[exchange][exchange11][iterate]")
 // ===========================================================================
 
 /// 1 depot at (0,0), 10 clients, 4 vehicles with capacity 30.
-static ProblemData make_large_instance()
-{
+static ProblemData make_large_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(4, {.capacity = {30}});
@@ -563,23 +537,24 @@ static ProblemData make_large_instance()
 }
 
 /// Helper: verify all clients appear exactly once across all routes.
-static void check_all_clients(Solution const& sol, int num_clients)
-{
+static void check_all_clients(Solution const& sol, int num_clients) {
     CHECK(sol.num_unassigned() == 0);
     std::vector<int> seen(num_clients, 0);
-    for (int r = 0; r < sol.num_routes(); ++r)
-        for (int i = 0; i < sol.route(r).size(); ++i)
+    for (int r = 0; r < sol.num_routes(); ++r) {
+        for (int i = 0; i < sol.route(r).size(); ++i) {
             seen[sol.route(r).client(i)]++;
-    for (int c = 0; c < num_clients; ++c)
+        }
+    }
+    for (int c = 0; c < num_clients; ++c) {
         CHECK(seen[c] == 1);
+    }
 }
 
 // ===========================================================================
 //  Exchange(2,1) tests
 // ===========================================================================
 
-TEST_CASE("Exchange21: finds improving move", "[exchange][exchange21]")
-{
+TEST_CASE("Exchange21: finds improving move", "[exchange][exchange21]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -596,9 +571,7 @@ TEST_CASE("Exchange21: finds improving move", "[exchange][exchange21]")
     }
 }
 
-TEST_CASE("Exchange21: delta matches actual cost change",
-          "[exchange][exchange21]")
-{
+TEST_CASE("Exchange21: delta matches actual cost change", "[exchange][exchange21]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -614,8 +587,7 @@ TEST_CASE("Exchange21: delta matches actual cost change",
     }
 }
 
-TEST_CASE("Exchange21: preserves all clients", "[exchange][exchange21]")
-{
+TEST_CASE("Exchange21: preserves all clients", "[exchange][exchange21]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -628,8 +600,7 @@ TEST_CASE("Exchange21: preserves all clients", "[exchange][exchange21]")
     }
 }
 
-TEST_CASE("Iterated Exchange21 converges", "[exchange][exchange21][iterate]")
-{
+TEST_CASE("Iterated Exchange21 converges", "[exchange][exchange21][iterate]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -649,8 +620,7 @@ TEST_CASE("Iterated Exchange21 converges", "[exchange][exchange21][iterate]")
 //  Exchange(2,2) tests
 // ===========================================================================
 
-TEST_CASE("Exchange22: finds improving move", "[exchange][exchange22]")
-{
+TEST_CASE("Exchange22: finds improving move", "[exchange][exchange22]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -667,9 +637,7 @@ TEST_CASE("Exchange22: finds improving move", "[exchange][exchange22]")
     }
 }
 
-TEST_CASE("Exchange22: delta matches actual cost change",
-          "[exchange][exchange22]")
-{
+TEST_CASE("Exchange22: delta matches actual cost change", "[exchange][exchange22]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -685,8 +653,7 @@ TEST_CASE("Exchange22: delta matches actual cost change",
     }
 }
 
-TEST_CASE("Exchange22: preserves all clients", "[exchange][exchange22]")
-{
+TEST_CASE("Exchange22: preserves all clients", "[exchange][exchange22]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -699,9 +666,7 @@ TEST_CASE("Exchange22: preserves all clients", "[exchange][exchange22]")
     }
 }
 
-TEST_CASE("Exchange22: no move when routes have < 2 clients",
-          "[exchange][exchange22]")
-{
+TEST_CASE("Exchange22: no move when routes have < 2 clients", "[exchange][exchange22]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -715,9 +680,7 @@ TEST_CASE("Exchange22: no move when routes have < 2 clients",
 //  Exchange(3,0) tests
 // ===========================================================================
 
-TEST_CASE("Exchange30: finds improving triple relocate",
-          "[exchange][exchange30]")
-{
+TEST_CASE("Exchange30: finds improving triple relocate", "[exchange][exchange30]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -734,9 +697,7 @@ TEST_CASE("Exchange30: finds improving triple relocate",
     }
 }
 
-TEST_CASE("Exchange30: delta matches actual cost change",
-          "[exchange][exchange30]")
-{
+TEST_CASE("Exchange30: delta matches actual cost change", "[exchange][exchange30]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -752,8 +713,7 @@ TEST_CASE("Exchange30: delta matches actual cost change",
     }
 }
 
-TEST_CASE("Exchange30: preserves all clients", "[exchange][exchange30]")
-{
+TEST_CASE("Exchange30: preserves all clients", "[exchange][exchange30]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -766,9 +726,7 @@ TEST_CASE("Exchange30: preserves all clients", "[exchange][exchange30]")
     }
 }
 
-TEST_CASE("Exchange30: no move when routes have < 3 clients",
-          "[exchange][exchange30]")
-{
+TEST_CASE("Exchange30: no move when routes have < 3 clients", "[exchange][exchange30]") {
     auto data = make_test_instance();
     CostEvaluator eval(100);
 
@@ -778,8 +736,7 @@ TEST_CASE("Exchange30: no move when routes have < 3 clients",
     CHECK_FALSE(op.find_best_move(sol, eval, data));
 }
 
-TEST_CASE("Iterated Exchange30 converges", "[exchange][exchange30][iterate]")
-{
+TEST_CASE("Iterated Exchange30 converges", "[exchange][exchange30][iterate]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -799,8 +756,7 @@ TEST_CASE("Iterated Exchange30 converges", "[exchange][exchange30][iterate]")
 //  Exchange(3,1) tests
 // ===========================================================================
 
-TEST_CASE("Exchange31: finds improving move", "[exchange][exchange31]")
-{
+TEST_CASE("Exchange31: finds improving move", "[exchange][exchange31]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -817,9 +773,7 @@ TEST_CASE("Exchange31: finds improving move", "[exchange][exchange31]")
     }
 }
 
-TEST_CASE("Exchange31: delta matches actual cost change",
-          "[exchange][exchange31]")
-{
+TEST_CASE("Exchange31: delta matches actual cost change", "[exchange][exchange31]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -835,8 +789,7 @@ TEST_CASE("Exchange31: delta matches actual cost change",
     }
 }
 
-TEST_CASE("Exchange31: preserves all clients", "[exchange][exchange31]")
-{
+TEST_CASE("Exchange31: preserves all clients", "[exchange][exchange31]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -853,8 +806,7 @@ TEST_CASE("Exchange31: preserves all clients", "[exchange][exchange31]")
 //  Exchange(3,2) tests
 // ===========================================================================
 
-TEST_CASE("Exchange32: finds improving move", "[exchange][exchange32]")
-{
+TEST_CASE("Exchange32: finds improving move", "[exchange][exchange32]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -871,9 +823,7 @@ TEST_CASE("Exchange32: finds improving move", "[exchange][exchange32]")
     }
 }
 
-TEST_CASE("Exchange32: delta matches actual cost change",
-          "[exchange][exchange32]")
-{
+TEST_CASE("Exchange32: delta matches actual cost change", "[exchange][exchange32]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -893,8 +843,7 @@ TEST_CASE("Exchange32: delta matches actual cost change",
 //  Exchange(3,3) tests
 // ===========================================================================
 
-TEST_CASE("Exchange33: finds improving move", "[exchange][exchange33]")
-{
+TEST_CASE("Exchange33: finds improving move", "[exchange][exchange33]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -911,9 +860,7 @@ TEST_CASE("Exchange33: finds improving move", "[exchange][exchange33]")
     }
 }
 
-TEST_CASE("Exchange33: delta matches actual cost change",
-          "[exchange][exchange33]")
-{
+TEST_CASE("Exchange33: delta matches actual cost change", "[exchange][exchange33]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 
@@ -929,8 +876,7 @@ TEST_CASE("Exchange33: delta matches actual cost change",
     }
 }
 
-TEST_CASE("Exchange33: preserves all clients", "[exchange][exchange33]")
-{
+TEST_CASE("Exchange33: preserves all clients", "[exchange][exchange33]") {
     auto data = make_large_instance();
     CostEvaluator eval(100);
 

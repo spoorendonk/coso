@@ -9,18 +9,18 @@ namespace coso {
 // ---------------------------------------------------------------------------
 
 PiecewiseLinearFunction::PiecewiseLinearFunction(std::vector<Breakpoint> breakpoints)
-    : breakpoints_(std::move(breakpoints))
-{
-    if (breakpoints_.size() < 2)
-        throw std::invalid_argument(
-            "PiecewiseLinearFunction requires at least 2 breakpoints");
+    : breakpoints_(std::move(breakpoints)) {
+    if (breakpoints_.size() < 2) {
+        throw std::invalid_argument("PiecewiseLinearFunction requires at least 2 breakpoints");
+    }
 
     // Verify strictly increasing x-values.
     for (size_t i = 1; i < breakpoints_.size(); ++i) {
-        if (breakpoints_[i].x <= breakpoints_[i - 1].x)
+        if (breakpoints_[i].x <= breakpoints_[i - 1].x) {
             throw std::invalid_argument(
                 "PiecewiseLinearFunction breakpoints must have strictly "
                 "increasing x-values");
+        }
     }
 }
 
@@ -28,15 +28,16 @@ PiecewiseLinearFunction::PiecewiseLinearFunction(std::vector<Breakpoint> breakpo
 //  Segment lookup
 // ---------------------------------------------------------------------------
 
-int PiecewiseLinearFunction::find_segment_(int x) const
-{
+int PiecewiseLinearFunction::find_segment_(int x) const {
     int n = static_cast<int>(breakpoints_.size());
 
     // Clamp to valid segment range.
-    if (x <= breakpoints_[0].x)
+    if (x <= breakpoints_[0].x) {
         return 0;
-    if (x >= breakpoints_[n - 1].x)
+    }
+    if (x >= breakpoints_[n - 1].x) {
         return n - 2;
+    }
 
     // Binary search: find the largest i such that breakpoints_[i].x <= x.
     // We want the segment [i, i+1] where breakpoints_[i].x <= x < breakpoints_[i+1].x.
@@ -44,10 +45,11 @@ int PiecewiseLinearFunction::find_segment_(int x) const
     int hi = n - 2;
     while (lo < hi) {
         int mid = lo + (hi - lo + 1) / 2;
-        if (breakpoints_[mid].x <= x)
+        if (breakpoints_[mid].x <= x) {
             lo = mid;
-        else
+        } else {
             hi = mid - 1;
+        }
     }
     return lo;
 }
@@ -56,8 +58,7 @@ int PiecewiseLinearFunction::find_segment_(int x) const
 //  Evaluation
 // ---------------------------------------------------------------------------
 
-int64_t PiecewiseLinearFunction::evaluate(int x) const
-{
+int64_t PiecewiseLinearFunction::evaluate(int x) const {
     int seg = find_segment_(x);
     auto const& p0 = breakpoints_[seg];
     auto const& p1 = breakpoints_[seg + 1];
@@ -73,10 +74,10 @@ int64_t PiecewiseLinearFunction::evaluate(int x) const
     return p0.y + (offset * dy) / dx;
 }
 
-int64_t PiecewiseLinearFunction::delta(int x_old, int x_new) const
-{
-    if (x_old == x_new)
+int64_t PiecewiseLinearFunction::delta(int x_old, int x_new) const {
+    if (x_old == x_new) {
         return 0;
+    }
 
     int seg_old = find_segment_(x_old);
     int seg_new = find_segment_(x_new);
@@ -101,13 +102,11 @@ int64_t PiecewiseLinearFunction::delta(int x_old, int x_new) const
 //  Factory methods
 // ---------------------------------------------------------------------------
 
-PiecewiseLinearFunction
-PiecewiseLinearFunction::tiered(std::vector<int> const& thresholds,
-                                std::vector<int> const& rates)
-{
-    if (rates.size() != thresholds.size() + 1)
-        throw std::invalid_argument(
-            "tiered: rates.size() must equal thresholds.size() + 1");
+PiecewiseLinearFunction PiecewiseLinearFunction::tiered(std::vector<int> const& thresholds,
+                                                        std::vector<int> const& rates) {
+    if (rates.size() != thresholds.size() + 1) {
+        throw std::invalid_argument("tiered: rates.size() must equal thresholds.size() + 1");
+    }
 
     // Build breakpoints starting from (0, 0).
     std::vector<Breakpoint> bps;
@@ -134,12 +133,8 @@ PiecewiseLinearFunction::tiered(std::vector<int> const& thresholds,
     return PiecewiseLinearFunction(std::move(bps));
 }
 
-PiecewiseLinearFunction
-PiecewiseLinearFunction::overtime(int normal_limit,
-                                  int overtime_rate,
-                                  int max_overtime,
-                                  int excess_rate)
-{
+PiecewiseLinearFunction PiecewiseLinearFunction::overtime(int normal_limit, int overtime_rate,
+                                                          int max_overtime, int excess_rate) {
     std::vector<Breakpoint> bps;
 
     // (0, 0): zero cost at zero input.
@@ -163,4 +158,4 @@ PiecewiseLinearFunction::overtime(int normal_limit,
     return PiecewiseLinearFunction(std::move(bps));
 }
 
-} // namespace coso
+}  // namespace coso

@@ -34,8 +34,7 @@ void DisjunctiveGraph::set_processing_time(int op, int machine, int duration) {
     dirty_ = true;
 }
 
-void DisjunctiveGraph::set_sequence(int machine,
-                                     std::vector<int> const& ops) {
+void DisjunctiveGraph::set_sequence(int machine, std::vector<int> const& ops) {
     assert(machine >= 0 && machine < num_machines_);
     machine_seq_[machine] = ops;
     dirty_ = true;
@@ -50,14 +49,18 @@ std::vector<int> DisjunctiveGraph::topo_sort() const {
 
     // Build in-degree from adj_.
     std::vector<int> in_deg(n, 0);
-    for (int u = 0; u < n; ++u)
-        for (int v : adj_[u])
+    for (int u = 0; u < n; ++u) {
+        for (int v : adj_[u]) {
             ++in_deg[v];
+        }
+    }
 
     std::queue<int> q;
-    for (int u = 0; u < n; ++u)
-        if (in_deg[u] == 0)
+    for (int u = 0; u < n; ++u) {
+        if (in_deg[u] == 0) {
             q.push(u);
+        }
+    }
 
     std::vector<int> order;
     order.reserve(n);
@@ -65,9 +68,11 @@ std::vector<int> DisjunctiveGraph::topo_sort() const {
         int u = q.front();
         q.pop();
         order.push_back(u);
-        for (int v : adj_[u])
-            if (--in_deg[v] == 0)
+        for (int v : adj_[u]) {
+            if (--in_deg[v] == 0) {
                 q.push(v);
+            }
+        }
     }
 
     assert(static_cast<int>(order.size()) == n);
@@ -75,8 +80,9 @@ std::vector<int> DisjunctiveGraph::topo_sort() const {
 }
 
 void DisjunctiveGraph::recompute() {
-    if (!dirty_)
+    if (!dirty_) {
         return;
+    }
 
     int n = num_operations() + 2;
     int src = source();
@@ -88,22 +94,25 @@ void DisjunctiveGraph::recompute() {
     // Conjunctive arcs: job precedences.
     for (int j = 0; j < num_jobs_; ++j) {
         auto const& ops = job_ops_[j];
-        if (ops.empty())
+        if (ops.empty()) {
             continue;
+        }
         // source -> first op of job
         adj_[src].push_back(ops.front());
         // last op of job -> sink
         adj_[ops.back()].push_back(snk);
         // chain within job
-        for (int i = 0; i + 1 < static_cast<int>(ops.size()); ++i)
+        for (int i = 0; i + 1 < static_cast<int>(ops.size()); ++i) {
             adj_[ops[i]].push_back(ops[i + 1]);
+        }
     }
 
     // Disjunctive arcs: machine sequences.
     for (int m = 0; m < num_machines_; ++m) {
         auto const& seq = machine_seq_[m];
-        for (int i = 0; i + 1 < static_cast<int>(seq.size()); ++i)
+        for (int i = 0; i + 1 < static_cast<int>(seq.size()); ++i) {
             adj_[seq[i]].push_back(seq[i + 1]);
+        }
     }
 
     // Forward and backward pass.
@@ -123,9 +132,9 @@ void DisjunctiveGraph::forward_pass(std::vector<int> const& topo) {
     for (int u : topo) {
         int dur = (u < num_operations()) ? ops_[u].duration : 0;
         earliest_finish_[u] = earliest_start_[u] + dur;
-        for (int v : adj_[u])
-            earliest_start_[v] =
-                std::max(earliest_start_[v], earliest_finish_[u]);
+        for (int v : adj_[u]) {
+            earliest_start_[v] = std::max(earliest_start_[v], earliest_finish_[u]);
+        }
     }
 }
 
@@ -141,8 +150,9 @@ void DisjunctiveGraph::backward_pass(std::vector<int> const& topo) {
     for (int i = static_cast<int>(topo.size()) - 1; i >= 0; --i) {
         int u = topo[i];
         int dur = (u < num_operations()) ? ops_[u].duration : 0;
-        for (int v : adj_[u])
+        for (int v : adj_[u]) {
             latest_finish[u] = std::min(latest_finish[u], latest_start_[v]);
+        }
         latest_start_[u] = latest_finish[u] - dur;
     }
 }
@@ -179,8 +189,9 @@ std::vector<int> DisjunctiveGraph::critical_path_ops() {
 
     std::vector<int> path;
     for (int op = 0; op < num_operations(); ++op) {
-        if (earliest_start_[op] == latest_start_[op])
+        if (earliest_start_[op] == latest_start_[op]) {
             path.push_back(op);
+        }
     }
     return path;
 }
@@ -193,9 +204,11 @@ std::vector<int> DisjunctiveGraph::topological_order() {
     result.reserve(num_operations());
     int src = source();
     int snk = sink();
-    for (int u : full)
-        if (u != src && u != snk)
+    for (int u : full) {
+        if (u != src && u != snk) {
             result.push_back(u);
+        }
+    }
     return result;
 }
 
@@ -209,14 +222,16 @@ int DisjunctiveGraph::longest_path(int from, int to) {
     dist[from] = 0;
 
     for (int u : topo) {
-        if (dist[u] < 0)
+        if (dist[u] < 0) {
             continue;
+        }
         int dur = (u < num_operations()) ? ops_[u].duration : 0;
-        for (int v : adj_[u])
+        for (int v : adj_[u]) {
             dist[v] = std::max(dist[v], dist[u] + dur);
+        }
     }
 
     return dist[to];
 }
 
-} // namespace coso
+}  // namespace coso

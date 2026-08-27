@@ -14,7 +14,7 @@ namespace coso {
 /// hard constraints conflict with demand, the solver can relax constraints
 /// with penalty costs to find a "least bad" schedule.
 struct AssignmentOverconstrainedConfig {
-    int64_t understaffing_penalty       = 10000; ///< Cost per missing shift (unmet demand).
+    int64_t understaffing_penalty = 10000;        ///< Cost per missing shift (unmet demand).
     int64_t constraint_violation_penalty = 5000;  ///< Cost per soft constraint violation.
 };
 
@@ -30,10 +30,8 @@ struct AssignmentOverconstrainedConfig {
 /// @param config    Overconstrained configuration.
 /// @return The overconstrained penalty cost (non-negative).
 [[nodiscard]] int64_t assignment_overconstrained_penalty(
-    AssignmentData const& data,
-    AssignmentCostEvaluator const& eval,
-    std::vector<std::vector<int>> const& schedule,
-    AssignmentOverconstrainedConfig const& config);
+    AssignmentData const& data, AssignmentCostEvaluator const& eval,
+    std::vector<std::vector<int>> const& schedule, AssignmentOverconstrainedConfig const& config);
 
 /// Compute the total overconstrained cost for an assignment schedule.
 ///
@@ -47,10 +45,8 @@ struct AssignmentOverconstrainedConfig {
 /// @param config    Overconstrained configuration.
 /// @return Total overconstrained cost.
 [[nodiscard]] int64_t assignment_overconstrained_cost(
-    AssignmentData const& data,
-    AssignmentCostEvaluator const& eval,
-    std::vector<std::vector<int>> const& schedule,
-    AssignmentOverconstrainedConfig const& config);
+    AssignmentData const& data, AssignmentCostEvaluator const& eval,
+    std::vector<std::vector<int>> const& schedule, AssignmentOverconstrainedConfig const& config);
 
 /// Count total understaffing across all shift types and days.
 ///
@@ -60,9 +56,8 @@ struct AssignmentOverconstrainedConfig {
 /// @param data      The assignment instance data.
 /// @param schedule  The schedule matrix.
 /// @return Total number of missing employee-shifts.
-[[nodiscard]] int assignment_total_understaffing(
-    AssignmentData const& data,
-    std::vector<std::vector<int>> const& schedule);
+[[nodiscard]] int assignment_total_understaffing(AssignmentData const& data,
+                                                 std::vector<std::vector<int>> const& schedule);
 
 /// Count total hard constraint violations.
 ///
@@ -73,10 +68,9 @@ struct AssignmentOverconstrainedConfig {
 /// @param eval      The cost evaluator (provides component functions).
 /// @param schedule  The schedule matrix.
 /// @return Total number of hard constraint violations (weighted by eval).
-[[nodiscard]] int assignment_total_hard_violations(
-    AssignmentData const& data,
-    AssignmentCostEvaluator const& eval,
-    std::vector<std::vector<int>> const& schedule);
+[[nodiscard]] int assignment_total_hard_violations(AssignmentData const& data,
+                                                   AssignmentCostEvaluator const& eval,
+                                                   std::vector<std::vector<int>> const& schedule);
 
 /// Check whether a schedule is overconstrained-feasible.
 ///
@@ -89,7 +83,6 @@ struct AssignmentOverconstrainedConfig {
 /// @param schedule  The schedule matrix.
 /// @return true if no hard constraint violations exist.
 [[nodiscard]] bool assignment_overconstrained_feasible(
-    AssignmentCostEvaluator const& eval,
-    std::vector<std::vector<int>> const& schedule);
+    AssignmentCostEvaluator const& eval, std::vector<std::vector<int>> const& schedule);
 
-} // namespace coso
+}  // namespace coso

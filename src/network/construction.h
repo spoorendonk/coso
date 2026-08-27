@@ -21,4 +21,4 @@ namespace coso {
 /// 2. Route remaining excess using greedy shortest-path augmentation.
 [[nodiscard]] NetworkSolution construct_feasible(NetworkData const& data);
 
-} // namespace coso
+}  // namespace coso

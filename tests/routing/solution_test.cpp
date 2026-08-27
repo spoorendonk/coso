@@ -1,7 +1,8 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "routing/solution.h"
+
 #include "routing/cost_evaluator.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -12,30 +13,28 @@ using namespace coso;
 /// 1 depot at (0,0), 4 clients, 2 vehicle types (2 vehicles each = 4 total).
 /// Vehicle type 0: capacity 10, unit_distance_cost 1, fixed_cost 0.
 /// Vehicle type 1: capacity 15, unit_distance_cost 1, fixed_cost 20.
-static ProblemData make_solution_instance()
-{
+static ProblemData make_solution_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
     b.add_vehicle_type(2, {.capacity = {15}, .cost = {.fixed_cost = 20}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}});   // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});   // client 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});   // client 2
-    b.add_client({0.0, 10.0}, {.demand = {2}});   // client 3
+    b.add_client({10.0, 0.0}, {.demand = {3}});  // client 0
+    b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1
+    b.add_client({30.0, 0.0}, {.demand = {5}});  // client 2
+    b.add_client({0.0, 10.0}, {.demand = {2}});  // client 3
 
     return b.build(0);
 }
 
 /// Instance with optional clients (prizes).
-static ProblemData make_prize_instance()
-{
+static ProblemData make_prize_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
 
-    b.add_client({10.0, 0.0}, {.demand = {3}, .prize = 50, .required = false}); // 0
-    b.add_client({20.0, 0.0}, {.demand = {4}, .prize = 30, .required = false}); // 1
+    b.add_client({10.0, 0.0}, {.demand = {3}, .prize = 50, .required = false});  // 0
+    b.add_client({20.0, 0.0}, {.demand = {4}, .prize = 30, .required = false});  // 1
     b.add_client({30.0, 0.0}, {.demand = {5}});                                  // 2
 
     return b.build(0);
@@ -45,8 +44,7 @@ static ProblemData make_prize_instance()
 //  Solution construction tests
 // ===========================================================================
 
-TEST_CASE("Solution: initial state has all clients unassigned", "[solution]")
-{
+TEST_CASE("Solution: initial state has all clients unassigned", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
 
@@ -63,9 +61,7 @@ TEST_CASE("Solution: initial state has all clients unassigned", "[solution]")
     }
 }
 
-TEST_CASE("Solution: set_route_clients assigns and tracks correctly",
-          "[solution]")
-{
+TEST_CASE("Solution: set_route_clients assigns and tracks correctly", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
 
@@ -85,8 +81,7 @@ TEST_CASE("Solution: set_route_clients assigns and tracks correctly",
     CHECK(sol.route(2).size() == 2);
 }
 
-TEST_CASE("Solution: set_route_clients can reassign clients", "[solution]")
-{
+TEST_CASE("Solution: set_route_clients can reassign clients", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
 
@@ -103,8 +98,7 @@ TEST_CASE("Solution: set_route_clients can reassign clients", "[solution]")
     CHECK(sol.num_unassigned() == 0);
 }
 
-TEST_CASE("Solution: insert_client and remove_client", "[solution]")
-{
+TEST_CASE("Solution: insert_client and remove_client", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
 
@@ -129,8 +123,7 @@ TEST_CASE("Solution: insert_client and remove_client", "[solution]")
 //  Cost evaluation with Solution
 // ===========================================================================
 
-TEST_CASE("Solution: cost sums across all routes", "[solution]")
-{
+TEST_CASE("Solution: cost sums across all routes", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
     CostEvaluator eval(100);  // load_penalty = 100
@@ -161,8 +154,7 @@ TEST_CASE("Solution: cost sums across all routes", "[solution]")
     CHECK(sol.cost(eval) == sol.objective(eval));
 }
 
-TEST_CASE("Solution: penalty for overloaded route", "[solution]")
-{
+TEST_CASE("Solution: penalty for overloaded route", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
     CostEvaluator eval(100);
@@ -174,8 +166,7 @@ TEST_CASE("Solution: penalty for overloaded route", "[solution]")
     CHECK(sol.penalty(eval) == 200);  // 2 * 100
 }
 
-TEST_CASE("Solution: total_distance across routes", "[solution]")
-{
+TEST_CASE("Solution: total_distance across routes", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
 
@@ -190,8 +181,7 @@ TEST_CASE("Solution: total_distance across routes", "[solution]")
 //  Copy semantics
 // ===========================================================================
 
-TEST_CASE("Solution: copy creates independent solution", "[solution]")
-{
+TEST_CASE("Solution: copy creates independent solution", "[solution]") {
     auto data = make_solution_instance();
     Solution sol(data);
     sol.set_route_clients(0, {0, 1});
@@ -213,8 +203,7 @@ TEST_CASE("Solution: copy creates independent solution", "[solution]")
 //  Prize handling through Solution
 // ===========================================================================
 
-TEST_CASE("Solution: prizes reduce objective cost", "[solution]")
-{
+TEST_CASE("Solution: prizes reduce objective cost", "[solution]") {
     auto data = make_prize_instance();
     Solution sol(data);
     CostEvaluator eval(100);

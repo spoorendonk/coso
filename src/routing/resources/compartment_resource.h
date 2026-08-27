@@ -41,16 +41,16 @@ struct CompartmentResource {
     /// @param info       Per-client compartment info lookup.
     /// @param client     Client index (0-based among clients).
     /// @param num_comps  Total number of compartments.
-    [[nodiscard]] static State init(std::vector<ClientInfo> const& info,
-                                    int client, int num_comps) {
-        assert(client >= 0
-               && client < static_cast<int>(info.size()));
+    [[nodiscard]] static State init(std::vector<ClientInfo> const& info, int client,
+                                    int num_comps) {
+        assert(client >= 0 && client < static_cast<int>(info.size()));
         State s;
         s.loads.resize(num_comps, 0);
 
         auto const& ci = info[client];
-        if (ci.compartment >= 0 && ci.compartment < num_comps)
+        if (ci.compartment >= 0 && ci.compartment < num_comps) {
             s.loads[ci.compartment] = ci.demand;
+        }
 
         return s;
     }
@@ -72,8 +72,9 @@ struct CompartmentResource {
         State result;
         result.loads.resize(nc);
 
-        for (int c = 0; c < nc; ++c)
+        for (int c = 0; c < nc; ++c) {
             result.loads[c] = left.loads[c] + right.loads[c];
+        }
 
         return result;
     }
@@ -81,8 +82,7 @@ struct CompartmentResource {
     /// Merge when the right subsequence is reversed.
     ///
     /// Compartment loads are order-independent, so merge_reverse == merge.
-    [[nodiscard]] static State merge_reverse(State const& left,
-                                             State const& right) {
+    [[nodiscard]] static State merge_reverse(State const& left, State const& right) {
         return merge(left, right);
     }
 
@@ -92,20 +92,19 @@ struct CompartmentResource {
     ///
     /// @param state       The merged state for the full route.
     /// @param capacities  Per-compartment capacities.
-    [[nodiscard]] static int excess(State const& state,
-                                    std::vector<int> const& capacities) {
+    [[nodiscard]] static int excess(State const& state, std::vector<int> const& capacities) {
         int total = 0;
         int nc = state.num_compartments();
 
         for (int c = 0; c < nc; ++c) {
-            int cap = (c < static_cast<int>(capacities.size()))
-                          ? capacities[c] : 0;
-            if (state.loads[c] > cap)
+            int cap = (c < static_cast<int>(capacities.size())) ? capacities[c] : 0;
+            if (state.loads[c] > cap) {
                 total += state.loads[c] - cap;
+            }
         }
 
         return total;
     }
 };
 
-} // namespace coso
+}  // namespace coso

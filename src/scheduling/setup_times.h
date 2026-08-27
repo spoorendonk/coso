@@ -44,7 +44,7 @@ public:
     [[nodiscard]] int num_machines() const noexcept { return num_machines_; }
 
 private:
-    int num_ops_      = 0;
+    int num_ops_ = 0;
     int num_machines_ = 0;
 
     /// Flat row-major: data_[from * num_ops_ * num_machines_ + to * num_machines_ + machine].
@@ -58,4 +58,4 @@ private:
     }
 };
 
-} // namespace coso
+}  // namespace coso

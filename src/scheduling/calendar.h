@@ -40,8 +40,7 @@ public:
     /// for at least `duration` consecutive time units.
     /// Returns `time` if the machine is already available.
     /// Returns -1 if no suitable window exists.
-    [[nodiscard]] int next_available(int machine, int time,
-                                     int duration = 1) const;
+    [[nodiscard]] int next_available(int machine, int time, int duration = 1) const;
 
     /// Check whether a machine has any calendar restrictions.
     [[nodiscard]] bool has_calendar(int machine) const;
@@ -59,4 +58,4 @@ private:
     void merge_intervals(int machine);
 };
 
-} // namespace coso
+}  // namespace coso

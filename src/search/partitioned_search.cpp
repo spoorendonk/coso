@@ -14,16 +14,13 @@ namespace coso {
 // ---------------------------------------------------------------------------
 
 PartitionedSearch::PartitionedSearch(ProblemData const& data, unsigned int seed)
-    : data_(&data), rng_(seed)
-{
-}
+    : data_(&data), rng_(seed) {}
 
 // ---------------------------------------------------------------------------
 //  K-means partitioning
 // ---------------------------------------------------------------------------
 
-Partition PartitionedSearch::partition_clients(int k, int kmeans_iters)
-{
+Partition PartitionedSearch::partition_clients(int k, int kmeans_iters) {
     int const n = data_->num_clients();
     assert(k > 0);
     assert(n > 0);
@@ -95,7 +92,9 @@ Partition PartitionedSearch::partition_clients(int k, int kmeans_iters)
     }
 
     // Build cluster lists from final assignment.
-    for (auto& cl : result.clusters) cl.clear();
+    for (auto& cl : result.clusters) {
+        cl.clear();
+    }
     for (int c = 0; c < n; ++c) {
         result.clusters[result.assignment[c]].push_back(c);
     }
@@ -107,9 +106,8 @@ Partition PartitionedSearch::partition_clients(int k, int kmeans_iters)
 //  Overlap expansion
 // ---------------------------------------------------------------------------
 
-std::vector<std::vector<int>> PartitionedSearch::expand_with_overlap(
-    Partition const& part, double overlap_frac) const
-{
+std::vector<std::vector<int>> PartitionedSearch::expand_with_overlap(Partition const& part,
+                                                                     double overlap_frac) const {
     int const k = part.num_clusters();
     int const n = data_->num_clients();
 
@@ -140,13 +138,17 @@ std::vector<std::vector<int>> PartitionedSearch::expand_with_overlap(
     for (int j = 0; j < k; ++j) {
         int max_overlap = static_cast<int>(
             std::ceil(overlap_frac * static_cast<double>(part.clusters[j].size())));
-        if (max_overlap <= 0) continue;
+        if (max_overlap <= 0) {
+            continue;
+        }
 
         // Collect clients NOT in this cluster, with their distance to this centroid.
         std::vector<std::pair<double, int>> candidates;
         candidates.reserve(n - static_cast<int>(part.clusters[j].size()));
         for (int c = 0; c < n; ++c) {
-            if (part.assignment[c] == j) continue;
+            if (part.assignment[c] == j) {
+                continue;
+            }
             auto coord = data_->client(c).coord;
             double dx = coord.x - cx[j];
             double dy = coord.y - cy[j];
@@ -155,10 +157,8 @@ std::vector<std::vector<int>> PartitionedSearch::expand_with_overlap(
 
         // Take the closest max_overlap candidates.
         if (static_cast<int>(candidates.size()) > max_overlap) {
-            std::partial_sort(
-                candidates.begin(),
-                candidates.begin() + max_overlap,
-                candidates.end());
+            std::partial_sort(candidates.begin(), candidates.begin() + max_overlap,
+                              candidates.end());
             candidates.resize(max_overlap);
         }
 
@@ -174,10 +174,8 @@ std::vector<std::vector<int>> PartitionedSearch::expand_with_overlap(
 //  Sub-solution extraction
 // ---------------------------------------------------------------------------
 
-Solution PartitionedSearch::extract_sub_solution_(
-    Solution const& global,
-    std::vector<int> const& clients) const
-{
+Solution PartitionedSearch::extract_sub_solution_(Solution const& global,
+                                                  std::vector<int> const& clients) const {
     // Create a set for quick lookup.
     std::set<int> client_set(clients.begin(), clients.end());
 
@@ -205,19 +203,17 @@ Solution PartitionedSearch::extract_sub_solution_(
 // ---------------------------------------------------------------------------
 
 Solution PartitionedSearch::merge_sub_solutions_(
-    std::vector<Solution> const& subs,
-    std::vector<std::vector<int>> const& expanded_clusters,
-    CostEvaluator const& eval) const
-{
+    std::vector<Solution> const& subs, std::vector<std::vector<int>> const& expanded_clusters,
+    CostEvaluator const& eval) const {
     int const n = data_->num_clients();
     int const num_routes = data_->total_vehicles();
 
     // For each client, find which sub-solution and route gives the best cost.
     // Track: client -> (sub_idx, route_idx, position_in_route).
     struct ClientPlacement {
-        int sub_idx   = -1;
+        int sub_idx = -1;
         int route_idx = -1;
-        int pos       = -1;
+        int pos = -1;
     };
     std::vector<ClientPlacement> best_placement(n);
 
@@ -259,7 +255,9 @@ Solution PartitionedSearch::merge_sub_solutions_(
 
     // Ensure clients are in the same order as in the winning sub-solution's route.
     for (int r = 0; r < num_routes; ++r) {
-        if (route_clients[r].empty()) continue;
+        if (route_clients[r].empty()) {
+            continue;
+        }
 
         // Collect all sub-solutions that contribute to this route.
         // For each client in this route, it came from subs[bp.sub_idx].route(r).
@@ -269,7 +267,9 @@ Solution PartitionedSearch::merge_sub_solutions_(
             auto const& pa = best_placement[a];
             auto const& pb = best_placement[b];
             // If from same sub, use position order.
-            if (pa.sub_idx == pb.sub_idx) return pa.pos < pb.pos;
+            if (pa.sub_idx == pb.sub_idx) {
+                return pa.pos < pb.pos;
+            }
             // Otherwise, order by sub index (arbitrary but consistent).
             return pa.sub_idx < pb.sub_idx;
         });
@@ -285,8 +285,7 @@ Solution PartitionedSearch::merge_sub_solutions_(
     // Handle any unassigned clients (shouldn't happen if all subs cover all
     // clients, but handle gracefully).  Insert them greedily.
     if (merged.num_unassigned() > 0) {
-        auto unassigned = std::vector<int>(
-            merged.unassigned().begin(), merged.unassigned().end());
+        auto unassigned = std::vector<int>(merged.unassigned().begin(), merged.unassigned().end());
         for (int c : unassigned) {
             // Find cheapest insertion across all routes.
             int64_t best_delta = std::numeric_limits<int64_t>::max();
@@ -316,19 +315,14 @@ Solution PartitionedSearch::merge_sub_solutions_(
 //  Main run loop
 // ---------------------------------------------------------------------------
 
-Solution PartitionedSearch::run(
-    Solution const& initial,
-    CostEvaluator const& eval,
-    LocalSearchFn const& local_search,
-    PartitionConfig const& config)
-{
+Solution PartitionedSearch::run(Solution const& initial, CostEvaluator const& eval,
+                                LocalSearchFn const& local_search, PartitionConfig const& config) {
     Solution best = initial;
     int64_t best_cost = best.cost(eval);
 
     for (int iter = 0; iter < config.max_iterations; ++iter) {
         // 1. Partition clients.
-        auto part = partition_clients(config.num_partitions,
-                                      config.kmeans_iters);
+        auto part = partition_clients(config.num_partitions, config.kmeans_iters);
 
         // 2. Expand with overlap.
         auto expanded = expand_with_overlap(part, config.overlap_frac);
@@ -365,4 +359,4 @@ Solution PartitionedSearch::run(
     return best;
 }
 
-} // namespace coso
+}  // namespace coso

@@ -1,9 +1,10 @@
-#include <catch2/catch_test_macros.hpp>
+#include "search/score_analysis.h"
 
 #include "routing/cost_evaluator.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
-#include "search/score_analysis.h"
+
+#include <catch2/catch_test_macros.hpp>
 
 using namespace coso;
 
@@ -11,13 +12,12 @@ using namespace coso;
 //  Helper: build a small CVRP instance (4 clients, 1 depot, 2 vehicles cap 20)
 // ---------------------------------------------------------------------------
 
-static ProblemData make_instance()
-{
+static ProblemData make_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
 
-    b.add_client({10.0, 0.0},  {.demand = {8}});
-    b.add_client({0.0, 10.0},  {.demand = {6}});
+    b.add_client({10.0, 0.0}, {.demand = {8}});
+    b.add_client({0.0, 10.0}, {.demand = {6}});
     b.add_client({-10.0, 0.0}, {.demand = {7}});
     b.add_client({0.0, -10.0}, {.demand = {9}});
 
@@ -26,8 +26,7 @@ static ProblemData make_instance()
     return b.build();
 }
 
-TEST_CASE("analyze — all clients assigned across two routes", "[score_analysis]")
-{
+TEST_CASE("analyze — all clients assigned across two routes", "[score_analysis]") {
     auto data = make_instance();
     CostEvaluator eval;
     Solution sol(data);
@@ -53,8 +52,7 @@ TEST_CASE("analyze — all clients assigned across two routes", "[score_analysis
     CHECK(analysis.penalized_cost == sol.cost(eval));
 }
 
-TEST_CASE("analyze — route demand and capacity breakdown", "[score_analysis]")
-{
+TEST_CASE("analyze — route demand and capacity breakdown", "[score_analysis]") {
     auto data = make_instance();
     CostEvaluator eval;
     Solution sol(data);
@@ -84,8 +82,7 @@ TEST_CASE("analyze — route demand and capacity breakdown", "[score_analysis]")
     CHECK(r1.load_excess == 0);
 }
 
-TEST_CASE("analyze — unserved clients", "[score_analysis]")
-{
+TEST_CASE("analyze — unserved clients", "[score_analysis]") {
     auto data = make_instance();
     CostEvaluator eval;
     Solution sol(data);
@@ -100,14 +97,13 @@ TEST_CASE("analyze — unserved clients", "[score_analysis]")
     CHECK(analysis.routes.size() == 1);
 }
 
-TEST_CASE("analyze — infeasible solution with load excess", "[score_analysis]")
-{
+TEST_CASE("analyze — infeasible solution with load excess", "[score_analysis]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
 
     // Three clients with total demand 30, vehicle capacity 15.
-    b.add_client({10.0, 0.0},  {.demand = {10}});
-    b.add_client({0.0, 10.0},  {.demand = {10}});
+    b.add_client({10.0, 0.0}, {.demand = {10}});
+    b.add_client({0.0, 10.0}, {.demand = {10}});
     b.add_client({-10.0, 0.0}, {.demand = {10}});
 
     b.add_vehicle_type(1, {.capacity = {15}});
@@ -130,8 +126,7 @@ TEST_CASE("analyze — infeasible solution with load excess", "[score_analysis]"
     CHECK(r.capacity[0] == 15);
 }
 
-TEST_CASE("analyze — empty solution", "[score_analysis]")
-{
+TEST_CASE("analyze — empty solution", "[score_analysis]") {
     auto data = make_instance();
     CostEvaluator eval;
     Solution sol(data);
@@ -147,8 +142,7 @@ TEST_CASE("analyze — empty solution", "[score_analysis]")
     CHECK(analysis.routes.empty());
 }
 
-TEST_CASE("analyze — to_string produces output", "[score_analysis]")
-{
+TEST_CASE("analyze — to_string produces output", "[score_analysis]") {
     auto data = make_instance();
     CostEvaluator eval;
     Solution sol(data);
@@ -168,8 +162,7 @@ TEST_CASE("analyze — to_string produces output", "[score_analysis]")
     CHECK(str.find("Dim 0") != std::string::npos);
 }
 
-TEST_CASE("analyze — fixed cost included in objective", "[score_analysis]")
-{
+TEST_CASE("analyze — fixed cost included in objective", "[score_analysis]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_client({10.0, 0.0}, {.demand = {5}});

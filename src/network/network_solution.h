@@ -92,4 +92,4 @@ private:
     void recompute_excess_();
 };
 
-} // namespace coso
+}  // namespace coso

@@ -4,8 +4,7 @@
 
 namespace coso {
 
-LotsizingData LotsizingData::Builder::build() const
-{
+LotsizingData LotsizingData::Builder::build() const {
     LotsizingData data;
 
     int P = static_cast<int>(setup_costs_.size());
@@ -13,19 +12,20 @@ LotsizingData LotsizingData::Builder::build() const
     assert(T > 0 && "Must set num_periods before building");
 
     data.num_products_ = P;
-    data.num_periods_  = T;
+    data.num_periods_ = T;
 
-    data.setup_costs_    = setup_costs_;
-    data.setup_times_    = setup_times_;
+    data.setup_costs_ = setup_costs_;
+    data.setup_times_ = setup_times_;
     data.unit_prod_costs_ = unit_prod_costs_;
-    data.holding_costs_  = holding_costs_;
+    data.holding_costs_ = holding_costs_;
 
     // Copy demands into [P x T] flat array.
     data.demands_.resize(static_cast<size_t>(P) * T, 0.0);
     for (int p = 0; p < P; ++p) {
         for (int t = 0; t < T && t < max_periods_; ++t) {
-            if (p * max_periods_ + t < static_cast<int>(demands_.size()))
+            if (p * max_periods_ + t < static_cast<int>(demands_.size())) {
                 data.demands_[p * T + t] = demands_[p * max_periods_ + t];
+            }
         }
     }
 
@@ -50,4 +50,4 @@ LotsizingData LotsizingData::Builder::build() const
     return data;
 }
 
-} // namespace coso
+}  // namespace coso

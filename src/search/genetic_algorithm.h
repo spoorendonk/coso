@@ -63,4 +63,4 @@ private:
     int initial_pop_size_ = 0;  // 0 means auto = 4 * max_feasible_
 };
 
-} // namespace coso
+}  // namespace coso

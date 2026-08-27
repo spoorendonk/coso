@@ -24,4 +24,4 @@ namespace coso {
 /// Read a schedulingbenchmarks.org NRP instance from a file.
 [[nodiscard]] AssignmentData read_nrp(const std::string& path);
 
-} // namespace coso
+}  // namespace coso

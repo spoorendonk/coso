@@ -1,8 +1,7 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "scheduling/disjunctive_graph.h"
 
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <set>
 #include <vector>
 
@@ -62,8 +61,7 @@ TEST_CASE("DisjunctiveGraph basics", "[scheduling][disjunctive]") {
     REQUIRE(g.operation(6).duration == 4);
 }
 
-TEST_CASE("Topological order respects job precedences",
-          "[scheduling][disjunctive]") {
+TEST_CASE("Topological order respects job precedences", "[scheduling][disjunctive]") {
     auto g = make_3x3();
 
     // Set arbitrary machine sequences.
@@ -76,8 +74,9 @@ TEST_CASE("Topological order respects job precedences",
 
     // Build position map.
     std::vector<int> pos(g.num_operations());
-    for (int i = 0; i < static_cast<int>(topo.size()); ++i)
+    for (int i = 0; i < static_cast<int>(topo.size()); ++i) {
         pos[topo[i]] = i;
+    }
 
     // Job 0: op0 < op1 < op2
     REQUIRE(pos[0] < pos[1]);
@@ -98,8 +97,7 @@ TEST_CASE("Topological order respects job precedences",
     REQUIRE(pos[2] < pos[7]);  // M2: 2 before 7
 }
 
-TEST_CASE("Forward pass without machine sequences",
-          "[scheduling][disjunctive]") {
+TEST_CASE("Forward pass without machine sequences", "[scheduling][disjunctive]") {
     auto g = make_3x3();
 
     // Without machine sequences, only job precedence arcs exist.
@@ -130,8 +128,7 @@ TEST_CASE("Forward pass without machine sequences",
     REQUIRE(g.critical_path() == 7);
 }
 
-TEST_CASE("Critical path with machine sequences",
-          "[scheduling][disjunctive]") {
+TEST_CASE("Critical path with machine sequences", "[scheduling][disjunctive]") {
     auto g = make_3x3();
 
     // Set machine sequences:
@@ -167,8 +164,7 @@ TEST_CASE("Critical path with machine sequences",
     REQUIRE(g.critical_path() == 11);
 }
 
-TEST_CASE("Backward pass and critical path operations",
-          "[scheduling][disjunctive]") {
+TEST_CASE("Backward pass and critical path operations", "[scheduling][disjunctive]") {
     auto g = make_3x3();
 
     g.set_sequence(0, {0, 3});
@@ -190,15 +186,14 @@ TEST_CASE("Backward pass and critical path operations",
     // The critical path chain should include op0 -> op3 -> op4 -> op2 -> op7
     // with makespan contribution: 3 + 2 + 1 + 2 + 3 = 11.
     std::set<int> cp_set(cp_ops.begin(), cp_ops.end());
-    REQUIRE(cp_set.count(0) == 1);   // op0
-    REQUIRE(cp_set.count(3) == 1);   // op3
-    REQUIRE(cp_set.count(4) == 1);   // op4
-    REQUIRE(cp_set.count(2) == 1);   // op2
-    REQUIRE(cp_set.count(7) == 1);   // op7
+    REQUIRE(cp_set.count(0) == 1);  // op0
+    REQUIRE(cp_set.count(3) == 1);  // op3
+    REQUIRE(cp_set.count(4) == 1);  // op4
+    REQUIRE(cp_set.count(2) == 1);  // op2
+    REQUIRE(cp_set.count(7) == 1);  // op7
 }
 
-TEST_CASE("Changing machine sequences updates makespan",
-          "[scheduling][disjunctive]") {
+TEST_CASE("Changing machine sequences updates makespan", "[scheduling][disjunctive]") {
     auto g = make_3x3();
 
     // Sequence 1: as above.
@@ -226,8 +221,7 @@ TEST_CASE("Changing machine sequences updates makespan",
     REQUIRE(ms1 != ms2);
 }
 
-TEST_CASE("Longest path between specific operations",
-          "[scheduling][disjunctive]") {
+TEST_CASE("Longest path between specific operations", "[scheduling][disjunctive]") {
     auto g = make_3x3();
 
     g.set_sequence(0, {0, 3});
@@ -252,8 +246,7 @@ TEST_CASE("Longest path between specific operations",
     REQUIRE(g.longest_path(7, 0) == -1);
 }
 
-TEST_CASE("set_processing_time updates computation",
-          "[scheduling][disjunctive]") {
+TEST_CASE("set_processing_time updates computation", "[scheduling][disjunctive]") {
     auto g = make_3x3();
 
     g.set_sequence(0, {0, 3});

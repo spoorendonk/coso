@@ -19,8 +19,8 @@ namespace coso {
 /// A transition to -1 (or absent entry) means "no valid transition" and
 /// counts as a violation for every remaining day.
 struct DFA {
-    int num_states       = 0;
-    int start_state      = 0;
+    int num_states = 0;
+    int start_state = 0;
     std::vector<int> accepting_states;
 
     /// Transition table indexed by (state * alphabet_size + symbol_index).
@@ -30,20 +30,20 @@ struct DFA {
     std::vector<int> transitions;  ///< Flat array: num_states * alphabet_size.
 
     /// Look up the next state.  Returns -1 if no transition exists.
-    [[nodiscard]] int next(int state, int symbol_index) const noexcept
-    {
-        if (state < 0 || state >= num_states
-            || symbol_index < 0 || symbol_index >= alphabet_size)
+    [[nodiscard]] int next(int state, int symbol_index) const noexcept {
+        if (state < 0 || state >= num_states || symbol_index < 0 || symbol_index >= alphabet_size) {
             return -1;
+        }
         return transitions[state * alphabet_size + symbol_index];
     }
 
     /// Check if a state is accepting.
-    [[nodiscard]] bool is_accepting(int state) const noexcept
-    {
-        for (int s : accepting_states)
-            if (s == state)
+    [[nodiscard]] bool is_accepting(int state) const noexcept {
+        for (int s : accepting_states) {
+            if (s == state) {
                 return true;
+            }
+        }
         return false;
     }
 };
@@ -60,8 +60,7 @@ struct DFA {
 /// consecutive matches), max_consec+1 (rejecting sink — too many).
 ///
 /// `num_shift_types` is the total number of shift types in the problem.
-[[nodiscard]] DFA build_max_consecutive_dfa(
-    int shift_type, int max_consec, int num_shift_types);
+[[nodiscard]] DFA build_max_consecutive_dfa(int shift_type, int max_consec, int num_shift_types);
 
 /// Build a DFA that rejects any occurrence of the given forbidden pattern
 /// (a sequence of shift-type IDs, where -1 means "off").
@@ -69,8 +68,7 @@ struct DFA {
 /// Uses a simple prefix-matching approach: states 0..len track how many
 /// symbols of the pattern have been matched so far.  State `len` is the
 /// rejecting sink.  All states except `len` are accepting.
-[[nodiscard]] DFA build_forbidden_pattern_dfa(
-    std::vector<int> const& pattern, int num_shift_types);
+[[nodiscard]] DFA build_forbidden_pattern_dfa(std::vector<int> const& pattern, int num_shift_types);
 
 // --------------------------------------------------------------------------- //
 //  AutomatonConstraint                                                         //
@@ -89,18 +87,14 @@ class AutomatonConstraint final : public Constraint {
 public:
     /// Construct with a DFA and per-violation penalty.
     explicit AutomatonConstraint(DFA dfa, int penalty = 10000)
-        : dfa_(std::move(dfa)), penalty_(penalty)
-    {
-    }
+        : dfa_(std::move(dfa)), penalty_(penalty) {}
 
-    [[nodiscard]] int evaluate(
-        AssignmentData const& data,
-        std::vector<std::vector<int>> const& schedule) const override;
+    [[nodiscard]] int evaluate(AssignmentData const& data,
+                               std::vector<std::vector<int>> const& schedule) const override;
 
-    [[nodiscard]] int evaluate_delta(
-        AssignmentData const& data,
-        std::vector<std::vector<int>> const& schedule,
-        AssignmentMove const& move) const override;
+    [[nodiscard]] int evaluate_delta(AssignmentData const& data,
+                                     std::vector<std::vector<int>> const& schedule,
+                                     AssignmentMove const& move) const override;
 
     [[nodiscard]] std::string name() const override { return "Automaton"; }
 
@@ -113,14 +107,10 @@ private:
 
     /// Convert a schedule shift value to a DFA symbol index.
     /// off (-1) -> 0, shift 0 -> 1, shift 1 -> 2, etc.
-    [[nodiscard]] static int to_symbol(int shift) noexcept
-    {
-        return shift + 1;
-    }
+    [[nodiscard]] static int to_symbol(int shift) noexcept { return shift + 1; }
 
     /// Count violations for a single employee row by running the DFA.
-    [[nodiscard]] int employee_cost(
-        std::vector<int> const& row, int horizon) const;
+    [[nodiscard]] int employee_cost(std::vector<int> const& row, int horizon) const;
 };
 
-} // namespace coso
+}  // namespace coso

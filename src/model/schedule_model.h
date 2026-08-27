@@ -15,19 +15,19 @@ struct MachineParams {
 
 /// Parameters for an operation within a job.
 struct OperationParams {
-    int machine                            = -1;   ///< fixed machine (-1 = flexible / FJSP)
-    std::vector<int> eligible_machines;             ///< for FJSP: machine alternatives
-    std::vector<int> durations_per_machine;         ///< duration on each eligible machine
-    int duration                           = 0;    ///< fixed duration (when machine is fixed)
-    bool optional                          = false;
+    int machine = -1;                        ///< fixed machine (-1 = flexible / FJSP)
+    std::vector<int> eligible_machines;      ///< for FJSP: machine alternatives
+    std::vector<int> durations_per_machine;  ///< duration on each eligible machine
+    int duration = 0;                        ///< fixed duration (when machine is fixed)
+    bool optional = false;
 };
 
 /// Parameters for a job.
 struct JobParams {
     std::string name;
     int release_time = 0;
-    int due_date     = INT_MAX;
-    int weight       = 1;           ///< for weighted tardiness objectives
+    int due_date = INT_MAX;
+    int weight = 1;  ///< for weighted tardiness objectives
 };
 
 /// Scheduling objective function.
@@ -75,8 +75,7 @@ public:
     // -- Warm start ----------------------------------------------------------
 
     /// Provide an initial schedule: per-operation (machine, start_time) pairs.
-    void set_initial_schedule(
-        const std::vector<std::pair<int, int>>& op_assignments);
+    void set_initial_schedule(const std::vector<std::pair<int, int>>& op_assignments);
 
     // -- Solve ---------------------------------------------------------------
 
@@ -123,4 +122,4 @@ private:
 /// Convenience: solve a JSP instance file (Taillard format) directly.
 Result solve_jsp(const std::string& instance_path, TimeLimit tl);
 
-} // namespace coso
+}  // namespace coso

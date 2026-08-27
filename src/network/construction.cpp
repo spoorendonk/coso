@@ -17,10 +17,7 @@ struct SPResult {
     std::vector<int> pred_arc;  // -1 = not reached
 };
 
-SPResult shortest_path_bfs(NetworkData const& data,
-                           NetworkSolution const& sol,
-                           int src, int dst)
-{
+SPResult shortest_path_bfs(NetworkData const& data, NetworkSolution const& sol, int src, int dst) {
     int const nn = data.num_nodes();
     int const na = data.num_arcs();
 
@@ -40,12 +37,18 @@ SPResult shortest_path_bfs(NetworkData const& data,
         auto [d, u] = pq.top();
         pq.pop();
 
-        if (d > dist[u]) continue;
-        if (u == dst) break;
+        if (d > dist[u]) {
+            continue;
+        }
+        if (u == dst) {
+            break;
+        }
 
         for (int a : data.outgoing(u)) {
             int res = data.arc(a).upper_cap - sol.flow(a);
-            if (res <= 0) continue;
+            if (res <= 0) {
+                continue;
+            }
 
             int v = data.arc(a).head;
             long long nd = dist[u] + std::max(0, data.arc(a).cost);
@@ -76,7 +79,7 @@ SPResult shortest_path_bfs(NetworkData const& data,
     return result;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 NetworkSolution construct_greedy(NetworkData const& data) {
     NetworkSolution sol(data);
@@ -95,7 +98,9 @@ NetworkSolution construct_greedy(NetworkData const& data) {
                 src = n;
             }
         }
-        if (src < 0) break;
+        if (src < 0) {
+            break;
+        }
 
         // Find demand node with largest deficit.
         int dst = -1;
@@ -106,13 +111,19 @@ NetworkSolution construct_greedy(NetworkData const& data) {
                 dst = n;
             }
         }
-        if (dst < 0) break;
+        if (dst < 0) {
+            break;
+        }
 
         auto path = shortest_path_bfs(data, sol, src, dst);
-        if (!path.found || path.bottleneck <= 0) continue;
+        if (!path.found || path.bottleneck <= 0) {
+            continue;
+        }
 
         int send = std::min({path.bottleneck, sol.excess(src), -sol.excess(dst)});
-        if (send <= 0) continue;
+        if (send <= 0) {
+            continue;
+        }
 
         // Augment along the path.
         int cur = dst;
@@ -145,21 +156,35 @@ NetworkSolution construct_feasible(NetworkData const& data) {
 
         int src = -1;
         for (int n = 0; n < data.num_nodes(); ++n) {
-            if (sol.excess(n) > 0) { src = n; break; }
+            if (sol.excess(n) > 0) {
+                src = n;
+                break;
+            }
         }
-        if (src < 0) break;
+        if (src < 0) {
+            break;
+        }
 
         int dst = -1;
         for (int n = 0; n < data.num_nodes(); ++n) {
-            if (sol.excess(n) < 0) { dst = n; break; }
+            if (sol.excess(n) < 0) {
+                dst = n;
+                break;
+            }
         }
-        if (dst < 0) break;
+        if (dst < 0) {
+            break;
+        }
 
         auto path = shortest_path_bfs(data, sol, src, dst);
-        if (!path.found || path.bottleneck <= 0) continue;
+        if (!path.found || path.bottleneck <= 0) {
+            continue;
+        }
 
         int send = std::min({path.bottleneck, sol.excess(src), -sol.excess(dst)});
-        if (send <= 0) continue;
+        if (send <= 0) {
+            continue;
+        }
 
         int cur = dst;
         while (cur != src) {
@@ -174,4 +199,4 @@ NetworkSolution construct_feasible(NetworkData const& data) {
     return sol;
 }
 
-} // namespace coso
+}  // namespace coso

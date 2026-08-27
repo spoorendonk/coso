@@ -16,24 +16,32 @@ using namespace coso;
 
 namespace {
 
-AssignmentData make_instance()
-{
+AssignmentData make_instance() {
     AssignmentData data;
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day",   .start_hour = 8,  .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6,  .duration_hours = 0},
+        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
+        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
     };
 
     // 3 employees.
     data.employees = {
-        {.name = "Alice", .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Bob",   .skills = {"nurse"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
-        {.name = "Carol", .skills = {"nurse", "senior"}, .max_hours_per_week = 40,
-         .max_consecutive_days = 5, .min_rest_hours = 11},
+        {.name = "Alice",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Bob",
+         .skills = {"nurse"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
+        {.name = "Carol",
+         .skills = {"nurse", "senior"},
+         .max_hours_per_week = 40,
+         .max_consecutive_days = 5,
+         .min_rest_hours = 11},
     };
 
     data.horizon = 7;
@@ -46,7 +54,7 @@ AssignmentData make_instance()
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
 
-    data.max_consecutive_shifts  = 5;
+    data.max_consecutive_shifts = 5;
     data.min_rest_between_shifts = 11;
 
     return data;
@@ -56,10 +64,8 @@ AssignmentData make_instance()
 /// Alice: Day shifts on days 0-4.
 /// Bob:   Night shifts on days 0-4.
 /// Carol: unassigned.
-AssignmentSolution make_populated_solution(
-    AssignmentData const& data,
-    AssignmentCostEvaluator const& eval)
-{
+AssignmentSolution make_populated_solution(AssignmentData const& data,
+                                           AssignmentCostEvaluator const& eval) {
     AssignmentSolution sol(data, eval);
     for (int d = 0; d < 5; ++d) {
         sol.assign(0, d, 0);  // Alice -> Day
@@ -68,14 +74,13 @@ AssignmentSolution make_populated_solution(
     return sol;
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 // ===========================================================================
 //  ShiftSwap tests
 // ===========================================================================
 
-TEST_CASE("ShiftSwap: finds improving swap", "[assignment][operators]")
-{
+TEST_CASE("ShiftSwap: finds improving swap", "[assignment][operators]") {
     auto data = make_instance();
     // Add a preference: Alice prefers Night on day 0, Bob prefers Day on day 0.
     data.preferences = {
@@ -101,8 +106,7 @@ TEST_CASE("ShiftSwap: finds improving swap", "[assignment][operators]")
     REQUIRE(sol.cost() == cost_before + move.delta);
 }
 
-TEST_CASE("ShiftSwap: no improving swap when optimal", "[assignment][operators]")
-{
+TEST_CASE("ShiftSwap: no improving swap when optimal", "[assignment][operators]") {
     auto data = make_instance();
     // Preferences already satisfied.
     data.preferences = {
@@ -118,12 +122,12 @@ TEST_CASE("ShiftSwap: no improving swap when optimal", "[assignment][operators]"
     bool found = op.find_best_move(sol);
     // It may or may not find an improving move depending on demand interactions,
     // but if it does, delta must be < 0.
-    if (found)
+    if (found) {
         REQUIRE(op.best_delta() < 0);
+    }
 }
 
-TEST_CASE("ShiftSwap: delta accuracy", "[assignment][operators]")
-{
+TEST_CASE("ShiftSwap: delta accuracy", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -140,8 +144,7 @@ TEST_CASE("ShiftSwap: delta accuracy", "[assignment][operators]")
     }
 }
 
-TEST_CASE("ShiftSwap: skips identical assignments", "[assignment][operators]")
-{
+TEST_CASE("ShiftSwap: skips identical assignments", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -155,8 +158,7 @@ TEST_CASE("ShiftSwap: skips identical assignments", "[assignment][operators]")
     for (auto const& m : moves) {
         if (m.day == 5) {
             // emp1 and emp2 should not both be {0, 1} with same shift.
-            bool same_pair = (m.emp1 == 0 && m.emp2 == 1)
-                          || (m.emp1 == 1 && m.emp2 == 0);
+            bool same_pair = (m.emp1 == 0 && m.emp2 == 1) || (m.emp1 == 1 && m.emp2 == 0);
             if (same_pair) {
                 // They should have different original assignments.
                 // (This won't fire because enumerate skips same-assignment pairs.)
@@ -170,8 +172,7 @@ TEST_CASE("ShiftSwap: skips identical assignments", "[assignment][operators]")
 //  ShiftMove tests
 // ===========================================================================
 
-TEST_CASE("ShiftMove: finds improving move", "[assignment][operators]")
-{
+TEST_CASE("ShiftMove: finds improving move", "[assignment][operators]") {
     auto data = make_instance();
     // Carol prefers Day on day 0, but Alice currently has it.
     data.preferences = {
@@ -197,8 +198,7 @@ TEST_CASE("ShiftMove: finds improving move", "[assignment][operators]")
     }
 }
 
-TEST_CASE("ShiftMove: only moves to unassigned slots", "[assignment][operators]")
-{
+TEST_CASE("ShiftMove: only moves to unassigned slots", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -212,8 +212,7 @@ TEST_CASE("ShiftMove: only moves to unassigned slots", "[assignment][operators]"
     }
 }
 
-TEST_CASE("ShiftMove: delta accuracy", "[assignment][operators]")
-{
+TEST_CASE("ShiftMove: delta accuracy", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -235,15 +234,12 @@ TEST_CASE("ShiftMove: delta accuracy", "[assignment][operators]")
 //  BlockSwap tests
 // ===========================================================================
 
-TEST_CASE("BlockSwap: finds improving block swap", "[assignment][operators]")
-{
+TEST_CASE("BlockSwap: finds improving block swap", "[assignment][operators]") {
     auto data = make_instance();
     // Preferences: Alice prefers Night on days 0-2, Bob prefers Day on days 0-2.
     for (int d = 0; d < 3; ++d) {
-        data.preferences.push_back(
-            {.employee = 0, .day = d, .shift_type = 1, .weight = 10});
-        data.preferences.push_back(
-            {.employee = 1, .day = d, .shift_type = 0, .weight = 10});
+        data.preferences.push_back({.employee = 0, .day = d, .shift_type = 1, .weight = 10});
+        data.preferences.push_back({.employee = 1, .day = d, .shift_type = 0, .weight = 10});
     }
 
     AssignmentCostEvaluator eval(data);
@@ -262,8 +258,7 @@ TEST_CASE("BlockSwap: finds improving block swap", "[assignment][operators]")
     REQUIRE(sol.cost() == cost_before + move.delta);
 }
 
-TEST_CASE("BlockSwap: minimum block length is 2", "[assignment][operators]")
-{
+TEST_CASE("BlockSwap: minimum block length is 2", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -274,8 +269,7 @@ TEST_CASE("BlockSwap: minimum block length is 2", "[assignment][operators]")
     }
 }
 
-TEST_CASE("BlockSwap: delta accuracy", "[assignment][operators]")
-{
+TEST_CASE("BlockSwap: delta accuracy", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);
@@ -285,20 +279,21 @@ TEST_CASE("BlockSwap: delta accuracy", "[assignment][operators]")
         int cost_before = sol.cost();
 
         // Apply block swap.
-        for (int d = m.start; d < m.start + m.len; ++d)
+        for (int d = m.start; d < m.start + m.len; ++d) {
             sol.swap(m.emp1, m.emp2, d);
+        }
         int cost_after = sol.cost();
 
         REQUIRE(m.delta == cost_after - cost_before);
 
         // Undo.
-        for (int d = m.start; d < m.start + m.len; ++d)
+        for (int d = m.start; d < m.start + m.len; ++d) {
             sol.swap(m.emp1, m.emp2, d);
+        }
     }
 }
 
-TEST_CASE("BlockSwap: skips blocks with identical assignments", "[assignment][operators]")
-{
+TEST_CASE("BlockSwap: skips blocks with identical assignments", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     AssignmentSolution sol(data, eval);
@@ -326,8 +321,7 @@ TEST_CASE("BlockSwap: skips blocks with identical assignments", "[assignment][op
     }
 }
 
-TEST_CASE("BlockSwap: respects max_block_len", "[assignment][operators]")
-{
+TEST_CASE("BlockSwap: respects max_block_len", "[assignment][operators]") {
     auto data = make_instance();
     AssignmentCostEvaluator eval(data);
     auto sol = make_populated_solution(data, eval);

@@ -36,8 +36,7 @@ public:
     /// Scan the neighbourhood and find the best improving move.
     ///
     /// @return true if an improving move was found (delta < 0).
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     /// Apply the stored best move to the solution.
@@ -53,10 +52,10 @@ private:
     // Stored move: remove client at from_pos_ in from_route_,
     //              insert at to_pos_ in to_route_.
     int from_route_ = -1;
-    int from_pos_   = -1;
-    int to_route_   = -1;
-    int to_pos_     = -1;
-    int client_     = -1;
+    int from_pos_ = -1;
+    int to_route_ = -1;
+    int to_pos_ = -1;
+    int client_ = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -73,8 +72,7 @@ private:
 /// Considers both inter-route and intra-route swaps.
 class Exchange11 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     void apply(Solution& sol) const;
@@ -85,9 +83,9 @@ private:
     int64_t best_delta_ = 0;
 
     int route_a_ = -1;
-    int pos_a_   = -1;  // position in route A
+    int pos_a_ = -1;  // position in route A
     int route_b_ = -1;
-    int pos_b_   = -1;  // position in route B
+    int pos_b_ = -1;  // position in route B
 };
 
 // ---------------------------------------------------------------------------
@@ -101,8 +99,7 @@ private:
 /// Delta evaluation: remove cost for both clients + insert cost at target.
 class Exchange20 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     void apply(Solution& sol) const;
@@ -113,9 +110,9 @@ private:
     int64_t best_delta_ = 0;
 
     int from_route_ = -1;
-    int from_pos_   = -1;  // position of first client in the pair
-    int to_route_   = -1;
-    int to_pos_     = -1;  // insertion position in target route
+    int from_pos_ = -1;  // position of first client in the pair
+    int to_route_ = -1;
+    int to_pos_ = -1;  // insertion position in target route
 };
 
 // ---------------------------------------------------------------------------
@@ -125,8 +122,7 @@ private:
 /// Swap two consecutive clients from route A with one client from route B.
 class Exchange21 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
     [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
@@ -134,9 +130,9 @@ public:
 private:
     int64_t best_delta_ = 0;
     int route_a_ = -1;
-    int pos_a_   = -1;
+    int pos_a_ = -1;
     int route_b_ = -1;
-    int pos_b_   = -1;
+    int pos_b_ = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -146,8 +142,7 @@ private:
 /// Swap two consecutive clients from route A with two consecutive from route B.
 class Exchange22 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
     [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
@@ -155,9 +150,9 @@ public:
 private:
     int64_t best_delta_ = 0;
     int route_a_ = -1;
-    int pos_a_   = -1;
+    int pos_a_ = -1;
     int route_b_ = -1;
-    int pos_b_   = -1;
+    int pos_b_ = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -167,8 +162,7 @@ private:
 /// Relocate three consecutive clients from route A to route B.
 class Exchange30 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
     [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
@@ -176,9 +170,9 @@ public:
 private:
     int64_t best_delta_ = 0;
     int from_route_ = -1;
-    int from_pos_   = -1;
-    int to_route_   = -1;
-    int to_pos_     = -1;
+    int from_pos_ = -1;
+    int to_route_ = -1;
+    int to_pos_ = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -188,8 +182,7 @@ private:
 /// Swap three consecutive clients from route A with one client from route B.
 class Exchange31 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
     [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
@@ -197,9 +190,9 @@ public:
 private:
     int64_t best_delta_ = 0;
     int route_a_ = -1;
-    int pos_a_   = -1;
+    int pos_a_ = -1;
     int route_b_ = -1;
-    int pos_b_   = -1;
+    int pos_b_ = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -209,8 +202,7 @@ private:
 /// Swap three consecutive clients from route A with two consecutive from B.
 class Exchange32 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
     [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
@@ -218,9 +210,9 @@ public:
 private:
     int64_t best_delta_ = 0;
     int route_a_ = -1;
-    int pos_a_   = -1;
+    int pos_a_ = -1;
     int route_b_ = -1;
-    int pos_b_   = -1;
+    int pos_b_ = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -230,8 +222,7 @@ private:
 /// Swap three consecutive clients from route A with three consecutive from B.
 class Exchange33 {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
     [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
@@ -239,9 +230,9 @@ public:
 private:
     int64_t best_delta_ = 0;
     int route_a_ = -1;
-    int pos_a_   = -1;
+    int pos_a_ = -1;
     int route_b_ = -1;
-    int pos_b_   = -1;
+    int pos_b_ = -1;
 };
 
 // ---------------------------------------------------------------------------
@@ -261,8 +252,7 @@ private:
 /// removed/added edges).
 class SwapTails {
 public:
-    [[nodiscard]] bool find_best_move(Solution const& sol,
-                                      CostEvaluator const& eval,
+    [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
 
     void apply(Solution& sol) const;
@@ -272,10 +262,10 @@ public:
 private:
     int64_t best_delta_ = 0;
 
-    int route_a_  = -1;
-    int pos_a_    = -1;  // cut after this position in route A (-1 = before first)
-    int route_b_  = -1;
-    int pos_b_    = -1;  // cut after this position in route B (-1 = before first)
+    int route_a_ = -1;
+    int pos_a_ = -1;  // cut after this position in route A (-1 = before first)
+    int route_b_ = -1;
+    int pos_b_ = -1;  // cut after this position in route B (-1 = before first)
 };
 
-} // namespace coso
+}  // namespace coso

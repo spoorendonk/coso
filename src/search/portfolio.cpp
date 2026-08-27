@@ -7,18 +7,13 @@
 
 namespace coso {
 
-PortfolioSolver::PortfolioSolver(ProblemData const& data)
-    : data_(&data)
-{
-}
+PortfolioSolver::PortfolioSolver(ProblemData const& data) : data_(&data) {}
 
-void PortfolioSolver::set_seed(uint64_t seed)
-{
+void PortfolioSolver::set_seed(uint64_t seed) {
     seed_ = seed;
 }
 
-Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop)
-{
+Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop) {
     // Phase 1: Run ILS as a short warm-start phase.
     //
     // ILS converges quickly to a good local optimum.  We bound it by both
@@ -72,4 +67,4 @@ Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop)
     return best;
 }
 
-} // namespace coso
+}  // namespace coso
