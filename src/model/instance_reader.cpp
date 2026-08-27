@@ -308,19 +308,20 @@ int VrpInstance::dist(int i, int j) const {
         if (coords.empty()) {
             return -1;
         }
-        constexpr double PI = 3.141592653589793;
-        constexpr double RRR = 6378.388;
+        constexpr double kPi = 3.141592653589793;
+        constexpr double kEarthRadiusKm = 6378.388;
         auto to_geo = [](double val) {
             int deg = static_cast<int>(val);
             double min_part = val - deg;
-            return PI * (deg + 5.0 * min_part / 3.0) / 180.0;
+            return kPi * (deg + 5.0 * min_part / 3.0) / 180.0;
         };
         double lat_i = to_geo(coords[i].x), lon_i = to_geo(coords[i].y);
         double lat_j = to_geo(coords[j].x), lon_j = to_geo(coords[j].y);
         double q1 = std::cos(lon_i - lon_j);
         double q2 = std::cos(lat_i - lat_j);
         double q3 = std::cos(lat_i + lat_j);
-        return static_cast<int>(RRR * std::acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
+        return static_cast<int>(
+            kEarthRadiusKm * std::acos(0.5 * ((1.0 + q1) * q2 - (1.0 - q1) * q3)) + 1.0);
     }
 
     if (edge_weight_type == EdgeWeightType::ATT) {

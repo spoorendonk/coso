@@ -189,7 +189,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
                     if (delta < best_delta_) {
                         best_delta_ = delta;
-                        move_type_ = kSwap;
+                        move_type_ = Swap;
                         route_a_ = ra;
                         route_b_ = rb;
                         client_u_ = u;
@@ -212,7 +212,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
                 if (delta < best_delta_) {
                     best_delta_ = delta;
-                    move_type_ = kRelocateAtoB;
+                    move_type_ = RelocateAtoB;
                     route_a_ = ra;
                     route_b_ = rb;
                     client_u_ = u;
@@ -234,7 +234,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
                 if (delta < best_delta_) {
                     best_delta_ = delta;
-                    move_type_ = kRelocateBtoA;
+                    move_type_ = RelocateBtoA;
                     route_a_ = ra;
                     route_b_ = rb;
                     client_u_ = -1;
@@ -258,7 +258,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
 void SwapStar::apply(Solution& sol) const {
     assert(route_a_ >= 0 && route_b_ >= 0);
 
-    if (move_type_ == kSwap) {
+    if (move_type_ == Swap) {
         auto const& ra = sol.route(route_a_);
         auto const& rb = sol.route(route_b_);
 
@@ -288,12 +288,12 @@ void SwapStar::apply(Solution& sol) const {
         sol.set_route_clients(route_a_, std::move(ca));
         sol.set_route_clients(route_b_, std::move(cb));
 
-    } else if (move_type_ == kRelocateAtoB) {
+    } else if (move_type_ == RelocateAtoB) {
         sol.remove_client(route_a_, pos_u_);
         sol.insert_client(route_b_, insert_u_, client_u_);
 
     } else {
-        assert(move_type_ == kRelocateBtoA);
+        assert(move_type_ == RelocateBtoA);
         sol.remove_client(route_b_, pos_v_);
         sol.insert_client(route_a_, insert_v_, client_v_);
     }

@@ -10,18 +10,18 @@ namespace coso {
 
 /// Sentinel value representing a depot visit (reload) within a route sequence.
 ///
-/// Multi-trip routes contain DEPOT_VISIT markers to indicate where the vehicle
+/// Multi-trip routes contain kDepotVisit markers to indicate where the vehicle
 /// returns to the depot, reloads, and departs again.  This constant is used
 /// when building or interpreting multi-trip sequences externally (e.g., in
 /// result reporting).  Within the solver, multi-trip is implemented by
 /// splitting one logical vehicle trip into separate Route objects.
 ///
-/// DEPOT_VISIT == -1.  Valid client indices are >= 0, so this is unambiguous.
-inline constexpr int DEPOT_VISIT = -1;
+/// kDepotVisit == -1.  Valid client indices are >= 0, so this is unambiguous.
+inline constexpr int kDepotVisit = -1;
 
 /// Check whether a value in a route sequence is a depot visit marker.
 [[nodiscard]] inline bool is_depot_visit(int v) noexcept {
-    return v == DEPOT_VISIT;
+    return v == kDepotVisit;
 }
 
 // ---------------------------------------------------------------------------

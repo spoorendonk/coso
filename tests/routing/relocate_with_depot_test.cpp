@@ -115,12 +115,12 @@ static Solution make_solution(ProblemData const& data,
 }
 
 // ===========================================================================
-//  DEPOT_VISIT sentinel tests
+//  kDepotVisit sentinel tests
 // ===========================================================================
 
-TEST_CASE("DEPOT_VISIT sentinel value and is_depot_visit", "[relocate_with_depot]") {
-    REQUIRE(DEPOT_VISIT == -1);
-    REQUIRE(is_depot_visit(DEPOT_VISIT));
+TEST_CASE("kDepotVisit sentinel value and is_depot_visit", "[relocate_with_depot]") {
+    REQUIRE(kDepotVisit == -1);
+    REQUIRE(is_depot_visit(kDepotVisit));
     REQUIRE_FALSE(is_depot_visit(0));
     REQUIRE_FALSE(is_depot_visit(1));
     REQUIRE_FALSE(is_depot_visit(100));

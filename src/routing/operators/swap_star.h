@@ -56,9 +56,9 @@ private:
     int64_t best_delta_ = 0;
 
     // Stored move description.
-    enum MoveType { kSwap, kRelocateAtoB, kRelocateBtoA };
+    enum MoveType { Swap, RelocateAtoB, RelocateBtoA };
 
-    MoveType move_type_ = kSwap;
+    MoveType move_type_ = Swap;
     int route_a_ = -1;
     int route_b_ = -1;
     int client_u_ = -1;

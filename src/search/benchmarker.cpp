@@ -120,7 +120,7 @@ int Benchmarker::lookup_bks(std::string const& filename) {
 std::unordered_map<std::string, int> const& Benchmarker::bks_table() {
     // BKS values for Uchoa et al. X-set instances.
     // Source: CVRPLIB (http://vrp.atd-lab.inf.puc-rio.br/)
-    static std::unordered_map<std::string, int> const table = {
+    static std::unordered_map<std::string, int> const kTable = {
         {"X-n101-k25.vrp", 27591},   {"X-n106-k14.vrp", 26362},   {"X-n110-k13.vrp", 14971},
         {"X-n115-k10.vrp", 12747},   {"X-n120-k6.vrp", 6942},     {"X-n125-k30.vrp", 55539},
         {"X-n129-k18.vrp", 28940},   {"X-n134-k13.vrp", 10916},   {"X-n139-k10.vrp", 13590},
@@ -156,7 +156,7 @@ std::unordered_map<std::string, int> const& Benchmarker::bks_table() {
         {"X-n936-k151.vrp", 132715}, {"X-n957-k87.vrp", 85465},   {"X-n979-k58.vrp", 118976},
         {"X-n1001-k43.vrp", 72355},
     };
-    return table;
+    return kTable;
 }
 
 }  // namespace coso

@@ -185,17 +185,17 @@ bool try_relocate_with_pins(Solution& sol, CostEvaluator const& eval, ProblemDat
     int best_client = -1;
 
     for (int ra = 0; ra < sol.num_routes(); ++ra) {
-        Route const& routeA = sol.route(ra);
+        Route const& route_a = sol.route(ra);
 
-        for (int pa = 0; pa < routeA.size(); ++pa) {
-            int client = routeA.client(pa);
+        for (int pa = 0; pa < route_a.size(); ++pa) {
+            int client = route_a.client(pa);
             if (pins.is_pinned(client)) {
                 continue;
             }
 
             for (int rb = 0; rb < sol.num_routes(); ++rb) {
-                Route const& routeB = sol.route(rb);
-                int n = routeB.size();
+                Route const& route_b = sol.route(rb);
+                int n = route_b.size();
 
                 for (int pb = 0; pb <= n; ++pb) {
                     // Skip identity move.
@@ -206,20 +206,20 @@ bool try_relocate_with_pins(Solution& sol, CostEvaluator const& eval, ProblemDat
                     int64_t delta;
                     if (ra == rb) {
                         // Intra-route: build modified route and compare.
-                        int64_t cost_before = eval.route_cost(routeA);
+                        int64_t cost_before = eval.route_cost(route_a);
                         auto clients =
-                            std::vector<int>(routeA.clients().begin(), routeA.clients().end());
+                            std::vector<int>(route_a.clients().begin(), route_a.clients().end());
                         // Remove from pa, insert at adjusted position.
                         clients.erase(clients.begin() + pa);
                         int adj = (pb > pa) ? pb - 1 : pb;
                         clients.insert(clients.begin() + adj, client);
-                        Route tmp(data, routeA.vehicle_type());
+                        Route tmp(data, route_a.vehicle_type());
                         tmp.set_clients(std::move(clients));
                         delta = eval.route_cost(tmp) - cost_before;
                     } else {
                         // Inter-route: delta from separate remove and insert.
-                        delta = eval.eval_remove_cost(routeA, pa) +
-                                eval.eval_insert_cost(routeB, pb, client);
+                        delta = eval.eval_remove_cost(route_a, pa) +
+                                eval.eval_insert_cost(route_b, pb, client);
                     }
 
                     if (delta < best_delta) {
@@ -260,41 +260,41 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
     int best_rb = -1, best_pb = -1;
 
     for (int ra = 0; ra < sol.num_routes(); ++ra) {
-        Route const& routeA = sol.route(ra);
+        Route const& route_a = sol.route(ra);
 
-        for (int pa = 0; pa < routeA.size(); ++pa) {
-            int clientA = routeA.client(pa);
-            if (pins.is_pinned(clientA)) {
+        for (int pa = 0; pa < route_a.size(); ++pa) {
+            int client_a = route_a.client(pa);
+            if (pins.is_pinned(client_a)) {
                 continue;
             }
 
             for (int rb = ra; rb < sol.num_routes(); ++rb) {
-                Route const& routeB = sol.route(rb);
+                Route const& route_b = sol.route(rb);
                 int start_pb = (ra == rb) ? pa + 1 : 0;
 
-                for (int pb = start_pb; pb < routeB.size(); ++pb) {
-                    int clientB = routeB.client(pb);
-                    if (pins.is_pinned(clientB)) {
+                for (int pb = start_pb; pb < route_b.size(); ++pb) {
+                    int client_b = route_b.client(pb);
+                    if (pins.is_pinned(client_b)) {
                         continue;
                     }
 
                     // Compute exact delta by building modified client lists
                     // and evaluating the cost difference.
-                    int64_t cost_before = eval.route_cost(routeA);
+                    int64_t cost_before = eval.route_cost(route_a);
                     if (ra != rb) {
-                        cost_before += eval.route_cost(routeB);
+                        cost_before += eval.route_cost(route_b);
                     }
 
                     // Build modified client lists.
                     auto clients_a =
-                        std::vector<int>(routeA.clients().begin(), routeA.clients().end());
+                        std::vector<int>(route_a.clients().begin(), route_a.clients().end());
                     auto clients_b =
-                        std::vector<int>(routeB.clients().begin(), routeB.clients().end());
+                        std::vector<int>(route_b.clients().begin(), route_b.clients().end());
 
                     if (ra == rb) {
                         std::swap(clients_a[pa], clients_a[pb]);
                         // Temporarily set and evaluate.
-                        Route tmp_a(data, routeA.vehicle_type());
+                        Route tmp_a(data, route_a.vehicle_type());
                         tmp_a.set_clients(std::move(clients_a));
                         int64_t cost_after = eval.route_cost(tmp_a);
                         int64_t delta = cost_after - cost_before;
@@ -306,10 +306,10 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
                             best_pb = pb;
                         }
                     } else {
-                        clients_a[pa] = clientB;
-                        clients_b[pb] = clientA;
-                        Route tmp_a(data, routeA.vehicle_type());
-                        Route tmp_b(data, routeB.vehicle_type());
+                        clients_a[pa] = client_b;
+                        clients_b[pb] = client_a;
+                        Route tmp_a(data, route_a.vehicle_type());
+                        Route tmp_b(data, route_b.vehicle_type());
                         tmp_a.set_clients(std::move(clients_a));
                         tmp_b.set_clients(std::move(clients_b));
                         int64_t cost_after = eval.route_cost(tmp_a) + eval.route_cost(tmp_b);
@@ -332,8 +332,8 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
     }
 
     // Apply swap by replacing clients at their positions.
-    int clientA = sol.route(best_ra).client(best_pa);
-    int clientB = sol.route(best_rb).client(best_pb);
+    int client_a = sol.route(best_ra).client(best_pa);
+    int client_b = sol.route(best_rb).client(best_pb);
 
     auto clients_a =
         std::vector<int>(sol.route(best_ra).clients().begin(), sol.route(best_ra).clients().end());
@@ -344,8 +344,8 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
         std::swap(clients_a[best_pa], clients_a[best_pb]);
         sol.set_route_clients(best_ra, std::move(clients_a));
     } else {
-        clients_a[best_pa] = clientB;
-        clients_b[best_pb] = clientA;
+        clients_a[best_pa] = client_b;
+        clients_b[best_pb] = client_a;
         sol.set_route_clients(best_ra, std::move(clients_a));
         sol.set_route_clients(best_rb, std::move(clients_b));
     }
