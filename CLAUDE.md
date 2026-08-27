@@ -127,6 +127,16 @@ heading.
 Tools resolve from `.venv/bin` first, then `PATH` (`.githooks/resolve-tools.sh`).
 A tool that is missing everywhere is reported, never skipped in silence.
 
+**clang 18 or newer**, so the distro's own package works: Ubuntu 24.04 ships
+clang 18, 26.04 ships 21. Everything that can *block* is version-stable, and was
+measured rather than assumed — clang-format 18.1.8 through 23.1.0 all leave the
+tree byte-identical, and clang-tidy 18 reports nothing for the four checks
+`pre-commit` auto-fixes or for the naming rules. What does drift is `pre-push`'s
+advisory list: `bugprone-*`, `modernize-*` and `readability-*` are wildcards, so
+a newer clang-tidy simply knows more checks (86 findings under 18 vs 102 under 21
+on one file). That list only ever warns, so a contributor on an older clang sees
+a shorter list, never a different verdict.
+
 There are no Claude Code hooks. Two rules they used to enforce are now
 conventions, and still expected:
 
