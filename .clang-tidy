@@ -1,1 +1,101 @@
-.devkit/config/.clang-tidy
+---
+Checks: >
+  -*,
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  -modernize-use-trailing-return-type,
+  -readability-magic-numbers
+
+CheckOptions:
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 25
+
+  # COSO uses CamelCase types, lower_case functions and variables, k-prefixed
+  # CamelCase compile-time constants, and a trailing underscore on private and
+  # protected data members. Constant rules are split by scope because a single
+  # ConstantCase would force local constants into the k-prefixed form too.
+  # Public member rules are left unset: some public structs suffix their fields
+  # with an underscore and expose accessors, others are plain aggregates, and a
+  # rule either way would flag correct code. ConstantMemberCase is left unset
+  # for a sharper reason — it outranks PrivateMemberSuffix and would fight it.
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+
+  # Enumerators are CamelCase, except those that mirror an external spec or are
+  # standard acronyms — TSPLIB's EUC_2D and FULL_MATRIX, dispatch rules SPT/LPT.
+  # Renaming those would break the correspondence a reader checks them against.
+  - key: readability-identifier-naming.EnumConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumConstantIgnoredRegexp
+    value: '[A-Z][A-Z0-9_]*'
+
+  # A bare uppercase letter is OR notation carried over from the literature
+  # (P products, T periods, D dimensions) and is clearer than a prose name.
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.VariableIgnoredRegexp
+    value: '[A-Z]'
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterIgnoredRegexp
+    value: '[A-Z]'
+  - key: readability-identifier-naming.LocalConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalConstantIgnoredRegexp
+    value: '[A-Z]'
+  - key: readability-identifier-naming.ConstantParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstantParameterIgnoredRegexp
+    value: '[A-Z]'
+
+  # Non-public helpers may carry a trailing underscore; both forms are in use.
+  - key: readability-identifier-naming.PublicMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.ProtectedMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.ProtectedMethodIgnoredRegexp
+    value: '[a-z][a-z0-9_]*_'
+  - key: readability-identifier-naming.PrivateMethodCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMethodIgnoredRegexp
+    value: '[a-z][a-z0-9_]*_'
+
+  - key: readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.PrivateMemberSuffix
+    value: _
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: lower_case
+  - key: readability-identifier-naming.ProtectedMemberSuffix
+    value: _
+
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantPrefix
+    value: k
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantPrefix
+    value: k
+  - key: readability-identifier-naming.ClassConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.ClassConstantPrefix
+    value: k
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: CamelCase
+  - key: readability-identifier-naming.ConstexprVariablePrefix
+    value: k
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
+FormatStyle: file

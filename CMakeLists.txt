@@ -17,6 +17,36 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(COSO_BUILD_TESTS   "Build Catch2 unit tests"          ON)
 option(COSO_BUILD_PYTHON  "Build nanobind Python bindings"   OFF)
 option(COSO_USE_TBB       "Enable TBB for parallel solving"  OFF)
+option(COSO_INSTALL_GIT_HOOKS "Point core.hooksPath at .githooks/" ON)
+
+# --------------------------------------------------------------------------- #
+#  Git hooks                                                                   #
+# --------------------------------------------------------------------------- #
+
+# core.hooksPath is per-checkout local config and cannot be committed, so it is
+# set at configure time. The top-level guard keeps a project that vendors coso
+# via add_subdirectory/FetchContent from having this written into ITS repo.
+# EXISTS is true for the .git *file* in a linked worktree, so worktrees work.
+if(COSO_INSTALL_GIT_HOOKS
+   AND CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR
+   AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/.git")
+    find_program(GIT_EXECUTABLE git)
+    if(GIT_EXECUTABLE)
+        execute_process(
+            COMMAND "${GIT_EXECUTABLE}" config --local core.hooksPath .githooks
+            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+            RESULT_VARIABLE COSO_HOOKS_RESULT
+            OUTPUT_QUIET ERROR_QUIET
+        )
+        if(COSO_HOOKS_RESULT EQUAL 0)
+            message(STATUS "Git hooks enabled: core.hooksPath -> .githooks")
+        else()
+            message(WARNING "Could not set core.hooksPath; git hooks are NOT active.")
+        endif()
+    else()
+        message(WARNING "git not found; git hooks are NOT active.")
+    endif()
+endif()
 
 # --------------------------------------------------------------------------- #
 #  Dependencies                                                                #

@@ -21,6 +21,11 @@ dist/
 .cache/
 .vscode/
 
+# Agent tooling — local to each checkout, not part of the published project.
+# A fresh clone or worktree therefore has no /review or /start command and no
+# statusline; the git hooks in .githooks/ are the gates that always run.
+.claude/
+
 # Benchmark instances (downloaded, not in git)
 tests/data/*.vrp
 tests/data/*.txt
