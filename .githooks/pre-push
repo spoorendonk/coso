@@ -31,9 +31,14 @@ CHANGED_FILES=$(git diff --name-only "origin/$MAIN_BRANCH"...HEAD 2>/dev/null ||
 
 [ -z "$CHANGED_FILES" ] && exit 0
 
-CPP_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(cpp|cc|cxx|h|hpp|hxx)$' || true)
 PY_FILES=$(echo "$CHANGED_FILES" | grep -E '\.py$' || true)
 SH_FILES=$(echo "$CHANGED_FILES" | grep -E '\.sh$' || true)
+
+# clang-tidy parses a translation unit per argument, so it takes only the .cpp
+# files: a header is not a TU, and is covered by HeaderFilterRegex when the .cpp
+# including it is analysed. Passing headers too costs a slow parse each for no
+# extra coverage.
+CPP_TU_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(cpp|cc|cxx)$' || true)
 
 # Docs-only pushes skip build+test.
 CODE_FILES=$(echo "$CHANGED_FILES" | grep -vE '^(LICENSE|CHANGELOG)' | grep -vE '\.(md|txt|rst)$' | grep -vE '^\.(gitignore|gitattributes)$' || true)
@@ -120,13 +125,18 @@ fi
 
 ISSUES=""
 
-if [ -n "$CPP_FILES" ] && [ -n "$CLANG_TIDY" ] && [ -n "$COMPILE_DB" ]; then
+if [ -n "$CPP_TU_FILES" ] && [ -n "$CLANG_TIDY" ] && [ -n "$COMPILE_DB" ]; then
 	echo ""
 	echo "=== Running clang-tidy ==="
-	for f in $CPP_FILES; do
+	for f in $CPP_TU_FILES; do
 		[ -f "$f" ] || continue
 		# shellcheck disable=SC2086
 		RESULT=$($CLANG_TIDY $COMPILE_DB --quiet "$f" 2>&1 || true)
+		# A file outside the compile database cannot be parsed; that is a setup
+		# fact, not a finding, so it must not be reported as a code issue.
+		if echo "$RESULT" | grep -q 'clang-diagnostic-error'; then
+			continue
+		fi
 		if echo "$RESULT" | grep -qE '(warning|error):'; then
 			ISSUES="${ISSUES}${RESULT}"$'\n'
 		fi

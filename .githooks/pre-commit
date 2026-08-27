@@ -18,6 +18,12 @@ CPP_FILES=$(echo "$STAGED_FILES" | grep -E '\.(cpp|cc|cxx|h|hpp|hxx)$' || true)
 PY_FILES=$(echo "$STAGED_FILES" | grep -E '\.py$' || true)
 SH_FILES=$(echo "$STAGED_FILES" | grep -E '\.sh$' || true)
 
+# clang-tidy parses a translation unit per argument, so it takes only the .cpp
+# files: a header is not a TU, and is covered by HeaderFilterRegex when the .cpp
+# including it is analysed. Passing headers too costs a slow parse each for no
+# extra coverage — on a whole-tree commit that is 246 parses instead of 67.
+CPP_TU_FILES=$(echo "$STAGED_FILES" | grep -E '\.(cpp|cc|cxx)$' || true)
+
 # ============================================================
 # Step 1: Auto-format and auto-fix
 # ============================================================
@@ -51,18 +57,21 @@ if [ -n "$PY_FILES" ]; then
 	fi
 fi
 
-if [ -n "$CPP_FILES" ]; then
+if [ -n "$CPP_TU_FILES" ]; then
 	if [ -z "$CLANG_TIDY" ]; then
 		echo "note: clang-tidy not found — C++ lint fixes skipped."
 	elif [ -z "$COMPILE_DB" ]; then
 		echo "note: no compile_commands.json — C++ lint fixes skipped."
 	else
-		for f in $CPP_FILES; do
+		for f in $CPP_TU_FILES; do
 			[ -f "$f" ] || continue
+			# A file outside the compile database (e.g. the bindings, which only
+			# build with COSO_BUILD_PYTHON=ON) cannot be parsed; skip it quietly
+			# rather than printing a header-not-found wall on every commit.
 			# shellcheck disable=SC2086
 			$CLANG_TIDY $COMPILE_DB \
 				--checks="-*,modernize-use-nullptr,modernize-use-override,modernize-use-using,readability-braces-around-statements" \
-				--fix --quiet "$f" 2>/dev/null || true
+				--fix --quiet "$f" >/dev/null 2>&1 || true
 		done
 	fi
 fi

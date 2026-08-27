@@ -12,6 +12,18 @@ license = "MIT"
 
 [project.optional-dependencies]
 test = ["pytest>=7.0"]
+# The hooks in .githooks/ prefer .venv/bin over PATH, so `pip install -e '.[dev]'`
+# is what makes their checks actually run. The formatters are pinned exactly:
+# clang-format and ruff both rewrite code, so an unpinned copy would make one
+# person's commit reformat another's. clang-tidy has no 21.1.8 wheel; 21.1.6 is
+# the nearest to the 21.1.x the tree was brought to a fixed point under.
+dev = [
+    "pytest>=7.0",
+    "clang-format==21.1.8",
+    "clang-tidy==21.1.6",
+    "ruff==0.16.4",
+    "mypy>=1.11",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["python/tests"]
