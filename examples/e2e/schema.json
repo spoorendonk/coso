@@ -26,10 +26,6 @@
         "packing"
       ]
     },
-    "variant": {
-      "type": "string",
-      "description": "Roadmap variant code (e.g. R1, N2, S4)."
-    },
     "profile": {
       "type": "string",
       "enum": ["smoke", "benchmark"],

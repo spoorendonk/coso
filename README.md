@@ -1,19 +1,19 @@
 # COSO — Combinatorial Structure-aware Optimization
 
-Declarative modeling + LP-free solving for combinatorial optimization.
-C++ engine with Python bindings (nanobind).
+COSO is two products, built together:
 
-Many combinatorial problems — routing, scheduling, packing — have rich structure
-that generic MIP solvers destroy when they flatten everything into rows and columns.
-COSO exploits that structure directly with problem-specific local search, construction
-heuristics, and metaheuristics.
+1. **The Model API.** You declare the problem — depots, clients, vehicles, jobs, machines, bins,
+   products — and ask for a solution. One typed model per problem class, no LP/MIP flattening in the
+   user's hands. The API is **backend-flexible by design**: the same declaration is meant to be
+   solvable by COSO's own engine or by a plugged-in backend (PyVRP, OR-Tools CP-SAT, HiGHS, or one
+   you supply). *The plugin protocol is not built yet* — see [#176](../../issues/176).
+2. **The COSO engine.** A C++23 solver that exploits problem structure directly, with
+   domain-specific local search, construction heuristics, and metaheuristics. It is the default
+   where there is evidence it is the right choice, and a product in its own right.
 
-You pick the problem class (e.g. `RoutingModel`), declare the instance, and the
-solver selects the algorithm portfolio: which construction heuristic, which local
-search operators, which metaheuristic wrapper.
-
-> **Status:** Early development. The routing engine is validated against standard
-> benchmarks. Other engines are work-in-progress.
+> **Status:** early development. The charter and all open work live in GitHub issues — start at
+> [#173](../../issues/173). `Model::solve()` is expected to change as the plugin protocol lands, so
+> treat the snippets below as current, not stable.
 
 ## Quick Start
 
@@ -49,31 +49,18 @@ Or from a CVRPLIB file:
 auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 ```
 
-## Engines
+## Models
 
-| Engine | Problems | Approach | Status |
-|--------|----------|----------|--------|
-| **Routing** | CVRP, VRPTW, PDPTW, TRSP, fleet, multi-trip, ... | Resources + ILS/HGS | **Validated** — tested against Uchoa CVRP instances, ~1.5% gap to BKS |
-| **Network** | MCF, RCMCF, liner shipping | Successive shortest paths (exact) + network local search | **Functional** — exact min-cost flow solver (single commodity); MCF not yet implemented |
-| **Packing** | Bin packing, vector bin packing | FFD + local search | **Functional** — tested against Falkenauer instances |
-| **Lot sizing** | CLSP, MLCLSP | Constructive + lot-sizing operators | **Functional** — construction heuristics + local improvement |
-| **Scheduling** | JSP, FJSP, RCPSP, flow shop, open shop, ... | Disjunctive graph + local search | **Experimental** — known correctness issues under investigation |
-| **Assignment** | Nurse rostering, timetabling, employee scheduling | VND + CP filter | **Experimental** — partial metaheuristic coverage |
-
-## Public Model APIs
-
-All engines are available through typed model APIs:
-
-- `RoutingModel`
-- `NetworkModel`
-- `LotSizingModel`
-- `ScheduleModel`
-- `AssignmentModel`
-- `PackingModel`
+| Model | Problems |
+|---|---|
+| `RoutingModel` | CVRP, VRPTW, PDPTW, heterogeneous fleet, multi-depot, multi-trip, ... |
+| `ScheduleModel` | JSP, FJSP, RCPSP, flow shop, open shop |
+| `AssignmentModel` | Nurse rostering, employee scheduling, multi-activity scheduling |
+| `PackingModel` | Bin packing, vector bin packing, bin packing with conflicts |
+| `NetworkModel` | Network flow |
+| `LotSizingModel` | CLSP, MLCLSP |
 
 Python bindings currently cover `RoutingModel`, `NetworkModel`, and `LotSizingModel`.
-
-Example (`NetworkModel`):
 
 ```cpp
 coso::NetworkModel m;
@@ -83,17 +70,37 @@ m.add_arc(s, t, /*cost=*/2, /*lower=*/0, /*upper=*/5);
 auto r = m.solve(coso::TimeLimit(10));
 ```
 
-## Canonical E2E Examples
+## Engine status
 
-One runnable C++ example per model family is available in
-`examples/canonical/`:
+Deliberately unquantified: no gap, percentage, or instance count appears here until a verified
+benchmark run backs it. That work is [#177](../../issues/177) and the per-model milestones.
 
-- `examples/canonical/routing_example.cpp`
-- `examples/canonical/network_example.cpp`
-- `examples/canonical/lotsizing_example.cpp`
-- `examples/canonical/schedule_example.cpp`
-- `examples/canonical/assignment_example.cpp`
-- `examples/canonical/packing_example.cpp`
+| Engine | Status |
+|---|---|
+| **Routing** | Most mature. Validated against standard CVRP instances. |
+| **Packing** | Functional — FFD construction with move/swap local search. |
+| **Lot sizing** | Functional — fix-and-optimize bridge. |
+| **Network** | Target scope is **multi-commodity flow and network design** ([#184](../../issues/184)) — neither is implemented. What exists is a single-commodity min-cost flow solver, which is not a COSO target: that problem is solved. |
+| **Scheduling** | **Construction-only** (SGS / SPT dispatch / NEH). `ScheduleModel::solve()` validates every candidate and returns feasible-but-unoptimised schedules. There is no working local search: the disjunctive-graph operators are not wired into `solve()` and carry the unsound cycle guard of [#185](../../issues/185). |
+| **Assignment** | Construction + VND. Not validated. |
+
+## Tests and coverage
+
+`ctest -L e2e-smoke` runs six end-to-end scenarios — **one per model type**, each a small toy
+instance. It is a smoke gate: it proves the model → engine → `Result` path runs and is
+deterministic. It is not variant coverage and not a benchmark. Per-variant instances arrive with the
+per-model milestones (M1–M6 in [#173](../../issues/173)).
+
+Benchmark executables (`benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`,
+`assignment_benchmark_test`, `packing_benchmark_test`, label `benchmark`) run against instances
+fetched by `tests/data/download_benchmarks.sh`. Their results are not published until they are
+reproducible under [#177](../../issues/177).
+
+## Canonical examples
+
+One runnable C++ example per model family in `examples/canonical/`:
+`routing_example.cpp`, `network_example.cpp`, `lotsizing_example.cpp`, `schedule_example.cpp`,
+`assignment_example.cpp`, `packing_example.cpp`.
 
 ## Build
 
@@ -110,11 +117,14 @@ cmake --build build -j$(nproc)
 ctest --test-dir build -j$(nproc)
 ```
 
-## Roadmap
+## Python install
 
-See [docs/roadmap.md](docs/roadmap.md) for the full design plan: modeling
-interface, architecture, problem catalog (50+ problem types), implementation
-steps, and design decisions.
+**`pip install coso` does not install this project** — that name belongs to an unrelated package on
+PyPI. COSO will be published as **`pycoso`**; until then, build the bindings from source:
+
+```bash
+cmake -B build -DCOSO_BUILD_PYTHON=ON && cmake --build build -j$(nproc)
+```
 
 ## License
 
