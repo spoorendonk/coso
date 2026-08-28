@@ -24,21 +24,29 @@ if [ -n "$PUSH_REFS" ] && ! echo "$PUSH_REFS" | grep -qvE '^[^ ]+ 0+ '; then
 	exit 0
 fi
 
+# Fetch before probing for the branch: testing origin/main first means a
+# checkout that has not yet fetched it silently falls through to "master", the
+# fetch of that nonexistent branch is swallowed, and the diff base collapses to
+# HEAD~1 — gating a five-commit push on its last commit alone.
+git fetch origin main --quiet 2>/dev/null || git fetch origin master --quiet 2>/dev/null || true
 MAIN_BRANCH="main"
 git rev-parse --verify "origin/$MAIN_BRANCH" &>/dev/null || MAIN_BRANCH="master"
-git fetch origin "$MAIN_BRANCH" --quiet 2>/dev/null || true
 CHANGED_FILES=$(git diff --name-only "origin/$MAIN_BRANCH"...HEAD 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || true)
 
 [ -z "$CHANGED_FILES" ] && exit 0
 
 PY_FILES=$(echo "$CHANGED_FILES" | grep -E '\.py$' || true)
-SH_FILES=$(echo "$CHANGED_FILES" | grep -E '\.sh$' || true)
+SH_FILES=$(shell_files "$CHANGED_FILES")
 
-# clang-tidy parses a translation unit per argument, so it takes only the .cpp
-# files: a header is not a TU, and is covered by HeaderFilterRegex when the .cpp
-# including it is analysed. Passing headers too costs a slow parse each for no
-# extra coverage.
+# clang-tidy parses a translation unit per argument, so headers are not passed
+# directly. That only covers them if a .cpp including them is in the same push,
+# so header-only changes are mapped to translation units that include them.
 CPP_TU_FILES=$(echo "$CHANGED_FILES" | grep -E '\.(cpp|cc|cxx)$' || true)
+CHANGED_HEADERS=$(echo "$CHANGED_FILES" | grep -E '\.(h|hpp|hxx)$' || true)
+if [ -n "$CHANGED_HEADERS" ]; then
+	CPP_TU_FILES=$(printf '%s\n%s\n' "$CPP_TU_FILES" "$(tus_including "$CHANGED_HEADERS")" |
+		grep -v '^$' | sort -u || true)
+fi
 
 # Docs-only pushes skip build+test.
 CODE_FILES=$(echo "$CHANGED_FILES" | grep -vE '^(LICENSE|CHANGELOG)' | grep -vE '\.(md|txt|rst)$' | grep -vE '^\.(gitignore|gitattributes)$' || true)
@@ -58,31 +66,37 @@ extract_block() {
 		-e '}' CLAUDE.md
 }
 
+CLEAN_CMD=$(extract_block clean)
+BUILD_CMD=$(extract_block build)
+TEST_CMD=$(extract_block test)
+
+# Validated before the docs-only branch, not inside it. CLAUDE.md is itself a
+# .md file, so the one commit that can break these fences is exactly the one a
+# docs-only skip would wave through — and the breakage would then surface as an
+# unexplained block on someone else's next code push.
+MISSING=""
+if [ -z "$BUILD_CMD" ]; then MISSING="${MISSING} build"; fi
+if [ -z "$TEST_CMD" ]; then MISSING="${MISSING} test"; fi
+if [ -n "$MISSING" ]; then
+	echo ""
+	echo "Push blocked: CLAUDE.md's '## Build & Test' section is missing a fence for:${MISSING}"
+	echo "Expected blocks opened with \`\`\`build and \`\`\`test inside that section,"
+	echo "and the section must still be followed by another '## ' heading."
+	exit 1
+fi
+
 if [ -z "$CODE_FILES" ]; then
 	echo ""
-	echo "=== Skipping build+test (docs-only) ==="
+	echo "=== Skipping build+test (docs-only; fences verified) ==="
 else
-	CLEAN_CMD=$(extract_block clean)
-	BUILD_CMD=$(extract_block build)
-	TEST_CMD=$(extract_block test)
-
-	# Both fences are required. Running only whichever one resolved would report
-	# "All checks passed" on a push that never ran the tests, and guessing a
-	# build would gate a different build than the documented one.
-	MISSING=""
-	if [ -z "$BUILD_CMD" ]; then MISSING="${MISSING} build"; fi
-	if [ -z "$TEST_CMD" ]; then MISSING="${MISSING} test"; fi
-	if [ -n "$MISSING" ]; then
-		echo ""
-		echo "Push blocked: CLAUDE.md's '## Build & Test' section is missing a fence for:${MISSING}"
-		echo "Expected blocks opened with \`\`\`build and \`\`\`test inside that section,"
-		echo "and the section must still be followed by another '## ' heading."
-		exit 1
-	fi
-
 	BUILD_FAILED=0
 
-	if [ -n "$CLEAN_CMD" ]; then
+	# The clean step is opt-in. It gates the same code as an incremental build,
+	# but discards build/ and recompiles every TU plus the fetched dependencies
+	# on each push — minutes for a one-line change, and it deletes the very
+	# directory pre-commit builds and tests in, so the next commit after a push
+	# starts from an unbuilt tree. Set COSO_PREPUSH_CLEAN=1 for the full rebuild.
+	if [ -n "$CLEAN_CMD" ] && [ "${COSO_PREPUSH_CLEAN:-0}" = "1" ]; then
 		echo ""
 		echo "=== Clean ==="
 		set +e
@@ -128,19 +142,41 @@ ISSUES=""
 if [ -n "$CPP_TU_FILES" ] && [ -n "$CLANG_TIDY" ] && [ -n "$COMPILE_DB" ]; then
 	echo ""
 	echo "=== Running clang-tidy ==="
+	TIDY_PARSED=0
+	TIDY_BROKEN=""
 	for f in $CPP_TU_FILES; do
 		[ -f "$f" ] || continue
-		# shellcheck disable=SC2086
-		RESULT=$($CLANG_TIDY $COMPILE_DB --quiet "$f" 2>&1 || true)
-		# A file outside the compile database cannot be parsed; that is a setup
-		# fact, not a finding, so it must not be reported as a code issue.
-		if echo "$RESULT" | grep -q 'clang-diagnostic-error'; then
+		# Not built in this configuration: nothing to analyse. Decided from the
+		# database itself, so it cannot be confused with a parse failure.
+		if ! in_compile_db "$f"; then
+			echo "note: $f is not in the compile database — not analysed."
 			continue
 		fi
+		# shellcheck disable=SC2086
+		RESULT=$($CLANG_TIDY $COMPILE_DB --quiet "$f" 2>&1 || true)
+		# A file that IS in the database but will not parse means the lint setup
+		# is broken — a compiler/database mismatch, say. Reported loudly: a step
+		# that can analyse nothing must never look like a clean tree.
+		if echo "$RESULT" | grep -q 'clang-diagnostic-error'; then
+			TIDY_BROKEN="${TIDY_BROKEN} $f"
+			continue
+		fi
+		TIDY_PARSED=$((TIDY_PARSED + 1))
 		if echo "$RESULT" | grep -qE '(warning|error):'; then
 			ISSUES="${ISSUES}${RESULT}"$'\n'
 		fi
 	done
+	if [ -n "$TIDY_BROKEN" ]; then
+		echo ""
+		echo "WARNING: clang-tidy could not parse these files, which ARE in the"
+		echo "         compile database — the lint setup is broken, not the code:"
+		for f in $TIDY_BROKEN; do echo "           $f"; done
+		if [ "$TIDY_PARSED" -eq 0 ]; then
+			echo "         Nothing was analysed at all. Do not read this as a pass."
+		fi
+		echo "         Common cause: compile_commands.json generated by a compiler"
+		echo "         whose flags or headers this clang-tidy does not understand."
+	fi
 fi
 
 if [ -n "$PY_FILES" ] && [ -n "$RUFF" ]; then

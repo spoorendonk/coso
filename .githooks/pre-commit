@@ -14,15 +14,29 @@ STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || tr
 
 [ -z "$STAGED_FILES" ] && exit 0
 
+# Files that already had unstaged changes before the formatters ran. Re-staging
+# one of these would `git add` its whole content and sweep in hunks the author
+# deliberately left out of the commit — so they are formatted but not re-staged,
+# and named at the end.
+# shellcheck disable=SC2086
+PARTIALLY_STAGED=$(git diff --name-only -- $STAGED_FILES 2>/dev/null || true)
+
 CPP_FILES=$(echo "$STAGED_FILES" | grep -E '\.(cpp|cc|cxx|h|hpp|hxx)$' || true)
 PY_FILES=$(echo "$STAGED_FILES" | grep -E '\.py$' || true)
-SH_FILES=$(echo "$STAGED_FILES" | grep -E '\.sh$' || true)
+SH_FILES=$(shell_files "$STAGED_FILES")
 
-# clang-tidy parses a translation unit per argument, so it takes only the .cpp
-# files: a header is not a TU, and is covered by HeaderFilterRegex when the .cpp
-# including it is analysed. Passing headers too costs a slow parse each for no
-# extra coverage — on a whole-tree commit that is 246 parses instead of 67.
+# clang-tidy parses a translation unit per argument, so headers are not passed
+# directly — a header is not a TU, and HeaderFilterRegex covers it when a .cpp
+# including it is analysed. But that only holds if such a .cpp is in the same
+# commit: a header-only change (src/routing/resources/ is entirely header-only)
+# would otherwise get no analysis at all, so map those headers to TUs that
+# include them.
 CPP_TU_FILES=$(echo "$STAGED_FILES" | grep -E '\.(cpp|cc|cxx)$' || true)
+STAGED_HEADERS=$(echo "$STAGED_FILES" | grep -E '\.(h|hpp|hxx)$' || true)
+if [ -n "$STAGED_HEADERS" ]; then
+	CPP_TU_FILES=$(printf '%s\n%s\n' "$CPP_TU_FILES" "$(tus_including "$STAGED_HEADERS")" |
+		grep -v '^$' | sort -u || true)
+fi
 
 # ============================================================
 # Step 1: Auto-format and auto-fix
@@ -65,9 +79,13 @@ if [ -n "$CPP_TU_FILES" ]; then
 	else
 		for f in $CPP_TU_FILES; do
 			[ -f "$f" ] || continue
-			# A file outside the compile database (e.g. the bindings, which only
-			# build with COSO_BUILD_PYTHON=ON) cannot be parsed; skip it quietly
-			# rather than printing a header-not-found wall on every commit.
+			# Not built in this configuration — nothing to analyse, and saying so
+			# beats a header-not-found wall. Checked against the database itself
+			# rather than by matching clang's error text.
+			if ! in_compile_db "$f"; then
+				echo "note: $f is not in the compile database — not analysed."
+				continue
+			fi
 			# shellcheck disable=SC2086
 			$CLANG_TIDY $COMPILE_DB \
 				--checks="-*,modernize-use-nullptr,modernize-use-override,modernize-use-using,readability-braces-around-statements" \
@@ -76,11 +94,27 @@ if [ -n "$CPP_TU_FILES" ]; then
 	fi
 fi
 
-# Re-stage files the formatters rewrote.
+# Re-stage what the formatters rewrote, except files that were already dirty
+# before they ran — `git add` stages a whole file, so re-adding one of those
+# would commit content the author withheld.
+SKIPPED_RESTAGE=""
 # shellcheck disable=SC2086
 while read -r f; do
+	[ -n "$f" ] || continue
+	if printf '%s\n' "$PARTIALLY_STAGED" | grep -qxF "$f"; then
+		SKIPPED_RESTAGE="${SKIPPED_RESTAGE} $f"
+		continue
+	fi
 	git add "$f"
 done < <(git diff --name-only -- $STAGED_FILES 2>/dev/null)
+
+if [ -n "$SKIPPED_RESTAGE" ]; then
+	echo ""
+	echo "note: these files had unstaged changes, so formatting was NOT re-staged:"
+	for f in $SKIPPED_RESTAGE; do echo "        $f"; done
+	echo "      The commit keeps the content you staged. Stage the formatting"
+	echo "      separately if you want it in this commit."
+fi
 
 # ============================================================
 # Step 2: Tests (hard block)
@@ -97,11 +131,21 @@ if [ -n "$CPP_FILES" ]; then
 	elif [ ! -d "build" ]; then
 		echo "note: no build/ directory — C++ tests skipped. Configure with 'cmake -B build'."
 	else
-		echo "Running C++ tests..."
-		TESTS_RAN=1
-		if ! ctest --test-dir build --output-on-failure -j"$(nproc 2>/dev/null || echo 4)"; then
-			echo "FAILED: C++ tests failed."
+		# Build first, incrementally. Without this ctest runs whatever binaries
+		# happen to be in build/, so the gate reports on the previous state of
+		# the tree rather than on the change being committed.
+		echo "Building..."
+		if ! cmake --build build -j"$(nproc 2>/dev/null || echo 4)"; then
+			echo "FAILED: build failed."
 			TESTS_FAILED=1
+			TESTS_RAN=1
+		else
+			echo "Running C++ tests..."
+			TESTS_RAN=1
+			if ! ctest --test-dir build --output-on-failure -j"$(nproc 2>/dev/null || echo 4)"; then
+				echo "FAILED: C++ tests failed."
+				TESTS_FAILED=1
+			fi
 		fi
 	fi
 fi
