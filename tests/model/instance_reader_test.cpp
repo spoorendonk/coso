@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+
 #include <cmath>
 #include <model/instance_reader.h>
 #include <string>

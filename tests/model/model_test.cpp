@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+
 #include <model/assignment_model.h>
 #include <model/lotsizing_model.h>
 #include <model/network_model.h>

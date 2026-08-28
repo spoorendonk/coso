@@ -3,8 +3,9 @@
 #include "packing/packing_operators.h"
 #include "packing/packing_solution.h"
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
 #include <iostream>
 #include <numeric>
 #include <vector>

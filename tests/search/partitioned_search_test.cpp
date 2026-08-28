@@ -6,8 +6,9 @@
 #include "routing/problem_data.h"
 #include "routing/solution.h"
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
 #include <numeric>
 #include <set>
 

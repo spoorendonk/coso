@@ -1,5 +1,6 @@
-#include <array>
 #include <catch2/catch_test_macros.hpp>
+
+#include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <string>

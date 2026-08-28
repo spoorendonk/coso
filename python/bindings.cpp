@@ -3,10 +3,11 @@
 #include "model/routing_model.h"
 #include "model/types.h"
 
-#include <climits>
 #include <nanobind/nanobind.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
+
+#include <climits>
 
 namespace nb = nanobind;
 using namespace nb::literals;

@@ -4,8 +4,9 @@
 #include "scheduling/schedule_data.h"
 #include "scheduling/schedule_operators.h"
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
 #include <climits>
 #include <cstdlib>
 #include <filesystem>

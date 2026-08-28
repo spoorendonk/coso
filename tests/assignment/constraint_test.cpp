@@ -3,6 +3,7 @@
 #include "assignment/assignment_data.h"
 
 #include <catch2/catch_test_macros.hpp>
+
 #include <climits>
 #include <memory>
 

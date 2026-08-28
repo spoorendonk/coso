@@ -16,12 +16,15 @@ PointerAlignment: Left
 SortIncludes: CaseInsensitive
 IncludeBlocks: Regroup
 IncludeCategories:
-  # Project headers
+  # Project headers.
   - Regex: '".*"'
     Priority: 1
-  # Third-party headers
-  - Regex: '<[a-z].*>'
+  # Third-party headers, named explicitly. A pattern like '<[a-z].*>' would
+  # also match <vector> and <cstdlib>, so clang-format — which takes the first
+  # matching category — would put the standard library in this group and the
+  # next one would never match anything.
+  - Regex: '<(catch2|nanobind|tbb|oneapi)/.*>'
     Priority: 2
-  # Standard library
+  # Standard library, and anything else angle-included.
   - Regex: '<.*>'
     Priority: 3

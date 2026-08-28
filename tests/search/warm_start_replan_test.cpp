@@ -3,8 +3,9 @@
 #include "routing/solution.h"
 #include "search/warm_start.h"
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
 #include <set>
 #include <vector>
 

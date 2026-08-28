@@ -6,8 +6,9 @@
 #include "routing/solution.h"
 #include "search/stop_criterion.h"
 
-#include <algorithm>
 #include <catch2/catch_test_macros.hpp>
+
+#include <algorithm>
 #include <vector>
 
 using namespace coso;
