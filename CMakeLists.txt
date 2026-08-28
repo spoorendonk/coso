@@ -15,8 +15,28 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # --------------------------------------------------------------------------- #
 
 option(COSO_BUILD_TESTS   "Build Catch2 unit tests"          ON)
-option(COSO_BUILD_PYTHON  "Build nanobind Python bindings"   OFF)
 option(COSO_USE_TBB       "Enable TBB for parallel solving"  OFF)
+
+# The bindings default ON wherever the Python development headers exist, so that
+# python/bindings.cpp is compiled and linted like the rest of the tree. With
+# them OFF it is the one translation unit no gate covers: absent from
+# compile_commands.json, so clang-tidy skips it and nothing catches a broken
+# include or a bad signature until someone builds a wheel.
+# Probed rather than assumed ON, so a checkout without python3-dev still
+# configures instead of failing outright.
+find_package(Python 3.9 QUIET COMPONENTS Interpreter Development.Module)
+if(Python_FOUND)
+    set(COSO_PYTHON_DEFAULT ON)
+else()
+    set(COSO_PYTHON_DEFAULT OFF)
+endif()
+option(COSO_BUILD_PYTHON  "Build nanobind Python bindings"   ${COSO_PYTHON_DEFAULT})
+
+if(NOT COSO_BUILD_PYTHON)
+    message(STATUS
+        "Python bindings OFF — python/bindings.cpp will not be compiled or linted. "
+        "Install the Python development headers to enable them.")
+endif()
 option(COSO_INSTALL_GIT_HOOKS "Point core.hooksPath at .githooks/" ON)
 
 # --------------------------------------------------------------------------- #
