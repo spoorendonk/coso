@@ -25,11 +25,12 @@ cmake -B build && cmake --build build -j$(nproc)
 ctest --test-dir build --output-on-failure -j$(nproc)
 ```
 
-`pre-push` runs the three blocks above, so they have to work on a plain
-checkout. That is why `test` is C++ only: the default build leaves
-`COSO_BUILD_PYTHON=OFF`, so there is no `coso` module for the Python tests to
-import, and CI gates on `ctest` alone. Run the Python suite explicitly, against
-a bindings build.
+`pre-push` runs the blocks above, so they must not depend on anything that is
+not a build dependency. `test` is therefore C++ only: pytest is not required to
+build COSO, and a fence ending in `pytest` exits 127 wherever it is absent,
+which blocks every push. CI gates on `ctest` alone for the same reason. The
+Python suite still runs — `pre-commit` runs it, guarded, whenever a `.py` file
+is staged, and you can run it directly.
 
 Run a single C++ test executable:
 ```bash
@@ -37,15 +38,21 @@ Run a single C++ test executable:
 ./build/tests/route_test "test name substring"    # run specific test case
 ```
 
-Python tests (needs a bindings build and `pip install -e '.[dev]'`):
+Python tests (needs `pip install -e '.[dev]'`; the bindings are built by the
+default `cmake -B build` above):
 ```bash
 pytest python/tests -q
 pytest python/tests/test_routing.py::test_name -q
 ```
+Without the bindings the suite skips itself and says why, rather than failing
+collection — see `python/tests/conftest.py`.
 
-Build with Python bindings:
+The Python bindings build by default wherever the Python development headers are
+present, so `python/bindings.cpp` is compiled and linted with everything else.
+Without those headers CMake says so and carries on without them. To force it
+either way:
 ```bash
-cmake -B build -DCOSO_BUILD_PYTHON=ON && cmake --build build -j$(nproc)
+cmake -B build -DCOSO_BUILD_PYTHON=OFF && cmake --build build -j$(nproc)
 ```
 
 Build with TBB (parallel solving):
@@ -120,15 +127,25 @@ gates on** — a fresh clone has them inert until then.
 | Hook | Runs | On failure |
 |---|---|---|
 | `commit-msg` | Conventional Commits format, subject ≤ 72 chars | blocks |
-| `pre-commit` | Formats and auto-fixes staged files, re-stages, then runs the tests for the languages that changed | blocks on test failure |
-| `pre-push` | Clean build + full suite, then clang-tidy, shellcheck, ruff complexity, mypy | blocks on build/test failure; lint findings warn only |
+| `pre-commit` | Formats and auto-fixes staged files, re-stages, builds, then runs the tests for the languages that changed | blocks on build or test failure |
+| `pre-push` | Build + full suite, then clang-tidy, shellcheck, ruff complexity, mypy | blocks on build/test failure; lint findings warn only |
 
-`pre-push` takes its clean/build/test commands from the fenced blocks in
+`pre-push` takes its build and test commands from the fenced blocks in
 **## Build & Test** above, so that section is executable configuration, not just
 documentation. Renaming a fence or moving the heading makes the hook block and
-say which fence it could not find. The `sed` range that reads it ends at the next
-`## ` heading, so **## Build & Test** must stay followed by another level-2
-heading.
+say which fence it could not find — including on a docs-only push, since
+CLAUDE.md is itself the file that can break them. The `sed` range that reads it
+ends at the next `## ` heading, so **## Build & Test** must stay followed by
+another level-2 heading.
+
+The `clean` fence is opt-in: `COSO_PREPUSH_CLEAN=1 git push` discards `build/`
+and rebuilds from scratch. By default `pre-push` builds incrementally, which
+gates the same code without spending minutes per push or deleting the directory
+`pre-commit` builds in.
+
+`pre-commit` will not re-stage a file that already had unstaged changes — `git
+add` takes the whole file, so re-adding one would commit hunks you deliberately
+kept back. Such files are formatted, left unstaged, and named in the output.
 
 Tools resolve from `.venv/bin` first, then `PATH` (`.githooks/resolve-tools.sh`).
 A tool that is missing everywhere is reported, never skipped in silence.
