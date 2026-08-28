@@ -67,11 +67,14 @@ in_compile_db() {
 }
 
 # Translation units that include the given headers, so a header-only change is
-# still analysed. Falls back to nothing when the database is unreadable.
+# still analysed. Restricted to files git tracks: the compile database also
+# contains the fetched dependencies' own sources (Catch2 builds from .cpp), and
+# without this filter a header-only change drags third-party translation units
+# into the lint run and reports findings that are not ours to fix.
 tus_including() {
 	local headers="$1"
 	[ -n "$COMPILE_DB_FILE" ] || return 0
-	python3 - "$COMPILE_DB_FILE" <<-PY
+	python3 - "$COMPILE_DB_FILE" <<-PY | grep -Fxf <(git ls-files '*.cpp' '*.cc' '*.cxx') || true
 		import json, os, re, sys
 		headers = [h for h in """$headers""".split() if h]
 		try:

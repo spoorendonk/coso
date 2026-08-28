@@ -7,6 +7,7 @@
 set -e
 
 HOOK_DIR=$(dirname "$0")
+# shellcheck source-path=SCRIPTDIR
 # shellcheck source=resolve-tools.sh
 . "$HOOK_DIR/resolve-tools.sh"
 
@@ -192,7 +193,10 @@ fi
 if [ -n "$SH_FILES" ] && [ -n "$SHELLCHECK" ]; then
 	for f in $SH_FILES; do
 		[ -f "$f" ] || continue
-		RESULT=$($SHELLCHECK "$f" 2>&1 || true)
+		# -x follows sourced files. Without it every script that sources another
+		# reports SC1091 "not following", which is a fact about how shellcheck
+		# was invoked rather than anything wrong with the script.
+		RESULT=$($SHELLCHECK -x "$f" 2>&1 || true)
 		if [ -n "$RESULT" ]; then
 			ISSUES="${ISSUES}${RESULT}"$'\n'
 		fi
