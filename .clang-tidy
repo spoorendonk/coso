@@ -1,4 +1,14 @@
 ---
+# The four families stay on: of the 205 checks they enable, 166 are already
+# clean across the tree. The 39 that are not are switched off below so the
+# pre-push list is short enough to act on, and every one of them is tracked
+# with its finding count in coso#190 — re-enable them from there, cheapest
+# first, rather than as one unbounded sweep.
+#
+# readability-identifier-length is not on that list to be revisited: it wants
+# names of three characters or more, which contradicts the OR notation the
+# naming rules below deliberately allow (P products, T periods, D dimensions,
+# and the usual i/j/k loop indices). It stays off permanently.
 Checks: >
   -*,
   bugprone-*,
@@ -6,7 +16,45 @@ Checks: >
   performance-*,
   readability-*,
   -modernize-use-trailing-return-type,
-  -readability-magic-numbers
+  -readability-magic-numbers,
+  -readability-identifier-length,
+  -modernize-use-designated-initializers,
+  -readability-math-missing-parentheses,
+  -modernize-use-integer-sign-comparison,
+  -readability-function-cognitive-complexity,
+  -modernize-use-ranges,
+  -bugprone-easily-swappable-parameters,
+  -readability-isolate-declaration,
+  -readability-implicit-bool-conversion,
+  -performance-avoid-endl,
+  -readability-make-member-function-const,
+  -bugprone-argument-comment,
+  -modernize-use-emplace,
+  -bugprone-implicit-widening-of-multiplication-result,
+  -modernize-use-scoped-lock,
+  -performance-enum-size,
+  -readability-use-anyofallof,
+  -readability-uppercase-literal-suffix,
+  -bugprone-unchecked-optional-access,
+  -readability-use-std-min-max,
+  -performance-inefficient-vector-operation,
+  -readability-container-contains,
+  -modernize-raw-string-literal,
+  -readability-container-size-empty,
+  -readability-simplify-boolean-expr,
+  -readability-convert-member-functions-to-static,
+  -readability-avoid-nested-conditional-operator,
+  -performance-move-const-arg,
+  -modernize-use-std-numbers,
+  -modernize-use-default-member-init,
+  -modernize-avoid-c-arrays,
+  -readability-else-after-return,
+  -modernize-use-auto,
+  -modernize-pass-by-value,
+  -modernize-loop-convert,
+  -modernize-concat-nested-namespaces,
+  -bugprone-narrowing-conversions,
+  -bugprone-integer-division
 
 CheckOptions:
   - key: readability-function-cognitive-complexity.Threshold

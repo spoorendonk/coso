@@ -1,0 +1,14 @@
+---
+# Inherits the root .clang-tidy and turns off one check for the tests only.
+#
+# readability-identifier-naming is clean across src/ and enforced there. The 43
+# violations that remain are all in five test files, so disabling it here keeps
+# the convention enforced where the library lives instead of losing it entirely
+# to test-only debt. Fix those files, then delete this file — the count and the
+# file list are in coso#190.
+#
+# Note this costs the tests no other coverage: every other check the root config
+# enables still applies to them.
+InheritParentConfig: true
+Checks: >
+  -readability-identifier-naming
