@@ -131,11 +131,18 @@ A tool that is missing everywhere is reported, never skipped in silence.
 clang 18, 26.04 ships 21. Everything that can *block* is version-stable, and was
 measured rather than assumed — clang-format 18.1.8 through 23.1.0 all leave the
 tree byte-identical, and clang-tidy 18 reports nothing for the four checks
-`pre-commit` auto-fixes or for the naming rules. What does drift is `pre-push`'s
-advisory list: `bugprone-*`, `modernize-*` and `readability-*` are wildcards, so
-a newer clang-tidy simply knows more checks (86 findings under 18 vs 102 under 21
-on one file). That list only ever warns, so a contributor on an older clang sees
-a shorter list, never a different verdict.
+`pre-commit` auto-fixes or for the naming rules. `pre-push`'s clang-tidy list is
+advisory and currently empty; because the check families are wildcards, a newer
+clang-tidy knows more checks and may add to it, which means a longer or shorter
+advisory list, never a different verdict.
+
+clang-tidy runs clean today, at 0 findings over all 155 translation units, and
+should stay that way — a list people scroll past is worth no more than no check
+at all. Getting there needed two things beyond tuning: the vendored dependencies
+are fetched `SYSTEM` so their headers are not analysed, and the 39 checks the
+codebase does not currently satisfy are switched off in `.clang-tidy` and
+tracked in #190 with counts and a re-enable order. The other 166 stay on. When a
+new finding appears, fix it or add the check to #190 — do not let the list grow.
 
 There are no Claude Code hooks. Two rules they used to enforce are now
 conventions, and still expected:
