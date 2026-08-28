@@ -22,8 +22,14 @@ cmake -B build && cmake --build build -j$(nproc)
 ```
 
 ```test
-ctest --test-dir build --output-on-failure -j$(nproc) && pytest --tb=short -q
+ctest --test-dir build --output-on-failure -j$(nproc)
 ```
+
+`pre-push` runs the three blocks above, so they have to work on a plain
+checkout. That is why `test` is C++ only: the default build leaves
+`COSO_BUILD_PYTHON=OFF`, so there is no `coso` module for the Python tests to
+import, and CI gates on `ctest` alone. Run the Python suite explicitly, against
+a bindings build.
 
 Run a single C++ test executable:
 ```bash
@@ -31,9 +37,9 @@ Run a single C++ test executable:
 ./build/tests/route_test "test name substring"    # run specific test case
 ```
 
-Run a single Python test:
+Python tests (needs a bindings build and `pip install -e '.[dev]'`):
 ```bash
-pytest python/tests/test_routing.py -q
+pytest python/tests -q
 pytest python/tests/test_routing.py::test_name -q
 ```
 
