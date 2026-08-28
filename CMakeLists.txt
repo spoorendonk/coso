@@ -40,6 +40,26 @@ endif()
 option(COSO_INSTALL_GIT_HOOKS "Point core.hooksPath at .githooks/" ON)
 
 # --------------------------------------------------------------------------- #
+#  Compiler cache                                                              #
+# --------------------------------------------------------------------------- #
+
+# A from-scratch build recompiles 270 translation units, 116 of which belong to
+# Catch2 and nanobind. Through ccache that becomes a cache replay: measured, `rm
+# -rf build && cmake -B build && cmake --build build -j12` goes from 42s to 5s.
+# A cold cache costs about 10% over an uncached build, once.
+# Set before the dependencies so the fetched subprojects compile through it too.
+# CMake keeps the launcher out of compile_commands.json, so clang-tidy sees the
+# same compile lines either way.
+option(COSO_USE_CCACHE "Compile through ccache when it is installed" ON)
+if(COSO_USE_CCACHE AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
+    find_program(CCACHE_PROGRAM ccache)
+    if(CCACHE_PROGRAM)
+        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+        message(STATUS "Compiler cache: ${CCACHE_PROGRAM}")
+    endif()
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Git hooks                                                                   #
 # --------------------------------------------------------------------------- #
 

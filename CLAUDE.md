@@ -60,6 +60,21 @@ Build with TBB (parallel solving):
 cmake -B build -DCOSO_USE_TBB=ON && cmake --build build -j$(nproc)
 ```
 
+`cmake -B build` compiles through `ccache` wherever it is installed, and says
+so; without it the build is unchanged. It is what makes the `clean` fence cheap
+— rebuilding all 270 translation units after `rm -rf build` takes 5s from a warm
+cache against 42s without one. 116 of those are Catch2's and nanobind's and
+never change at all; the rest are recompiled only when their own source does.
+The dependencies are fetched `GIT_SHALLOW`, so re-cloning them costs ~5s of the
+~6s configure. To build without the cache, or to swap in
+another one:
+```bash
+cmake -B build -DCOSO_USE_CCACHE=OFF
+cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=sccache   # respected as given
+```
+The launcher does not reach `compile_commands.json` — CMake strips it — so
+clang-tidy and the gates that call it see the same compile lines either way.
+
 ## Architecture
 
 ### Layered Design
