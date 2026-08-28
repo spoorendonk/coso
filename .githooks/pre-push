@@ -52,6 +52,14 @@ fi
 # Docs-only pushes skip build+test.
 CODE_FILES=$(echo "$CHANGED_FILES" | grep -vE '^(LICENSE|CHANGELOG)' | grep -vE '\.(md|txt|rst)$' | grep -vE '^\.(gitignore|gitattributes)$' || true)
 
+# CMakeLists.txt wears a prose extension and the .txt filter above swallows it,
+# so every build-system change looked docs-only and pushed without a build —
+# the one kind of change that can break configure for everyone else. Put those
+# back rather than loosening the filter, which would let tests/data/*.txt in.
+CODE_FILES=$(printf '%s\n%s\n' "$CODE_FILES" \
+	"$(echo "$CHANGED_FILES" | grep -E '(^|/)CMakeLists\.txt$' || true)" |
+	grep -v '^$' | sort -u || true)
+
 # ============================================================
 # Step 1: Clean build + test (hard block)
 # ============================================================

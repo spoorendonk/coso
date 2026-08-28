@@ -145,6 +145,12 @@ gates on** — a fresh clone has them inert until then.
 | `pre-commit` | Formats and auto-fixes staged files, re-stages, builds, then runs the tests for the languages that changed | blocks on build or test failure |
 | `pre-push` | Build + full suite, then clang-tidy, shellcheck, ruff complexity, mypy | blocks on build/test failure; lint findings warn only |
 
+Both hooks count `CMakeLists.txt` as code, not as the prose its extension
+suggests. `pre-commit` triggers the C++ build and tests on it even when no
+`.cpp` is staged, and `pre-push`'s docs-only skip does not apply to it — a
+change that can break `cmake -B build` for everyone is the last one that should
+push ungated.
+
 `pre-push` takes its build and test commands from the fenced blocks in
 **## Build & Test** above, so that section is executable configuration, not just
 documentation. Renaming a fence or moving the heading makes the hook block and

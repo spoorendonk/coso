@@ -26,6 +26,11 @@ CPP_FILES=$(echo "$STAGED_FILES" | grep -E '\.(cpp|cc|cxx|h|hpp|hxx)$' || true)
 PY_FILES=$(echo "$STAGED_FILES" | grep -E '\.py$' || true)
 SH_FILES=$(shell_files "$STAGED_FILES")
 
+# The build files are their own trigger, not part of CPP_FILES: they must run
+# the build and tests below, but clang-format must never be pointed at them.
+# Without this a CMakeLists.txt-only commit is gated by nothing at all.
+BUILD_FILES=$(echo "$STAGED_FILES" | grep -E '(^|/)CMakeLists\.txt$|\.cmake$' || true)
+
 # clang-tidy parses a translation unit per argument, so headers are not passed
 # directly — a header is not a TU, and HeaderFilterRegex covers it when a .cpp
 # including it is analysed. But that only holds if such a .cpp is in the same
@@ -126,7 +131,7 @@ echo "=== Pre-commit: running tests ==="
 TESTS_FAILED=0
 TESTS_RAN=0
 
-if [ -n "$CPP_FILES" ]; then
+if [ -n "$CPP_FILES" ] || [ -n "$BUILD_FILES" ]; then
 	if ! command -v ctest &>/dev/null; then
 		echo "note: ctest not found — C++ tests skipped."
 	elif [ ! -d "build" ]; then
