@@ -55,12 +55,17 @@ endif()
 include(FetchContent)
 
 # Catch2 v3.7.1
+#
+# SYSTEM marks the fetched include directories as system headers, which stops
+# clang-tidy analysing them: without it, every test TU reports thousands of
+# findings inside Catch2's own headers and the real findings are unfindable.
 if(COSO_BUILD_TESTS)
     FetchContent_Declare(
         Catch2
         GIT_REPOSITORY https://github.com/catchorg/Catch2.git
         GIT_TAG        v3.7.1
         GIT_SHALLOW    TRUE
+        SYSTEM
     )
     FetchContent_MakeAvailable(Catch2)
     list(APPEND CMAKE_MODULE_PATH ${catch2_SOURCE_DIR}/extras)
@@ -73,6 +78,7 @@ if(COSO_BUILD_PYTHON)
         GIT_REPOSITORY https://github.com/wjakob/nanobind.git
         GIT_TAG        v2.4.0
         GIT_SHALLOW    TRUE
+        SYSTEM
     )
     FetchContent_MakeAvailable(nanobind)
 endif()
