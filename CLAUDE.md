@@ -108,7 +108,7 @@ No numbers here until a verified benchmark run backs them (#177).
 | Network | Target scope is multi-commodity flow + network design (#184) — neither implemented. The existing single-commodity min-cost flow solver is not a COSO target: that problem is solved |
 | Packing | Functional — FFD + move/swap local search (1-D, vector, conflicts) |
 | Lot sizing | Functional — fix-and-optimize bridge |
-| Scheduling | **Construction-only** (SGS / SPT dispatch / NEH). `ScheduleModel::solve()` validates every candidate with `sol.feasible()` and returns feasible-but-unoptimised schedules. No working local search: the operators in `src/scheduling/schedule_operators.cpp` are not wired into `solve()` and carry the unsound cycle guard of #185. NEH crashes on operations with no feasible machine (#188), and the operators and perturbations can still build cyclic disjunctive graphs (#189) — the tests covering both are `SKIP`-ed, each naming its issue |
+| Scheduling | **Broken, not merely unoptimised.** `ScheduleModel::solve()` calls `construct_neh()`, which aborts the process on any instance with two or more jobs (#188) — so the model API is unusable for real input, and the `e2e_smoke` scenario passes only because it uses a single job. Also: `construct_dispatch()` indexes `machine_free[-1]` for an operation no machine can run (#191), the operators and perturbations can still build cyclic disjunctive graphs (#189), and the local search in `src/scheduling/schedule_operators.cpp` is not wired into `solve()` at all and carries the unsound cycle guard of #185. Every test covering these is `SKIP`-ed, each naming its issue |
 | Assignment | Construction + VND; not validated |
 
 ## Gates

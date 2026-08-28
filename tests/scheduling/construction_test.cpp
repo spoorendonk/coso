@@ -196,7 +196,10 @@ TEST_CASE("SGS: RCPSP with resource constraints", "[scheduling][construction]") 
 // ---------------------------------------------------------------------------
 
 TEST_CASE("NEH: small flow-shop instance", "[scheduling][construction]") {
-    SKIP("construct_neh() crashes when an operation has no feasible machine — coso#188");
+    SKIP(
+        "construct_neh() aborts on any instance with 2 or more jobs: it scores partial "
+        "job sequences but takes the makespan over every operation, so ops of "
+        "not-yet-inserted jobs still hold machine == -1 — coso#188");
     auto data = make_flowshop_3x2();
     auto result = construct_neh(data);
 
@@ -209,7 +212,10 @@ TEST_CASE("NEH: small flow-shop instance", "[scheduling][construction]") {
 }
 
 TEST_CASE("NEH: small JSP instance", "[scheduling][construction]") {
-    SKIP("construct_neh() crashes when an operation has no feasible machine — coso#188");
+    SKIP(
+        "construct_neh() aborts on any instance with 2 or more jobs: it scores partial "
+        "job sequences but takes the makespan over every operation, so ops of "
+        "not-yet-inserted jobs still hold machine == -1 — coso#188");
     auto data = make_jsp_2x3();
     auto result = construct_neh(data);
 
@@ -273,7 +279,10 @@ TEST_CASE("Dispatch: single job, operations ordered correctly", "[scheduling][co
 
 TEST_CASE("All heuristics produce feasible schedules on same instance",
           "[scheduling][construction]") {
-    SKIP("construct_neh() crashes when an operation has no feasible machine — coso#188");
+    SKIP(
+        "construct_neh() aborts on any instance with 2 or more jobs: it scores partial "
+        "job sequences but takes the makespan over every operation, so ops of "
+        "not-yet-inserted jobs still hold machine == -1 — coso#188");
     auto data = make_jsp_2x3();
 
     auto r_sgs = construct_sgs(data);
