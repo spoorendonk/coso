@@ -23,6 +23,36 @@ TEST_CASE("NetworkModel solves a simple minimum-cost flow", "[network][model]") 
     REQUIRE_FALSE(result.flows()[0].empty());
 }
 
+TEST_CASE("NetworkModel respects arc upper capacity", "[network][model]") {
+    NetworkModel model;
+    int s = model.add_node(4, "source");
+    int t = model.add_node(-4, "sink");
+    model.add_arc(s, t, 1, 0, 2);  // cheap, capped at 2
+    model.add_arc(s, t, 5, 0, 4);  // expensive, wide open
+
+    Result result = model.solve(TimeLimit(1.0));
+
+    REQUIRE(result.feasible());
+    // The cap forces 2 units onto the expensive arc: 2 * 1 + 2 * 5.
+    REQUIRE(result.cost() == 12.0);
+}
+
+TEST_CASE("NetworkModel respects arc lower bounds", "[network][model]") {
+    NetworkModel model;
+    int s = model.add_node(2, "source");
+    int m = model.add_node(0, "middle");
+    int t = model.add_node(-2, "sink");
+    model.add_arc(s, t, 1, 0, 10);  // cheap direct arc
+    model.add_arc(s, m, 5, 1, 3);   // detour, at least one unit mandatory
+    model.add_arc(m, t, 0, 0, 3);
+
+    Result result = model.solve(TimeLimit(1.0));
+
+    REQUIRE(result.feasible());
+    // Without the lower bound both units take the cheap arc for cost 2.
+    REQUIRE(result.cost() == 6.0);
+}
+
 TEST_CASE("NetworkModel invalid arc indices throw", "[network][model]") {
     NetworkModel model;
     model.add_node(1, "s");

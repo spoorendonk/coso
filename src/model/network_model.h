@@ -8,9 +8,11 @@
 
 namespace coso {
 
-/// Network flow model: declare nodes, arcs, and optional resources, then solve.
+/// Network flow model: declare nodes with supply and arcs with cost and
+/// capacity bounds, then solve.
 ///
-/// Supports minimum-cost flow style models and resource-constrained variants.
+/// Single-commodity minimum-cost flow. Multi-commodity flow and network design
+/// are not declarable (see docs/models.md, Network).
 class NetworkModel {
 public:
     /// Add a node (positive supply, negative demand).
@@ -18,12 +20,6 @@ public:
 
     /// Add an arc between nodes.
     int add_arc(int tail, int head, int cost = 0, int lower_cap = 0, int upper_cap = INT_MAX);
-
-    /// Add a global resource with an upper bound.
-    int add_resource(std::string name = "", int upper_bound = INT_MAX);
-
-    /// Set per-arc resource usage.
-    void set_resource_usage(int arc, int resource, int amount);
 
     /// Solve the network flow problem within the given limits.
     Result solve(TimeLimit tl);
@@ -40,15 +36,8 @@ private:
         int lower_cap = 0;
         int upper_cap = INT_MAX;
     };
-    struct ResourceEntry {
-        std::string name;
-        int upper_bound = INT_MAX;
-    };
-
     std::vector<NodeEntry> nodes_;
     std::vector<ArcEntry> arcs_;
-    std::vector<ResourceEntry> resources_;
-    std::vector<std::vector<int>> resource_usage_;
 };
 
 }  // namespace coso

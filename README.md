@@ -57,7 +57,7 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 | `ScheduleModel` | JSP, FJSP, RCPSP, flow shop, open shop |
 | `AssignmentModel` | Nurse rostering, employee scheduling, multi-activity scheduling |
 | `PackingModel` | Bin packing, vector bin packing, bin packing with conflicts |
-| `NetworkModel` | Network flow |
+| `NetworkModel` | Min-cost flow (single commodity) |
 | `LotSizingModel` | CLSP, MLCLSP |
 
 Python bindings currently cover `RoutingModel`, `NetworkModel`, and `LotSizingModel`.

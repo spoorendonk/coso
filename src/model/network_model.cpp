@@ -129,30 +129,6 @@ int NetworkModel::add_arc(int tail, int head, int cost, int lower_cap, int upper
     return idx;
 }
 
-int NetworkModel::add_resource(std::string name, int upper_bound) {
-    int idx = static_cast<int>(resources_.size());
-    resources_.push_back({std::move(name), upper_bound});
-    return idx;
-}
-
-void NetworkModel::set_resource_usage(int arc, int resource, int amount) {
-    if (arc < 0 || arc >= static_cast<int>(arcs_.size())) {
-        throw std::out_of_range("NetworkModel::set_resource_usage: invalid arc");
-    }
-    if (resource < 0 || resource >= static_cast<int>(resources_.size())) {
-        throw std::out_of_range("NetworkModel::set_resource_usage: invalid resource");
-    }
-
-    if (resource_usage_.size() <= static_cast<size_t>(arc)) {
-        resource_usage_.resize(static_cast<size_t>(arc) + 1);
-    }
-    if (resource_usage_[arc].size() <= static_cast<size_t>(resource)) {
-        resource_usage_[arc].resize(static_cast<size_t>(resource) + 1, 0);
-    }
-
-    resource_usage_[arc][resource] = amount;
-}
-
 Result NetworkModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
@@ -172,19 +148,6 @@ Result NetworkModel::solve(TimeLimit tl) {
     for (auto const& a : arcs_) {
         builder.add_arc(a.tail, a.head, a.cost, a.lower_cap, a.upper_cap);
         work.count(1);
-    }
-    for (auto const& r : resources_) {
-        builder.add_resource(r.name, r.upper_bound);
-        work.count(1);
-    }
-
-    for (int a = 0; a < static_cast<int>(resource_usage_.size()); ++a) {
-        for (int r = 0; r < static_cast<int>(resource_usage_[a].size()); ++r) {
-            if (resource_usage_[a][r] != 0) {
-                builder.set_resource_usage(a, r, resource_usage_[a][r]);
-            }
-            work.count(1);
-        }
     }
 
     if (stop.should_stop()) {

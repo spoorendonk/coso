@@ -248,7 +248,7 @@ TEST_CASE("NetworkModel can be default-constructed", "[network]") {
     (void)m;
 }
 
-TEST_CASE("NetworkModel add nodes, arcs, and resources", "[network]") {
+TEST_CASE("NetworkModel add nodes and arcs", "[network]") {
     coso::NetworkModel m;
     int src = m.add_node(5, "src");
     int mid = m.add_node(0, "mid");
@@ -261,10 +261,6 @@ TEST_CASE("NetworkModel add nodes, arcs, and resources", "[network]") {
     int a1 = m.add_arc(mid, dst, 1, 0, 5);
     REQUIRE(a0 == 0);
     REQUIRE(a1 == 1);
-
-    int r = m.add_resource("time", 100);
-    REQUIRE(r == 0);
-    m.set_resource_usage(a0, r, 3);
 }
 
 TEST_CASE("NetworkModel solve returns flow result", "[network]") {

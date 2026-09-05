@@ -206,10 +206,6 @@ NB_MODULE(_coso, m) {
         .def("add_node", &coso::NetworkModel::add_node, "supply"_a = 0, "name"_a = "")
         .def("add_arc", &coso::NetworkModel::add_arc, "tail"_a, "head"_a, "cost"_a = 0,
              "lower_cap"_a = 0, "upper_cap"_a = INT_MAX)
-        .def("add_resource", &coso::NetworkModel::add_resource, "name"_a = "",
-             "upper_bound"_a = INT_MAX)
-        .def("set_resource_usage", &coso::NetworkModel::set_resource_usage, "arc"_a, "resource"_a,
-             "amount"_a)
         .def("solve", &coso::NetworkModel::solve, "time_limit"_a);
 
     // -- LotSizingModel -------------------------------------------------------

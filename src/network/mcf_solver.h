@@ -11,8 +11,9 @@ namespace coso {
 /// shortest augmenting paths from supply nodes to demand nodes in the
 /// residual graph using Bellman-Ford (handles negative costs).
 ///
-/// The solver handles basic MCF without resource constraints. For RCMCF,
-/// combine with the network operators for local search improvement.
+/// The solver handles basic MCF. Nothing in src/network/ enforces the
+/// per-path resource budgets NetworkData can carry -- the operators are
+/// resource-blind too; RCMCF belongs to #184's design (see #195).
 class McfSolver {
 public:
     /// Solve the minimum cost flow problem.
