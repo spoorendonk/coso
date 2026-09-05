@@ -738,9 +738,9 @@ Evidence:
 - [a] Three periods are declared and the returned `production()[p]` and `inventory()[p]` are three
   long, with the inventory balance chained across exactly those three periods — the horizon is what
   the plan spans, not a stored number.
-- [b] Two products are declared and come back as two independent rows with different plans in the
-  control section and different cost contributions in every section; [f]–[i] are the four fields
-  that distinguish them.
+- [b] Two products are declared and come back as two independent rows, each with its own plan and
+  its own cost contribution. Their plans coincide here because the instance is symmetric in
+  quantity; [f]–[i] are the four fields that price them differently.
 - [c] The test recomputes `inventory[p][t]` as `inventory[p][t-1] + production[p][t] - demand[p][t]`
   from the *declared* demand and asserts it equals the returned inventory, and that it is
   non-negative — the only assertion that ties the returned plan to the numbers the model was given.
@@ -748,10 +748,11 @@ Evidence:
 - [d] The capacitated section returns 330 and the control section — the same declaration with
   period 0's capacity raised to 1000 and nothing else changed — returns 260 with a different plan.
   Recomputed period-0 usage is 25 against a declared 25 in the first and 65 against 1000 in the
-  second. An engine that ignored capacity would return the control's answer in both. Enforced by
-  `has_capacity_violation()` through `is_feasible()` on every move in
-  `src/lotsizing/lotsizing_operators.cpp` — **not** by the constructions, which never read
-  `capacity()`; see §Defects, #211, for what that costs.
+  second. An engine that ignored capacity would return the control's answer in both. Two separate
+  mechanisms enforce it, and neither is the other: `is_feasible()` in
+  `src/lotsizing/lotsizing_operators.cpp` does its own single-period check on the move's
+  `to_period`, while `has_capacity_violation()` is what backs `Result::feasible()`. Neither is the
+  constructions, which never read `capacity()` at all — see §Defects, #211, for what that costs.
 - [e] `add_bom` is stored, copied into `LotsizingData` and never read again.
   `LotsizingSolution::recompute_inventory_` balances external demand only — its own comment claims
   the constructions and operators handle dependent demand, and neither mentions the BOM.
@@ -898,10 +899,10 @@ Three findings:
 
 | claim | features needed | verdict |
 |---|---|---|
-| README "CLSP", P1 (#143) | horizon, products, demand, capacity, setup cost and time, holding | expressible now: the whole §Features evidence list. Bounded by #211 — an instance whose only feasible plans pre-build ahead of a capacity spike comes back `feasible() == false` |
+| README "CLSP" (#143) | horizon, products, demand, capacity, setup cost and time, holding | expressible now: the whole §Features evidence list. Bounded by #211 — an instance whose only feasible plans pre-build ahead of a capacity spike comes back `feasible() == false` |
 | CLSP with setup times (Trigeiro et al. 1989) | `setup_time` | expressible now: [g]. This is the field-for-field fit checked in §Rulings |
 | ULSP / Wagner-Whitin, uncapacitated single-item | horizon, demand, setup and holding cost | expressible now: one product and a capacity above total demand — the control section is exactly this, and returns the Wagner-Whitin answer |
-| README "MLCLSP", P2 (#149) | BOM dependent demand | declarable and **dropped** — #210. Not a variant this model expresses today, whatever `is_multi_level()` reports |
+| README "MLCLSP" (#143) | BOM dependent demand | declarable and **dropped** — #210. Not a variant this model expresses today, whatever `is_multi_level()` reports |
 | P3 DLSP (#144) | all-or-nothing production, small time buckets | `cut` — §Rulings |
 | P4 GLSP (#145) | within-period sequencing, sequence-dependent setups | `cut` — §Rulings, and it is a scope ruling on a single model, not a principle-2 composition |
 | P5 CSLP / setup carry-over (#146) | a setup state linked across periods | after an `extend` — §Rulings, #213 |

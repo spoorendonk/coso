@@ -9,8 +9,9 @@ namespace coso {
 
 /// Compiled, immutable representation of a lot sizing instance.
 ///
-/// Supports both CLSP (Capacitated Lot Sizing Problem) and MLCLSP
-/// (Multi-Level CLSP) with bill-of-materials relationships.
+/// Carries CLSP (Capacitated Lot Sizing Problem) instances. The
+/// bill-of-materials fields are populated but no solver reads them, so MLCLSP
+/// (Multi-Level CLSP) is stored, not solved -- see #210.
 ///
 /// Data layout:
 ///   - Products with demand per period

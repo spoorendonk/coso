@@ -4,7 +4,8 @@
 
 namespace coso {
 
-/// Public lot-sizing model API for CLSP / MLCLSP.
+/// Public lot-sizing model API for CLSP. add_bom() is accepted but never read
+/// by solve(), so a multi-level instance silently solves as CLSP -- see #210.
 class LotSizingModel {
 public:
     /// Set number of planning periods.
