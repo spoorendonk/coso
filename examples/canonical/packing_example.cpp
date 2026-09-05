@@ -8,7 +8,6 @@ int main() {
     model.add_item({.size = {6}});
     model.add_item({.size = {4}});
     model.add_item({.size = {3}});
-    model.minimize_bins();
 
     coso::Result result = model.solve(coso::TimeLimit(1.0, 0.05));
     std::cout << "packing feasible=" << result.feasible() << " bins=" << result.num_bins()

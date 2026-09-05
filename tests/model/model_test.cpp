@@ -488,11 +488,6 @@ TEST_CASE("PackingModel conflicts", "[packing]") {
     m.add_conflict(a, b);
 }
 
-TEST_CASE("PackingModel minimize_bins", "[packing]") {
-    coso::PackingModel m;
-    m.minimize_bins();
-}
-
 TEST_CASE("PackingModel solve returns a Result", "[packing]") {
     coso::PackingModel m;
     m.add_bin_type({.capacity = {100}});

@@ -4,6 +4,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <vector>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
@@ -132,7 +135,6 @@ TEST_CASE("PackingModel: solve returns baseline packed result", "[packing][model
     model.add_bin_type({.capacity = {100}});
     model.add_item({.size = {30}});
     model.add_item({.size = {50}});
-    model.minimize_bins();
 
     Result result = model.solve(TimeLimit(1.0));
 
@@ -294,8 +296,6 @@ TEST_CASE("PackingModel: simple 1D instance end-to-end", "[packing][model]") {
     model.add_item({.size = {3}});
     model.add_item({.size = {3}});
 
-    model.minimize_bins();
-
     REQUIRE(model.num_bin_types() == 1);
     REQUIRE(model.num_items() == 7);
     REQUIRE(model.num_dimensions() == 1);
@@ -319,4 +319,169 @@ TEST_CASE("PackingModel: simple 1D instance end-to-end", "[packing][model]") {
     Result result = model.solve(TimeLimit(1.0));
     REQUIRE(result.feasible());
     REQUIRE(result.num_bins() >= data.continuous_lower_bound());
+}
+
+// ---------------------------------------------------------------------------
+//  Variant coverage through the model API (docs/models.md §Packing)
+//
+//  Each case pairs the declaration with a control that drops the feature, so
+//  the assertions fail if the engine ignores what was declared.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+/// Index of the returned bin holding `item`, or -1.
+int bin_of(Result const& r, int item) {
+    for (int b = 0; b < r.num_bins(); ++b) {
+        auto const& items = r.bins()[b];
+        if (std::find(items.begin(), items.end(), item) != items.end()) {
+            return b;
+        }
+    }
+    return -1;
+}
+
+}  // namespace
+
+TEST_CASE("PackingModel: vector bin packing respects every dimension", "[packing][model]") {
+    // Items 0 and 1 fit together in dimension 0 (5 + 5 <= 10) but not in
+    // dimension 1 (8 + 8 > 10). Item 2 fits alongside either of them.
+    auto items = std::vector<std::vector<int>>{{5, 8}, {5, 8}, {5, 1}};
+
+    SECTION("control: dimension 0 alone packs items 0 and 1 together") {
+        PackingModel model;
+        model.add_bin_type({.capacity = {10}});
+        for (auto const& s : items) {
+            model.add_item({.size = {s[0]}});
+        }
+
+        Result result = model.solve(TimeLimit(1.0));
+
+        REQUIRE(result.feasible());
+        REQUIRE(bin_of(result, 0) == bin_of(result, 1));
+    }
+
+    SECTION("both dimensions declared") {
+        PackingModel model;
+        model.add_bin_type({.capacity = {10, 10}});
+        for (auto const& s : items) {
+            model.add_item({.size = s});
+        }
+
+        Result result = model.solve(TimeLimit(1.0));
+
+        REQUIRE(result.feasible());
+        REQUIRE(result.unassigned().empty());
+        REQUIRE(result.num_bins() == 2);
+        REQUIRE(result.cost() == 2.0);
+
+        // The conflicting pair is separated by dimension 1.
+        REQUIRE(bin_of(result, 0) >= 0);
+        REQUIRE(bin_of(result, 1) >= 0);
+        REQUIRE(bin_of(result, 0) != bin_of(result, 1));
+
+        // Every returned bin is within capacity in both dimensions.
+        for (auto const& bin : result.bins()) {
+            std::vector<int> load(2, 0);
+            for (int i : bin) {
+                load[0] += items[i][0];
+                load[1] += items[i][1];
+            }
+            REQUIRE(load[0] <= 10);
+            REQUIRE(load[1] <= 10);
+        }
+    }
+}
+
+TEST_CASE("PackingModel: bin packing with conflicts keeps the pair apart", "[packing][model]") {
+    // Two items of size 5 fit one bin of capacity 10 — unless they conflict.
+    SECTION("control: no conflict declared") {
+        PackingModel model;
+        model.add_bin_type({.capacity = {10}});
+        model.add_item({.size = {5}});
+        model.add_item({.size = {5}});
+
+        Result result = model.solve(TimeLimit(1.0));
+
+        REQUIRE(result.feasible());
+        REQUIRE(result.num_bins() == 1);
+        REQUIRE(result.cost() == 1.0);
+        REQUIRE(result.bins()[0].size() == 2);
+    }
+
+    SECTION("conflict declared") {
+        PackingModel model;
+        model.add_bin_type({.capacity = {10}});
+        int a = model.add_item({.size = {5}});
+        int b = model.add_item({.size = {5}});
+        model.add_conflict(a, b);
+
+        Result result = model.solve(TimeLimit(1.0));
+
+        REQUIRE(result.feasible());
+        REQUIRE(result.unassigned().empty());
+        REQUIRE(result.num_bins() == 2);
+        REQUIRE(result.cost() == 2.0);
+        REQUIRE(result.bins()[0].size() == 1);
+        REQUIRE(result.bins()[1].size() == 1);
+        REQUIRE(bin_of(result, a) >= 0);
+        REQUIRE(bin_of(result, a) != bin_of(result, b));
+    }
+}
+
+TEST_CASE("PackingModel: variable-sized bin packing costs the mix", "[packing][model]") {
+    // Two bin types: small (capacity 5, cost 1) and large (capacity 10,
+    // cost 5). Items 8, 5, 5. Only a large bin holds the 8; the two 5s are
+    // cheaper in small bins (1 + 1) than sharing a second large bin (5).
+    SECTION("control: large bins only") {
+        PackingModel model;
+        model.add_bin_type({.capacity = {10}, .cost = 5});
+        model.add_item({.size = {8}});
+        model.add_item({.size = {5}});
+        model.add_item({.size = {5}});
+
+        Result result = model.solve(TimeLimit(1.0));
+
+        REQUIRE(result.feasible());
+        REQUIRE(result.num_bins() == 2);
+        REQUIRE(result.cost() == 10.0);
+    }
+
+    SECTION("both bin types declared") {
+        PackingModel model;
+        model.add_bin_type({.capacity = {5}, .cost = 1});
+        model.add_bin_type({.capacity = {10}, .cost = 5});
+        int big = model.add_item({.size = {8}});
+        model.add_item({.size = {5}});
+        model.add_item({.size = {5}});
+
+        Result result = model.solve(TimeLimit(1.0));
+
+        REQUIRE(result.feasible());
+        REQUIRE(result.unassigned().empty());
+        // Three bins costing 7, not the two bins costing 10 that a
+        // bin-count objective would return.
+        REQUIRE(result.num_bins() == 3);
+        REQUIRE(result.cost() == 7.0);
+
+        // The size-8 item is alone: no small bin holds it, and no other item
+        // fits beside it in a large bin.
+        REQUIRE(bin_of(result, big) >= 0);
+        REQUIRE(result.bins()[bin_of(result, big)].size() == 1);
+    }
+}
+
+TEST_CASE("PackingModel: bin count limits the slots of a type", "[packing][model]") {
+    // One small bin available, three items: two go unassigned.
+    PackingModel model;
+    model.add_bin_type({.capacity = {5}, .cost = 1, .count = 1});
+    model.add_item({.size = {5}});
+    model.add_item({.size = {5}});
+    model.add_item({.size = {5}});
+
+    Result result = model.solve(TimeLimit(1.0));
+
+    REQUIRE(result.num_bins() == 1);
+    REQUIRE(result.unassigned().size() == 2);
+    REQUIRE_FALSE(result.feasible());  // unpacked items make the result infeasible
 }

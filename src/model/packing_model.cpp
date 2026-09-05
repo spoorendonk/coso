@@ -64,10 +64,6 @@ void PackingModel::add_conflict(int item_a, int item_b) {
     conflicts_.emplace_back(item_a, item_b);
 }
 
-void PackingModel::minimize_bins() {
-    minimize_bins_ = true;
-}
-
 Result PackingModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;

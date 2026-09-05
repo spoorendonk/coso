@@ -361,3 +361,252 @@ target scope is multi-commodity flow and network design and needed no change.
 | #206 `Result` returns only a lossy path decomposition, never arc flows | filed by this audit; it is what stops the `supported` cells being evidenced on the returned flow rather than on `cost()`. Belongs with #176's `Result` contract |
 
 The native column has no `drops` cell left, which is the condition #179's milestone needs.
+
+## Packing
+
+`PackingModel` (`src/model/packing_model.h`) declares bin types — N-dimensional capacity, a
+per-bin cost, an optional count limit — and items with an N-dimensional size, plus pairwise item
+conflicts, and solves it as bin packing under one objective: minimise the total cost of the bins
+used. The `minimize_bins()` setter is deleted as of this section — see §Rulings.
+
+The N dimensions are **additive resources** (weight, volume, ...), not spatial axes. Nothing in
+the schema carries a coordinate; §Rulings turns that into the 2-D / 3-D ruling.
+
+Engine columns are #173's map for this model: **native** (FFD-style construction plus a
+merge/move descent, all of it inside `PackingModel::solve()`) and **HiGHS** (#182). Only the
+native engine is integrated; HiGHS is not a dependency of this repo, so its column can hold no
+value but `documented`, pinned to a public API reference:
+
+- HiGHS v1.7.2, `HighsLp` (`col_cost_`, `col_lower_`, `col_upper_`, `integrality_` —
+  `HighsVarType::kInteger` — `a_matrix_`, `row_lower_`, `row_upper_`, `sense_`), passed with
+  `Highs::passModel` and solved with `Highs::run()`. #182 names two formulations, arc-flow and
+  assignment-based ILP. Every HiGHS cell below is evidenced on the **assignment-based** one
+  (`x_ib` = item `i` in bin `b`, `y_b` = bin `b` open), because arc-flow is one-dimensional and
+  carries neither N-dimensional capacity nor conflicts.
+
+### Schema
+
+| entity | fields |
+|---|---|
+| bin type | `capacity` (one int per dimension), `cost` (int per bin used, default 1), `count` (int, 0 = unlimited) |
+| item | `size` (one int per dimension, matching the bin capacity dimensions) |
+| conflict | an unordered pair of item ids: the two items may not share a bin |
+
+`num_dimensions()` is inferred from the first entity added; `add_bin_type` and `add_item` throw
+`std::invalid_argument` on an empty capacity/size and on a dimension count that differs from it.
+`add_conflict` throws `std::out_of_range` on an unknown item id and `std::invalid_argument` on a
+self-conflict. `solve(TimeLimit)` is the whole call surface — there is no reference solution and
+no warm start, so principle 4 has nothing to rule here. A model with no bin type or no item
+returns a default-constructed `Result` (`feasible() == false`) rather than throwing.
+
+Absent, and named because the rulings below turn on them: item value, item multiplicity
+(demand), item–bin-type compatibility, and item geometry.
+
+### Features
+
+| feature | model | native | HiGHS |
+|---|---|---|---|
+| bin capacity, N dimensions | `declarable` | `supported` [a] | `documented` [g] |
+| bin cost | `declarable` | `supported` [b] | `documented` [h] |
+| bin count per type | `declarable` | `supported` [c] | `documented` [i] |
+| item size, N dimensions | `declarable` | `supported` [d] | `documented` [j] |
+| pairwise item conflicts | `declarable` | `supported` [e] | `documented` [k] |
+| objective: minimise total bin cost | `declarable` [f] | `supported` [f] | `documented` [l] |
+| item value | `absent` | `—` [m] | `—` [m] |
+| item multiplicity (demand) | `absent` | `—` [n] | `—` [n] |
+| item–bin-type compatibility | `absent` | `—` [o] | `—` [o] |
+| item geometry (2-D / 3-D shape and placement) | `absent` | `—` [p] | `—` [p] |
+
+The four `absent` rows have no engine value to hold: an engine cannot enforce, reject or drop a
+declaration the API cannot make. Their `—` cells say why the model cannot express the feature,
+and §Rulings says whether that is an `extend` or a `cut`.
+
+Evidence:
+
+- [a] `tests/packing/packing_model_test.cpp` "PackingModel: vector bin packing respects every
+  dimension": bins of capacity `{10, 10}` and items `{5,8}`, `{5,8}`, `{5,1}` come back as two
+  bins with the first two items separated, and the test recomputes each returned bin's load in
+  both dimensions from the declared sizes and asserts it is within capacity. The control
+  section declares dimension 0 alone and gets those two items in *one* bin, so the assertion
+  fails if the second dimension is ignored. Enforced by the `D`-loop in
+  `PackingSolution::item_fits_capacity` and by the same loop in the move/swap/merge/split
+  feasibility checks — **not** by `src/packing/bin_capacity.h`, the file #168 named: nothing on
+  the model path constructs a `BinCapacity`, only `tests/packing/bin_capacity_test.cpp` does.
+- [b] `tests/packing/packing_model_test.cpp` "PackingModel: variable-sized bin packing costs the
+  mix": a small type (capacity 5, cost 1) and a large one (capacity 10, cost 5) with items 8, 5,
+  5 return three bins costing 7, where the control section — large bins only — returns the two
+  bins costing 10 that a bin-*count* objective would prefer.
+- [c] `tests/packing/packing_model_test.cpp` "PackingModel: bin count limits the slots of a
+  type": one type with `count = 1` and three items that each fill a bin returns exactly one bin,
+  two unassigned items and `feasible() == false`. Enforced by slot allocation in the
+  `PackingSolution` constructor — `count` slots for a limited type, `num_items` for an unlimited
+  one.
+- [d] The per-bin load recomputation in [a] is an assertion on the declared sizes: it is the
+  only thing that ties a returned bin's contents to the numbers the model was given. [b] and [e]
+  add the one-dimensional case, where two size-5 items share a capacity-10 bin and a size-8 item
+  cannot enter a capacity-5 one.
+- [e] `tests/packing/packing_model_test.cpp` "PackingModel: bin packing with conflicts keeps the
+  pair apart": two size-5 items and a capacity-10 bin come back in one bin in the control
+  section and in two bins, in different bins, once the conflict is declared. Enforced by
+  `PackingSolution::has_conflict_in_bin` through `item_fits`, and by the conflict checks in
+  every operator's `is_feasible`.
+- [f] Implicit and unique: declaring bin costs declares the objective, and after the
+  `minimize_bins()` deletion there is no setter and no second objective. `Result::cost` is
+  `PackingSolution::cost()`, **the sum of `bin_cost` over non-empty bins** — maintained
+  incrementally as bins open and close in `assign` / `unassign` / `move`, and equal to the bin
+  count exactly when every declared `cost` is the default 1. [b]'s `cost() == 7` over bin costs
+  1 and 5 is an assertion on the weighted sum, not on the three bins returned.
+- [g] One row per bin and dimension: `sum_i s_id x_ib − C_td y_b <= 0`, i.e. `a_matrix_` entries
+  with `row_upper_ = 0` and `row_lower_ = −kHighsInf`. Dimensions add rows, not columns, so N is
+  unbounded.
+- [h] `col_cost_[y_b] = cost(t)` for the bin's type `t`.
+- [i] Either generate only `count_t` bin columns of type `t`, or add the cardinality row
+  `sum_{b of type t} y_b <= count_t` with `row_upper_ = count_t`.
+- [j] The `s_id` coefficients of [g], plus one assignment row per item,
+  `sum_b x_ib = 1` (`row_lower_ = row_upper_ = 1`).
+- [k] `x_ib + x_jb <= 1` for each conflicting pair `(i, j)` and each bin `b`
+  (`row_upper_ = 1`). All `x` and `y` columns are `integrality_ = HighsVarType::kInteger` with
+  bounds `[0, 1]`.
+- [l] `min col_cost_ . x` with `sense_ = ObjSense::kMinimize`; `Highs::getSolution()` returns
+  the `y_b` values that price it.
+- [m] `ItemParams` has one field, `size`. There is no value and no objective that could read one
+  — see §Rulings, knapsack.
+- [n] An item is one object; a demand of 500 identical pieces is 500 `add_item` calls — see
+  §Rulings, cutting stock.
+- [o] Any item may enter any bin type whose capacity holds it. There is no per-(item, bin type)
+  admissibility flag, so "this item only fits refrigerated bins" is inexpressible except by
+  giving the forbidden types a capacity the item overflows in some dimension — a modelling
+  trick, not a declaration.
+- [p] An item is a vector of additive loads; a 2-D or 3-D item is a shape and its solution is a
+  *placement*. Neither the schema nor `Result` carries a coordinate — see §Rulings, 2-D / 3-D.
+
+### Result
+
+Primary: **the item ids in each bin, and the bin's type**. The partition alone is not enough to
+verify a `supported` cell whenever more than one bin type is declared.
+
+What a returned `Result` carries today:
+
+| field | contents |
+|---|---|
+| `cost()` | the declared objective's value, `sum over non-empty bins b of bin_cost(bin_type(b))` |
+| `feasible()` | no capacity violation, no conflict violation, **and** every item assigned (`PackingSolution::feasible()`) |
+| `bins()` | one entry per non-empty bin, holding that bin's item ids; empty slots are dropped |
+| `num_bins()` | `bins().size()` — non-empty bins only, so it is the number of bins *used* |
+| `unassigned()` | the items no bin could take |
+| `iterations()`, `work_ticks()` / `work_units()`, `elapsed_seconds()` | search and work counters |
+
+Two findings:
+
+1. **Bin type per bin is not returned.** `Result::bins_` is `vector<vector<int>>` — item ids and
+   nothing else. With a single bin type the type is recoverable by construction, which is why
+   the 1-D cells above can be evidenced; with **heterogeneous bin types a third party cannot
+   cost or check the returned solution**, because a bin holding 5 units of load may be a
+   capacity-5 bin costing 1 or a capacity-10 bin costing 5, and only the engine knows which.
+   `cost()` cannot be recomputed from `bins()`, and no capacity check is possible either. The
+   variable-sized test above therefore asserts `cost()` and the bin count, and identifies the
+   large bin only indirectly — the size-8 item fits no other type. Filed as #207; it belongs
+   with #176's `Result` contract, next to #206.
+2. **`Result::unassigned_` is documented as assignment-only.** In `src/model/types.h` the field
+   sits in the "Assignment (nurse rostering)" block, but `PackingModel::solve()` populates it
+   and packing has no other channel for unpacked items — [c]'s two unassigned items arrive
+   there. The field is shared; its comment is not. Noted on #176.
+
+### Variants
+
+| claim | features needed | verdict |
+|---|---|---|
+| K1 BPP (#167, README "Bin packing") | one bin type, item size, unit bin cost | expressible now: evidence [a]–[f], and "PackingModel: simple 1D instance end-to-end" solves a 7-item instance through `solve()` and checks the returned bin count against `continuous_lower_bound()` |
+| K2 vector bin packing (#168) | N-dimensional capacity and size | expressible now: [a]. The model-level gap the closed issue left open is closed by that test — and the multi-dimensional code it credits, `bin_capacity.{h,cpp}`, is not what enforces it |
+| K3 bin packing with conflicts (#169) | pairwise conflicts | expressible now: [e] |
+| variable-sized BPP | several bin types with different capacity and cost | expressible now: [b]. `count` bounds the supply of each size |
+| bin packing with fixed bin supply | bin `count` | expressible now: [c]. Excess items come back in `unassigned()`, with `feasible() == false` |
+| cutting stock, 1-D | item multiplicity | after an `extend` — §Rulings, #208 |
+| knapsack, single and multi-dimensional | item value, a maximise-value objective | `cut` — §Rulings |
+| 2-D / 3-D bin packing, strip packing, pallet and container loading | geometry: shapes, coordinates, rotation | `cut` — §Rulings |
+| bin packing with item–bin compatibility | per-(item, bin type) admissibility | not expressible; no owner. [o] |
+
+### Rulings
+
+**`minimize_bins()` — `delete`.** The setter and its `minimize_bins_` field are gone from
+`src/model/packing_model.h` and `src/model/packing_model.cpp`, with the four call sites updated
+(`tests/model/model_test.cpp`, `tests/packing/packing_model_test.cpp` ×2,
+`examples/canonical/packing_example.cpp`). The flag was written and read nowhere:
+`PackingModel::solve()` always minimises `PackingSolution::cost()`, the weighted bin cost, and
+would do so whether or not the setter had been called. Under the deletion rule that is a delete
+— no engine column can be `supported` for an objective no engine distinguishes, and there is no
+dormant "count the bins" objective anywhere to wire in. The objective survives as the implicit
+one, exactly as arc cost is in `NetworkModel`: declaring `cost` on the bin types declares it,
+and leaving `cost` at its default 1 makes it bin minimisation. This is a cut, so it is E2 work
+(principle 5); #171's closed description mentions `minimize_bins` in the binding it never added,
+which is now one thing less to bind.
+
+**Cutting stock, 1-D — `extend` via item multiplicity, filed as #208.** CSP *is* this model with
+demands: BPPLIB (Delorme, Iori and Martello, *Optimization Letters* 12(2):235–250, 2018) ships
+every instance in both a BPP and a CSP version, and the CSP one adds exactly one field —
+`BPPLib.jl`'s `CSPData` is `name`, `capacity`, `weights`, **`demands`**, `lb`, `ub` against
+`BPPData`'s same list without `demands`. (The published `.txt` files themselves could not be
+inspected: `or.dei.unibo.it/library/bpplib` now 302s to a site index, and
+`tests/data/download_benchmarks.sh` has no BPP or CSP entry to read one from. The field list
+above is the documented schema, not a line format read off an instance.) The workaround today is
+to repeat the item: `add_item` once per unit of demand. That is expressible, and it is why this
+is an `extend` rather than a defect — but it is quadratic in exactly the wrong place, since CSP
+demands run to the hundreds or thousands per size and every pairwise conflict check, move
+enumeration and merge enumeration in the native engine is over items, not distinct sizes. It
+also destroys the structure the engine most wants: identical items become distinguishable, so
+the search wastes its time on symmetric solutions. And #182's arc-flow formulation consumes
+multiplicity natively — a demand row per distinct size is *the* CSP formulation (Valério de
+Carvalho), so the `extend` costs that engine nothing and the repeat-the-item workaround costs it
+its whole advantage. #208 sketches `ItemParams::count` and an `item_count(i)` accessor, additive
+per principle 5, landing in #182.
+
+**Knapsack — `cut`.** A knapsack declares an item *value* and one capacitated container and asks
+for the maximum-value subset that fits. Two things are missing and neither is a field: there is
+no item value ([m]), and the objective is minimise bin cost, which for a single bin is a
+constant — every subset that fits scores the same, so `solve()` would return an arbitrary
+feasible packing and call it optimal. Making it work means a second objective on a model whose
+objective is unique, and a *maximisation* at that. The reason to add none of it is that nothing
+structure-aware is planned: #173's engine map has no knapsack oracle, HiGHS solves it exactly
+and the textbook DP solves it in pseudo-polynomial time. Note where a knapsack legitimately
+appears — as the pricing subproblem of a column-generation CSP or BPP solver. That is inside an
+engine, not a declaration a user makes, and #182 is free to solve as many knapsacks as it likes.
+
+**2-D / 3-D packing — `cut`.** Geometry is a different algorithm family. An item here is a
+vector of additive loads; a 2-D or 3-D item is a shape, and the answer is a **placement** —
+coordinates, orientation, and a cutting pattern (guillotine or free) — not a partition of the
+items. Nothing in the schema carries a coordinate and `Result::bins_` cannot return one, so the
+cut is structural rather than a matter of missing fields: the whole solution object is the wrong
+shape. The engine map is the second reason. The native operators (merge, move, swap, split)
+reason only about summed load vectors, and additivity is exactly the property geometry lacks —
+four 5×5 items "fit" a 10×10 bin by area *and* would pass a two-dimensional vector-capacity
+check at (10, 10) totals, while a fifth 1×10 item passing neither check is what the real problem
+is about; conversely a set that passes an area check may have no feasible placement at all.
+HiGHS can formulate 2-D bin packing, but only with placement or relative-position variables,
+which is a different model from [g]–[l] and a weak one. #173 lists no geometric oracle to plug
+in. Cut, and the N-dimensional capacity vector must not be sold as 2-D/3-D packing: it is vector
+packing, K2.
+
+### Defects
+
+| issue | verdict |
+|---|---|
+| #207 packing `Result` does not say which bin type each returned bin is | filed by this audit. It is what stops the heterogeneous-bin cells being evidenced on the returned solution rather than on `cost()`. Belongs with #176's `Result` contract |
+| #208 `ItemParams` has no multiplicity, so cutting stock is one `add_item` per unit of demand | filed by this audit as the cutting-stock `extend`; lands in #182 |
+| `Result::unassigned_` documented as assignment-only, populated by packing | noted on #176; a comment fix on a shared field, not a schema change |
+
+Two findings with no issue of their own, both for #182:
+
+- **`packing_benchmark_test` does not go through the model API**, contrary to what this audit's
+  issue assumed. It builds a `PackingModel` only to call `PackingData::build`, then runs its own
+  `first_fit_decreasing` and `local_search` over `PackingSolution` —
+  `PackingModel::solve()` is never called, and the two implementations are not the same search.
+  Under the evidence rule none of it is evidence for a `supported` cell, which is why every cell
+  above cites `packing_model_test.cpp` instead. Its instances are hand-written arrays named
+  after Falkenauer and Scholl classes, not the published files: `download_benchmarks.sh` has no
+  BPP entry. #182's step 3 is where this becomes real benchmark coverage; until then "tested
+  against Falkenauer" (#167, #172, README) overstates what runs.
+- **#170 (BPPLIB parser) and #171 (Python bindings for `PackingModel`) are closed as completed,
+  and neither exists in the tree.** There is no packing parser anywhere in `src/`, and
+  `python/bindings.cpp` binds `RoutingModel`, `NetworkModel` and `LotSizingModel` only. Nothing
+  in this audit depends on either, and no Python surface is affected by the cut above — but
+  their closed state is not a record of work done, and #182 should not plan around them.

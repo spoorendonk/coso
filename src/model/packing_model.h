@@ -36,11 +36,6 @@ public:
     /// Add a conflict: two items cannot share the same bin.
     void add_conflict(int item_a, int item_b);
 
-    // -- Objective -----------------------------------------------------------
-
-    /// Set objective to minimize total number of bins (weighted by cost).
-    void minimize_bins();
-
     // -- Solve ---------------------------------------------------------------
 
     /// Solve the packing problem within the given time limit.
@@ -61,7 +56,6 @@ private:
     std::vector<ItemParams> items_;
     std::vector<std::pair<int, int>> conflicts_;
     int num_dims_ = 0;
-    bool minimize_bins_ = false;
 };
 
 }  // namespace coso
