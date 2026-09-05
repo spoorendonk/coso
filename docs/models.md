@@ -58,11 +58,20 @@ A native `drops` / `rejects` cell carries an implementation note that decides wi
 **dormant** (engine code exists but is unreachable from `solve()` — name the idle file) or
 **dead** (no code).
 
-**Deletion rule.** A `declarable` feature is deleted from the schema when no engine column is
-`supported` or `documented`, unless the native column's dormant code has an owner committed to
-wiring it in a named milestone. An idle header is not an owner. Everything kept stays
-declarable, and the native engine `rejects` it (the disable-and-raise fixes in #193, #195,
-#196) until wired.
+**Deletion rule — suspended.** As written, this rule deleted a `declarable` feature when no
+engine column was `supported` or `documented`. It made the schema a function of engine
+capability, which is the coupling the current phase exists to break: the model API is the
+product, the engine is a reference implementation, and its gaps are evidence about the engine
+and not a verdict on what a user may declare (CLAUDE.md, **Current phase**).
+
+For now: a feature with no supporting engine **stays declarable**, and the engine columns
+record what each engine does with it — `drops` included. Deleting from the schema needs a
+*modelling* reason: the feature cannot be said coherently, it duplicates another, or it belongs
+to a different archetype. The deletions already made under the old rule each carry such a
+reason too, so they stand.
+
+What is *not* suspended: a declaration that is silently ignored must say so in its row, with
+its issue number. Accepted-and-dropped is tolerable and tracked; undocumented is not.
 
 **Feature granularity.** One feature name per thing an engine in the model's map either has or
 lacks, so an engine's reject list is a column difference. `time_windows` and

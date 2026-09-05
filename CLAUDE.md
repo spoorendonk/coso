@@ -4,12 +4,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-COSO (Combinatorial Structure-aware Optimization) — two products built together:
+COSO (Combinatorial Structure-aware Optimization) — two things, built in that order:
 
 1. **The Model API** — declare-then-solve, one typed model per problem class. Backend-flexible by design: the same declaration is meant to be solvable by COSO's own engine or by a plugged-in backend (PyVRP, OR-Tools CP-SAT, HiGHS, user-supplied). The plugin protocol is **not built yet** — see #176.
 2. **The COSO engine** — C++23 with Python bindings (nanobind). Exploits problem structure with domain-specific local search, construction heuristics, and metaheuristics instead of LP/MIP flattening.
 
 Direction and open work live in GitHub issues; the charter is #173. There is no roadmap file.
+
+## Current phase — modelling first
+
+**The model API is the work. The engine is not, right now.**
+
+Treat the two as separate products that happen to share a repo. What is being designed,
+reviewed and gated at the moment is what a user can *declare*: the schema, its semantics, what
+a returned `Result` must carry, and what a backend has to promise. The engine behind it is a
+reference implementation — useful for proving a declaration is well-formed and round-trips,
+not the thing being built.
+
+**The engine is broken in places, and that is intentional.** Scheduling aborts on real input,
+lot sizing ignores a declared bill of materials, routing drops most of its declarable fields.
+These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
+over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a
+reason an audit or a spec decision cannot proceed. File it, cite it, and carry on.
+
+What this changes in practice:
+
+- An engine defect is **recorded**, not repaired, unless the issue you are on asks for the repair.
+- A model feature is **not** deleted because no engine implements it. Engine capability is
+  evidence about an engine, not a verdict on the schema. See the note on `docs/models.md`'s
+  deletion rule below.
+- A test may assert a declaration is accepted and round-trips even where no engine honours it;
+  the engine-side assertion is `SKIP`-ed with its issue number.
+- "It cannot be verified because the engine is broken" is not a reason to reject a modelling
+  issue. Verify the declaration instead.
 
 ## Build & Test
 
@@ -81,6 +108,14 @@ clang-tidy and the gates that call it see the same compile lines either way.
 Every cell in it carries the evidence its value requires — a cell without that evidence is a
 review finding.
 
+Its **deletion rule** was written when the engine was the product: it deleted a declarable
+feature no engine supported. That is suspended for this phase — see **Current phase**. A
+feature with no supporting engine stays declarable and is recorded as such; the engine columns
+say what each engine does, and nothing about whether the schema should carry it. Deletions now
+need a *modelling* reason: the feature is unsayable, redundant, or belongs to another
+archetype. The three deletions already made under the old rule (#201's network resource API,
+#204's `minimize_bins_`) each also have a modelling reason, so they stand.
+
 ### Layered Design
 
 ```
@@ -124,9 +159,11 @@ The routing engine is the reference architecture for other engines:
   - `COSO_E2E_APPLY_QUARANTINE=1` makes `run_pack.sh` skip scenario ids listed in `tests/e2e/quarantine.csv`.
 - **Benchmark tests**: `benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`, `assignment_benchmark_test`, `packing_benchmark_test` (label `benchmark`). Instances come from `tests/data/download_benchmarks.sh`. **No results are published anywhere until a verified run exists** — see #177.
 
-### Engine Maturity
+### Engine state
 
-No numbers here until a verified benchmark run backs them (#177).
+Not the current product — see **Current phase**. This table exists so a modelling decision can
+cite what an engine actually does, not so the gaps read as a work queue. No numbers here until a
+verified benchmark run backs them (#177).
 
 | Engine | Status |
 |--------|--------|
@@ -134,7 +171,7 @@ No numbers here until a verified benchmark run backs them (#177).
 | Network | Target scope is multi-commodity flow + network design (#184) — neither implemented. The existing single-commodity min-cost flow solver is not a COSO target: that problem is solved |
 | Packing | Functional — FFD + move/swap local search (1-D, vector, conflicts) |
 | Lot sizing | Single-level CLSP. Lot-for-lot / Silver-Meal / part-period balancing plus a shift/merge/split descent; there is no fix-and-optimize in the tree. `add_bom()` is accepted and never read, so MLCLSP silently solves as CLSP (#210), and no construction respects capacity, so an instance needing a pre-build returns `feasible() == false` (#211) |
-| Scheduling | **Broken, not merely unoptimised.** `ScheduleModel::solve()` calls `construct_neh()`, which aborts the process on any instance with two or more jobs (#188) — so the model API is unusable for real input, and the `e2e_smoke` scenario passes only because it uses a single job. Also: `construct_dispatch()` indexes `machine_free[-1]` for an operation no machine can run (#191), the operators and perturbations can still build cyclic disjunctive graphs (#189), and the local search in `src/scheduling/schedule_operators.cpp` is not wired into `solve()` at all and carries the unsound cycle guard of #185. Every test covering these is `SKIP`-ed, each naming its issue |
+| Scheduling | **Broken by acceptance, not by accident.** `ScheduleModel::solve()` calls `construct_neh()`, which aborts the process on any instance with two or more jobs (#188), so nothing that solves can be asserted here; the `e2e_smoke` scenario passes only because it uses a single job. The *declaration* is still auditable and is what #202 covers. Also: `construct_dispatch()` indexes `machine_free[-1]` for an operation no machine can run (#191), the operators and perturbations can still build cyclic disjunctive graphs (#189), and the local search in `src/scheduling/schedule_operators.cpp` is not wired into `solve()` at all and carries the unsound cycle guard of #185. Every test covering these is `SKIP`-ed, each naming its issue |
 | Assignment | Construction + VND; not validated |
 
 ## Gates
@@ -302,5 +339,8 @@ literature (`P` products, `T` periods, `D` dimensions).
 - When implementing from a paper or reference implementation, match it exactly.
   No early exits, iteration caps, or shortcuts that change behaviour unless
   asked for them.
-- Never ship an engine or feature that is known-broken. Disable it so it raises a
-  clear error, or delete it — a status line in a doc is not a guard.
+- The model API must never lie. A declaration is accepted and honoured, or rejected with a
+  clear error, or documented as accepted-and-dropped with its issue number — silently
+  ignoring what a user declared is the one defect that still blocks. This is where the old
+  "disable it or delete it" rule now applies, and only here.
+- The engine may ship broken (see **Current phase**). Record it, cite the issue, move on.
