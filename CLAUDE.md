@@ -77,6 +77,10 @@ clang-tidy and the gates that call it see the same compile lines either way.
 
 ## Architecture
 
+`docs/models.md` is the model spec: what can be declared, and what each engine does with it.
+Every cell in it carries the evidence its value requires — a cell without that evidence is a
+review finding.
+
 ### Layered Design
 
 ```

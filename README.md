@@ -62,6 +62,9 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 
 Python bindings currently cover `RoutingModel`, `NetworkModel`, and `LotSizingModel`.
 
+What each model can actually declare, and what each engine does with it, is specified in
+[`docs/models.md`](docs/models.md).
+
 ```cpp
 coso::NetworkModel m;
 int s = m.add_node(5, "source");
