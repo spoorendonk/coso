@@ -37,8 +37,6 @@ struct DemandParams {
 /// Supports nurse rostering, timetabling, and related assignment problems.
 class AssignmentModel {
 public:
-    ~AssignmentModel();
-
     /// Add a shift type.
     int add_shift_type(ShiftTypeParams p);
 
@@ -89,6 +87,54 @@ public:
 
     /// Solve the assignment problem within the given time limit.
     Result solve(TimeLimit tl);
+
+private:
+    // -- Shift types & employees ---------------------------------------------
+    std::vector<ShiftTypeParams> shift_types_;
+    std::vector<EmployeeParams> employees_;
+
+    // -- Planning horizon ----------------------------------------------------
+    int horizon_ = 0;
+
+    // -- Demand entries: (shift_type, day) -> DemandParams -------------------
+    struct DemandEntry {
+        int shift_type;
+        int day;
+        DemandParams params;
+    };
+    std::vector<DemandEntry> demands_;
+
+    // -- Demand for all days: shift_type -> DemandParams ---------------------
+    struct DemandAllEntry {
+        int shift_type;
+        DemandParams params;
+    };
+    std::vector<DemandAllEntry> demands_all_;
+
+    // -- Hard constraints ----------------------------------------------------
+    int max_consecutive_shifts_ = INT_MAX;
+    int min_rest_between_shifts_ = 0;
+    std::vector<std::vector<int>> forbidden_sequences_;
+
+    // -- Preferences ---------------------------------------------------------
+    struct PrefEntry {
+        int employee;
+        int day;
+        int shift_type;
+        int weight;
+    };
+    std::vector<PrefEntry> preferences_;
+
+    // -- Unavailabilities ----------------------------------------------------
+    struct UnavailEntry {
+        int employee;
+        int day;
+    };
+    std::vector<UnavailEntry> unavailabilities_;
+
+    // -- Replanning ----------------------------------------------------------
+    std::vector<std::vector<int>> published_schedule_;
+    int change_penalty_ = 0;
 };
 
 }  // namespace coso
