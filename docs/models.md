@@ -622,3 +622,408 @@ Two findings with no issue of their own, both for #182:
   `python/bindings.cpp` binds `RoutingModel`, `NetworkModel` and `LotSizingModel` only. Nothing
   in this audit depends on either, and no Python surface is affected by the cut above — but
   their closed state is not a record of work done, and #182 should not plan around them.
+
+## Lot sizing
+
+`LotSizingModel` (`src/model/lotsizing_model.h`, 52 lines) declares a planning horizon, products
+carrying a setup cost, a setup time, a unit production cost and a holding cost, an external demand
+per product and period, one production capacity per period, and a bill of materials, and solves it
+as the capacitated lot-sizing problem. Nothing is cut by this section; the BOM is kept and its
+native cell is `drops` — see §Rulings.
+
+Engine columns are #173's map for this model: **native** (`lot_for_lot` / `silver_meal` /
+`part_period_balancing` from `src/lotsizing/construction.cpp`, then a shift/merge/split descent
+inside `LotSizingModel::solve()`) and **HiGHS** (#183). Only the native engine is integrated;
+HiGHS is not a dependency of this repo, so its column can hold no value but `documented`, pinned
+to a public API reference:
+
+- HiGHS v1.7.2, `HighsLp` (`col_cost_`, `col_lower_`, `col_upper_`, `integrality_` —
+  `HighsVarType::kInteger` — `a_matrix_`, `row_lower_`, `row_upper_`, `sense_`), passed with
+  `Highs::passModel` and solved with `Highs::run()`. Every HiGHS cell below is evidenced on the
+  **standard aggregate CLSP formulation** — the one #183 names — with, per product `p` and period
+  `t`, a continuous production column `x_pt`, a binary setup column `y_pt` and a continuous
+  inventory column `s_pt`:
+
+```text
+balance   s_{p,t-1} + x_pt - s_pt = d_pt                       (s_{p,-1} = 0)
+setup     x_pt - M_pt y_pt <= 0,   M_pt = min(sum_{u >= t} d_pu, C_t - st_p)
+capacity  sum_p (x_pt + st_p y_pt) <= C_t
+min       sum_{p,t} (sc_p y_pt + uc_p x_pt + hc_p s_pt)
+```
+
+### Schema
+
+| entity | fields |
+|---|---|
+| horizon | `num_periods` (int > 0) |
+| product | `setup_cost`, `setup_time`, `unit_production_cost`, `holding_cost` (double, one value per product, constant over the horizon) |
+| demand | `demand[product][period]` (double, default 0) |
+| capacity | `capacity[period]` (double, default **0**) |
+| BOM edge | `parent`, `child`, `quantity` (double, default 1.0) |
+
+`set_num_periods` throws `std::invalid_argument` on a non-positive horizon and **resets demand and
+capacity**, so it must be called before the values it would wipe. `set_demand` and `set_capacity`
+throw `std::out_of_range` on an unknown product or period; `add_bom` throws `std::out_of_range` on
+an unknown product and `std::invalid_argument` on `parent == child`, and does not check the BOM
+graph for cycles. `solve(TimeLimit)` is the whole call surface — there is no reference solution and
+no warm start, so principle 4 has nothing to rule here. A model with no product or no period
+returns a default-constructed `Result` (`feasible() == false`) rather than throwing.
+
+Two defaults worth stating because a user hits them first. **Capacity defaults to 0**, so a model
+that never calls `set_capacity` cannot produce anything: every plan with production violates
+capacity in every period and comes back `feasible() == false`. **Demand defaults to 0**, which is
+the harmless direction — an unset product-period simply has nothing to make.
+
+Absent, and named because the rulings below turn on them: initial inventory, backlog as a cost,
+setup carry-over between periods, multiple resources or parallel machines, minimum and maximum lot
+size, lead times, per-period variation of any of the four cost fields, all-or-nothing production
+(DLSP), within-period sequencing (GLSP), and the unit production *time* — `capacity_usage` in
+`src/lotsizing/lotsizing_solution.cpp` charges exactly one unit of capacity per unit produced, a
+hardcoded rate of 1, plus the product's setup time wherever it produces.
+
+### Features
+
+| feature | model | native | HiGHS |
+|---|---|---|---|
+| planning horizon (`set_num_periods`) | `declarable` | `supported` [a] | `documented` [k] |
+| product (`add_product`) | `declarable` | `supported` [b] | `documented` [l] |
+| external demand per product-period (`set_demand`) | `declarable` | `supported` [c] | `documented` [m] |
+| production capacity per period (`set_capacity`) | `declarable` | `supported` [d] | `documented` [n] |
+| BOM dependent demand (`add_bom`) | `declarable` | `drops` [e] — **dead** | `documented` [o] |
+| `setup_cost` | `declarable` | `supported` [f] | `documented` [p] |
+| `setup_time` | `declarable` | `supported` [g] | `documented` [q] |
+| `unit_production_cost` | `declarable` | `supported` [h] | `documented` [r] |
+| `holding_cost` | `declarable` | `supported` [i] | `documented` [s] |
+| objective: minimise setup + production + holding cost | `declarable` [j] | `supported` [j] | `documented` [t] |
+| initial inventory | `absent` | `—` [u] | `—` [u] |
+| backlog as a cost | `absent` | `—` [v] | `—` [v] |
+| setup carry-over between periods | `absent` | `—` [w] | `—` [w] |
+| multiple resources / parallel machines | `absent` | `—` [x] | `—` [x] |
+| minimum and maximum lot size | `absent` | `—` [y] | `—` [y] |
+| lead times | `absent` | `—` [z] | `—` [z] |
+| per-period cost variation | `absent` | `—` [aa] | `—` [aa] |
+| all-or-nothing production (DLSP) | `absent` | `—` [ab] | `—` [ab] |
+| within-period sequencing (GLSP) | `absent` | `—` [ac] | `—` [ac] |
+| unit production time | `absent` | `—` [ad] | `—` [ad] |
+
+The ten `absent` rows have no engine value to hold: an engine cannot enforce, reject or drop a
+declaration the API cannot make. Their `—` cells say why the model cannot express the feature, and
+§Rulings says whether that is an `extend` or a `cut`.
+
+Every native `supported` cell is evidenced on one test,
+`tests/lotsizing/lotsizing_model_test.cpp` "LotSizingModel: CLSP with capacity binding in one
+period", so it is worth stating the instance once. Two products over three periods, demand 10 per
+product per period:
+
+| product | `setup_cost` | `setup_time` | `unit_production_cost` | `holding_cost` |
+|---|---|---|---|---|
+| A | 50 | 2 | 1 | 1 |
+| B | 60 | 3 | 2 | 1 |
+
+Total production is fixed at 30 per product — no initial inventory, no backlog, and
+overproduction only costs — so the variable production cost is the constant `30 * 1 + 30 * 2 = 90`
+and the plan is decided by setups against holding. Relaxed, the optimum is one setup per product in
+period 0: `setups 110 + holding 60 + production 90 = 260`, using `30 + 30 + 2 + 3 = 65` units of
+capacity in period 0. With capacity `(25, 100, 100)` that plan is out and the optimum becomes
+`A = (10, 20, 0)`, `B = (10, 20, 0)`: `setups 220 + holding 20 + production 90 = 330`, with
+period-0 usage `10 + 10 + 2 + 3 = 25`, exactly the declared capacity and the only binding period.
+Both optima are **unique**, established by exhaustive enumeration over a 0.25-unit production grid
+rather than by inspection. The test asserts the returned `production()` and `inventory()` matrices
+entry by entry, recomputes the inventory balance from the returned production and the declared
+demand, recomputes each period's capacity usage from the returned production and the declared setup
+times, and asserts `cost() == 330`.
+
+Evidence:
+
+- [a] Three periods are declared and the returned `production()[p]` and `inventory()[p]` are three
+  long, with the inventory balance chained across exactly those three periods — the horizon is what
+  the plan spans, not a stored number.
+- [b] Two products are declared and come back as two independent rows with different plans in the
+  control section and different cost contributions in every section; [f]–[i] are the four fields
+  that distinguish them.
+- [c] The test recomputes `inventory[p][t]` as `inventory[p][t-1] + production[p][t] - demand[p][t]`
+  from the *declared* demand and asserts it equals the returned inventory, and that it is
+  non-negative — the only assertion that ties the returned plan to the numbers the model was given.
+  Demand also fixes the totals: 30 per product in every section.
+- [d] The capacitated section returns 330 and the control section — the same declaration with
+  period 0's capacity raised to 1000 and nothing else changed — returns 260 with a different plan.
+  Recomputed period-0 usage is 25 against a declared 25 in the first and 65 against 1000 in the
+  second. An engine that ignored capacity would return the control's answer in both. Enforced by
+  `has_capacity_violation()` through `is_feasible()` on every move in
+  `src/lotsizing/lotsizing_operators.cpp` — **not** by the constructions, which never read
+  `capacity()`; see §Defects, #211, for what that costs.
+- [e] `add_bom` is stored, copied into `LotsizingData` and never read again.
+  `LotsizingSolution::recompute_inventory_` balances external demand only — its own comment claims
+  the constructions and operators handle dependent demand, and neither mentions the BOM.
+  `is_multi_level()`, `children()`, `parents()` and `is_end_product()` have exactly one caller in
+  the tree, `tests/lotsizing/lotsizing_test.cpp`, which asserts the adjacency lists at the data
+  layer and never solves. A parent with demand 5 per period and `add_bom(parent, child, 2.0)`
+  returns `production[child] = [0, 0, 0]` and `feasible() == true`. **Dead**, not dormant: there is
+  no idle dependent-demand code anywhere to wire in. Filed as #210, with the
+  `SKIP`-ed "LotSizingModel: BOM generates dependent demand for the child" holding the assertion
+  that should pass.
+- [f] The capacitated optimum runs two setups per product and the control one, and the difference
+  between the asserted 330 and 260 is `+110` of setup cost against `-40` of holding. An engine
+  ignoring `setup_cost` would return 110, not 330, and would have no reason to prefer the control's
+  plan.
+- [g] Third section: capacity 20 in period 0. Both products carry demand 10 there and there is no
+  initial inventory, so every feasible plan sets both up in period 0 —
+  `10 + 10 + 2 + 3 = 25 > 20` — and the instance is infeasible; the returned plan's recomputed
+  period-0 usage exceeds the declared capacity. The same declaration with the setup times removed
+  and nothing else changed fits in 20 exactly and returns the 330 plan. Setup time is the only
+  difference between the two, and it changes the returned solution. Enforced by the setup-time term
+  in `LotsizingSolution::capacity_usage`.
+- [h] A and B carry different unit costs, 1 and 2, over equal total production of 30 each. The
+  asserted cost carries `30 * 1 + 30 * 2 = 90` of it; a dropped or shared unit cost gives 240 or a
+  wrong total, not 330.
+- [i] Holding is 20 in the capacitated section and 60 in the control, on the same declared
+  `holding_cost` of 1 per product: it is the whole reason the control's single-setup plan costs
+  more to hold and less to set up. Charged on positive inventory only, in
+  `LotsizingSolution::recompute_costs`.
+- [j] Implicit and unique: declaring the four cost fields declares the objective, there is no
+  setter and no second objective. `Result::cost` is `LotsizingSolution::cost()`, which
+  `recompute_costs()` maintains as `setup_cost_ + holding_cost_ + production_cost_` — the sum of
+  `setup_cost(p)` over set-up product-periods, `holding_cost(p) * inventory` over **positive**
+  inventories, and `unit_production_cost(p) * production` over all of them. Every cost assertion
+  above is an assertion on it.
+- [k] The horizon is the `t` index of the column and row families above; nothing in `HighsLp`
+  bounds it.
+- [l] The `p` index of the same families. `Highs::passModel` takes one `HighsLp` for all of them.
+- [m] `row_lower_ == row_upper_ == d_pt` on the balance row.
+- [n] The capacity row, `row_upper_ = C_t` with `row_lower_ = -kHighsInf`.
+- [o] One extra term in the balance row it already has: for a BOM edge `(q, p)` with gozinto `r`,
+  the child's balance becomes `s_{p,t-1} + x_pt - s_pt - sum_q r_qp x_qt = d_pt`, i.e. an
+  `a_matrix_` entry of `-r_qp` on the parent's production column in the child's balance row. No new
+  column, no new row — which is why MLCLSP is cheap for #183 and why this cell is `documented`
+  while the native one is `drops`.
+- [p] `col_cost_[y_pt] = sc_p`, with `integrality_[y_pt] = HighsVarType::kInteger` and bounds
+  `[0, 1]`.
+- [q] The `st_p` coefficient on `y_pt` in the capacity row, and the `C_t - st_p` term of the setup
+  row's `M_pt`.
+- [r] `col_cost_[x_pt] = uc_p`.
+- [s] `col_cost_[s_pt] = hc_p`. `col_lower_[s_pt] = 0` is what makes backlog an infeasibility here
+  too, and what a backlog `extend` would change — see §Rulings, #212.
+- [t] `min col_cost_ . x` with `sense_ = ObjSense::kMinimize`; `Highs::getSolution()` returns the
+  `x`, `y` and `s` values that price it.
+- [u] Every product starts the horizon empty: `recompute_inventory_` takes `prev_inv = 0` at
+  `t == 0` and there is no setter. §Rulings, #212 — this is the field the instance files below all
+  carry and the model cannot take.
+- [v] `ProductEntry` has no backlog cost, and the objective has no term for one. A negative
+  inventory is an infeasibility instead — see §Result.
+- [w] `setup(p, t)` is a per-period indicator with no link between periods: producing the same
+  product in `t` and `t+1` pays `setup_cost(p)` twice and `setup_time(p)` twice, always.
+- [x] `capacity(t)` is one number per period. There is no resource index on the capacity, on the
+  setup time, or on production, so "two machines each with 400 hours" is inexpressible except as
+  one pooled 800 — which is a different problem the moment a lot cannot be split across machines.
+- [y] Production is any non-negative real, bounded only by capacity. There is no minimum lot size
+  and no maximum other than the period's capacity.
+- [z] Production in period `t` is available for demand in period `t`. There is no offset between
+  the period a lot is made in and the period it can be used in — which is also what makes a BOM
+  lead time inexpressible on top of #210.
+- [aa] All four cost fields are one value per product for the whole horizon:
+  `LotsizingData::setup_cost(p)`, `setup_time(p)`, `unit_production_cost(p)`, `holding_cost(p)` take
+  a product and no period. `capacity(t)` is the only thing that varies over the horizon besides
+  demand.
+- [ab] Production is continuous on `[0, capacity]`. There is no way to say "produce at full
+  capacity or not at all", which is the whole of DLSP.
+- [ac] A period is a bucket with a total capacity; nothing in the schema orders what happens inside
+  it, and `Result` carries no start time or sequence. Sequence-dependent setup costs and times have
+  nowhere to go either.
+- [ad] `capacity_usage(t)` adds `production_[idx]` directly: one unit of capacity per unit produced,
+  for every product. A product that takes 2 hours per unit while another takes 0.5 cannot be
+  declared; the workaround is to scale that product's demand, holding cost and unit cost together,
+  which is a modelling trick, not a declaration.
+
+### Result
+
+Primary: **`production[p][t]`**, the quantity of product `p` made in period `t`. Everything else a
+third party needs to check a returned CLSP solution against the declaration follows from it —
+inventory by the balance, setups by the sign, capacity usage by adding the declared setup times.
+
+Also returned: **`inventory[p][t]`**, the end-of-period inventory. It is derived —
+`inventory[p][t] = inventory[p][t-1] + production[p][t] - demand[p][t]` from an empty start — and
+it is returned anyway because it is what the holding cost is charged on, and because a caller
+should be able to check the balance rather than recompute the engine's own arithmetic and agree
+with it by construction. The test does both.
+
+**Setup indicators are derivable and need no field.** `LotsizingSolution::set_production` clamps
+the quantity to `max(0.0, qty)` and sets `setup_[idx] = (qty > 0.0)` in the same statement, so
+`setup(p, t)` and `production(p, t) > 0` are the same predicate — there is no setup with zero
+production anywhere on the model path, and a caller recovers the setup pattern, the setup cost and
+the setup-time share of capacity from `production()` alone. This is what the test's capacity
+recomputation does.
+
+**Backlog would need its own array.** `inventory_` is one signed array and a negative entry is an
+*infeasibility*, not a backlog: see §Rulings, #212. If backlog is extended, the balance splits into
+`s_pt - b_pt` and `Result` gains `backlog[p][t]` beside the two arrays it has — inventory alone
+cannot carry it, because a period holding stock of one product while backlogging another is normal
+and a single signed array would be read as one or the other.
+
+What a returned `Result` carries today:
+
+| field | contents |
+|---|---|
+| `cost()` | the declared objective's value, `sum_{p,t} (setup_cost(p) [x>0] + unit_production_cost(p) x + holding_cost(p) max(inv, 0))` |
+| `feasible()` | `LotsizingSolution::feasible()`: no negative inventory and no period over capacity |
+| `production()` | `production_quantities_[product][period]` |
+| `inventory()` | `inventory_levels_[product][period]` |
+| `iterations()` | accepted descent moves |
+| `work_ticks()` / `work_units()`, `elapsed_seconds()` | work and time counters |
+
+Three findings:
+
+1. **Backlog is an infeasibility, not a cost.** `LotsizingSolution::feasible()` is
+   `!has_demand_violation() && !has_capacity_violation()`, and `has_demand_violation()` is
+   "some `inventory_[p * T + t] < -1e-9`". `total_backlog()` — the sum of the negative inventories
+   — exists in `src/lotsizing/lotsizing_solution.{h,cpp}` and has **no caller anywhere but
+   `tests/lotsizing/lotsizing_test.cpp`**, and no model-side cost drives it: `recompute_costs()`
+   charges holding on positive inventory only and has no backlog term to charge. On the model path
+   it is not merely uncosted but always zero, because every construction produces at least the
+   period's demand and every move's `is_feasible()` rejects a demand violation. Recorded, not
+   changed: it is the shape the #212 `extend` needs, and the ruling is that unmet demand is a
+   rejected plan until then.
+2. **No cost breakdown reaches the caller.** `LotsizingSolution` maintains `setup_cost()`,
+   `holding_cost()` and `production_cost()` separately and `Result` returns only their sum, so a
+   caller cannot check the three components independently — the test recomputes them from
+   `production()` and the declaration instead. Noted on #176 rather than filed: it is a `Result`
+   contract question for every model, not a lot-sizing bug.
+3. **`feasible() == false` is returned with a full plan attached.** `solve()` fills
+   `production_` and `inventory_` from `best` whether or not `best.feasible()`, so an infeasible
+   answer carries the plan that violates the declaration. That is the right shape — it is what lets
+   the setup-time section assert *how* the returned plan overruns capacity rather than only that it
+   does — but a caller must check `feasible()` before trusting the numbers. See #211 for the reason
+   an infeasible answer comes back at all on instances that have a feasible plan.
+
+### Variants
+
+| claim | features needed | verdict |
+|---|---|---|
+| README "CLSP", P1 (#143) | horizon, products, demand, capacity, setup cost and time, holding | expressible now: the whole §Features evidence list. Bounded by #211 — an instance whose only feasible plans pre-build ahead of a capacity spike comes back `feasible() == false` |
+| CLSP with setup times (Trigeiro et al. 1989) | `setup_time` | expressible now: [g]. This is the field-for-field fit checked in §Rulings |
+| ULSP / Wagner-Whitin, uncapacitated single-item | horizon, demand, setup and holding cost | expressible now: one product and a capacity above total demand — the control section is exactly this, and returns the Wagner-Whitin answer |
+| README "MLCLSP", P2 (#149) | BOM dependent demand | declarable and **dropped** — #210. Not a variant this model expresses today, whatever `is_multi_level()` reports |
+| P3 DLSP (#144) | all-or-nothing production, small time buckets | `cut` — §Rulings |
+| P4 GLSP (#145) | within-period sequencing, sequence-dependent setups | `cut` — §Rulings, and it is a scope ruling on a single model, not a principle-2 composition |
+| P5 CSLP / setup carry-over (#146) | a setup state linked across periods | after an `extend` — §Rulings, #213 |
+| P6 lot sizing with backlogging (#147) | backlog cost, a backlog array in `Result` | after an `extend` — §Rulings, #212 |
+| P7 multi-machine lot sizing (#148) | a resource index on capacity, setup time and production | `cut` — §Rulings, and it too is a scope ruling on a single model, not a principle-2 composition |
+| lot sizing with minimum or maximum lot size | production bounds per product | `cut` — §Rulings |
+| lot sizing with lead times | an offset between production and availability | `cut` — §Rulings |
+| lot sizing with time-varying costs | per-period cost fields | after an `extend` — §Rulings, #212 |
+| inventory routing (MIRPLIB, R22 #125) | a routing solution and a lot-sizing solution joined by an outer loop | `cut` by principle 2 — two models, not one. §Rulings records that #183 and #177 both had it filed as a lot-sizing source |
+
+### Rulings
+
+**Field inventory of the two instance formats.** #183 names Atamtürk's lot-sizing datasets and
+MIRPLIB. MIRPLIB is ruled out below; the second set is Trigeiro et al. (1989), the standard
+CLSP-with-setup-times benchmark, which #177 does not list. Both were downloaded and read — this
+table is what the files carry, not what a paper says they carry.
+
+*Atamtürk & Muñoz, `capacitated.lotsizing`* —
+<https://atamturk.ieor.berkeley.edu/data/capacitated.lotsizing/cls.data.tar.gz> (619 KB, HTTP 200),
+246 files, 100 instances named `cls.T90.C{2..5}.F{100,200,250,500,1000}.S{1..5}`, from *A Study of
+the Lot-Sizing Polytope*, Mathematical Programming 99:443–465 (2004). Instance read:
+`cls.T90.C3.F100.S1`, with its `.dat`, its `.mps` twin and the AMPL generator `ls.T90.C3.F100.S1.mod`
+that produced both.
+
+*Trigeiro, Thomas & McClain (1989)* — the original Auburn FTP host is dead and has no Wayback
+snapshot, and OR-Library's lot-sizing page says outright that it has no lot-sizing instances. The
+live distribution is Christopher Sürie's converted set,
+<http://www.suerie.de/testsets/clspl/data.tar.bz2> (297 KB, HTTP 200): 751 instances, one directory
+of eleven `.PRN` files each, with a published format specification
+(`TI_CLSPL_Description.pdf`) and a TTM-name mapping (`conv_ttm_new.txt`). Instance read:
+`test0001`, which that mapping identifies as TTM `E1.dat` — 6 items, 15 periods, 1 resource.
+Every "in all 751" claim below was checked by reading all 751 instance directories.
+
+| field | Atamtürk `cls.T90.C3.F100.S1` | Trigeiro `test0001` (TTM `E1`) | `LotSizingModel` |
+|---|---|---|---|
+| number of products | no field — single item | `INDEX.PRN` col 1, `J = 6` | `add_product`, `declarable` |
+| number of periods | line 1 of the `.dat`, `T = 90` | `INDEX.PRN` col 2, `T = 15` | `set_num_periods`, `declarable` |
+| number of resources | no field — one implied | `INDEX.PRN` col 3, `M = 1` (and `M = 1` in all 751) | **`absent`** — one capacity per period |
+| demand per product-period | `.dat` lines 2..T+1, **cumulative**; per-period by differencing | `P-BEDARF.PRN`, J × T matrix | `set_demand`, `declarable` |
+| capacity per period | `.dat` lines T+2..2T+1, varies per period (23–37 for `C3`) | `KAPAZ.PRN`, M × T, but **constant over t in all 751** | `set_capacity`, `declarable` |
+| setup cost | `.mod` / `.mps` only, **one value per period**, `floor(Uniform(901,1100))` | `RUESTK.PRN`, one per item, time-invariant (25–2000 across the set, no zeros) | `setup_cost`, `declarable` — but per product only |
+| setup time | no field | `RUESTZ.PRN`, `(m, j, st)` triples; 5–150, no zeros | `setup_time`, `declarable` |
+| unit production cost | `.mod` / `.mps` only, **one value per period**, `floor(Uniform(81,120))` | no field — the spec attributes no direct production cost to a lot | `unit_production_cost`, `declarable` — but per product only |
+| holding cost | `.mod` / `.mps` only, 10 per period and **60 in the terminal period** | `LAGKOST.PRN`, one per item, time-invariant | `holding_cost`, `declarable` — but per product only |
+| unit production time | no field — implicit 1 | `PRODKOEF.PRN`, `(m, j, a_mj)`; values 0.5–1.5, **not 1 in 10 of the 751** | **`absent`** — hardcoded 1 |
+| initial inventory | **no field** | `L0.PRN`, one per item — **present, and 0 in all 751** | **`absent`** |
+| required ending inventory | no field | `LT.PRN`, one per item — present, and 0 in all 751 | **`absent`** |
+| overtime / soft capacity | no field | `UEBER-KS.PRN`, one per resource — 10000 in all 751 | **`absent`** — capacity is hard |
+| BOM / multi-level | no field | `DIREKT-B.PRN`, `(j, k, r_jk)` triples — present but **empty in all 751**; three bytes of DOS line ending | `add_bom`, `declarable` but `drops` — #210 |
+| backlog cost | no field; `roof` forbids negative inventory | no field; the CLSPL model is stated as being without backlogging | **`absent`** |
+| setup carry-over | no field | not a data field — the same files serve CLSP and CLSPL | **`absent`** |
+| min / max lot size | no field; only `size[t] <= producing[t] * capacity[t]` | no field; only the big-M link | **`absent`** |
+| lead time | no field | no field — `LT.PRN` is *ending inventory*, not lead time | **`absent`** |
+
+Two expectations of #205 that the files did not bear out, recorded because they change the rulings
+below:
+
+- **Initial inventory is not universal.** The issue expected it in both. Atamtürk has no field at
+  all, Trigeiro has a dedicated one that is zero in every instance. It stays an `extend` — see
+  #214 — but on the strength of rolling-horizon use, not on the strength of the benchmark data.
+- **Neither set is multi-level, and Atamtürk is not multi-item.** `DIREKT-B.PRN` is empty in all
+  751 and Atamtürk has no product dimension. So the MLCLSP half of the README's claim has no
+  benchmark behind it either way, quite apart from #210.
+
+And one that changes #177's sequencing: **neither set can be read into the schema as it stands.**
+Atamtürk's setup and production costs vary by period, and 10 of the 751 Trigeiro instances have a
+production coefficient other than 1. Both are #215.
+
+**MIRPLIB is mis-filed, on #183 and on #177.** MIRPLIB (<https://mirplib.scl.gatech.edu/>) is the
+*Maritime Inventory Routing* library: vessels routed between production and consumption ports,
+each port carrying an inventory balance with a storage capacity. Its solution is a set of vessel
+routes *and* a delivery schedule — two structures joined by an outer loop, which is exactly
+principle 2's user-level composition of `RoutingModel` and `LotSizingModel`, and the preamble
+already names it as R22's (#125) relative. It is not a lot-sizing instance format, no plugin for
+#183 can read it, and no lot-sizing benchmark should cite it. Both issues now carry the correction
+and Trigeiro as the replacement, with the live URL.
+
+**The nine `absent` classes.**
+
+| class | ruling | reason |
+|---|---|---|
+| initial inventory | `extend` — #214 | Two coefficients on a row that already exists (period-0 balance RHS, and a lower bound on the last period's inventory column). It is what makes rolling-horizon re-planning expressible, which is the ordinary industrial use and needs no new concept. Weakly evidenced by the data — see above — and strongly by use. Covers the required *ending* inventory in the same issue, because `L0.PRN` and `LT.PRN` are the two ends of one balance |
+| backlog cost (P6, #147) | `extend` — #212 | A named variant, and the engine already computes `total_backlog()` with nothing to charge it. One column family for HiGHS (`s_pt` splits into `s_pt - b_pt`), and `Result` gains `backlog[p][t]`. Neither benchmark set has it, so it is driven by P6 rather than by the data — but the sibling in the same issue, **overtime**, is in every one of the 751 Trigeiro files, and is the same shape: a priced violation column |
+| setup carry-over (P5, #146) | `extend` — #213 | The strongest of the four. The Trigeiro set *is* CLSPL data — Sürie's format specification is titled for lot sizing with linked lot sizes, carry-over is a modelling choice rather than an instance field, and the same 751 files serve both problems. The day the `w_pt` link variable exists, #183 gets CLSPL coverage at no data cost and can cross-check against the published bounds |
+| per-period cost variation | `extend` — #215 | Not merely nice: it is what stops Atamtürk's set being loadable. Collapsing 90 per-period setup costs into one number is a different instance, not a lossy import. Free for HiGHS, which writes a `col_cost_` entry per `(p, t)` already. #215 carries the unit production *time* with it — the same "indexed by product alone" defect, and the thing 10 of the 751 Trigeiro instances need |
+| multiple resources / parallel machines (P7, #148) | `cut` | **Ruled on scope, as a single-model schema extension — principle 2 does not reach it.** A resource index on `capacity`, `setup_time` and production is one model with a wider schema, exactly like location-routing or transshipment, so the question is whether it is in scope, not whether it composes. It is not: `M = 1` in all 751 Trigeiro instances and Atamtürk has no resource dimension, so nothing COSO would benchmark needs it; and #148 as written is not the schema widening at all but "assign production to machines **and sequence**", which drags in GLSP's cut below and a scheduling engine #173's map does not offer for this model. The cut is reversible and cheap if a multi-resource set is ever curated — `capacity(resource, period)` plus `setup_time(product, resource)` is what the `.PRN` format already stores — which is the reason to cut it now rather than build it on no instances |
+| minimum and maximum lot size | `cut` | Neither set has the field; in both, the only bound on a lot is the big-M capacity link. No named variant issue asks for it. Reversible in two column bounds for HiGHS, and a minimum lot size is a genuinely harder native change — it makes the empty lot and the minimum lot the only options, which the shift and split operators cannot express. Cut until an instance needs it |
+| lead times | `cut` | Neither set has the field. The `LT.PRN` that looks like one is a required *ending* inventory, which #214 takes. A lead time only becomes meaningful once dependent demand works at all, so it is behind #210 as well as behind a benchmark |
+| DLSP (P3, #144) | `cut` | All-or-nothing production, `x_t in {0, C_t}`, single item, small buckets. Neither set has it, #144 is closed, and it is a change of feasible *set* rather than a field: HiGHS gets it by substituting `C_t y_t` for `x_t`, which is a formulation, and the native operators — shift, merge and split arbitrary quantities — have nothing left to say when a lot may only be empty or full. There is no structure-aware oracle in #173's map for it |
+| GLSP (P4, #145) | `cut` | **Ruled on scope, as a single-model schema extension — principle 2 does not reach it.** GLSP is one model: lot sizes and a sequence within each bucket, decided together. So the ruling is on scope, and it is out on three counts. The solution object changes — `Result` would carry an order and start times inside each period, which is `ScheduleModel`'s object, and §Result's derivation of setups from `production()` stops holding. Sequence-dependent setup costs and times have nowhere in the schema to go. And the native engine reasons only about period totals, so there is no structure-aware operator to exploit; Fleischmann & Meyr's instances are not in #177 either. Cut, and the N-period bucket must not be sold as a schedule |
+
+**README.** Two rows overstated what exists and are corrected in the same commit. The model row
+read `LotSizingModel | CLSP, MLCLSP`; MLCLSP is not expressible while #210 stands, so it is
+narrowed to `CLSP (capacitated lot sizing)`. The engine-status row read *"Functional —
+fix-and-optimize bridge"*; **there is no fix-and-optimize anywhere in the tree** — the string
+occurs in `README.md` and `CLAUDE.md` and nowhere else, and the engine is lot-for-lot /
+Silver-Meal / part-period balancing followed by a shift/merge/split descent. Both files now say
+so, and say that a capacitated instance needing a pre-build comes back infeasible (#211).
+
+### Defects
+
+| issue | verdict |
+|---|---|
+| #210 `add_bom` is accepted and never read, so MLCLSP solves as CLSP | filed by this audit. It is the one `drops` in the native column, and **dead** rather than dormant: there is no idle dependent-demand code to wire. The interim step is the disable-and-raise of #193 — `solve()` throws while `bom_` is non-empty — and #183 makes it real, at the cost of one term in a balance row. Must be zero before #183 closes |
+| #211 constructions ignore capacity and the descent cannot repair infeasibility | filed by this audit. It is why the `supported` evidence for capacity is capacity *blocking* a merge rather than capacity *forcing* a pre-build: a one-product instance with demand `(0, 20)` and capacity `(20, 10)` comes back `feasible() == false` although the plan that pre-builds in period 0 is feasible and optimal. On instances that do come back feasible it costs quality — the same 2 × 3 instance at capacity 45 returns 330 against an enumerated optimum of 290 |
+| #212 backlog is an infeasibility with no cost, and capacity has no overtime | filed by this audit as the P6 `extend`; lands in #183 |
+| #213 no setup carry-over between periods | filed by this audit as the P5 `extend`; lands in #183, where it unlocks CLSPL over the same 751 instances |
+| #214 no initial or required ending inventory | filed by this audit as the `extend`; lands in #183 |
+| #215 costs are per product only and production time is fixed at 1 | filed by this audit as the `extend` that **blocks #177 curating either benchmark set**; lands in #183 |
+
+Two findings with no issue of their own:
+
+- **`Result` returns no cost breakdown.** `LotsizingSolution` maintains `setup_cost()`,
+  `holding_cost()` and `production_cost()` separately and only their sum reaches the caller, so the
+  test recomputes the three components from `production()` and the declaration instead. It is a
+  `Result` contract question for every model, so it is noted on #176 rather than filed here.
+- **The existing model-level coverage was not evidence.** Before this audit,
+  `tests/lotsizing/lotsizing_model_test.cpp` asserted the *shape* of `production()` and
+  `inventory()` plus `cost() > 0.0` — the pattern #199's evidence rule exists to exclude, since it
+  passes whatever the engine does with the declaration. One case was named "LotSizingModel supports
+  BOM" and asserted two `size()` calls; it is renamed to "accepts a BOM declaration", which is what
+  it shows, and the claim it made now lives in the `SKIP`-ed case that names #210. The `[lotsizing]`
+  cases in `tests/model/model_test.cpp` are shape assertions too, and the `e2e_smoke` scenario is
+  one product over three periods with a capacity of 80 against a peak demand of 20 — nothing there
+  binds. Every `supported` cell above cites the new capacity test instead.

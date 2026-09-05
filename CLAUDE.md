@@ -133,7 +133,7 @@ No numbers here until a verified benchmark run backs them (#177).
 | Routing | Most mature; validated against standard CVRP instances |
 | Network | Target scope is multi-commodity flow + network design (#184) — neither implemented. The existing single-commodity min-cost flow solver is not a COSO target: that problem is solved |
 | Packing | Functional — FFD + move/swap local search (1-D, vector, conflicts) |
-| Lot sizing | Functional — fix-and-optimize bridge |
+| Lot sizing | Single-level CLSP. Lot-for-lot / Silver-Meal / part-period balancing plus a shift/merge/split descent; there is no fix-and-optimize in the tree. `add_bom()` is accepted and never read, so MLCLSP silently solves as CLSP (#210), and no construction respects capacity, so an instance needing a pre-build returns `feasible() == false` (#211) |
 | Scheduling | **Broken, not merely unoptimised.** `ScheduleModel::solve()` calls `construct_neh()`, which aborts the process on any instance with two or more jobs (#188) — so the model API is unusable for real input, and the `e2e_smoke` scenario passes only because it uses a single job. Also: `construct_dispatch()` indexes `machine_free[-1]` for an operation no machine can run (#191), the operators and perturbations can still build cyclic disjunctive graphs (#189), and the local search in `src/scheduling/schedule_operators.cpp` is not wired into `solve()` at all and carries the unsound cycle guard of #185. Every test covering these is `SKIP`-ed, each naming its issue |
 | Assignment | Construction + VND; not validated |
 

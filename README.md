@@ -58,7 +58,7 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 | `AssignmentModel` | Nurse rostering, employee scheduling, multi-activity scheduling |
 | `PackingModel` | Bin packing, vector bin packing, bin packing with conflicts |
 | `NetworkModel` | Min-cost flow (single commodity) |
-| `LotSizingModel` | CLSP, MLCLSP |
+| `LotSizingModel` | CLSP (capacitated lot sizing) |
 
 Python bindings currently cover `RoutingModel`, `NetworkModel`, and `LotSizingModel`.
 
@@ -82,7 +82,7 @@ benchmark run backs it. That work is [#177](../../issues/177) and the per-model 
 |---|---|
 | **Routing** | Most mature. Validated against standard CVRP instances. |
 | **Packing** | Functional — FFD construction with move/swap local search. |
-| **Lot sizing** | Functional — fix-and-optimize bridge. |
+| **Lot sizing** | Single-level CLSP only. Constructions (lot-for-lot, Silver-Meal, part-period balancing) plus a shift/merge/split descent — there is no fix-and-optimize anywhere in the tree. A declared bill of materials is accepted and never read ([#210](../../issues/210)), and an instance whose only feasible plans build ahead of a capacity spike comes back infeasible ([#211](../../issues/211)). |
 | **Network** | Target scope is **multi-commodity flow and network design** ([#184](../../issues/184)) — neither is implemented. What exists is a single-commodity min-cost flow solver, which is not a COSO target: that problem is solved. |
 | **Scheduling** | **Construction-only** (SGS / SPT dispatch / NEH). `ScheduleModel::solve()` validates every candidate and returns feasible-but-unoptimised schedules. There is no working local search: the disjunctive-graph operators are not wired into `solve()` and carry the unsound cycle guard of [#185](../../issues/185). |
 | **Assignment** | Construction + VND. Not validated. |
