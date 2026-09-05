@@ -107,12 +107,14 @@ resource API (`add_resource` / `set_resource_usage`) is deleted as of this secti
 
 Engine columns are #173's map for this model: **native** (`McfSolver`, successive shortest
 paths), **OR-Tools** `SimpleMinCostFlow` (#179), **mcfcg** and **HiGHS** (#184). Only the native
-engine is integrated; nothing else is a dependency of this repo, so the other three columns can
-hold no value but `documented`, pinned to a public API reference:
+engine is integrated; nothing else is a dependency of this repo, so the other three columns hold
+`documented` where the engine's API has the feature and `—` where it does not, each pinned to a
+public API reference:
 
 - OR-Tools v9.11, `ortools/graph/min_cost_flow.h` (`SimpleMinCostFlow`).
 - mcfcg (<https://github.com/spoorendonk/mcfcg>, arXiv:2509.24656) — column generation for
-  min-cost multicommodity flow, path- and tree-based Dantzig-Wolfe; README formulations.
+  min-cost multicommodity flow, path- and tree-based Dantzig-Wolfe. No tagged release, so the
+  pin is a commit: README formulations at `ad848c25d8fd` (2026-09-03).
 - HiGHS v1.7.2, `HighsLp` (`col_cost_`, `col_lower_`, `col_upper_`, `row_lower_`, `row_upper_`).
 
 ### Schema
@@ -191,7 +193,7 @@ What a returned `Result` carries today, and the two findings:
 | field | contents |
 |---|---|
 | `cost()` | the declared objective's value, `sum_a flow(a) * cost(a)` |
-| `feasible()` | conservation at every node and `lower_cap <= flow <= upper_cap` on every arc |
+| `feasible()` | conservation at every node, `lower_cap <= flow <= upper_cap` on every arc, and `resource_feasible()` — vacuous now that no resource is declarable |
 | `flows()` | one entry, the greedy path decomposition |
 | `work_ticks()` / `work_units()` | deterministic work count |
 
