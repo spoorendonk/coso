@@ -431,13 +431,18 @@ Evidence:
   both dimensions from the declared sizes and asserts it is within capacity. The control
   section declares dimension 0 alone and gets those two items in *one* bin, so the assertion
   fails if the second dimension is ignored. Enforced by the `D`-loop in
-  `PackingSolution::item_fits_capacity` and by the same loop in the move/swap/merge/split
-  feasibility checks — **not** by `src/packing/bin_capacity.h`, the file #168 named: nothing on
-  the model path constructs a `BinCapacity`, only `tests/packing/bin_capacity_test.cpp` does.
+  `PackingSolution::item_fits_capacity` and by the same loop in the move and merge feasibility
+  checks — the only two `solve()` reaches, via `enumerate_moves` and `enumerate_merges`;
+  `enumerate_swaps` and `enumerate_splits` enforce nothing on the model path. And **not** by
+  `src/packing/bin_capacity.h`, the file #168 named: nothing on the model path constructs a
+  `BinCapacity`, only `tests/packing/bin_capacity_test.cpp` does.
 - [b] `tests/packing/packing_model_test.cpp` "PackingModel: variable-sized bin packing costs the
-  mix": a small type (capacity 5, cost 1) and a large one (capacity 10, cost 5) with items 8, 5,
-  5 return three bins costing 7, where the control section — large bins only — returns the two
-  bins costing 10 that a bin-*count* objective would prefer.
+  mix": a large type (capacity 10, cost 5) declared first and a small one (capacity 5, cost 1)
+  second, with items 8, 5, 5, return three bins costing 7. Declaration order carries the
+  evidence: construction breaks ties on lowest slot index, so an engine that ignored the
+  declared costs would fill the large bins and return two bins costing 10. Verified by mutation
+  — replacing `assign_cost_delta` / `move_cost_delta` with unit costs, which makes the search
+  minimise bin *count*, fails this assertion at 2 bins.
 - [c] `tests/packing/packing_model_test.cpp` "PackingModel: bin count limits the slots of a
   type": one type with `count = 1` and three items that each fill a bin returns exactly one bin,
   two unassigned items and `feasible() == false`. Enforced by slot allocation in the
@@ -450,8 +455,8 @@ Evidence:
 - [e] `tests/packing/packing_model_test.cpp` "PackingModel: bin packing with conflicts keeps the
   pair apart": two size-5 items and a capacity-10 bin come back in one bin in the control
   section and in two bins, in different bins, once the conflict is declared. Enforced by
-  `PackingSolution::has_conflict_in_bin` through `item_fits`, and by the conflict checks in
-  every operator's `is_feasible`.
+  `PackingSolution::has_conflict_in_bin` through `item_fits`, and by the conflict checks in the
+  `is_feasible` of the two operators `solve()` reaches.
 - [f] Implicit and unique: declaring bin costs declares the objective, and after the
   `minimize_bins()` deletion there is no setter and no second objective. `Result::cost` is
   `PackingSolution::cost()`, **the sum of `bin_cost` over non-empty bins** — maintained
@@ -509,10 +514,12 @@ Two findings:
    variable-sized test above therefore asserts `cost()` and the bin count, and identifies the
    large bin only indirectly — the size-8 item fits no other type. Filed as #207; it belongs
    with #176's `Result` contract, next to #206.
-2. **`Result::unassigned_` is documented as assignment-only.** In `src/model/types.h` the field
-   sits in the "Assignment (nurse rostering)" block, but `PackingModel::solve()` populates it
-   and packing has no other channel for unpacked items — [c]'s two unassigned items arrive
-   there. The field is shared; its comment is not. Noted on #176.
+2. **`Result::unassigned_` reads as assignment-only.** In `src/model/types.h` the field sits in
+   the "Assignment (nurse rostering)" block and carries no comment of its own, and the class
+   header comment lists `unassigned()` under neither assignment nor packing. But
+   `PackingModel::solve()` populates it, and packing has no other channel for unpacked items —
+   [c]'s two unassigned items arrive there. The placement is the documentation, and it is
+   wrong. Noted on #176.
 
 ### Variants
 
@@ -606,7 +613,10 @@ Two findings with no issue of their own, both for #182:
   above cites `packing_model_test.cpp` instead. Its instances are hand-written arrays named
   after Falkenauer and Scholl classes, not the published files: `download_benchmarks.sh` has no
   BPP entry. #182's step 3 is where this becomes real benchmark coverage; until then "tested
-  against Falkenauer" (#167, #172, README) overstates what runs.
+  against Falkenauer" (#167, #172) overstates what runs. README does not use that phrase, but
+  makes its own wrong claim in the same direction: `packing_benchmark_test` is listed among the
+  executables that "run against instances fetched by `tests/data/download_benchmarks.sh`", and
+  no fetched instance reaches it.
 - **#170 (BPPLIB parser) and #171 (Python bindings for `PackingModel`) are closed as completed,
   and neither exists in the tree.** There is no packing parser anywhere in `src/`, and
   `python/bindings.cpp` binds `RoutingModel`, `NetworkModel` and `LotSizingModel` only. Nothing

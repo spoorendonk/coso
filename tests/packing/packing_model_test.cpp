@@ -449,8 +449,12 @@ TEST_CASE("PackingModel: variable-sized bin packing costs the mix", "[packing][m
 
     SECTION("both bin types declared") {
         PackingModel model;
-        model.add_bin_type({.capacity = {5}, .cost = 1});
+        // The large type is declared first deliberately. Construction breaks
+        // ties on lowest slot index, so an engine that ignored the declared
+        // costs would fill the large bins and return 2 bins costing 10; only
+        // one that reads them returns 3 bins costing 7.
         model.add_bin_type({.capacity = {10}, .cost = 5});
+        model.add_bin_type({.capacity = {5}, .cost = 1});
         int big = model.add_item({.size = {8}});
         model.add_item({.size = {5}});
         model.add_item({.size = {5}});
@@ -459,8 +463,6 @@ TEST_CASE("PackingModel: variable-sized bin packing costs the mix", "[packing][m
 
         REQUIRE(result.feasible());
         REQUIRE(result.unassigned().empty());
-        // Three bins costing 7, not the two bins costing 10 that a
-        // bin-count objective would return.
         REQUIRE(result.num_bins() == 3);
         REQUIRE(result.cost() == 7.0);
 
