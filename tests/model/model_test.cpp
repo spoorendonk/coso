@@ -1,11 +1,15 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include <climits>
 #include <model/assignment_model.h>
 #include <model/lotsizing_model.h>
 #include <model/network_model.h>
 #include <model/packing_model.h>
 #include <model/routing_model.h>
 #include <model/schedule_model.h>
+#include <string>
+#include <utility>
+#include <vector>
 
 // =========================================================================
 //  API contract tests
@@ -581,5 +585,441 @@ TEST_CASE("Deterministic stop parity across model APIs", "[model][work_units]") 
         REQUIRE(r1.work_ticks() > 0);
         REQUIRE(r1.work_ticks() == r2.work_ticks());
         REQUIRE(r1.work_units() == r2.work_units());
+    }
+}
+
+// ==========================================================================
+//  Introspection round-trips (#216)
+//
+//  What a model was told, read back off the model itself.  Every accessor
+//  added by #216 is called at least once here and every field of every
+//  exposed entry struct is asserted, so dropping an accessor fails the build
+//  and dropping a field from a struct fails to compile the assertion that
+//  reads it.
+// ==========================================================================
+
+TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]") {
+    coso::RoutingModel m;
+
+    SECTION("depots, clients and vehicle types round-trip field by field") {
+        coso::DepotParams dp;
+        dp.tw = {5, 500};
+        REQUIRE(m.add_depot(1.5, -2.5, dp) == 0);
+        REQUIRE(m.add_depot(42, dp) == 1);
+
+        coso::ClientParams cp;
+        cp.demand = {3, 4};
+        cp.pickup = {1, 2};
+        cp.tw = {10, 90};
+        cp.extra_tw = {{100, 110}, {120, 130}};
+        cp.service = 7;
+        cp.release_time = 8;
+        cp.prize = 9;
+        cp.required = false;
+        cp.group = 11;
+        cp.skills = {"crane", "fridge"};
+        cp.client_type = 2;
+        REQUIRE(m.add_client(3.5, 4.5, cp) == 0);
+        REQUIRE(m.add_client(77, cp) == 1);
+
+        coso::VehicleTypeParams vp;
+        vp.capacity = {50, 60};
+        vp.max_duration = 480;
+        vp.max_distance = 900;
+        vp.min_tasks = 1;
+        vp.max_tasks = 12;
+        vp.max_overtime = 30;
+        vp.unit_overtime_cost = 5;
+        vp.reload_depot = 1;
+        vp.max_reloads = 2;
+        vp.cost.fixed_cost = 100;
+        vp.cost.unit_distance_cost = 3;
+        vp.cost.unit_duration_cost = 4;
+        vp.profile = 1;
+        vp.skills = {"crane"};
+        REQUIRE(m.add_vehicle_type(6, vp) == 0);
+
+        REQUIRE(m.num_depots() == 2);
+        auto const& d0 = m.depot(0);
+        REQUIRE(d0.x == 1.5);
+        REQUIRE(d0.y == -2.5);
+        REQUIRE(d0.has_coord);
+        REQUIRE(d0.explicit_id == -1);
+        REQUIRE(d0.params.tw.start == 5);
+        REQUIRE(d0.params.tw.end == 500);
+
+        // Trap: a depot added by explicit id stores x = y = 0.0, so has_coord
+        // is the only thing telling it apart from a depot at the origin.
+        auto const& d1 = m.depot(1);
+        REQUIRE(d1.x == 0.0);
+        REQUIRE(d1.y == 0.0);
+        REQUIRE_FALSE(d1.has_coord);
+        REQUIRE(d1.explicit_id == 42);
+
+        REQUIRE(m.num_clients() == 2);
+        auto const& c0 = m.client(0);
+        REQUIRE(c0.x == 3.5);
+        REQUIRE(c0.y == 4.5);
+        REQUIRE(c0.has_coord);
+        REQUIRE(c0.explicit_id == -1);
+        REQUIRE(c0.params.demand == std::vector<int>{3, 4});
+        REQUIRE(c0.params.pickup == std::vector<int>{1, 2});
+        REQUIRE(c0.params.tw.start == 10);
+        REQUIRE(c0.params.tw.end == 90);
+        REQUIRE(c0.params.extra_tw.size() == 2);
+        REQUIRE(c0.params.extra_tw[1].start == 120);
+        REQUIRE(c0.params.extra_tw[1].end == 130);
+        REQUIRE(c0.params.service == 7);
+        REQUIRE(c0.params.release_time == 8);
+        REQUIRE(c0.params.prize == 9);
+        REQUIRE_FALSE(c0.params.required);
+        REQUIRE(c0.params.group == 11);
+        REQUIRE(c0.params.skills == std::vector<std::string>{"crane", "fridge"});
+        REQUIRE(c0.params.client_type == 2);
+
+        // Trap: same for clients added by explicit id.
+        auto const& c1 = m.client(1);
+        REQUIRE(c1.x == 0.0);
+        REQUIRE(c1.y == 0.0);
+        REQUIRE_FALSE(c1.has_coord);
+        REQUIRE(c1.explicit_id == 77);
+
+        REQUIRE(m.num_vehicle_types() == 1);
+        auto const& v0 = m.vehicle_type(0);
+        REQUIRE(v0.count == 6);
+        REQUIRE(v0.params.capacity == std::vector<int>{50, 60});
+        REQUIRE(v0.params.max_duration == 480);
+        REQUIRE(v0.params.max_distance == 900);
+        REQUIRE(v0.params.min_tasks == 1);
+        REQUIRE(v0.params.max_tasks == 12);
+        REQUIRE(v0.params.max_overtime == 30);
+        REQUIRE(v0.params.unit_overtime_cost == 5);
+        REQUIRE(v0.params.reload_depot == 1);
+        REQUIRE(v0.params.max_reloads == 2);
+        REQUIRE(v0.params.cost.fixed_cost == 100);
+        REQUIRE(v0.params.cost.unit_distance_cost == 3);
+        REQUIRE(v0.params.cost.unit_duration_cost == 4);
+        REQUIRE(v0.params.profile == 1);
+        REQUIRE(v0.params.skills == std::vector<std::string>{"crane"});
+    }
+
+    SECTION("add_pickup and add_delivery store plain clients; only the pairing survives") {
+        // Trap: add_pickup / add_delivery are literal aliases for add_client.
+        // The role is not stored, so the stored entries are indistinguishable
+        // and only add_request() records anything about the pair.
+        int p = m.add_pickup(1.0, 1.0);
+        int d = m.add_delivery(2.0, 2.0);
+        int plain = m.add_client(3.0, 3.0);
+        m.add_request(p, d);
+        m.add_pickup_delivery(d, plain);
+
+        REQUIRE(m.num_clients() == 3);
+        REQUIRE(m.client(p).has_coord);
+        REQUIRE(m.client(d).has_coord);
+        // Nothing on a stored client distinguishes a pickup from a delivery
+        // from a plain client: all three carry default ClientParams.
+        REQUIRE(m.client(p).params.required);
+        REQUIRE(m.client(d).params.required);
+        REQUIRE(m.client(plain).params.required);
+        REQUIRE(m.client(p).params.demand.empty());
+        REQUIRE(m.client(d).params.demand.empty());
+
+        REQUIRE(m.requests() == std::vector<std::pair<int, int>>{{p, d}, {d, plain}});
+    }
+
+    SECTION("client groups count the ids handed out, not the ids clients carry") {
+        REQUIRE(m.num_client_groups() == 0);
+        REQUIRE(m.add_client_group() == 0);
+        REQUIRE(m.add_client_group() == 1);
+        REQUIRE(m.num_client_groups() == 2);
+
+        // ClientParams::group is never validated against next_group_id_, so a
+        // client may name a group that was never created and the count does
+        // not bound it.
+        coso::ClientParams cp;
+        cp.group = 99;
+        m.add_client(0.0, 0.0, cp);
+        REQUIRE(m.client(0).params.group == 99);
+        REQUIRE(m.num_client_groups() == 2);
+    }
+
+    SECTION("matrix setters are an append-only log, last entry wins") {
+        m.set_distance(0, 1, 10);
+        m.set_duration(0, 1, 20);
+        m.set_profile(2);
+        m.set_distance(0, 1, 30);  // same (from, to), new profile
+        m.set_duration(0, 1, 40);
+        m.set_profile_distance(3, 1, 0, 50);
+        m.set_profile_duration(3, 1, 0, 60);
+        m.set_cost_matrix(1, 0, 1, 70);
+
+        REQUIRE(m.distance_entries().size() == 3);
+        auto const& e0 = m.distance_entries()[0];
+        REQUIRE(e0.profile == 0);
+        REQUIRE(e0.from == 0);
+        REQUIRE(e0.to == 1);
+        REQUIRE(e0.value == 10);
+        REQUIRE(m.distance_entries()[1].profile == 2);
+        REQUIRE(m.distance_entries()[1].value == 30);
+        REQUIRE(m.distance_entries()[2].profile == 3);
+        REQUIRE(m.distance_entries()[2].from == 1);
+        REQUIRE(m.distance_entries()[2].to == 0);
+        REQUIRE(m.distance_entries()[2].value == 50);
+
+        REQUIRE(m.duration_entries().size() == 3);
+        REQUIRE(m.duration_entries()[0].value == 20);
+        REQUIRE(m.duration_entries()[1].value == 40);
+        REQUIRE(m.duration_entries()[2].value == 60);
+
+        REQUIRE(m.cost_entries().size() == 1);
+        REQUIRE(m.cost_entries()[0].profile == 1);
+        REQUIRE(m.cost_entries()[0].from == 0);
+        REQUIRE(m.cost_entries()[0].to == 1);
+        REQUIRE(m.cost_entries()[0].value == 70);
+
+        // Trap: a repeated (profile, from, to) appends rather than
+        // overwriting, so the log holds duplicates and the reader must take
+        // the last one.
+        m.set_profile_distance(0, 0, 1, 11);
+        REQUIRE(m.distance_entries().size() == 4);
+        REQUIRE(m.distance_entries()[0].value == 10);
+        REQUIRE(m.distance_entries()[3].profile == 0);
+        REQUIRE(m.distance_entries()[3].from == 0);
+        REQUIRE(m.distance_entries()[3].to == 1);
+        REQUIRE(m.distance_entries()[3].value == 11);
+    }
+
+    SECTION("warm start and pins round-trip verbatim") {
+        std::vector<std::vector<int>> routes = {{0, 1, 2}, {}, {3}};
+        m.set_initial_routes(routes);
+        REQUIRE(m.initial_routes() == routes);
+
+        // set_initial_routes assigns, so a second call replaces the first.
+        m.set_initial_routes({{4}});
+        REQUIRE(m.initial_routes() == std::vector<std::vector<int>>{{4}});
+
+        // Trap: pin() appends with no dedup and no range check, so the same
+        // id can appear twice and an id no client owns is stored as given.
+        REQUIRE(m.pinned().empty());
+        m.pin(2);
+        m.pin(2);
+        m.pin(9999);
+        m.pin(-1);
+        REQUIRE(m.pinned() == std::vector<int>{2, 2, 9999, -1});
+        REQUIRE(m.num_clients() == 0);
+    }
+}
+
+TEST_CASE("NetworkModel reads back every declaration", "[network][introspection]") {
+    coso::NetworkModel m;
+
+    REQUIRE(m.num_nodes() == 0);
+    REQUIRE(m.num_arcs() == 0);
+
+    int s = m.add_node(15, "source");
+    int t = m.add_node(-15, "sink");
+    int mid = m.add_node();  // defaults: supply 0, empty name
+    int a = m.add_arc(s, mid, 7, 2, 20);
+    int b = m.add_arc(mid, t);  // defaults: cost 0, lower 0, upper INT_MAX
+
+    REQUIRE(m.num_nodes() == 3);
+    REQUIRE(m.node(s).supply == 15);
+    REQUIRE(m.node(s).name == "source");
+    REQUIRE(m.node(t).supply == -15);
+    REQUIRE(m.node(t).name == "sink");
+    REQUIRE(m.node(mid).supply == 0);
+    REQUIRE(m.node(mid).name.empty());
+
+    REQUIRE(m.num_arcs() == 2);
+    REQUIRE(m.arc(a).tail == s);
+    REQUIRE(m.arc(a).head == mid);
+    REQUIRE(m.arc(a).cost == 7);
+    REQUIRE(m.arc(a).lower_cap == 2);
+    REQUIRE(m.arc(a).upper_cap == 20);
+    REQUIRE(m.arc(b).tail == mid);
+    REQUIRE(m.arc(b).head == t);
+    REQUIRE(m.arc(b).cost == 0);
+    REQUIRE(m.arc(b).lower_cap == 0);
+    REQUIRE(m.arc(b).upper_cap == INT_MAX);
+}
+
+TEST_CASE("LotSizingModel reads back every declaration", "[lotsizing][introspection]") {
+    SECTION("products, demand, capacity and BOM round-trip") {
+        coso::LotSizingModel m;
+        REQUIRE(m.num_periods() == 0);
+        REQUIRE(m.num_products() == 0);
+
+        m.set_num_periods(3);
+        REQUIRE(m.num_periods() == 3);
+        REQUIRE(m.capacities() == std::vector<double>{0.0, 0.0, 0.0});
+
+        int p0 = m.add_product(100.0, 2.0, 1.5, 0.25);
+        int p1 = m.add_product(50.0, 1.0, 0.5, 0.75);
+        REQUIRE(m.num_products() == 2);
+        REQUIRE(m.product(p0).setup_cost == 100.0);
+        REQUIRE(m.product(p0).setup_time == 2.0);
+        REQUIRE(m.product(p0).unit_production_cost == 1.5);
+        REQUIRE(m.product(p0).holding_cost == 0.25);
+        REQUIRE(m.product(p1).setup_cost == 50.0);
+        REQUIRE(m.product(p1).setup_time == 1.0);
+        REQUIRE(m.product(p1).unit_production_cost == 0.5);
+        REQUIRE(m.product(p1).holding_cost == 0.75);
+
+        m.set_demand(p0, 0, 10.0);
+        m.set_demand(p0, 2, 30.0);
+        m.set_demand(p1, 1, 5.0);
+        m.set_capacity(0, 80.0);
+        m.set_capacity(2, 90.0);
+
+        REQUIRE(m.demands().size() == 2);
+        REQUIRE(m.demands()[p0] == std::vector<double>{10.0, 0.0, 30.0});
+        REQUIRE(m.demands()[p1] == std::vector<double>{0.0, 5.0, 0.0});
+        REQUIRE(m.capacities() == std::vector<double>{80.0, 0.0, 90.0});
+
+        m.add_bom(p0, p1, 2.5);
+        REQUIRE(m.bom().size() == 1);
+        REQUIRE(m.bom()[0].parent == p0);
+        REQUIRE(m.bom()[0].child == p1);
+        REQUIRE(m.bom()[0].quantity == 2.5);
+    }
+
+    SECTION("set_num_periods wipes demand and capacity, so call order is load-bearing") {
+        // Trap: set_num_periods() re-assigns demands_ and capacities_.
+        coso::LotSizingModel m;
+        m.set_num_periods(2);
+        int p = m.add_product(1.0, 0.0, 1.0, 1.0);
+        m.set_demand(p, 0, 42.0);
+        m.set_capacity(1, 99.0);
+        REQUIRE(m.demands()[p][0] == 42.0);
+        REQUIRE(m.capacities()[1] == 99.0);
+
+        m.set_num_periods(4);
+        REQUIRE(m.num_periods() == 4);
+        REQUIRE(m.num_products() == 1);  // products survive
+        REQUIRE(m.demands()[p] == std::vector<double>{0.0, 0.0, 0.0, 0.0});
+        REQUIRE(m.capacities() == std::vector<double>{0.0, 0.0, 0.0, 0.0});
+    }
+
+    SECTION("a product added before set_num_periods has an empty demand row") {
+        // Trap: add_product with num_periods_ == 0 pushes an empty row, so
+        // demands() is ragged until set_num_periods() is called at all.
+        coso::LotSizingModel m;
+        int p = m.add_product(1.0, 0.0, 1.0, 1.0);
+        REQUIRE(m.num_products() == 1);
+        REQUIRE(m.num_periods() == 0);
+        REQUIRE(m.demands().size() == 1);
+        REQUIRE(m.demands()[p].empty());
+        REQUIRE(m.capacities().empty());
+        REQUIRE(m.bom().empty());
+    }
+}
+
+TEST_CASE("ScheduleModel reads back every declaration", "[scheduling][introspection]") {
+    coso::ScheduleModel m;
+
+    SECTION("machines, jobs, operations and precedences round-trip") {
+        REQUIRE(m.num_machines() == 0);
+        REQUIRE(m.num_jobs() == 0);
+        REQUIRE(m.num_operations() == 0);
+        REQUIRE(m.objective() == coso::ScheduleObjective::Makespan);
+
+        int m0 = m.add_machine({.name = "drill"});
+        int m1 = m.add_machine();
+        REQUIRE(m.num_machines() == 2);
+        REQUIRE(m.machine(m0).name == "drill");
+        REQUIRE(m.machine(m1).name.empty());
+
+        coso::JobParams jp;
+        jp.name = "widget";
+        jp.release_time = 3;
+        jp.due_date = 100;
+        jp.weight = 4;
+        int j0 = m.add_job(jp);
+        int j1 = m.add_job();
+        REQUIRE(m.num_jobs() == 2);
+        REQUIRE(m.job(j0).name == "widget");
+        REQUIRE(m.job(j0).release_time == 3);
+        REQUIRE(m.job(j0).due_date == 100);
+        REQUIRE(m.job(j0).weight == 4);
+        REQUIRE(m.job(j1).name.empty());
+        REQUIRE(m.job(j1).release_time == 0);
+        REQUIRE(m.job(j1).due_date == INT_MAX);
+        REQUIRE(m.job(j1).weight == 1);
+
+        coso::OperationParams fixed;
+        fixed.machine = m0;
+        fixed.duration = 12;
+        int o0 = m.add_operation(j0, fixed);
+
+        coso::OperationParams flexible;
+        flexible.eligible_machines = {m0, m1};
+        flexible.durations_per_machine = {7, 9};
+        flexible.optional = true;
+        int o1 = m.add_operation(j0, flexible);
+        int o2 = m.add_operation(j1, fixed);
+
+        REQUIRE(m.num_operations() == 3);
+        REQUIRE(m.operation(o0).job == j0);
+        REQUIRE(m.operation(o0).params.machine == m0);
+        REQUIRE(m.operation(o0).params.duration == 12);
+        REQUIRE(m.operation(o0).params.eligible_machines.empty());
+        REQUIRE(m.operation(o0).params.durations_per_machine.empty());
+        REQUIRE_FALSE(m.operation(o0).params.optional);
+        REQUIRE(m.operation(o1).job == j0);
+        REQUIRE(m.operation(o1).params.machine == -1);
+        REQUIRE(m.operation(o1).params.eligible_machines == std::vector<int>{m0, m1});
+        REQUIRE(m.operation(o1).params.durations_per_machine == std::vector<int>{7, 9});
+        REQUIRE(m.operation(o1).params.optional);
+
+        REQUIRE(m.job_operations() == std::vector<std::vector<int>>{{o0, o1}, {o2}});
+
+        m.add_precedence(o0, o2);
+        m.add_precedence(o2, o1);
+        REQUIRE(m.extra_precedences().size() == 2);
+        REQUIRE(m.extra_precedences()[0].before == o0);
+        REQUIRE(m.extra_precedences()[0].after == o2);
+        REQUIRE(m.extra_precedences()[1].before == o2);
+        REQUIRE(m.extra_precedences()[1].after == o1);
+    }
+
+    SECTION("resource usage comes back ragged, unset meaning zero") {
+        m.add_machine();
+        int j = m.add_job();
+        int o0 = m.add_operation(j, {.machine = 0, .duration = 5});
+        int o1 = m.add_operation(j, {.machine = 0, .duration = 5});
+        int o2 = m.add_operation(j, {.machine = 0, .duration = 5});
+
+        int r0 = m.add_resource(10);
+        int r1 = m.add_resource(20);
+        int r2 = m.add_resource(30);
+        REQUIRE(m.num_resources() == 3);
+        REQUIRE(m.resource_capacities() == std::vector<int>{10, 20, 30});
+
+        m.set_resource_usage(o0, r0, 4);
+        m.set_resource_usage(o1, r2, 6);
+
+        // Trap: rows are grown only to resource + 1, so they are ragged and
+        // nothing is padded out to num_resources().
+        REQUIRE(m.resource_usage().size() == 3);
+        REQUIRE(m.resource_usage()[o0] == std::vector<int>{4});
+        REQUIRE(m.resource_usage()[o1] == std::vector<int>{0, 0, 6});
+        REQUIRE(m.resource_usage()[o2].empty());
+        // Which means a reader must treat a short row as unset, i.e. 0.
+        REQUIRE(static_cast<int>(m.resource_usage()[o0].size()) < m.num_resources());
+        REQUIRE(r1 == 1);
+    }
+
+    SECTION("objective and initial schedule round-trip") {
+        m.set_objective(coso::ScheduleObjective::TotalWeightedTardiness);
+        REQUIRE(m.objective() == coso::ScheduleObjective::TotalWeightedTardiness);
+        m.set_objective(coso::ScheduleObjective::TotalFlowTime);
+        REQUIRE(m.objective() == coso::ScheduleObjective::TotalFlowTime);
+        m.minimize_makespan();
+        REQUIRE(m.objective() == coso::ScheduleObjective::Makespan);
+
+        REQUIRE(m.initial_schedule().empty());
+        std::vector<std::pair<int, int>> assignments = {{0, 0}, {1, 12}};
+        m.set_initial_schedule(assignments);
+        REQUIRE(m.initial_schedule() == assignments);
     }
 }
