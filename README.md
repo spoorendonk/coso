@@ -122,8 +122,18 @@ ctest --test-dir build -j$(nproc)
 
 ## Python install
 
+```bash
+pip install pycoso
+```
+
 **`pip install coso` does not install this project** — that name belongs to an unrelated package on
-PyPI. COSO will be published as **`pycoso`**; until then, build the bindings from source:
+PyPI. The distribution is `pycoso`; the import package is still `coso`:
+
+```python
+import coso
+```
+
+To build the bindings from source instead:
 
 ```bash
 cmake -B build -DCOSO_BUILD_PYTHON=ON && cmake --build build -j$(nproc)

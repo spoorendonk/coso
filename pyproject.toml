@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.10", "nanobind>=2.4"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "coso"
+name = "pycoso"
 version = "0.1.0"
 description = "Combinatorial Structure-aware Optimization"
 readme = "README.md"
@@ -38,6 +38,14 @@ testpaths = ["python/tests"]
 [tool.scikit-build]
 cmake.build-type = "Release"
 cmake.args = ["-DCOSO_BUILD_PYTHON=ON", "-DCOSO_BUILD_TESTS=OFF"]
+# The distribution is `pycoso`; the import package stays `coso`. Without this
+# line scikit-build-core auto-discovers packages at src/<name>, python/<name>,
+# <name> — all derived from the *distribution* name — finds no `pycoso/`, and
+# ships a wheel with no `__init__.py` at all, only the `coso/_coso*.so` that
+# `install(TARGETS _coso DESTINATION coso)` puts there. `import coso` would then
+# resolve as an empty namespace package. That failure is install-time only, so
+# neither ctest nor pytest would catch it.
+wheel.packages = ["python/coso"]
 
 [tool.ruff]
 line-length = 100
