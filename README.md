@@ -18,7 +18,7 @@ COSO is two products, built together:
 ## Quick Start
 
 ```cpp
-#include <coso/routing_model.h>
+#include "model/routing_model.h"
 
 coso::RoutingModel m;
 auto depot = m.add_depot(456, 320);
@@ -85,7 +85,7 @@ benchmark run backs it. That work is [#177](../../issues/177) and the per-model 
 
 | Engine | Status |
 |---|---|
-| **Routing** | Most mature, and narrower than the schema. What it enforces is demand against an N-dimensional vehicle capacity, minimising distance; it is validated against standard CVRP instances. Time windows are penalised but never enforced, so a violating solution comes back feasible ([#194](../../issues/194)); `Result::cost` is total distance whatever objective was declared ([#198](../../issues/198)); and 16 of the 27 declarable fields plus four methods — multi-depot, multi-trip, pickup-delivery pairs, optional clients, groups, skills, release times, overtime — are accepted and dropped ([#196](../../issues/196)). Per-field verdicts are in [`docs/models.md`](docs/models.md). |
+| **Routing** | Most mature, and narrower than the schema. What it enforces is demand against an N-dimensional vehicle capacity, minimising distance; it is validated against standard CVRP instances. Time windows are penalised but never enforced, so a violating solution comes back feasible ([#194](../../issues/194)); `Result::cost` is total distance whatever objective was declared ([#198](../../issues/198)); and 24 of the 27 declarable fields, plus six more structural declarations — multi-depot, pickup-delivery pairs, client groups, a third cost matrix, a reference solution, explicit node ids — are accepted and dropped ([#196](../../issues/196)). Per-field verdicts are in [`docs/models.md`](docs/models.md). |
 | **Packing** | Functional — FFD construction with move/swap local search. |
 | **Lot sizing** | Single-level CLSP only. Constructions (lot-for-lot, Silver-Meal, part-period balancing) plus a shift/merge/split descent — there is no fix-and-optimize anywhere in the tree. A declared bill of materials is accepted and never read ([#210](../../issues/210)), and an instance whose only feasible plans build ahead of a capacity spike comes back infeasible ([#211](../../issues/211)). |
 | **Network** | Target scope is **multi-commodity flow and network design** ([#184](../../issues/184)) — neither is implemented. What exists is a single-commodity min-cost flow solver, which is not a COSO target: that problem is solved. |

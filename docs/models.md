@@ -1184,7 +1184,7 @@ split it.
 | `ClientParams::release_time` | `declarable` | `drops` [f] — **dead** | `documented` — `Client.release_time` |
 | `ClientParams::prize` | `declarable` | `drops` [g] — **dormant**, #196 | `documented` — `Client.prize` |
 | `ClientParams::required` | `declarable` | `drops` [h] — **dormant**, #196 | `documented` — `Client.required` |
-| `ClientParams::group` | `declarable` | `drops` [i] — **dead**, #196 | `documented` — `Client.group` + `ClientGroup(clients, required, mutually_exclusive)` |
+| `ClientParams::group` | `declarable` | `drops` [i] — **dead**, #196 | `documented` — `Client.group` + `ClientGroup(clients, required, *, name)`, with `mutually_exclusive` a read-back attribute |
 | `ClientParams::quantity` | `absent` [j] | `—` [j] | `—` [j] |
 | `ClientParams::skills` | `declarable` | `drops` [k] — **dormant**, #196 | `—` — no skill or qualification attribute anywhere in `_pyvrp.pyi` |
 | `ClientParams::setup_time` | `absent` [l] | `—` [l] | `—` [l] |
@@ -1233,7 +1233,7 @@ Evidence:
   (`load_resource.h:136-146`) through `Route::update`, `CostEvaluator::route_penalty` and
   `Solution::feasible()`. Verified by mutation: replacing
   `.demand = std::move(p.demand)` with `.demand = {}` in `ProblemData::Builder::add_client`
-  makes the capacitated section return one route and the test fails 2 assertions.
+  makes the capacitated section return one route and the test fails 4 assertions.
   Two further sections carry the N-dimensional case, which the granularity rule makes part of
   the same feature: `capacity = {100, 10}` against `demand = {1, 6}` is slack in dimension 0 at
   3 units against 100 and binding in dimension 1 at 18 against 10, and returns three routes,
@@ -1279,7 +1279,7 @@ Evidence:
   **Dormant** — `src/routing/operators/insert_optional.{h,cpp}`, the only code that would
   remove an unprofitable client, is idle. #196.
 - [h] `required` has no consumer in the reachable set at all; its two consumers are
-  `src/routing/overconstrained.cpp:12,65` and `src/routing/operators/insert_optional.cpp`, both
+  `src/routing/overconstrained.cpp:12` and `src/routing/operators/insert_optional.cpp:25,71` (line 65 of the former is a comment), plus a third in `src/search/warm_start.cpp:109`, all
   idle. `required = false` therefore has no effect. **Dormant.** #196.
 - [i] `ClientParams::group` has no consumer anywhere. `add_client_group()` is a counter
   (`routing_model.cpp:68-70`) and no code reads `ClientData::group`; the `group` hits in
@@ -1302,7 +1302,7 @@ Evidence:
   the two sections differ in `capacity` alone — `{10}` against `{20}`, and `{100, 10}` against
   `{100, 100}` — and return three routes against one. Verified by mutation independently of [a]'s: making `LoadResource::excess` return
   0 unconditionally leaves capacity unenforced and fails both the capacity and the pickup tests,
-  4 assertions in all.
+  6 assertions in all.
 - [p] `max_duration` is read twice — `DistanceResource::excess` (`distance_resource.h:103-104`)
   and `DurationResource::excess` (`duration_resource.h:154-155`) — and both feed
   `Route::dist_excess_` (`route.cpp:291`). Nothing consumes it: `CostEvaluator::route_penalty`
@@ -1394,7 +1394,7 @@ Evidence:
   feasible. **Dormant.** **#193.**
 - [al] The explicit-id overloads store `explicit_id` and `has_coord = false`, and `solve()`
   ignores both: it builds `Coord{d.x, d.y}` for every depot and `Coord{c.x, c.y}` for every
-  client (`routing_model.cpp:133,140`), so an explicitly-numbered node is at (0, 0). The
+  client (`routing_model.cpp:133,139`), so an explicitly-numbered node is at (0, 0). The
   builder then fills all three matrices with Euclidean distances from those coordinates and the
   caller's `set_distance` calls override only the pairs they name, leaving every unnamed pair at
   0 — and the granular k-NN lists are sorted on that matrix (`problem_data.cpp:209`). Not
@@ -1530,7 +1530,7 @@ why three of #200's eight candidates are kept.
 | `CostParams::per_task_hour_cost` | **delete** | *Redundant with `unit_duration_cost`.* The "task hours" it would price are the clients' `service` times, and those are already inside `Route::duration()`, which `unit_duration_cost` prices. There is no task entity in the schema distinct from a client visit, and — alone among all 32 slots — the field names a physical unit, the hour, that nothing in the model defines: every other time is a dimensionless integer |
 | `ClientParams::extra_tw` | **keep**, `drops`/dead | Multiple time windows is a **real and distinct VRP feature**, and this file's own granularity rule uses `time_windows` versus `multiple_time_windows` as its worked example of two features rather than one. That no engine in #173's map has it is evidence about the engines. It stays declarable and its row says it is dropped |
 | `RoutingModel::set_cost_matrix()` | **keep**, `drops`/dead | A **third arc-cost matrix, independent of distance and duration, is not redundant with either** — that is the whole point of it. Distance and duration are physical; an arc *cost* is a tariff, a toll, a congestion charge or a contract rate, and it is the one of the three a user cannot derive from the other two. PyVRP prices arcs as `unit_distance_cost * distance + unit_duration_cost * duration` and so cannot express it, which is a `—` in its column and not a verdict on the schema |
-| `RoutingModel::add_client_group()` | **keep**, `drops`/dead | It is the **only constructor of a group id**. Deleting it while keeping `ClientParams::group` — which #200 did not propose to cut — makes the feature unsayable: a user could set `group = 3` with nothing that says what group 3 is or which members it has. That is internally inconsistent, and inconsistency is not what the deletion rule is for. Both halves stay, both are `drops`/dead, and PyVRP's `ClientGroup(clients, required, mutually_exclusive)` is the shape #178 would wire them to |
+| `RoutingModel::add_client_group()` | **keep**, `drops`/dead | It is the **only constructor of a group id**. Deleting it while keeping `ClientParams::group` — which #200 did not propose to cut — makes the feature unsayable: a user could set `group = 3` with nothing that says what group 3 is or which members it has. That is internally inconsistent, and inconsistency is not what the deletion rule is for. Both halves stay, both are `drops`/dead, and PyVRP's `ClientGroup(clients, required, *, name)`, with `mutually_exclusive` a read-back attribute is the shape #178 would wire them to |
 
 The five deletions landed in one commit across `src/model/types.h`,
 `src/model/routing_model.h`, `src/routing/problem_data.{h,cpp}`, `python/bindings.cpp`,
@@ -1543,8 +1543,8 @@ leaving the fields behind would leave members that nothing writes and nothing re
 deleted: `tests/model/model_test.cpp` "RoutingModel pickup-delivery workflow" declared
 `{.quantity = 3}` on both ends of a request and now declares `{.pickup = {3}}` on the pickup and
 `{.demand = {3}}` on the delivery, which is what the ruling says that number always was; and the
-`speed_factor` line of `tests/routing/problem_data_test.cpp` "ProblemData Builder stores vehicle
-type parameters" is gone, with `profile` still asserted beside it. The class comment on
+`speed_factor` line of `tests/routing/problem_data_test.cpp` "ProblemData vehicle type data
+preserves attributes" is gone, with `profile` still asserted beside it. The class comment on
 `RoutingModel` claimed VRPTW, multi-trip, pickup-delivery, optional clients and client groups;
 it now says CVRP is what the native engine enforces and points here.
 
@@ -1653,7 +1653,7 @@ because 0.14.0 has `Shipment`.
 VRPTW, PDPTW, multi-depot and multi-trip are declarable and dropped, heterogeneous fleet cannot
 be checked from what is returned, and the `...` claims a rest that this table shows does not
 exist. Rewritten in the same commit to the three that have a native `supported` cell —
-CVRP, VRPSPD and TSP, with multi-dimensional capacity — and pointed at this section for the
+CVRP and VRPSPD, with multi-dimensional capacity, plus TSP — which has no feature row of its own, its evidence being the variant test — and pointed at this section for the
 rest. The engine-status row is corrected in the same commit: "validated against standard CVRP
 instances" is true and is also the whole of it, so it now says which declarations the engine
 drops rather than leaving "most mature" to imply coverage.
@@ -1663,11 +1663,11 @@ drops rather than leaving "most mature" to imply coverage.
 | issue | verdict |
 |---|---|
 | #193 `solve()` ignores `set_initial_routes()` and `pin()` | **dormant** — `src/search/warm_start.h` has `warm_start()`, `PinSet`, `replan()` and `local_search_with_pins()` and no includer. Recorded, not repaired: the disable-and-raise step in that issue is superseded by the current phase's ruling. The principle-4 split above is the modelling half of it, and #176 owns the API change; #178 wires the engine half. Must be zero before the routing milestone closes |
-| #194 `Solution::feasible()` checks load only | The single largest defect in this column: it is why `ClientParams::tw`, `DepotParams::tw`, `service`, `max_distance` and `max_duration` are `drops` rather than `supported`, and why R2 and every variant built on it is not expressible. Five `SKIP`-ed tests in `tests/routing/routing_model_test.cpp` name it and hold the assertions that should pass. Recorded, not repaired |
-| #196 `solve()` silently drops 21 of 32 fields and four methods | Confirmed by this audit's scripts, with two corrections to its arithmetic. **Five of the 21 are deleted here** rather than kept and rejected — `quantity`, `setup_time`, `location`, `speed_factor`, `per_task_hour_cost` — so the count falls to 16 of 27 slots. And `prize` is misfiled as dormant-only: it *is* read on the model path (`cost_evaluator.cpp:80`), it simply cannot matter while every client is always served. The disable-and-raise step is superseded by the current phase's ruling — the fields stay declarable and their rows say what happens to them |
+| #194 `Solution::feasible()` checks load only | The single largest defect in this column: it is why `ClientParams::tw`, `DepotParams::tw`, `service`, `max_distance` and `max_duration` are `drops` rather than `supported`, and why R2 and every variant built on it is not expressible. Four `SKIP`-ed tests in `tests/routing/routing_model_test.cpp` name it and hold the assertions that should pass. Recorded, not repaired |
+| #196 `solve()` silently drops 21 of 32 fields and four methods | Confirmed by this audit's scripts, with two corrections to its arithmetic. **Five of the 21 are deleted here** rather than kept and rejected — `quantity`, `setup_time`, `location`, `speed_factor`, `per_task_hour_cost` — so 27 slots survive. But the count *rises* rather than falls: this audit reclassifies eight more into `drops` — `ClientParams::tw`, `DepotParams::tw` and `service` under #194, and the five objective slots `cost`, `profile`, `fixed_cost`, `unit_distance_cost`, `unit_duration_cost` under #198 — so the native column is **24 `drops` of 27 slots**, with only `demand`, `pickup` and `capacity` `supported`. Six structural rows are `drops` too, not four: multi-depot, paired pickup-delivery, client groups, the third cost matrix, the reference solution, and explicit node ids. And `prize` is misfiled as dormant-only: it *is* read on the model path (`cost_evaluator.cpp:80`), it simply cannot matter while every client is always served. The disable-and-raise step is superseded by the current phase's ruling — the fields stay declarable and their rows say what happens to them |
 | #198 `Result::cost` is total distance, not the declared objective | It is what makes all five objective slots `drops` rather than `supported`, since it removes the only quantity a third party could check them against. Also what makes cross-validation against PyVRP (#178 step 4) compare two different numbers. Recorded, not repaired |
-| #220 explicitly-numbered nodes all get the coordinate (0, 0) | **filed by this audit.** `solve()` builds `Coord{d.x, d.y}` regardless of `has_coord` (`routing_model.cpp:133,140`) and `explicit_id` is never read, so a model declared with explicit ids starts from an all-zero distance matrix, every pair the caller did not name stays free, and the granular k-NN lists (`problem_data.cpp:209`) are sorted on that. Not a dropped declaration — a misread one |
-| #221 local-search deltas price a different objective than `CostEvaluator` | **filed by this audit.** No move delta prices `unit_duration_cost` (`cost_evaluator.cpp:122-131` skips it by design, justified by the field's default of 0), and `Exchange11` and `Exchange20` build their own deltas with no time-warp term at all, while `Exchange10` and `SwapStar` go through `CostEvaluator` and have one. So two of the five neighbourhoods the descent runs are time-window blind, and all five are duration-cost blind. `score_assert` cannot catch it: it recomputes the route's *distance*, not its cost |
+| #220 explicitly-numbered nodes all get the coordinate (0, 0) | **filed by this audit.** `solve()` builds `Coord{d.x, d.y}` regardless of `has_coord` (`routing_model.cpp:133,139`) and `explicit_id` is never read, so a model declared with explicit ids starts from an all-zero distance matrix, every pair the caller did not name stays free, and the granular k-NN lists (`problem_data.cpp:209`) are sorted on that. Not a dropped declaration — a misread one |
+| #221 local-search deltas price a different objective than `CostEvaluator` | **filed by this audit.** No move delta prices `unit_duration_cost` (`cost_evaluator.cpp:122-131` skips it by design, justified by the field's default of 0), and `Exchange11` and `Exchange20` build their own deltas with no time-warp term at all, while `Exchange10`, `SwapStar` and `SwapTails` go through `CostEvaluator` and have one. So two of the five neighbourhoods the descent runs are time-window blind, and all five are duration-cost blind. `score_assert` cannot catch it: it recomputes the route's *distance*, not its cost |
 | #222 vehicle start/end depot, shift window, initial load, depot service time, `Shipment` | **filed by this audit** as the PyVRP-parity `extend`; it is also R5 (open VRP) and half of R4. Lands with #178 |
 | #223 depots as decisions with a fixed cost and a capacity | **filed by this audit** as R23's `extend`; blocked behind #196's multi-depot wiring. Lands with #126 |
 | #224 no way to declare synchronised visits | **filed by this audit** as R28's `extend`, with `SyncResource::SyncGroup` already in the tree waiting for it. Lands with #131 |
