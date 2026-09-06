@@ -42,6 +42,20 @@ enum class ScheduleObjective {
 /// Supports JSP, FJSP, RCPSP, and related scheduling problems.
 class ScheduleModel {
 public:
+    // -- Stored entry types --------------------------------------------------
+
+    /// An operation as declared, with the job it belongs to.
+    struct OperationEntry {
+        int job = -1;
+        OperationParams params;
+    };
+
+    /// A precedence constraint declared beyond the default intra-job ordering.
+    struct Precedence {
+        int before;
+        int after;
+    };
+
     /// Add a machine with the given parameters.
     int add_machine(MachineParams p = {});
 
@@ -82,6 +96,42 @@ public:
     /// Solve the scheduling problem within the given time limit.
     Result solve(TimeLimit tl);
 
+    // -- Accessors -----------------------------------------------------------
+
+    [[nodiscard]] int num_machines() const noexcept { return static_cast<int>(machines_.size()); }
+    [[nodiscard]] MachineParams const& machine(int m) const { return machines_[m]; }
+
+    [[nodiscard]] int num_jobs() const noexcept { return static_cast<int>(jobs_.size()); }
+    [[nodiscard]] JobParams const& job(int j) const { return jobs_[j]; }
+
+    [[nodiscard]] int num_operations() const noexcept {
+        return static_cast<int>(operations_.size());
+    }
+    [[nodiscard]] OperationEntry const& operation(int o) const { return operations_[o]; }
+
+    /// Operation ids per job, job_operations()[job], in declaration order.
+    [[nodiscard]] auto const& job_operations() const noexcept { return job_operations_; }
+
+    [[nodiscard]] int num_resources() const noexcept {
+        return static_cast<int>(resource_capacities_.size());
+    }
+    [[nodiscard]] auto const& resource_capacities() const noexcept { return resource_capacities_; }
+
+    /// Per-operation resource usage exactly as stored: resource_usage()[op] is
+    /// ragged, grown only as far as the highest resource set for that
+    /// operation.  A row shorter than num_resources() — an empty row
+    /// included — means the missing resources are unset, i.e. 0.  Nothing here
+    /// is padded.
+    [[nodiscard]] auto const& resource_usage() const noexcept { return resource_usage_; }
+
+    /// Precedences added by add_precedence(), in declaration order.
+    [[nodiscard]] auto const& extra_precedences() const noexcept { return extra_precedences_; }
+
+    /// Per-operation (machine, start_time) pairs from set_initial_schedule().
+    [[nodiscard]] auto const& initial_schedule() const noexcept { return initial_schedule_; }
+
+    [[nodiscard]] ScheduleObjective objective() const noexcept { return objective_; }
+
 private:
     // -- Stored machine data -------------------------------------------------
     std::vector<MachineParams> machines_;
@@ -90,10 +140,6 @@ private:
     std::vector<JobParams> jobs_;
 
     // -- Stored operation data -----------------------------------------------
-    struct OperationEntry {
-        int job = -1;
-        OperationParams params;
-    };
     std::vector<OperationEntry> operations_;
 
     // -- Job → operations mapping --------------------------------------------
@@ -106,10 +152,6 @@ private:
     std::vector<std::vector<int>> resource_usage_;
 
     // -- Additional precedence constraints -----------------------------------
-    struct Precedence {
-        int before;
-        int after;
-    };
     std::vector<Precedence> extra_precedences_;
 
     // -- Objective -----------------------------------------------------------

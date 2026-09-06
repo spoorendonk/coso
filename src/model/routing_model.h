@@ -53,6 +53,43 @@ struct DepotParams {
 /// per-field verdict, and #194, #196 and #198 for the defects behind it.
 class RoutingModel {
 public:
+    // -- Stored entry types --------------------------------------------------
+    //
+    //  What the model keeps for each declaration, returned by the accessors
+    //  below so a backend adapter can read a model back.
+
+    /// A depot as declared: either coordinates or an explicit node id.
+    struct DepotEntry {
+        double x = 0.0, y = 0.0;
+        bool has_coord = false;  ///< false when added with explicit id
+        int explicit_id = -1;    ///< node id when added without coordinates
+        DepotParams params;
+    };
+
+    /// A client as declared.  add_pickup / add_delivery are aliases for
+    /// add_client, so the pickup/delivery role is not stored here — only the
+    /// pairing recorded by add_request, see requests().
+    struct ClientEntry {
+        double x = 0.0, y = 0.0;
+        bool has_coord = false;
+        int explicit_id = -1;
+        ClientParams params;
+    };
+
+    /// A vehicle type as declared, with its fleet count.
+    struct VehicleTypeEntry {
+        int count = 0;
+        VehicleTypeParams params;
+    };
+
+    /// One explicit distance / duration / cost matrix entry.
+    struct MatEntry {
+        int profile;
+        int from;
+        int to;
+        int value;
+    };
+
     /// Add a depot at the given coordinates.
     int add_depot(double x, double y, DepotParams p = {});
 
@@ -116,30 +153,42 @@ public:
     /// Solve the routing problem within the given time limit.
     Result solve(TimeLimit tl);
 
+    // -- Accessors -----------------------------------------------------------
+
+    [[nodiscard]] int num_depots() const noexcept { return static_cast<int>(depots_.size()); }
+    [[nodiscard]] DepotEntry const& depot(int d) const { return depots_[d]; }
+
+    [[nodiscard]] int num_clients() const noexcept { return static_cast<int>(clients_.size()); }
+    [[nodiscard]] ClientEntry const& client(int c) const { return clients_[c]; }
+
+    [[nodiscard]] int num_vehicle_types() const noexcept {
+        return static_cast<int>(vehicle_types_.size());
+    }
+    [[nodiscard]] VehicleTypeEntry const& vehicle_type(int v) const { return vehicle_types_[v]; }
+
+    /// Number of groups handed out by add_client_group().  This does NOT bound
+    /// the group ids clients carry: ClientParams::group is never validated, so
+    /// a client may name a group that was never created.
+    [[nodiscard]] int num_client_groups() const noexcept { return next_group_id_; }
+
+    /// Pickup-delivery pairs, in the order add_request() recorded them.
+    [[nodiscard]] auto const& requests() const noexcept { return requests_; }
+
+    /// Explicit distance entries, as an append-only log: set_distance() never
+    /// overwrites, so a repeated (profile, from, to) appends and the last
+    /// entry wins.  Duration and cost entries behave the same way.
+    [[nodiscard]] auto const& distance_entries() const noexcept { return dist_entries_; }
+    [[nodiscard]] auto const& duration_entries() const noexcept { return dur_entries_; }
+    [[nodiscard]] auto const& cost_entries() const noexcept { return cost_entries_; }
+
+    [[nodiscard]] auto const& initial_routes() const noexcept { return initial_routes_; }
+
+    /// Pinned client ids, as pin() recorded them: no dedup, no range check.
+    [[nodiscard]] auto const& pinned() const noexcept { return pinned_; }
+
 private:
-    // -- Stored depot data ---------------------------------------------------
-    struct DepotEntry {
-        double x = 0.0, y = 0.0;
-        bool has_coord = false;  ///< false when added with explicit id
-        int explicit_id = -1;    ///< node id when added without coordinates
-        DepotParams params;
-    };
     std::vector<DepotEntry> depots_;
-
-    // -- Stored client data --------------------------------------------------
-    struct ClientEntry {
-        double x = 0.0, y = 0.0;
-        bool has_coord = false;
-        int explicit_id = -1;
-        ClientParams params;
-    };
     std::vector<ClientEntry> clients_;
-
-    // -- Vehicle types -------------------------------------------------------
-    struct VehicleTypeEntry {
-        int count = 0;
-        VehicleTypeParams params;
-    };
     std::vector<VehicleTypeEntry> vehicle_types_;
 
     // -- Pickup-delivery requests --------------------------------------------
@@ -149,12 +198,6 @@ private:
     int next_group_id_ = 0;
 
     // -- Explicit matrix entries ---------------------------------------------
-    struct MatEntry {
-        int profile;
-        int from;
-        int to;
-        int value;
-    };
     std::vector<MatEntry> dist_entries_;
     std::vector<MatEntry> dur_entries_;
     std::vector<MatEntry> cost_entries_;
