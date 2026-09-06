@@ -72,18 +72,15 @@ class TestCostParams:
         assert cp.fixed_cost == 0
         assert cp.unit_distance_cost == 1
         assert cp.unit_duration_cost == 0
-        assert cp.per_task_hour_cost == 0
 
     def test_readwrite(self):
         cp = coso.CostParams()
         cp.fixed_cost = 100
         cp.unit_distance_cost = 5
         cp.unit_duration_cost = 3
-        cp.per_task_hour_cost = 7
         assert cp.fixed_cost == 100
         assert cp.unit_distance_cost == 5
         assert cp.unit_duration_cost == 3
-        assert cp.per_task_hour_cost == 7
 
     def test_repr(self):
         cp = coso.CostParams()
@@ -141,7 +138,7 @@ class TestVehicleTypeParams:
     def test_defaults(self):
         vt = coso.VehicleTypeParams()
         assert vt.capacity == []
-        assert vt.speed_factor == 1.0
+        assert vt.profile == 0
 
     def test_capacity(self):
         vt = coso.VehicleTypeParams()

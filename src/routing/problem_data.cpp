@@ -30,10 +30,7 @@ int ProblemData::Builder::add_client(Coord coord, ClientParams p) {
         .prize = p.prize,
         .required = p.required,
         .group = p.group,
-        .quantity = p.quantity,
         .skills = std::move(p.skills),
-        .setup_time = p.setup_time,
-        .location = p.location,
         .client_type = p.client_type,
     });
     return idx;
@@ -55,7 +52,6 @@ int ProblemData::Builder::add_vehicle_type(int count, VehicleTypeParams p) {
         .max_reloads = p.max_reloads,
         .cost = p.cost,
         .profile = p.profile,
-        .speed_factor = p.speed_factor,
         .skills = std::move(p.skills),
     });
     return idx;

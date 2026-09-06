@@ -55,12 +55,10 @@ NB_MODULE(_coso, m) {
         .def_rw("fixed_cost", &coso::CostParams::fixed_cost)
         .def_rw("unit_distance_cost", &coso::CostParams::unit_distance_cost)
         .def_rw("unit_duration_cost", &coso::CostParams::unit_duration_cost)
-        .def_rw("per_task_hour_cost", &coso::CostParams::per_task_hour_cost)
         .def("__repr__", [](const coso::CostParams& cp) {
             return "CostParams(fixed=" + std::to_string(cp.fixed_cost) +
                    ", dist=" + std::to_string(cp.unit_distance_cost) +
-                   ", dur=" + std::to_string(cp.unit_duration_cost) +
-                   ", task_hr=" + std::to_string(cp.per_task_hour_cost) + ")";
+                   ", dur=" + std::to_string(cp.unit_duration_cost) + ")";
         });
 
     // -- Result ---------------------------------------------------------------
@@ -105,7 +103,6 @@ NB_MODULE(_coso, m) {
         .def_rw("max_reloads", &coso::VehicleTypeParams::max_reloads)
         .def_rw("cost", &coso::VehicleTypeParams::cost)
         .def_rw("profile", &coso::VehicleTypeParams::profile)
-        .def_rw("speed_factor", &coso::VehicleTypeParams::speed_factor)
         .def_rw("skills", &coso::VehicleTypeParams::skills);
 
     // -- ClientParams ---------------------------------------------------------
@@ -121,10 +118,7 @@ NB_MODULE(_coso, m) {
         .def_rw("prize", &coso::ClientParams::prize)
         .def_rw("required", &coso::ClientParams::required)
         .def_rw("group", &coso::ClientParams::group)
-        .def_rw("quantity", &coso::ClientParams::quantity)
         .def_rw("skills", &coso::ClientParams::skills)
-        .def_rw("setup_time", &coso::ClientParams::setup_time)
-        .def_rw("location", &coso::ClientParams::location)
         .def_rw("client_type", &coso::ClientParams::client_type);
 
     // -- DepotParams ----------------------------------------------------------

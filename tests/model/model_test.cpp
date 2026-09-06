@@ -92,8 +92,8 @@ TEST_CASE("RoutingModel add_client with explicit id", "[routing]") {
 TEST_CASE("RoutingModel pickup-delivery workflow", "[routing]") {
     coso::RoutingModel m;
     m.add_depot(0.0, 0.0);
-    int p = m.add_pickup(1.0, 0.0, {.quantity = 3});
-    int d = m.add_delivery(2.0, 0.0, {.quantity = 3});
+    int p = m.add_pickup(1.0, 0.0, {.pickup = {3}});
+    int d = m.add_delivery(2.0, 0.0, {.demand = {3}});
     m.add_request(p, d);
     // add_pickup_delivery is an alias
     m.add_pickup_delivery(p, d);

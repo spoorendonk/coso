@@ -94,7 +94,6 @@ TEST_CASE("ProblemData vehicle type data preserves attributes", "[problem_data]"
                .max_reloads = 2,
                .cost = {.fixed_cost = 20, .unit_distance_cost = 2, .unit_duration_cost = 1},
                .profile = 0,
-               .speed_factor = 1.5,
            });
     auto pd = b.build(0);
 
@@ -114,7 +113,6 @@ TEST_CASE("ProblemData vehicle type data preserves attributes", "[problem_data]"
     REQUIRE(vt.cost.unit_distance_cost == 2);
     REQUIRE(vt.cost.unit_duration_cost == 1);
     REQUIRE(vt.profile == 0);
-    REQUIRE(vt.speed_factor == 1.5);
 }
 
 TEST_CASE("ProblemData total_vehicles sums across types", "[problem_data]") {

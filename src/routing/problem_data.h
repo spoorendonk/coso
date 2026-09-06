@@ -39,10 +39,7 @@ public:
         int prize = 0;
         bool required = true;
         int group = -1;
-        int quantity = 0;
         std::vector<std::string> skills;
-        int setup_time = 0;
-        int location = -1;
         int client_type = -1;  ///< type id for incompatibility (-1 = none)
     };
 
@@ -64,7 +61,6 @@ public:
         int max_reloads = 0;
         CostParams cost;
         int profile = 0;
-        double speed_factor = 1.0;
         std::vector<std::string> skills;
     };
 

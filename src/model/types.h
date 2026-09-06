@@ -21,7 +21,6 @@ struct CostParams {
     int fixed_cost = 0;
     int unit_distance_cost = 1;
     int unit_duration_cost = 0;
-    int per_task_hour_cost = 0;
 };
 
 /// Stop criterion passed to solve().

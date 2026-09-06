@@ -22,10 +22,10 @@ COSO is two products, built together:
 
 coso::RoutingModel m;
 auto depot = m.add_depot(456, 320);
-auto vtype = m.add_vehicle_type(4, {.capacity = 15});
-m.add_client(228, 0, {.demand = 1});
-m.add_client(912, 0, {.demand = 1});
-m.add_client(0,   80, {.demand = 3});
+auto vtype = m.add_vehicle_type(4, {.capacity = {15}});
+m.add_client(228, 0, {.demand = {1}});
+m.add_client(912, 0, {.demand = {1}});
+m.add_client(0,   80, {.demand = {3}});
 
 auto result = m.solve(coso::TimeLimit(60));
 ```
@@ -35,10 +35,15 @@ import coso
 
 m = coso.RoutingModel()
 depot = m.add_depot(456, 320)
-vtype = m.add_vehicle_type(4, capacity=15)
-m.add_client(228, 0, demand=1)
-m.add_client(912, 0, demand=1)
-m.add_client(0, 80, demand=3)
+
+vt = coso.VehicleTypeParams()
+vt.capacity = [15]
+vtype = m.add_vehicle_type(4, vt)
+
+for x, y, d in [(228, 0, 1), (912, 0, 1), (0, 80, 3)]:
+    cp = coso.ClientParams()
+    cp.demand = [d]
+    m.add_client(x, y, cp)
 
 result = m.solve(coso.TimeLimit(60))
 ```
@@ -53,7 +58,7 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 
 | Model | Problems |
 |---|---|
-| `RoutingModel` | CVRP, VRPTW, PDPTW, heterogeneous fleet, multi-depot, multi-trip, ... |
+| `RoutingModel` | CVRP, multi-dimensional CVRP, VRP with simultaneous pickup and delivery, TSP |
 | `ScheduleModel` | JSP, FJSP, RCPSP, flow shop, open shop |
 | `AssignmentModel` | Nurse rostering, employee scheduling, multi-activity scheduling |
 | `PackingModel` | Bin packing, vector bin packing, bin packing with conflicts |
@@ -80,7 +85,7 @@ benchmark run backs it. That work is [#177](../../issues/177) and the per-model 
 
 | Engine | Status |
 |---|---|
-| **Routing** | Most mature. Validated against standard CVRP instances. |
+| **Routing** | Most mature, and narrower than the schema. What it enforces is demand against an N-dimensional vehicle capacity, minimising distance; it is validated against standard CVRP instances. Time windows are penalised but never enforced, so a violating solution comes back feasible ([#194](../../issues/194)); `Result::cost` is total distance whatever objective was declared ([#198](../../issues/198)); and 16 of the 27 declarable fields plus four methods — multi-depot, multi-trip, pickup-delivery pairs, optional clients, groups, skills, release times, overtime — are accepted and dropped ([#196](../../issues/196)). Per-field verdicts are in [`docs/models.md`](docs/models.md). |
 | **Packing** | Functional — FFD construction with move/swap local search. |
 | **Lot sizing** | Single-level CLSP only. Constructions (lot-for-lot, Silver-Meal, part-period balancing) plus a shift/merge/split descent — there is no fix-and-optimize anywhere in the tree. A declared bill of materials is accepted and never read ([#210](../../issues/210)), and an instance whose only feasible plans build ahead of a capacity spike comes back infeasible ([#211](../../issues/211)). |
 | **Network** | Target scope is **multi-commodity flow and network design** ([#184](../../issues/184)) — neither is implemented. What exists is a single-commodity min-cost flow solver, which is not a COSO target: that problem is solved. |

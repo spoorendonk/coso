@@ -1134,17 +1134,20 @@ so idle `.cpp` files are never removed — `required` matches `operators/insert_
 | entity | fields |
 |---|---|
 | depot | coordinate `(x, y)` **or** an explicit node id; `tw` |
-| vehicle type | `count`; `capacity` (one int per load dimension), `max_duration`, `max_distance`, `min_tasks`, `max_tasks`, `max_overtime`, `unit_overtime_cost`, `reload_depot`, `max_reloads`, `cost` (a `CostParams`), `profile`, `speed_factor`, `skills` |
-| `CostParams` | `fixed_cost`, `unit_distance_cost` (default 1), `unit_duration_cost`, `per_task_hour_cost` |
-| client | coordinate `(x, y)` **or** an explicit node id; `demand` and `pickup` (one int per load dimension), `tw`, `extra_tw`, `service`, `release_time`, `prize`, `required`, `group`, `quantity`, `skills`, `setup_time`, `location`, `client_type` |
+| vehicle type | `count`; `capacity` (one int per load dimension), `max_duration`, `max_distance`, `min_tasks`, `max_tasks`, `max_overtime`, `unit_overtime_cost`, `reload_depot`, `max_reloads`, `cost` (a `CostParams`), `profile`, `skills` |
+| `CostParams` | `fixed_cost`, `unit_distance_cost` (default 1), `unit_duration_cost` |
+| client | coordinate `(x, y)` **or** an explicit node id; `demand` and `pickup` (one int per load dimension), `tw`, `extra_tw`, `service`, `release_time`, `prize`, `required`, `group`, `skills`, `client_type` |
 | request | an ordered `(pickup, delivery)` client pair |
 | matrices | `set_distance` / `set_duration` on the current profile, `set_profile_distance` / `set_profile_duration` / `set_cost_matrix` on a named one |
 | reference solution | `set_initial_routes(routes)`, `pin(client_id)` |
 
-Convention, and the count this audit is against: a slot is `Struct::field`. `ClientParams` 14 +
-`VehicleTypeParams` 13 (`cost` counted — it is a declarable member) + `CostParams` 4 +
-`DepotParams` 1 = **32 slots**. `ClientParams::tw` and `DepotParams::tw` are two slots, and so
-are `ClientParams::skills` and `VehicleTypeParams::skills`; each pair gets its own row below.
+Convention, and the count this audit is against: a slot is `Struct::field`. At `26046c6`, where
+the audit started, `ClientParams` had 14 + `VehicleTypeParams` 13 (`cost` counted — it is a
+declarable member) + `CostParams` 4 + `DepotParams` 1 = **32 slots**, and §Features has a row
+for each. Five of them — `quantity`, `setup_time`, `location`, `speed_factor` and
+`per_task_hour_cost` — are deleted by §Rulings, so the table above is 27 and those five rows
+read `absent`. `ClientParams::tw` and `DepotParams::tw` are two slots, and so are
+`ClientParams::skills` and `VehicleTypeParams::skills`; each pair gets its own row below.
 
 Node numbering is the one thing a caller must get right and the API never states: `set_distance`
 and every matrix setter take **full node indices** — depots `0..D-1`, then clients
@@ -1182,10 +1185,10 @@ split it.
 | `ClientParams::prize` | `declarable` | `drops` [g] — **dormant**, #196 | `documented` — `Client.prize` |
 | `ClientParams::required` | `declarable` | `drops` [h] — **dormant**, #196 | `documented` — `Client.required` |
 | `ClientParams::group` | `declarable` | `drops` [i] — **dead**, #196 | `documented` — `Client.group` + `ClientGroup(clients, required, mutually_exclusive)` |
-| `ClientParams::quantity` | `declarable` | `drops` [j] — **dead**, #196 | `—` — `Shipment.amount` carries a request's quantity; a `Client` has none |
+| `ClientParams::quantity` | `absent` [j] | `—` [j] | `—` [j] |
 | `ClientParams::skills` | `declarable` | `drops` [k] — **dormant**, #196 | `—` — no skill or qualification attribute anywhere in `_pyvrp.pyi` |
-| `ClientParams::setup_time` | `declarable` | `drops` [l] — **dead**, #196 | `—` — service duration only; no setup term, sequence-dependent or not |
-| `ClientParams::location` | `declarable` | `drops` [m] — **dead**, #196 | `—` — `Client.location` is the node's index into the matrices, which is COSO's node id, not a second "setup location" id |
+| `ClientParams::setup_time` | `absent` [l] | `—` [l] | `—` [l] |
+| `ClientParams::location` | `absent` [m] | `—` [m] | `—` [m] |
 | `ClientParams::client_type` | `declarable` | `drops` [n] — **dormant**, #196 | `—` — no type or incompatibility matrix |
 | `VehicleTypeParams::capacity` | `declarable` | `supported` [o] | `documented` — `VehicleType.capacity: list[int]` |
 | `VehicleTypeParams::max_duration` | `declarable` | `drops` [p] — **dormant**, #194 | `documented` — `VehicleType.shift_duration` |
@@ -1198,12 +1201,12 @@ split it.
 | `VehicleTypeParams::max_reloads` | `declarable` | `drops` [w] — **dormant**, #196 | `documented` — `VehicleType.max_reloads` |
 | `VehicleTypeParams::cost` | `declarable` | `drops` [x] — **wired**, #198 | `documented` — the three cost attributes below |
 | `VehicleTypeParams::profile` | `declarable` | `drops` [y] — **wired**, #198 | `documented` — `VehicleType.profile`, `ProblemData.distance_matrices` |
-| `VehicleTypeParams::speed_factor` | `declarable` | `drops` [z] — **dead**, #196 | `—` — one duration matrix per profile; no per-type scaling |
+| `VehicleTypeParams::speed_factor` | `absent` [z] | `—` [z] | `—` [z] |
 | `VehicleTypeParams::skills` | `declarable` | `drops` [aa] — **dormant**, #196 | `—` — no skill attribute; see `ClientParams::skills` |
 | `CostParams::fixed_cost` | `declarable` | `drops` [ab] — **wired**, #198 | `documented` — `VehicleType.fixed_cost` |
 | `CostParams::unit_distance_cost` | `declarable` | `drops` [ac] — **wired**, #198 | `documented` — `VehicleType.unit_distance_cost` |
 | `CostParams::unit_duration_cost` | `declarable` | `drops` [ad] — **wired**, #198 and #221 | `documented` — `VehicleType.unit_duration_cost` |
-| `CostParams::per_task_hour_cost` | `declarable` | `drops` [ae] — **dead**, #196 | `—` — no cost term indexed on service time |
+| `CostParams::per_task_hour_cost` | `absent` [ae] | `—` [ae] | `—` [ae] |
 | `DepotParams::tw` | `declarable` | `drops` [af] — **wired**, #194 | `documented` — `Depot.tw_early` / `tw_late` |
 
 The structural features, which are methods rather than slots:
@@ -1282,13 +1285,17 @@ Evidence:
   (`routing_model.cpp:68-70`) and no code reads `ClientData::group`; the `group` hits in
   `src/routing/resources/sync_resource.h` are a *sync* group's own `group_id`, an unrelated
   concept in an idle file. **Dead** — there is no group operator to wire. #196.
-- [j] `quantity`'s only occurrence in `src/routing` outside the copy is the comment at
-  `load_resource.h:28` describing `LoadResource::pickup`. **Dead.** #196, and see §Rulings —
-  this is one of the five slots deleted here.
+- [j] **Deleted by this section** — §Rulings, redundant with the pickup client's `pickup[]` and
+  the delivery client's `demand[]`. Before the cut it was `declarable` / `drops` / **dead**:
+  `quantity`'s only occurrence in `src/routing` outside the copy was the comment at
+  `load_resource.h:28` describing `LoadResource::pickup`. Neither engine has a row to hold now
+  that the API cannot make the declaration.
 - [k] `ClientParams::skills` reaches `src/routing/resources/skill_filter.h` and nothing else;
   that header has no includer outside `src/routing/resources/`. **Dormant.** #196.
-- [l] Zero consumers. **Dead.** #196, and deleted here — see §Rulings.
-- [m] Zero consumers. **Dead.** #196, and deleted here — see §Rulings.
+- [l] **Deleted by this section** — §Rulings, redundant with `service`. Before the cut it was
+  `declarable` / `drops` / **dead**: zero consumers anywhere in `src/routing` or `src/search`.
+- [m] **Deleted by this section** — §Rulings, redundant with the client's node id. Before the cut
+  it was `declarable` / `drops` / **dead**: zero consumers.
 - [n] `client_type` reaches `src/routing/resources/type_incompatibility.h:106` and nothing
   else; that header is idle. **Dormant.** #196.
 - [o] The same test as [a]: capacity is the half of the pair the control section isolates, since
@@ -1335,7 +1342,9 @@ Evidence:
   profile is a property of the *vehicle type*, `Result::routes()` is a list of client ids with
   no vehicle type attached, and `cost_` is total distance, so nothing in a returned solution
   says which matrix priced it. #198, and see the `Result` list in §Result.
-- [z] Zero consumers. **Dead.** #196, and deleted here — see §Rulings.
+- [z] **Deleted by this section** — §Rulings, redundant with `profile`. Before the cut it was
+  `declarable` / `drops` / **dead**: zero consumers. PyVRP has no per-type scaling either — one
+  duration matrix per profile.
 - [aa] `VehicleTypeParams::skills` reaches `skill_filter.h` only, the same idle header as [k].
   **Dormant.** #196.
 - [ab] `fixed_cost` is charged per non-empty route in `CostEvaluator::route_objective`
@@ -1353,8 +1362,9 @@ Evidence:
   `exchange.cpp` have no duration term either. So with `unit_duration_cost > 0` declared, the
   descent accepts moves on a function the evaluator does not agree with. Filed as **#221**;
   `drops` per [x] on top of that.
-- [ae] Zero consumers, and nothing in the schema defines what a "task hour" is. **Dead.** #196,
-  and deleted here — see §Rulings.
+- [ae] **Deleted by this section** — §Rulings, redundant with `unit_duration_cost`. Before the
+  cut it was `declarable` / `drops` / **dead**: zero consumers, and nothing in the schema defined
+  what a "task hour" was.
 - [af] `DepotParams::tw` reaches `DurationResource::init_depot`
   (`duration_resource.h:67-68`), which is where a route's earliest departure and latest return
   come from, so the depot window does enter the time-warp penalty. It is unenforced for exactly
@@ -1522,12 +1532,21 @@ why three of #200's eight candidates are kept.
 | `RoutingModel::set_cost_matrix()` | **keep**, `drops`/dead | A **third arc-cost matrix, independent of distance and duration, is not redundant with either** — that is the whole point of it. Distance and duration are physical; an arc *cost* is a tariff, a toll, a congestion charge or a contract rate, and it is the one of the three a user cannot derive from the other two. PyVRP prices arcs as `unit_distance_cost * distance + unit_duration_cost * duration` and so cannot express it, which is a `—` in its column and not a verdict on the schema |
 | `RoutingModel::add_client_group()` | **keep**, `drops`/dead | It is the **only constructor of a group id**. Deleting it while keeping `ClientParams::group` — which #200 did not propose to cut — makes the feature unsayable: a user could set `group = 3` with nothing that says what group 3 is or which members it has. That is internally inconsistent, and inconsistency is not what the deletion rule is for. Both halves stay, both are `drops`/dead, and PyVRP's `ClientGroup(clients, required, mutually_exclusive)` is the shape #178 would wire them to |
 
-The five deletions land in this section's commit across `src/model/routing_model.h`,
-`src/routing/problem_data.{h,cpp}`, `python/bindings.cpp` and `tests/model/model_test.cpp`. The
-`ProblemData::ClientData` and `VehicleTypeData` mirrors go with them: unlike #195's network
-resources, no engine-layer test reads any of the five, so leaving the fields behind would leave
-members that nothing writes and nothing reads. `CostParams` drops to three fields, which is the
-only one of the five visible in a Python `repr`.
+The five deletions landed in one commit across `src/model/types.h`,
+`src/model/routing_model.h`, `src/routing/problem_data.{h,cpp}`, `python/bindings.cpp`,
+`tests/model/model_test.cpp`, `tests/routing/problem_data_test.cpp` and
+`python/tests/test_routing.py`. The `ProblemData::ClientData` and `VehicleTypeData` mirrors went
+with them: unlike #195's network resources, no engine-layer test reads any of the five, so
+leaving the fields behind would leave members that nothing writes and nothing reads.
+`CostParams` drops to three fields, which is the only one of the five visible in a Python
+`repr` — `CostParams(fixed=…, dist=…, dur=…)`. Two existing tests changed rather than being
+deleted: `tests/model/model_test.cpp` "RoutingModel pickup-delivery workflow" declared
+`{.quantity = 3}` on both ends of a request and now declares `{.pickup = {3}}` on the pickup and
+`{.demand = {3}}` on the delivery, which is what the ruling says that number always was; and the
+`speed_factor` line of `tests/routing/problem_data_test.cpp` "ProblemData Builder stores vehicle
+type parameters" is gone, with `profile` still asserted beside it. The class comment on
+`RoutingModel` claimed VRPTW, multi-trip, pickup-delivery, optional clients and client groups;
+it now says CVRP is what the native engine enforces and points here.
 
 **Principle 4 applied to `set_initial_routes()` and `pin()` — the API splits in two, and the
 split is #176's to make.** `pin(client_id)` is defined against the routes given to

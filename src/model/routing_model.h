@@ -22,7 +22,6 @@ struct VehicleTypeParams {
     int max_reloads = 0;         ///< max number of reloads per shift
     CostParams cost;
     int profile = 0;  ///< distance/duration matrix index
-    double speed_factor = 1.0;
     std::vector<std::string> skills;
 };
 
@@ -36,11 +35,8 @@ struct ClientParams {
     int release_time = 0;
     int prize = 0;  ///< for optional clients (Team Orienteering)
     bool required = true;
-    int group = -1;    ///< client group id (-1 = none)
-    int quantity = 0;  ///< for pickup/delivery requests
+    int group = -1;  ///< client group id (-1 = none)
     std::vector<std::string> skills;
-    int setup_time = 0;
-    int location = -1;     ///< location id for location-aware setup
     int client_type = -1;  ///< type id for incompatibility constraints (-1 = none)
 };
 
@@ -51,8 +47,10 @@ struct DepotParams {
 
 /// Routing model: declare depots, vehicles, clients, distances, then solve.
 ///
-/// Supports CVRP, VRPTW, heterogeneous fleet, multi-trip, pickup-delivery,
-/// optional clients, client groups, multiple distance profiles, and more.
+/// What the native engine enforces is CVRP: demand against an N-dimensional
+/// vehicle capacity, minimising distance.  Most of the rest of this schema is
+/// accepted and dropped — see the Routing section of docs/models.md for the
+/// per-field verdict, and #194, #196 and #198 for the defects behind it.
 class RoutingModel {
 public:
     /// Add a depot at the given coordinates.
