@@ -122,6 +122,14 @@ ctest --test-dir build -j$(nproc)
 
 ## Python install
 
+COSO is **not on PyPI yet** ([#217](../../issues/217)) — build from source for now:
+
+```bash
+cmake -B build -DCOSO_BUILD_PYTHON=ON && cmake --build build -j$(nproc)
+```
+
+Once published, the distribution will be `pycoso`:
+
 ```bash
 pip install pycoso
 ```
@@ -131,12 +139,6 @@ PyPI. The distribution is `pycoso`; the import package is still `coso`:
 
 ```python
 import coso
-```
-
-To build the bindings from source instead:
-
-```bash
-cmake -B build -DCOSO_BUILD_PYTHON=ON && cmake --build build -j$(nproc)
 ```
 
 ## License
