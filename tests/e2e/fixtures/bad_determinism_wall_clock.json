@@ -1,0 +1,11 @@
+{
+  "id": "bad_determinism_wall_clock",
+  "model": "routing",
+  "variant": "R1",
+  "profile": "smoke",
+  "time_limit": {
+    "seconds": 1.0,
+    "work_units": 0.05
+  },
+  "checks": ["feasible", "deterministic_work"]
+}

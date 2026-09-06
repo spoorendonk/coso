@@ -157,6 +157,7 @@ The routing engine is the reference architecture for other engines:
 - **Python tests** (`python/tests/`): pytest. `test_routing.py` for routing + shared types, `test_models.py` for other models.
 - **E2E tests**: the `e2e_smoke` ctest target runs `tests/e2e/run_pack.sh` over `examples/e2e/scenarios/smoke/*.json` — **six scenarios, one per model type**. `e2e_runner` builds a hardcoded toy instance per model type (`examples/e2e/e2e_runner.cpp`, `solve_once`); scenario JSON only supplies id, time limit, and which checks to assert. This is a smoke gate, not variant or benchmark coverage — per-variant instances land in the M1–M6 milestones.
   - `COSO_E2E_APPLY_QUARANTINE=1` makes `run_pack.sh` skip scenario ids listed in `tests/e2e/quarantine.csv`.
+  - A scenario asserting `deterministic_work` must set `"seconds": 0` and `work_units > 0`. `StopCriterion` ORs its limits, so any wall clock lets a loaded machine stop the two solves at different iterations — the flake of #209. `e2e_runner` rejects such a scenario at parse time, and `tests/e2e/fixtures/` covers both spellings. That makes `e2e_smoke` runtime load-proportional, so it carries an explicit ctest `TIMEOUT` rather than the 1500s default.
 - **Benchmark tests**: `benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`, `assignment_benchmark_test`, `packing_benchmark_test` (label `benchmark`). Instances come from `tests/data/download_benchmarks.sh`. **No results are published anywhere until a verified run exists** — see #177.
 
 ### Engine state

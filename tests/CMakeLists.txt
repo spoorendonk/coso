@@ -1053,5 +1053,32 @@ add_test(
             $<TARGET_FILE:e2e_runner>
             ${CMAKE_SOURCE_DIR}/examples/e2e/scenarios/smoke
 )
-set_tests_properties(e2e_smoke PROPERTIES LABELS "e2e-smoke")
+# The smoke scenarios stop on deterministic work only, so the pack's runtime is
+# proportional to how contended the machine is and has no upper bound of its own
+# (1.5s unloaded, 2.6s for routing alone at 2x oversubscription). 300s is ~200x
+# the unloaded pack: far more headroom than any plausible CI load needs, and it
+# still catches a genuine non-terminating solve in 5 minutes instead of ctest's
+# default 25.
+set_tests_properties(e2e_smoke PROPERTIES LABELS "e2e-smoke" TIMEOUT 300)
+
+# A scenario that asks for deterministic_work must be bounded by work, not by the
+# wall clock — see #209. The runner rejects both spellings of an unbounded one.
+add_test(
+    NAME e2e_rejects_wall_clock_determinism
+    COMMAND $<TARGET_FILE:e2e_runner>
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/fixtures/bad_determinism_wall_clock.json
+)
+add_test(
+    NAME e2e_rejects_unbounded_determinism
+    COMMAND $<TARGET_FILE:e2e_runner>
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/fixtures/bad_determinism_unbounded.json
+)
+set_tests_properties(
+    e2e_rejects_wall_clock_determinism
+    e2e_rejects_unbounded_determinism
+    PROPERTIES
+    LABELS "e2e-smoke"
+    TIMEOUT 60
+    PASS_REGULAR_EXPRESSION "is not deterministically bounded"
+)
 

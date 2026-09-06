@@ -95,6 +95,19 @@ Scenario parse_scenario(std::filesystem::path const& path) {
     if (s.model.empty()) {
         throw std::runtime_error("Scenario parse error: missing string field 'model'");
     }
+
+    // A deterministic_work check compares two solves of the same scenario, so the
+    // run has to be bounded by something reproducible. The wall clock is not:
+    // StopCriterion ORs its limits, so any seconds > 0 lets the clock stop the two
+    // solves at different iterations under CPU load. work_units is the only bound
+    // that survives that, and with neither one set the solve is unbounded above.
+    if (s.checks.contains("deterministic_work") && (s.seconds > 0.0 || s.work_units <= 0.0)) {
+        throw std::runtime_error(
+            "Scenario '" + s.id +
+            "' requests deterministic_work but is not deterministically bounded: "
+            "time_limit.seconds must be 0 and time_limit.work_units must be > 0");
+    }
+
     return s;
 }
 
