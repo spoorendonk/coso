@@ -187,3 +187,24 @@ TEST_CASE("AssignmentModel: missing horizon returns infeasible", "[assignment]")
     auto result = model.solve(TimeLimit(0.1));
     REQUIRE_FALSE(result.feasible());
 }
+
+TEST_CASE("AssignmentModel: a copy carries the declaration", "[assignment]") {
+    // Regression for #197: the model kept its state in a file-local map keyed
+    // on `this`, so a copy shared none of it and solved as an empty model --
+    // silently, with feasible() == false and no assignments.
+    AssignmentModel a;
+    a.set_horizon(3);
+    int day = a.add_shift_type({.name = "Day", .start_hour = 8, .end_hour = 16});
+    a.add_employee({.name = "Alice"});
+    a.add_demand(day, DemandParams{.min_employees = 1});
+
+    AssignmentModel b = a;
+
+    auto ra = a.solve(TimeLimit(0.1));
+    auto rb = b.solve(TimeLimit(0.1));
+
+    REQUIRE(ra.feasible());
+    REQUIRE(rb.feasible() == ra.feasible());
+    REQUIRE(rb.cost() == ra.cost());
+    REQUIRE(rb.assignments().size() == ra.assignments().size());
+}
