@@ -1,10 +1,10 @@
 {
-  "id": "bad_determinism_unbounded",
+  "id": "bad_determinism_no_bound",
   "model": "routing",
   "variant": "R1",
   "profile": "smoke",
   "time_limit": {
-    "seconds": 1.0,
+    "seconds": 0,
     "work_units": 0
   },
   "checks": ["feasible", "deterministic_work"]

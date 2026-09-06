@@ -1068,30 +1068,44 @@ add_test(
 )
 # The smoke scenarios stop on deterministic work only, so the pack's runtime is
 # proportional to how contended the machine is and has no upper bound of its own
-# (1.5s unloaded, 2.6s for routing alone at 2x oversubscription). 300s is ~200x
-# the unloaded pack: far more headroom than any plausible CI load needs, and it
+# (measured on a 12-core dev box: 0.9-1.5s unloaded, 1.2-2.6s for routing alone at
+# 2x oversubscription). 300s is 200-350x the unloaded pack there: far more headroom
+# than any plausible CI load needs, and it
 # still catches a genuine non-terminating solve in 5 minutes instead of ctest's
 # default 25.
 set_tests_properties(e2e_smoke PROPERTIES LABELS "e2e-smoke" TIMEOUT 300)
 
 # A scenario that asks for deterministic_work must be bounded by work, not by the
-# wall clock — see #209. The runner rejects both spellings of an unbounded one.
+# wall clock — see #209. There are three bad spellings and one fixture each: a
+# clock with a work budget (the flake itself), a clock with no work budget, and
+# neither bound at all (the only one that can actually hang the pack).
 add_test(
     NAME e2e_rejects_wall_clock_determinism
     COMMAND $<TARGET_FILE:e2e_runner>
             ${CMAKE_CURRENT_SOURCE_DIR}/e2e/fixtures/bad_determinism_wall_clock.json
 )
 add_test(
-    NAME e2e_rejects_unbounded_determinism
+    NAME e2e_rejects_no_work_budget_determinism
     COMMAND $<TARGET_FILE:e2e_runner>
-            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/fixtures/bad_determinism_unbounded.json
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/fixtures/bad_determinism_no_work_budget.json
 )
+add_test(
+    NAME e2e_rejects_no_bound_determinism
+    COMMAND $<TARGET_FILE:e2e_runner>
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/fixtures/bad_determinism_no_bound.json
+)
+# PASS_REGULAR_EXPRESSION alone would only assert that the message appeared, not
+# that the runner refused to solve. FAIL_REGULAR_EXPRESSION on scenario_id — which
+# the runner emits only on the success path — makes these fail if the throw is ever
+# downgraded to a warning that lets the solve proceed.
 set_tests_properties(
     e2e_rejects_wall_clock_determinism
-    e2e_rejects_unbounded_determinism
+    e2e_rejects_no_work_budget_determinism
+    e2e_rejects_no_bound_determinism
     PROPERTIES
     LABELS "e2e-smoke"
     TIMEOUT 60
     PASS_REGULAR_EXPRESSION "is not deterministically bounded"
+    FAIL_REGULAR_EXPRESSION "scenario_id"
 )
 

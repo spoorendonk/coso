@@ -37,7 +37,8 @@
       "properties": {
         "seconds": {
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "description": "Wall-clock limit; 0 disables it. Must be 0 when checks include deterministic_work, since StopCriterion ORs its limits and a clock lets a loaded machine stop two solves at different iterations (#209). The runner enforces this."
         },
         "work_units": {
           "type": "number",
