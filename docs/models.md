@@ -1037,3 +1037,423 @@ Two findings with no issue of their own:
   cases in `tests/model/model_test.cpp` are shape assertions too, and the `e2e_smoke` scenario is
   one product over three periods with a capacity of 80 against a peak demand of 20 — nothing there
   binds. Every `supported` cell above cites the new capacity test instead.
+
+## Routing
+
+`RoutingModel` (`src/model/routing_model.h`) declares depots, vehicle types with an
+N-dimensional capacity and a cost structure, clients with demand, pickup, a time window and a
+service duration, per-profile distance and duration matrices, pickup-delivery requests and a
+reference solution, and solves it as a rich VRP: a nearest-neighbour or Clarke-Wright
+construction, then `PortfolioSolver` — ILS with a first-improvement granular descent, then an
+HGS-style GA, then a zero-penalty finalizer. It is the widest schema of the six and the first
+milestone's model. Five slots are deleted as of this section — see §Rulings.
+
+Engine columns are #173's map for this model: **native** and **PyVRP** (#178). Only the native
+engine is integrated; PyVRP is not a dependency of this repo, so its column can hold no value
+but `documented` or `—`, pinned to a public API reference:
+
+- **PyVRP v0.14.0**, uploaded 2026-08-20, read from the type stubs shipped inside the wheel
+  (`pyvrp-0.14.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl`,
+  `pyvrp/_pyvrp.pyi`) rather than from a documentation page, so every cell below names an
+  attribute that exists in the binary: `Location`, `Client`, `ClientGroup`, `Depot`,
+  `Shipment` / `ShipmentStep`, `VehicleType`, `ProblemData`, `Route`, `ScheduledActivity`,
+  `Solution`, plus the `pyvrp.Model` builder (`add_location`, `add_client`, `add_shipment`,
+  `add_client_group`, `add_depot`, `add_edge`, `add_profile`, `add_vehicle_type`, `solve`).
+  Every PyVRP cell below carries the attribute or call inline; a `—` cell says what is missing.
+
+**One correction to #200's own PyVRP list, made before any row is filled: 0.14.0 *has* paired
+pickup-delivery.** `Shipment(pickup_location, delivery_location, pickup_tw_early,
+pickup_tw_late, pickup_service_duration, delivery_tw_early, delivery_tw_late,
+delivery_service_duration, amount, prize, required)` is a first-class entity carried in
+`ProblemData(…, shipments=[…])` and built by `Model.add_shipment`; `Route` reports
+`num_shipments()` and `Activity::is_pickup()` / `is_delivery()`, and `Solution` reports
+`num_missing_shipments()`. So R15 (PDPTW) is a PyVRP feature, not a gap, and #178's reject list
+is one item shorter than the issue assumed. The four things 0.14.0 genuinely does not have are
+**skills**, **synchronised visits**, **driver breaks** and a **third arc-cost matrix**: no
+attribute in `_pyvrp.pyi` matches any of them, and the only occurrence of the string `break` in
+the stub file is `PiecewiseLinearFunction.breakpoints`.
+
+### Reachability from `solve()` — re-run at `26046c6`
+
+A declaration counts only if code that consumes it is reachable from `solve()`. Reachability is
+derived from includers, not assumed. #200's second loop matched **basenames**, so
+`src/routing/overconstrained.h` was credited with an includer it does not have —
+`src/assignment/overconstrained.cpp:1` includes `assignment/overconstrained.h`. Both loops below
+match the **path** an includer would have to write:
+
+```sh
+# resources/ and operators/ headers with no includer outside their own directory
+for h in src/routing/resources/*.h src/routing/operators/*.h; do
+  inc=$(grep -rl "\"${h#src/}\"" src/ --include='*.h' --include='*.cpp' \
+        | grep -v "^$(dirname "$h")/")
+  [ -z "$inc" ] && echo "idle: $h"
+done
+# top-level engine/search headers with no includer other than their own .h/.cpp
+for h in src/routing/overconstrained.h src/search/warm_start.h src/search/partitioned_search.h \
+         src/search/daemon.h src/search/guided_local_search.h; do
+  inc=$(grep -rl "\"${h#src/}\"" src/ --include='*.h' --include='*.cpp' \
+        | grep -v "^${h%.h}\.\(h\|cpp\)$")
+  [ -z "$inc" ] && echo "idle: $h"
+done
+```
+
+The first loop prints **thirteen**, exactly as #200 said: nine resources — `break_resource`,
+`compartment_resource`, `depot_resource`, `loading_resource`, `precedence_resource`,
+`skill_filter`, `sync_resource`, `task_count_resource`, `type_incompatibility` — and four
+operators — `insert_optional`, `pair_operators`, `relocate_with_depot`, `route_split`.
+
+The second loop prints **four** as #200's own script wrote it, and **five** once the match is
+path-qualified as above. The four are `warm_start.h`, `partitioned_search.h`, `daemon.h` and
+`guided_local_search.h`; the fifth is `src/routing/overconstrained.h`, which is idle in fact and
+was only ever masked by the basename collision. "All five top-level headers" was therefore the
+right count reached by the wrong route, and the corrected script is what this section records.
+
+What that leaves reachable, checked by hand rather than read off a word count:
+
+- `LocalSearch::run` (`src/routing/local_search.cpp:18-22`) instantiates `Exchange10`,
+  `Exchange11`, `Exchange20`, `SwapTails` and `SwapStar`, and nothing else.
+- `Route` includes the load, distance and duration resources only (`src/routing/route.h:4-6`).
+- `Route::depot_` is assigned 0 in the constructor (`route.cpp:14`) and nowhere else;
+  `src/routing/construction.cpp:37,98` hardcodes `depot = 0` too.
+- `ProblemData::cost(profile, from, to)` — the third matrix — has no caller in `src/`.
+- `CostEvaluator::set_distance_cost_function` / `set_duration_cost_function` are called only
+  from `tests/routing/piecewise_cost_test.cpp`, so `piecewise_cost.{h,cpp}` is compiled into the
+  model path and never installed on it.
+- `ProblemData::requests()` has two callers, `src/routing/operators/pair_operators.cpp` and
+  `src/routing/resources/precedence_resource.h` — both idle.
+
+#200's per-slot word-count script is **not** used here, and should not be: it counts
+comment-only hits (`quantity`'s single hit is `load_resource.h:28`, a comment about
+`LoadResource::pickup` — a comment hit *and* a name collision), it collapses `tw` and `skills`
+across two structs each, `cost` matches 38 files, and its `$IDLE` filter holds only `.h` paths
+so idle `.cpp` files are never removed — `required` matches `operators/insert_optional.cpp` and
+`search/warm_start.cpp`, `cost` matches `daemon.cpp`, `partitioned_search.cpp` and
+`guided_local_search.cpp`. Every per-slot verdict in §Features was checked against the grep's
+`file:line` output instead.
+
+### Schema
+
+| entity | fields |
+|---|---|
+| depot | coordinate `(x, y)` **or** an explicit node id; `tw` |
+| vehicle type | `count`; `capacity` (one int per load dimension), `max_duration`, `max_distance`, `min_tasks`, `max_tasks`, `max_overtime`, `unit_overtime_cost`, `reload_depot`, `max_reloads`, `cost` (a `CostParams`), `profile`, `speed_factor`, `skills` |
+| `CostParams` | `fixed_cost`, `unit_distance_cost` (default 1), `unit_duration_cost`, `per_task_hour_cost` |
+| client | coordinate `(x, y)` **or** an explicit node id; `demand` and `pickup` (one int per load dimension), `tw`, `extra_tw`, `service`, `release_time`, `prize`, `required`, `group`, `quantity`, `skills`, `setup_time`, `location`, `client_type` |
+| request | an ordered `(pickup, delivery)` client pair |
+| matrices | `set_distance` / `set_duration` on the current profile, `set_profile_distance` / `set_profile_duration` / `set_cost_matrix` on a named one |
+| reference solution | `set_initial_routes(routes)`, `pin(client_id)` |
+
+Convention, and the count this audit is against: a slot is `Struct::field`. `ClientParams` 14 +
+`VehicleTypeParams` 13 (`cost` counted — it is a declarable member) + `CostParams` 4 +
+`DepotParams` 1 = **32 slots**. `ClientParams::tw` and `DepotParams::tw` are two slots, and so
+are `ClientParams::skills` and `VehicleTypeParams::skills`; each pair gets its own row below.
+
+Node numbering is the one thing a caller must get right and the API never states: `set_distance`
+and every matrix setter take **full node indices** — depots `0..D-1`, then clients
+`D..D+C-1` — while `add_client` returns a **client index** `0..C-1` and `Result::routes()`
+gives those back. The offset is the caller's to apply.
+
+`add_pickup` and `add_delivery` are aliases of `add_client` with no added semantics
+(`routing_model.cpp:52-58`); `add_pickup_delivery` is an alias of `add_request`. Nothing in the
+model validates: no setter throws, an out-of-range client id in `add_request` or `pin` is stored
+unchecked, and `solve()` returns a default-constructed `Result` (`feasible() == false`) when
+there is no depot or no vehicle type rather than raising.
+
+Absent, and named because the rulings below turn on them: synchronised visits between vehicles,
+team formation, a route that does not return to a depot, per-client vehicle-type admissibility,
+a battery or recharge resource, time-dependent travel, a client served by more than one route,
+a multi-period visit pattern, and driver breaks.
+
+### Features
+
+Every native `supported` cell is evidenced on `tests/routing/routing_model_test.cpp`, and each
+of those tests was verified by mutation — the mutation and what it broke are recorded with the
+cell. The instance the capacity and pickup cells share is one depot at the origin and three
+clients on a line at (10, 0), (20, 0) and (30, 0): the single tour costs 60 and three singleton
+routes cost 120, so distance alone always prefers one route and only a declared capacity can
+split it.
+
+| slot | model | native | PyVRP 0.14.0 |
+|---|---|---|---|
+| `ClientParams::demand` | `declarable` | `supported` [a] | `documented` — `Client.delivery: list[int]` |
+| `ClientParams::pickup` | `declarable` | `supported` [b] | `documented` — `Client.pickup: list[int]` |
+| `ClientParams::tw` | `declarable` | `drops` [c] — **wired**, #194 | `documented` — `Client.tw_early` / `tw_late` |
+| `ClientParams::extra_tw` | `declarable` | `drops` [d] — **dead** | `—` — one window pair per `Client`; no list |
+| `ClientParams::service` | `declarable` | `drops` [e] — **wired**, #194 | `documented` — `Client.service_duration` |
+| `ClientParams::release_time` | `declarable` | `drops` [f] — **dead** | `documented` — `Client.release_time` |
+| `ClientParams::prize` | `declarable` | `drops` [g] — **dormant**, #196 | `documented` — `Client.prize` |
+| `ClientParams::required` | `declarable` | `drops` [h] — **dormant**, #196 | `documented` — `Client.required` |
+| `ClientParams::group` | `declarable` | `drops` [i] — **dead**, #196 | `documented` — `Client.group` + `ClientGroup(clients, required, mutually_exclusive)` |
+| `ClientParams::quantity` | `declarable` | `drops` [j] — **dead**, #196 | `—` — `Shipment.amount` carries a request's quantity; a `Client` has none |
+| `ClientParams::skills` | `declarable` | `drops` [k] — **dormant**, #196 | `—` — no skill or qualification attribute anywhere in `_pyvrp.pyi` |
+| `ClientParams::setup_time` | `declarable` | `drops` [l] — **dead**, #196 | `—` — service duration only; no setup term, sequence-dependent or not |
+| `ClientParams::location` | `declarable` | `drops` [m] — **dead**, #196 | `—` — `Client.location` is the node's index into the matrices, which is COSO's node id, not a second "setup location" id |
+| `ClientParams::client_type` | `declarable` | `drops` [n] — **dormant**, #196 | `—` — no type or incompatibility matrix |
+| `VehicleTypeParams::capacity` | `declarable` | `supported` [o] | `documented` — `VehicleType.capacity: list[int]` |
+| `VehicleTypeParams::max_duration` | `declarable` | `drops` [p] — **dormant**, #194 | `documented` — `VehicleType.shift_duration` |
+| `VehicleTypeParams::max_distance` | `declarable` | `drops` [q] — **dormant**, #194 | `documented` — `VehicleType.max_distance` |
+| `VehicleTypeParams::min_tasks` | `declarable` | `drops` [r] — **dormant**, #196 | `—` — no minimum visit count per vehicle |
+| `VehicleTypeParams::max_tasks` | `declarable` | `drops` [s] — **dormant**, #196 | `—` — no maximum visit count per vehicle |
+| `VehicleTypeParams::max_overtime` | `declarable` | `drops` [t] — **dormant**, #196 | `documented` — `VehicleType.max_overtime` |
+| `VehicleTypeParams::unit_overtime_cost` | `declarable` | `drops` [u] — **dead**, #196 | `documented` — `VehicleType.unit_overtime_cost` |
+| `VehicleTypeParams::reload_depot` | `declarable` | `drops` [v] — **dormant**, #196 | `documented` — `VehicleType.reload_depots: list[int]` |
+| `VehicleTypeParams::max_reloads` | `declarable` | `drops` [w] — **dormant**, #196 | `documented` — `VehicleType.max_reloads` |
+| `VehicleTypeParams::cost` | `declarable` | `drops` [x] — **wired**, #198 | `documented` — the three cost attributes below |
+| `VehicleTypeParams::profile` | `declarable` | `drops` [y] — **wired**, #198 | `documented` — `VehicleType.profile`, `ProblemData.distance_matrices` |
+| `VehicleTypeParams::speed_factor` | `declarable` | `drops` [z] — **dead**, #196 | `—` — one duration matrix per profile; no per-type scaling |
+| `VehicleTypeParams::skills` | `declarable` | `drops` [aa] — **dormant**, #196 | `—` — no skill attribute; see `ClientParams::skills` |
+| `CostParams::fixed_cost` | `declarable` | `drops` [ab] — **wired**, #198 | `documented` — `VehicleType.fixed_cost` |
+| `CostParams::unit_distance_cost` | `declarable` | `drops` [ac] — **wired**, #198 | `documented` — `VehicleType.unit_distance_cost` |
+| `CostParams::unit_duration_cost` | `declarable` | `drops` [ad] — **wired**, #198 and #221 | `documented` — `VehicleType.unit_duration_cost` |
+| `CostParams::per_task_hour_cost` | `declarable` | `drops` [ae] — **dead**, #196 | `—` — no cost term indexed on service time |
+| `DepotParams::tw` | `declarable` | `drops` [af] — **wired**, #194 | `documented` — `Depot.tw_early` / `tw_late` |
+
+The structural features, which are methods rather than slots:
+
+| feature | model | native | PyVRP 0.14.0 |
+|---|---|---|---|
+| more than one depot (`add_depot` ×N) | `declarable` | `drops` [ag] — **dormant**, #196 | `documented` — `VehicleType.start_depot` / `end_depot` per type |
+| paired pickup-delivery (`add_request`) | `declarable` | `drops` [ah] — **dormant**, #196 | `documented` — `Shipment`, `Model.add_shipment` |
+| client groups (`add_client_group`) | `declarable` | `drops` [ai] — **dead**, #196 | `documented` — `ClientGroup`, `Model.add_client_group` |
+| third arc-cost matrix (`set_cost_matrix`) | `declarable` | `drops` [aj] — **dead**, #196 | `—` — distance and duration matrices only; cost is `unit_distance_cost * distance + unit_duration_cost * duration` |
+| reference solution (`set_initial_routes`, `pin`) | `declarable` | `drops` [ak] — **dormant**, #193 | `—` as a *declaration*: `solve(…, initial_solution=Solution)` is a hint on the call, and there is no pinning at all. See §Rulings |
+| explicit node ids (`add_client(int id, …)`) | `declarable` | `drops` [al] — **wired wrong**, #220 | `documented` — `Client.location` indexes the matrices directly |
+
+Evidence:
+
+- [a] `tests/routing/routing_model_test.cpp` "RoutingModel: vehicle capacity splits a route the
+  demand overfills". Three clients of `demand = {6}` against `capacity = {10}` come back as
+  three singleton routes — two clients are 12 units against a declared 10, so *every* feasible
+  route set is exactly that — and the test recomputes each returned route's delivery load from
+  the declared demand and asserts it is within the declared capacity. The control section is
+  the same declaration with `capacity = {20}` and returns **one** route holding all three,
+  which is what an engine that ignored demand or capacity would return in both. Enforced by
+  `LoadResource::init` (`load_resource.h:52`) and `LoadResource::excess`
+  (`load_resource.h:136-146`) through `Route::update`, `CostEvaluator::route_penalty` and
+  `Solution::feasible()`. Verified by mutation: replacing
+  `.demand = std::move(p.demand)` with `.demand = {}` in `ProblemData::Builder::add_client`
+  makes the capacitated section return one route and the test fails 2 assertions.
+- [b] `tests/routing/routing_model_test.cpp` "RoutingModel: backhaul pickup loads the vehicle
+  like demand does". The same three clients with `demand = {0}` and `pickup = {6}` split into
+  three routes, and the control with `pickup = {0}` returns one — delivery demand is zero
+  throughout, so nothing but `pickup` can cause the split. Enforced by `load_resource.h:53-54`
+  and by the merge rule `max(l.load + r.delivery, r.load + l.pickup)` at
+  `load_resource.h:103-105`, which is what makes an accumulating backhaul peak at the end of the
+  route rather than the start. Verified by mutation: `.pickup = {}` in the builder collapses it
+  to one route and the test fails at the `routes().size() == 3` and per-route load assertions.
+- [c] `DurationResource::init` reads `c.tw.start` and `c.tw.end`
+  (`src/routing/resources/duration_resource.h:51-52`), `Route::update` maintains `time_warp_`
+  from it, and `CostEvaluator::route_penalty` charges `time_warp * tw_penalty_`
+  (`cost_evaluator.cpp:93`) — so the search does push toward the declared windows. What is
+  missing is the classification: `Solution::feasible()` (`solution.cpp:78-85`) checks
+  `load_feasible()` on every route and nothing else, so a route that violates every declared
+  window is returned with `feasible() == true`. **#194.** The assertion that should hold is in
+  the `SKIP`-ed "RoutingModel: client time windows are respected by the returned route", which
+  recomputes arrival times from the returned route and the declared travel times. Two of the
+  five operators make it worse: `Exchange11` and `Exchange20` build their own deltas with no
+  time-warp term at all (#221).
+- [d] Zero consumers. `extra_tw` is copied into `ProblemData::ClientData`
+  (`problem_data.cpp:27`) and the string does not occur again anywhere in `src/routing` or
+  `src/search`. **Dead**: there is no multi-window code to wire, idle or otherwise.
+- [e] `service` reaches `DurationResource::init` (`duration_resource.h:51,53`, as
+  `earliest = tw.start + service` and as the segment's `duration`) and
+  `DistanceResource::init` (`distance_resource.h:46`), both reachable. But its only
+  route-*observable* effect runs through arrival times, and those are exactly what #194 leaves
+  unenforced — with no window that can be violated, no returned route changes when the declared
+  service time does. The `SKIP`-ed "RoutingModel: service time delays the arrivals after it"
+  holds the assertion, naming #194. So the cell is `drops` for the same reason `tw` is, not for
+  want of code.
+- [f] Zero consumers, same test as [d]. `release_time` is stored and never read. **Dead.**
+- [g] `prize` *is* read on the model path — `CostEvaluator::route_objective` subtracts it per
+  served client (`cost_evaluator.cpp:80`) and the insert/remove deltas carry it
+  (`cost_evaluator.cpp:139,176`). It changes nothing, because the served set never changes:
+  `construction.cpp` has no `required` check and serves every client, and `crossover.cpp` step 5
+  reinserts every missing one, so the prize total is a constant offset on the objective.
+  **Dormant** — `src/routing/operators/insert_optional.{h,cpp}`, the only code that would
+  remove an unprofitable client, is idle. #196.
+- [h] `required` has no consumer in the reachable set at all; its two consumers are
+  `src/routing/overconstrained.cpp:12,65` and `src/routing/operators/insert_optional.cpp`, both
+  idle. `required = false` therefore has no effect. **Dormant.** #196.
+- [i] `ClientParams::group` has no consumer anywhere. `add_client_group()` is a counter
+  (`routing_model.cpp:68-70`) and no code reads `ClientData::group`; the `group` hits in
+  `src/routing/resources/sync_resource.h` are a *sync* group's own `group_id`, an unrelated
+  concept in an idle file. **Dead** — there is no group operator to wire. #196.
+- [j] `quantity`'s only occurrence in `src/routing` outside the copy is the comment at
+  `load_resource.h:28` describing `LoadResource::pickup`. **Dead.** #196, and see §Rulings —
+  this is one of the five slots deleted here.
+- [k] `ClientParams::skills` reaches `src/routing/resources/skill_filter.h` and nothing else;
+  that header has no includer outside `src/routing/resources/`. **Dormant.** #196.
+- [l] Zero consumers. **Dead.** #196, and deleted here — see §Rulings.
+- [m] Zero consumers. **Dead.** #196, and deleted here — see §Rulings.
+- [n] `client_type` reaches `src/routing/resources/type_incompatibility.h:106` and nothing
+  else; that header is idle. **Dormant.** #196.
+- [o] The same test as [a]: capacity is the half of the pair the control section isolates, since
+  the two sections differ in `capacity` alone — `{10}` against `{20}` — and return three routes
+  against one. Verified by mutation independently of [a]'s: making `LoadResource::excess` return
+  0 unconditionally leaves capacity unenforced and fails both the capacity and the pickup tests,
+  4 assertions in all.
+- [p] `max_duration` is read twice — `DistanceResource::excess` (`distance_resource.h:103-104`)
+  and `DurationResource::excess` (`duration_resource.h:154-155`) — and both feed
+  `Route::dist_excess_` (`route.cpp:291`). Nothing consumes it: `CostEvaluator::route_penalty`
+  adds load excess and time warp only, `dist_penalty_` is stored and never applied, and
+  `Solution::feasible()` does not look. `dist_excess()` and `dist_feasible()` have no caller in
+  `src/` at all. **Dormant**, and it is #194's second half rather than a separate bug.
+- [q] `max_distance` — the same mechanism, `distance_resource.h:99-100`. **Dormant.** #194.
+- [r] `min_tasks` reaches `src/routing/resources/task_count_resource.h:59` only; the header is
+  idle. **Dormant.** #196.
+- [s] `max_tasks` — same header, `task_count_resource.h:64`. **Dormant.** #196.
+- [t] `max_overtime` reaches `PiecewiseLinearFunction::overtime`
+  (`src/routing/piecewise_cost.cpp:137-148`) only. `piecewise_cost.h` is included by
+  `cost_evaluator.h`, so it compiles into the model path, but nothing installs a function on
+  it: `set_distance_cost_function` and `set_duration_cost_function` are called only from
+  `tests/routing/piecewise_cost_test.cpp`. **Dormant** — the function exists, the wiring does
+  not. #196.
+- [u] Zero consumers. The overtime *tier* exists in `piecewise_cost.cpp`, but it takes an
+  `overtime_rate` argument that no caller supplies and no code reads
+  `VehicleTypeData::unit_overtime_cost`. **Dead.** #196.
+- [v] `reload_depot` reaches `src/routing/operators/relocate_with_depot.{h,cpp}` only, which is
+  idle; `LocalSearch::run` instantiates five operators and this is not one of them.
+  **Dormant.** #196.
+- [w] `max_reloads` — same operator, `relocate_with_depot.cpp:64`. **Dormant.** #196.
+- [x] `VehicleTypeParams::cost` is the aggregate the three `CostParams` rows decompose, and it
+  is read on the model path: `CostEvaluator::route_objective` takes `vt.cost`
+  (`cost_evaluator.cpp:64`) and prices distance, duration and the fixed cost from it. **Wired**
+  — so the cell is not `drops` for want of engine code. It is `drops` because nothing about it
+  is *checkable* from what comes back: `RoutingModel::solve()` sets
+  `result.cost_ = best.total_distance()` (`routing_model.cpp:196`) and `Result` carries no
+  vehicle type per route, so a third party holding the returned routes cannot recompute the
+  quantity the search minimised. **#198.** Evidenced instead on the model axis — see the
+  round-trip note below the table.
+- [y] `profile` selects the matrix everywhere it matters — `Route::update` and the four
+  incremental evaluators take `data_->vehicle_type(vehicle_type_).profile`
+  (`route.cpp:77,99,124,147,165,180,227`), `construction.cpp:36,106-108` uses it, and the
+  exchange operators re-read it per move. **Wired.** `drops` for the same reason as [x]: a
+  profile is a property of the *vehicle type*, `Result::routes()` is a list of client ids with
+  no vehicle type attached, and `cost_` is total distance, so nothing in a returned solution
+  says which matrix priced it. #198, and see the `Result` list in §Result.
+- [z] Zero consumers. **Dead.** #196, and deleted here — see §Rulings.
+- [aa] `VehicleTypeParams::skills` reaches `skill_filter.h` only, the same idle header as [k].
+  **Dormant.** #196.
+- [ab] `fixed_cost` is charged per non-empty route in `CostEvaluator::route_objective`
+  (`cost_evaluator.cpp:75`) and carried in the insert, remove, pair and replace deltas
+  (`cost_evaluator.cpp:135,172`; `exchange.cpp:68,110`). **Wired**, `drops` per [x] — a declared
+  `fixed_cost = 1000` never reaches `Result::cost()`. The `SKIP`-ed "RoutingModel: Result::cost
+  is the value of the declared objective" holds the assertion that should pass, naming #198.
+- [ac] `unit_distance_cost` multiplies every distance term in the objective and in all four
+  delta paths (`cost_evaluator.cpp:44,119,167`; `exchange.cpp:66,108,146`). **Wired**, `drops`
+  per [x].
+- [ad] `unit_duration_cost` is priced in `CostEvaluator::route_objective` only
+  (`cost_evaluator.cpp:51,72`). **No move delta prices it** — `eval_insert_cost` /
+  `eval_remove_cost` skip the duration term by design (`cost_evaluator.cpp:122-131`, whose
+  comment justifies it by the field's default of 0), and the pair and replace deltas in
+  `exchange.cpp` have no duration term either. So with `unit_duration_cost > 0` declared, the
+  descent accepts moves on a function the evaluator does not agree with. Filed as **#221**;
+  `drops` per [x] on top of that.
+- [ae] Zero consumers, and nothing in the schema defines what a "task hour" is. **Dead.** #196,
+  and deleted here — see §Rulings.
+- [af] `DepotParams::tw` reaches `DurationResource::init_depot`
+  (`duration_resource.h:67-68`), which is where a route's earliest departure and latest return
+  come from, so the depot window does enter the time-warp penalty. It is unenforced for exactly
+  the reason [c] is — `Solution::feasible()` is load-only. **#194.** The `SKIP`-ed
+  "RoutingModel: the depot time window bounds the route" holds the assertion.
+- [ag] `add_depot` accepts any number of depots and `ProblemData` stores them all, but every
+  route starts and ends at node 0: `Route::depot_` is assigned 0 in `Route::Route`
+  (`route.cpp:14`) and never again, and `construction.cpp:37,98` hardcodes `depot = 0`.
+  `src/routing/resources/depot_resource.h` — the code that would assign a depot per route — is
+  idle. **Dormant.** #196.
+- [ah] `add_request` stores the pair and `ProblemData::requests()` returns it, but its only two
+  consumers are `src/routing/operators/pair_operators.cpp` and
+  `src/routing/resources/precedence_resource.h`, both idle. Construction and crossover treat the
+  two clients as unrelated, so a returned solution routinely puts a pickup and its delivery on
+  different vehicles or the delivery first. **Dormant.** #196.
+- [ai] `add_client_group()` returns `next_group_id_++` and stores nothing
+  (`routing_model.cpp:68-70`); with `ClientParams::group` dead per [i], the whole feature is a
+  counter. **Dead.** #196.
+- [aj] `set_cost_matrix` fills `ProblemData::cost_matrices_`, and `ProblemData::cost(profile,
+  from, to)` has no caller in `src/`. **Dead** — the matrix is built on every `build()` and read
+  by nobody. #196.
+- [ak] `set_initial_routes` and `pin` write `initial_routes_` and `pinned_`, and `solve()` reads
+  neither (`routing_model.cpp:116-226` touches `depots_`, `clients_`, `vehicle_types_`,
+  `requests_` and the three matrix vectors and nothing else). `src/search/warm_start.h`
+  implements `warm_start()`, `PinSet`, `replan()` and `local_search_with_pins()` and is idle.
+  A user who pins a client and re-solves gets a solution that ignores the pin, reported
+  feasible. **Dormant.** **#193.**
+- [al] The explicit-id overloads store `explicit_id` and `has_coord = false`, and `solve()`
+  ignores both: it builds `Coord{d.x, d.y}` for every depot and `Coord{c.x, c.y}` for every
+  client (`routing_model.cpp:133,140`), so an explicitly-numbered node is at (0, 0). The
+  builder then fills all three matrices with Euclidean distances from those coordinates and the
+  caller's `set_distance` calls override only the pairs they name, leaving every unnamed pair at
+  0 — and the granular k-NN lists are sorted on that matrix (`problem_data.cpp:209`). Not
+  `drops` in the ordinary sense: the declaration is read, and read wrongly. Filed as **#220**.
+
+**The objective slots are evidenced on the model axis, not on a returned route.** For `cost`,
+`fixed_cost`, `unit_distance_cost`, `unit_duration_cost` and `profile` no route set is
+*infeasible* — they are objective parameters, and the evidence rule's "only route sets that
+respect the declaration are feasible" has nothing to bite on. Their model-axis `declarable` is
+evidenced by "RoutingModel: the objective parameters round-trip and solve" in
+`tests/routing/routing_model_test.cpp`: the fields are set on a `VehicleTypeParams`, read back
+off the same public aggregate, passed to `add_vehicle_type`, and `solve()` returns a feasible
+result over a profile-1 matrix. **This is the interim form.** `CostParams` and
+`VehicleTypeParams` are public aggregates already `def_rw`-bound
+(`python/bindings.cpp:53-58,106`), so the round-trip works today without #216 — but a
+round-trip through the caller's own struct is weaker than a round-trip through the model, and
+#216's read-back accessors on `RoutingModel` are the real form. When they land, this test should
+read the values back off the model.
+
+### Result
+
+Primary: **the ordered client ids of each route, and the vehicle type and start/end depot of
+the route that serves them.** The client sequence alone is not enough to verify a `supported`
+cell the moment more than one vehicle type or more than one depot is declared — which is R3 and
+R4, two of the six variants #118 claimed as core.
+
+What a returned `Result` must carry for a third party to check a returned routing solution
+against the declaration, feature by feature:
+
+| needed for | field |
+|---|---|
+| any per-type feature — capacity, `max_distance`, the cost structure, `profile` (R3 HFVRP) | the **vehicle type** of each route |
+| multi-depot (R4), open VRP (R5) | the **start and end depot** of each route |
+| multi-trip (R12) | the **trip boundaries**: where the route returns to a reload depot, and which one |
+| time windows and service (R2 VRPTW, R27 TRSP) | **arrival, start-of-service, departure and wait** per visit, and the route's start and end time |
+| optional clients and groups (R8, R11) | the **unserved set** (present today) and, per group, which member was served |
+| the objective | `cost` = **the value of the declared objective**, plus the breakdown that prices it: fixed cost, distance cost, duration cost, prizes collected, overtime |
+
+That list is not invented: PyVRP 0.14.0's `Route` returns `vehicle_type()`, `start_depot()`,
+`end_depot()`, `num_trips()`, `schedule()` — a list of `ScheduledActivity(trip, start_time,
+end_time, duration, wait_duration, time_warp)` — plus `distance()`, `distance_cost()`,
+`duration()`, `duration_cost()`, `fixed_vehicle_cost()`, `prizes()`, `overtime()`,
+`excess_load()`, `excess_distance()` and `time_warp()`. Every row above is an attribute that a
+comparable engine already returns, which is what makes it a contract #176 can demand rather
+than a wish list.
+
+What a returned `Result` carries today:
+
+| field | contents |
+|---|---|
+| `cost()` | **`Solution::total_distance()`** — the sum of `Route::distance()` over routes, *not* the declared objective (`routing_model.cpp:196`) |
+| `feasible()` | `Solution::feasible()`: every route load-feasible. Time windows, `max_distance` and `max_duration` are not consulted (#194) |
+| `routes()` | one entry per non-empty route, holding that route's client ids in order. No vehicle type, no depot, no times |
+| `unserved()` | `Solution::unassigned()` — always empty on the model path, since construction serves every client and crossover reinserts every missing one |
+| `iterations()`, `work_ticks()` / `work_units()`, `elapsed_seconds()` | search and work counters |
+
+Three findings:
+
+1. **`cost()` is not the value of the declared objective.** The search minimises
+   `Solution::cost(eval)` = `Solution::objective(eval)` + penalty, and `route_objective` is
+   distance cost + duration cost + fixed cost − prizes (`cost_evaluator.cpp:58-84`); `solve()`
+   then reports `total_distance()`. With `fixed_cost`, `unit_duration_cost` or
+   `unit_distance_cost != 1` declared, the number returned is not the number minimised, and two
+   engines cross-validated on it compare different quantities. **#198**, and it is what makes
+   every objective row above `drops` rather than `supported`. CVRP with unit distance cost and
+   no fixed cost is unaffected, which is why the Uchoa numbers are consistent.
+2. **`routes()` cannot be costed.** With one vehicle type and one depot the type and the depot
+   are recoverable by construction, which is why the `demand`, `pickup` and `capacity` cells can
+   be evidenced at all — every test above declares exactly one of each. Declare two vehicle
+   types and the returned routes stop being checkable: the same client sequence costs differently
+   under each type's `cost` and `profile`, and nothing says which was used. This is #207's
+   finding in the packing section, one model over: it belongs with #176's `Result` contract.
+3. **`unserved()` exists and is unreachable.** `Result::unserved_` is populated from
+   `Solution::unassigned()`, and nothing on the model path ever leaves a client unassigned — so
+   the field that would carry R8's answer is permanently empty rather than absent. That is the
+   right shape and the wrong state; it becomes real when #196's `insert_optional` is wired.

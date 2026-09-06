@@ -29,6 +29,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  RoutingModel evidence tests (docs/models.md, Routing)                       #
+# --------------------------------------------------------------------------- #
+
+add_executable(routing_model_test routing/routing_model_test.cpp)
+target_link_libraries(routing_model_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(routing_model_test)
+else()
+    add_test(NAME routing_model_test COMMAND routing_model_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Routing engine tests                                                        #
 # --------------------------------------------------------------------------- #
 
