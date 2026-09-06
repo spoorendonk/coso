@@ -3,6 +3,7 @@
 #include "types.h"
 
 #include <climits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -99,15 +100,30 @@ public:
     // -- Accessors -----------------------------------------------------------
 
     [[nodiscard]] int num_machines() const noexcept { return static_cast<int>(machines_.size()); }
-    [[nodiscard]] MachineParams const& machine(int m) const { return machines_[m]; }
+    [[nodiscard]] MachineParams const& machine(int m) const {
+        if (m < 0 || static_cast<size_t>(m) >= machines_.size()) {
+            throw std::out_of_range("ScheduleModel::machine: invalid index");
+        }
+        return machines_[m];
+    }
 
     [[nodiscard]] int num_jobs() const noexcept { return static_cast<int>(jobs_.size()); }
-    [[nodiscard]] JobParams const& job(int j) const { return jobs_[j]; }
+    [[nodiscard]] JobParams const& job(int j) const {
+        if (j < 0 || static_cast<size_t>(j) >= jobs_.size()) {
+            throw std::out_of_range("ScheduleModel::job: invalid index");
+        }
+        return jobs_[j];
+    }
 
     [[nodiscard]] int num_operations() const noexcept {
         return static_cast<int>(operations_.size());
     }
-    [[nodiscard]] OperationEntry const& operation(int o) const { return operations_[o]; }
+    [[nodiscard]] OperationEntry const& operation(int o) const {
+        if (o < 0 || static_cast<size_t>(o) >= operations_.size()) {
+            throw std::out_of_range("ScheduleModel::operation: invalid index");
+        }
+        return operations_[o];
+    }
 
     /// Operation ids per job, job_operations()[job], in declaration order.
     [[nodiscard]] auto const& job_operations() const noexcept { return job_operations_; }

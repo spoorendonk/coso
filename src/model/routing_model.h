@@ -3,6 +3,7 @@
 #include "types.h"
 
 #include <climits>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -156,15 +157,30 @@ public:
     // -- Accessors -----------------------------------------------------------
 
     [[nodiscard]] int num_depots() const noexcept { return static_cast<int>(depots_.size()); }
-    [[nodiscard]] DepotEntry const& depot(int d) const { return depots_[d]; }
+    [[nodiscard]] DepotEntry const& depot(int d) const {
+        if (d < 0 || static_cast<size_t>(d) >= depots_.size()) {
+            throw std::out_of_range("RoutingModel::depot: invalid index");
+        }
+        return depots_[d];
+    }
 
     [[nodiscard]] int num_clients() const noexcept { return static_cast<int>(clients_.size()); }
-    [[nodiscard]] ClientEntry const& client(int c) const { return clients_[c]; }
+    [[nodiscard]] ClientEntry const& client(int c) const {
+        if (c < 0 || static_cast<size_t>(c) >= clients_.size()) {
+            throw std::out_of_range("RoutingModel::client: invalid index");
+        }
+        return clients_[c];
+    }
 
     [[nodiscard]] int num_vehicle_types() const noexcept {
         return static_cast<int>(vehicle_types_.size());
     }
-    [[nodiscard]] VehicleTypeEntry const& vehicle_type(int v) const { return vehicle_types_[v]; }
+    [[nodiscard]] VehicleTypeEntry const& vehicle_type(int v) const {
+        if (v < 0 || static_cast<size_t>(v) >= vehicle_types_.size()) {
+            throw std::out_of_range("RoutingModel::vehicle_type: invalid index");
+        }
+        return vehicle_types_[v];
+    }
 
     /// Number of groups handed out by add_client_group().  This does NOT bound
     /// the group ids clients carry: ClientParams::group is never validated, so

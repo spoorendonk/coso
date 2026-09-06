@@ -787,6 +787,23 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(m.distance_entries()[3].from == 0);
         REQUIRE(m.distance_entries()[3].to == 1);
         REQUIRE(m.distance_entries()[3].value == 11);
+
+        // The three plain setters append the same way -- asserted separately,
+        // because a set_profile_distance duplicate does not exercise them.
+        m.set_distance(0, 1, 12);
+        REQUIRE(m.distance_entries().size() == 5);
+        REQUIRE(m.distance_entries()[0].value == 10);
+        REQUIRE(m.distance_entries()[4].value == 12);
+
+        m.set_duration(0, 1, 21);
+        REQUIRE(m.duration_entries().size() == 4);
+        REQUIRE(m.duration_entries()[0].value == 20);
+        REQUIRE(m.duration_entries()[3].value == 21);
+
+        m.set_cost_matrix(1, 0, 1, 71);
+        REQUIRE(m.cost_entries().size() == 2);
+        REQUIRE(m.cost_entries()[0].value == 70);
+        REQUIRE(m.cost_entries()[1].value == 71);
     }
 
     SECTION("warm start and pins round-trip verbatim") {

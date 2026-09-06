@@ -3,6 +3,7 @@
 #include "types.h"
 
 #include <climits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -44,10 +45,20 @@ public:
     // -- Accessors -----------------------------------------------------------
 
     [[nodiscard]] int num_nodes() const noexcept { return static_cast<int>(nodes_.size()); }
-    [[nodiscard]] NodeEntry const& node(int n) const { return nodes_[n]; }
+    [[nodiscard]] NodeEntry const& node(int n) const {
+        if (n < 0 || static_cast<size_t>(n) >= nodes_.size()) {
+            throw std::out_of_range("NetworkModel::node: invalid index");
+        }
+        return nodes_[n];
+    }
 
     [[nodiscard]] int num_arcs() const noexcept { return static_cast<int>(arcs_.size()); }
-    [[nodiscard]] ArcEntry const& arc(int a) const { return arcs_[a]; }
+    [[nodiscard]] ArcEntry const& arc(int a) const {
+        if (a < 0 || static_cast<size_t>(a) >= arcs_.size()) {
+            throw std::out_of_range("NetworkModel::arc: invalid index");
+        }
+        return arcs_[a];
+    }
 
 private:
     std::vector<NodeEntry> nodes_;

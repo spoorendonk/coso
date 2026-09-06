@@ -2,6 +2,8 @@
 
 #include "types.h"
 
+#include <stdexcept>
+
 namespace coso {
 
 /// Public lot-sizing model API for CLSP. add_bom() is accepted but never read
@@ -50,7 +52,12 @@ public:
     [[nodiscard]] int num_periods() const noexcept { return num_periods_; }
 
     [[nodiscard]] int num_products() const noexcept { return static_cast<int>(products_.size()); }
-    [[nodiscard]] ProductEntry const& product(int p) const { return products_[p]; }
+    [[nodiscard]] ProductEntry const& product(int p) const {
+        if (p < 0 || static_cast<size_t>(p) >= products_.size()) {
+            throw std::out_of_range("LotSizingModel::product: invalid index");
+        }
+        return products_[p];
+    }
 
     /// External demand, demands()[product][period].  A row is empty when the
     /// product was added before set_num_periods(), which sizes the rows it
