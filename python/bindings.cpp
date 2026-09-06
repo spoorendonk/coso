@@ -4,6 +4,7 @@
 #include "model/types.h"
 
 #include <nanobind/nanobind.h>
+#include <nanobind/stl/pair.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/vector.h>
 
@@ -127,6 +128,35 @@ NB_MODULE(_coso, m) {
         .def(nb::init<>())
         .def_rw("tw", &coso::DepotParams::tw);
 
+    // -- RoutingModel stored entries ------------------------------------------
+    //
+    //  Read-only views of what the model was told; returned by the accessors
+    //  below.  Entries are copied out, so they never alias the model.
+
+    nb::class_<coso::RoutingModel::DepotEntry>(m, "DepotEntry")
+        .def_ro("x", &coso::RoutingModel::DepotEntry::x)
+        .def_ro("y", &coso::RoutingModel::DepotEntry::y)
+        .def_ro("has_coord", &coso::RoutingModel::DepotEntry::has_coord)
+        .def_ro("explicit_id", &coso::RoutingModel::DepotEntry::explicit_id)
+        .def_ro("params", &coso::RoutingModel::DepotEntry::params);
+
+    nb::class_<coso::RoutingModel::ClientEntry>(m, "ClientEntry")
+        .def_ro("x", &coso::RoutingModel::ClientEntry::x)
+        .def_ro("y", &coso::RoutingModel::ClientEntry::y)
+        .def_ro("has_coord", &coso::RoutingModel::ClientEntry::has_coord)
+        .def_ro("explicit_id", &coso::RoutingModel::ClientEntry::explicit_id)
+        .def_ro("params", &coso::RoutingModel::ClientEntry::params);
+
+    nb::class_<coso::RoutingModel::VehicleTypeEntry>(m, "VehicleTypeEntry")
+        .def_ro("count", &coso::RoutingModel::VehicleTypeEntry::count)
+        .def_ro("params", &coso::RoutingModel::VehicleTypeEntry::params);
+
+    nb::class_<coso::RoutingModel::MatEntry>(m, "MatEntry")
+        .def_ro("profile", &coso::RoutingModel::MatEntry::profile)
+        .def_ro("from_node", &coso::RoutingModel::MatEntry::from)
+        .def_ro("to_node", &coso::RoutingModel::MatEntry::to)
+        .def_ro("value", &coso::RoutingModel::MatEntry::value);
+
     // -- RoutingModel ---------------------------------------------------------
 
     nb::class_<coso::RoutingModel>(m, "RoutingModel")
@@ -186,12 +216,40 @@ NB_MODULE(_coso, m) {
         .def("pin", &coso::RoutingModel::pin, "client_id"_a)
 
         // Solve
-        .def("solve", &coso::RoutingModel::solve, "time_limit"_a);
+        .def("solve", &coso::RoutingModel::solve, "time_limit"_a)
+
+        // Accessors
+        .def("num_depots", &coso::RoutingModel::num_depots)
+        .def("depot", &coso::RoutingModel::depot, "d"_a)
+        .def("num_clients", &coso::RoutingModel::num_clients)
+        .def("client", &coso::RoutingModel::client, "c"_a)
+        .def("num_vehicle_types", &coso::RoutingModel::num_vehicle_types)
+        .def("vehicle_type", &coso::RoutingModel::vehicle_type, "v"_a)
+        .def("num_client_groups", &coso::RoutingModel::num_client_groups)
+        .def("requests", &coso::RoutingModel::requests)
+        .def("distance_entries", &coso::RoutingModel::distance_entries)
+        .def("duration_entries", &coso::RoutingModel::duration_entries)
+        .def("cost_entries", &coso::RoutingModel::cost_entries)
+        .def("initial_routes", &coso::RoutingModel::initial_routes)
+        .def("pinned", &coso::RoutingModel::pinned);
 
     // -- Free function: solve instance file -----------------------------------
 
     m.def("solve_instance", &coso::solve, "instance_path"_a, "time_limit"_a,
           "Solve a CVRPLIB/VRPLIB instance file directly.");
+
+    // -- NetworkModel stored entries ------------------------------------------
+
+    nb::class_<coso::NetworkModel::NodeEntry>(m, "NodeEntry")
+        .def_ro("supply", &coso::NetworkModel::NodeEntry::supply)
+        .def_ro("name", &coso::NetworkModel::NodeEntry::name);
+
+    nb::class_<coso::NetworkModel::ArcEntry>(m, "ArcEntry")
+        .def_ro("tail", &coso::NetworkModel::ArcEntry::tail)
+        .def_ro("head", &coso::NetworkModel::ArcEntry::head)
+        .def_ro("cost", &coso::NetworkModel::ArcEntry::cost)
+        .def_ro("lower_cap", &coso::NetworkModel::ArcEntry::lower_cap)
+        .def_ro("upper_cap", &coso::NetworkModel::ArcEntry::upper_cap);
 
     // -- NetworkModel ---------------------------------------------------------
 
@@ -200,7 +258,26 @@ NB_MODULE(_coso, m) {
         .def("add_node", &coso::NetworkModel::add_node, "supply"_a = 0, "name"_a = "")
         .def("add_arc", &coso::NetworkModel::add_arc, "tail"_a, "head"_a, "cost"_a = 0,
              "lower_cap"_a = 0, "upper_cap"_a = INT_MAX)
-        .def("solve", &coso::NetworkModel::solve, "time_limit"_a);
+        .def("solve", &coso::NetworkModel::solve, "time_limit"_a)
+
+        // Accessors
+        .def("num_nodes", &coso::NetworkModel::num_nodes)
+        .def("node", &coso::NetworkModel::node, "n"_a)
+        .def("num_arcs", &coso::NetworkModel::num_arcs)
+        .def("arc", &coso::NetworkModel::arc, "a"_a);
+
+    // -- LotSizingModel stored entries ----------------------------------------
+
+    nb::class_<coso::LotSizingModel::ProductEntry>(m, "ProductEntry")
+        .def_ro("setup_cost", &coso::LotSizingModel::ProductEntry::setup_cost)
+        .def_ro("setup_time", &coso::LotSizingModel::ProductEntry::setup_time)
+        .def_ro("unit_production_cost", &coso::LotSizingModel::ProductEntry::unit_production_cost)
+        .def_ro("holding_cost", &coso::LotSizingModel::ProductEntry::holding_cost);
+
+    nb::class_<coso::LotSizingModel::BomEntry>(m, "BomEntry")
+        .def_ro("parent", &coso::LotSizingModel::BomEntry::parent)
+        .def_ro("child", &coso::LotSizingModel::BomEntry::child)
+        .def_ro("quantity", &coso::LotSizingModel::BomEntry::quantity);
 
     // -- LotSizingModel -------------------------------------------------------
 
@@ -212,5 +289,13 @@ NB_MODULE(_coso, m) {
         .def("set_demand", &coso::LotSizingModel::set_demand, "product"_a, "period"_a, "demand"_a)
         .def("set_capacity", &coso::LotSizingModel::set_capacity, "period"_a, "capacity"_a)
         .def("add_bom", &coso::LotSizingModel::add_bom, "parent"_a, "child"_a, "quantity"_a = 1.0)
-        .def("solve", &coso::LotSizingModel::solve, "time_limit"_a);
+        .def("solve", &coso::LotSizingModel::solve, "time_limit"_a)
+
+        // Accessors
+        .def("num_periods", &coso::LotSizingModel::num_periods)
+        .def("num_products", &coso::LotSizingModel::num_products)
+        .def("product", &coso::LotSizingModel::product, "p"_a)
+        .def("demands", &coso::LotSizingModel::demands)
+        .def("capacities", &coso::LotSizingModel::capacities)
+        .def("bom", &coso::LotSizingModel::bom);
 }

@@ -376,3 +376,106 @@ class TestModule:
         assert hasattr(coso, "__version__")
         assert isinstance(coso.__version__, str)
         assert len(coso.__version__) > 0
+
+
+def test_routing_model_introspection_round_trip():
+    """Every routing accessor bound by #216 reads back what was declared."""
+    m = coso.RoutingModel()
+
+    dp = coso.DepotParams()
+    dp.tw = coso.TimeWindow(5, 500)
+    m.add_depot(1.5, -2.5, dp)
+    m.add_depot_id(42, dp)
+
+    cp = coso.ClientParams()
+    cp.demand = [3, 4]
+    cp.pickup = [1, 2]
+    cp.tw = coso.TimeWindow(10, 90)
+    cp.service = 7
+    cp.release_time = 8
+    cp.prize = 9
+    cp.required = False
+    cp.group = 11
+    cp.skills = ["crane"]
+    cp.client_type = 2
+    m.add_client(3.5, 4.5, cp)
+    m.add_client_id(77, cp)
+
+    vt = coso.VehicleTypeParams()
+    vt.capacity = [50, 60]
+    vt.max_duration = 480
+    vt.profile = 1
+    m.add_vehicle_type(6, vt)
+
+    assert m.num_depots() == 2
+    d0 = m.depot(0)
+    assert (d0.x, d0.y, d0.has_coord, d0.explicit_id) == (1.5, -2.5, True, -1)
+    assert (d0.params.tw.start, d0.params.tw.end) == (5, 500)
+    # An explicit-id depot stores x = y = 0.0; has_coord is what tells it apart.
+    d1 = m.depot(1)
+    assert (d1.x, d1.y, d1.has_coord, d1.explicit_id) == (0.0, 0.0, False, 42)
+
+    assert m.num_clients() == 2
+    c0 = m.client(0)
+    assert (c0.x, c0.y, c0.has_coord, c0.explicit_id) == (3.5, 4.5, True, -1)
+    assert c0.params.demand == [3, 4]
+    assert c0.params.pickup == [1, 2]
+    assert (c0.params.tw.start, c0.params.tw.end) == (10, 90)
+    assert c0.params.service == 7
+    assert c0.params.release_time == 8
+    assert c0.params.prize == 9
+    assert c0.params.required is False
+    assert c0.params.group == 11
+    assert c0.params.skills == ["crane"]
+    assert c0.params.client_type == 2
+    c1 = m.client(1)
+    assert (c1.x, c1.y, c1.has_coord, c1.explicit_id) == (0.0, 0.0, False, 77)
+
+    assert m.num_vehicle_types() == 1
+    v0 = m.vehicle_type(0)
+    assert v0.count == 6
+    assert v0.params.capacity == [50, 60]
+    assert v0.params.max_duration == 480
+    assert v0.params.profile == 1
+
+
+def test_routing_model_introspection_of_matrices_and_warm_start():
+    """The matrix log, requests, groups and pins read back as stored."""
+    m = coso.RoutingModel()
+
+    p = m.add_pickup(1.0, 1.0)
+    d = m.add_delivery(2.0, 2.0)
+    m.add_request(p, d)
+    # add_pickup / add_delivery are aliases for add_client: the role is not
+    # stored, only the pairing.
+    assert m.requests() == [(p, d)]
+    assert m.client(p).params.demand == []
+    assert m.client(d).params.demand == []
+
+    assert m.num_client_groups() == 0
+    m.add_client_group()
+    assert m.num_client_groups() == 1
+
+    m.set_distance(0, 1, 10)
+    m.set_duration(0, 1, 20)
+    m.set_cost_matrix(1, 0, 1, 70)
+    # The setters are an append-only log: a repeat appends, last one wins.
+    m.set_distance(0, 1, 11)
+
+    dist = m.distance_entries()
+    assert len(dist) == 2
+    assert (dist[0].profile, dist[0].from_node, dist[0].to_node, dist[0].value) == (0, 0, 1, 10)
+    assert dist[1].value == 11
+    assert [e.value for e in m.duration_entries()] == [20]
+    cost = m.cost_entries()
+    assert (cost[0].profile, cost[0].from_node, cost[0].to_node, cost[0].value) == (1, 0, 1, 70)
+
+    m.set_initial_routes([[0, 1], [], [2]])
+    assert m.initial_routes() == [[0, 1], [], [2]]
+
+    # pin() appends with no dedup and no range check.
+    assert m.pinned() == []
+    m.pin(2)
+    m.pin(2)
+    m.pin(9999)
+    assert m.pinned() == [2, 2, 9999]
