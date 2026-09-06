@@ -137,6 +137,12 @@ public API reference:
 `lower_cap < 0` or `upper_cap < lower_cap`. `solve(TimeLimit)` is the whole call surface;
 there is no reference solution and no warm start, so principle 4 has nothing to rule here.
 
+Every declaration reads back off the model (#216). `num_nodes()` / `node(n)` and `num_arcs()` /
+`arc(a)` return the stored `NetworkModel::NodeEntry` and `NetworkModel::ArcEntry` by `const&`,
+unchanged and undefaulted, so a backend adapter can translate a `NetworkModel` without being
+handed the builder calls that made it. Both are bound to Python. There is nothing a
+`NetworkModel` stores that the accessors do not return.
+
 Absent, and named because #184 needs them: commodities, arc-open decisions and fixed costs,
 capacity modules, per-commodity cost or admissibility, path-count and hop limits, undirected
 links, and node balance as an inequality rather than an equality.
@@ -682,6 +688,15 @@ Two defaults worth stating because a user hits them first. **Capacity defaults t
 that never calls `set_capacity` cannot produce anything: every plan with production violates
 capacity in every period and comes back `feasible() == false`. **Demand defaults to 0**, which is
 the harmless direction — an unset product-period simply has nothing to make.
+
+Every declaration reads back off the model (#216): `num_periods()`, `num_products()` /
+`product(p)`, `demands()`, `capacities()` and `bom()` return the stored state by `const&`, and
+`ProductEntry` and `BomEntry` are public and bound to Python. Reading it back is also how the
+call-order traps above become visible rather than merely documented — and the accessors return
+what is stored, not a tidied version of it. `demands()` is **ragged, not a matrix**: a product
+added before `set_num_periods` has an *empty* row rather than a zero-filled one, and
+`set_num_periods` replaces every row it finds. `num_products()` counts `products_`, which
+`set_num_periods` does not touch.
 
 Absent, and named because the rulings below turn on them: initial inventory, backlog as a cost,
 setup carry-over between periods, multiple resources or parallel machines, minimum and maximum lot
