@@ -1073,9 +1073,7 @@ is one item shorter than the issue assumed. The four things 0.14.0 genuinely doe
 attribute in `_pyvrp.pyi` matches any of them, and the only occurrence of the string `break` in
 the stub file is `PiecewiseLinearFunction.breakpoints`.
 
-### Reachability from `solve()` — re-run at `26046c6`
-
-A declaration counts only if code that consumes it is reachable from `solve()`. Reachability is
+**Reachability from `solve()`, re-run at `26046c6`.** A declaration counts only if code that consumes it is reachable from `solve()`. Reachability is
 derived from includers, not assumed. #200's second loop matched **basenames**, so
 `src/routing/overconstrained.h` was credited with an includer it does not have —
 `src/assignment/overconstrained.cpp:1` includes `assignment/overconstrained.h`. Both loops below
@@ -1233,6 +1231,12 @@ Evidence:
   `Solution::feasible()`. Verified by mutation: replacing
   `.demand = std::move(p.demand)` with `.demand = {}` in `ProblemData::Builder::add_client`
   makes the capacitated section return one route and the test fails 2 assertions.
+  Two further sections carry the N-dimensional case, which the granularity rule makes part of
+  the same feature: `capacity = {100, 10}` against `demand = {1, 6}` is slack in dimension 0 at
+  3 units against 100 and binding in dimension 1 at 18 against 10, and returns three routes,
+  while the control at `{100, 100}` returns one. Enforced by the `d`-loop in
+  `LoadResource::excess`; restricting that loop to `d == 0` fails those sections at 2
+  assertions while leaving the one-dimensional sections green.
 - [b] `tests/routing/routing_model_test.cpp` "RoutingModel: backhaul pickup loads the vehicle
   like demand does". The same three clients with `demand = {0}` and `pickup = {6}` split into
   three routes, and the control with `pickup = {0}` returns one — delivery demand is zero
@@ -1288,8 +1292,8 @@ Evidence:
 - [n] `client_type` reaches `src/routing/resources/type_incompatibility.h:106` and nothing
   else; that header is idle. **Dormant.** #196.
 - [o] The same test as [a]: capacity is the half of the pair the control section isolates, since
-  the two sections differ in `capacity` alone — `{10}` against `{20}` — and return three routes
-  against one. Verified by mutation independently of [a]'s: making `LoadResource::excess` return
+  the two sections differ in `capacity` alone — `{10}` against `{20}`, and `{100, 10}` against
+  `{100, 100}` — and return three routes against one. Verified by mutation independently of [a]'s: making `LoadResource::excess` return
   0 unconditionally leaves capacity unenforced and fails both the capacity and the pickup tests,
   4 assertions in all.
 - [p] `max_duration` is read twice — `DistanceResource::excess` (`distance_resource.h:103-104`)
@@ -1457,3 +1461,211 @@ Three findings:
    `Solution::unassigned()`, and nothing on the model path ever leaves a client unassigned — so
    the field that would carry R8's answer is permanently empty rather than absent. That is the
    right shape and the wrong state; it becomes real when #196's `insert_optional` is wired.
+
+### Variants
+
+R1–R15 are #118, closed as "core engine, all items verified complete in code"; R16–R28 are
+#119–#131 under #132. The verdicts below are against the feature table, not against those
+issues' checkboxes, and they do not agree with them: eight of the fifteen core variants are
+declarable and dropped.
+
+| claim | features needed | verdict |
+|---|---|---|
+| R1 CVRP (README, #118) | `demand`, `capacity`, distance objective | **expressible now**: [a], [o] |
+| R2 VRPTW (#118) | `ClientParams::tw`, `DepotParams::tw`, `service` | declarable and **dropped** — #194. The windows are penalised, never enforced, and a violating solution is returned `feasible() == true` |
+| R3 HFVRP (#118) | several vehicle types with different `capacity`, `cost`, `profile` | declarable; capacity per type is [o], but the cost structure that makes a fleet heterogeneous is `drops` (#198) and `Result` does not say which type served each route — **not expressible today** |
+| R4 MDVRP (#118) | more than one depot, a start/end depot per route | declarable and **dropped** — [ag], #196. Every route starts and ends at node 0 |
+| R5 Open VRP (#118) | a route that does not return to its depot | `absent` — §Rulings, `extend` #222 |
+| R6 VRPSPD (#118) | `demand` and `pickup` on the same client | **expressible now**: [a] + [b], and `LoadResource`'s merge rule is exactly the simultaneous-pickup-and-delivery peak load |
+| R7 VRPB (#118) | `pickup`, plus all linehauls before all backhauls on a route | the quantities are R6; the **ordering is `absent`** — §Rulings. Solvable today only as its VRPSPD relaxation, so a gap against a Goetschalckx best-known is not comparable |
+| R8 Team Orienteering (#118) | `prize`, `required`, `max_duration` | declarable and **dropped** — [g], [h], [p], #196. No client is ever left unserved |
+| R9 multi-dimensional capacity (#118) | `demand` and `capacity` as vectors | **expressible now**: [a]'s two N-dimensional sections |
+| R10 routing profiles (#118) | `profile` per vehicle type, per-profile matrices | declarable and read ([y]) but **not verifiable**: `Result` carries no vehicle type per route and `cost()` is total distance — #198, §Result finding 2 |
+| R11 client groups (#118) | `add_client_group`, `ClientParams::group` | declarable and **dropped** — [i], [ai], #196. Both halves are dead |
+| R12 multi-trip (#118) | `reload_depot`, `max_reloads`, trip boundaries in `Result` | declarable and **dropped** — [v], [w], #196 |
+| R13 release times (#118) | `release_time` | declarable and **dropped** — [f], #196. Dead, not dormant |
+| R14 overtime (#118) | `max_overtime`, `unit_overtime_cost` | declarable and **dropped** — [t], [u], #196 |
+| R15 PDPTW (#118) | `add_request`, precedence and same-route, plus R2 | declarable and **dropped** — [ah], #196, and the time-window half is #194 |
+| R16 CARP (#119) | arc demands | `cut` as a model feature — §Rulings |
+| R17 Cumulative CVRP (#120) | a sum-of-arrival-times objective | `absent`; `cut` — §Rulings |
+| R18 Split Delivery VRP (#121) | a client served by more than one route | `absent`; `cut` — §Rulings |
+| R19 Time-Dependent VRP (#122) | travel time as a function of departure time | `absent`; `cut` — §Rulings |
+| R20 Electric VRP (#123) | a battery resource and recharge stations | `absent`; `cut` — §Rulings |
+| R21 Period VRP (#124) | a horizon and a visit pattern per client | `absent`; `cut` — §Rulings |
+| R22 Inventory Routing (#125) | routing plus an inventory balance per customer | `cut` by principle 2 — two models joined by an outer loop, not one archetype |
+| R23 Location-Routing (#126) | optional depots with a fixed cost and a capacity | `absent`; `extend` #223 — §Rulings |
+| R24 Site-Dependent VRP (#127) | `skills` on clients and vehicle types | declarable and **dropped** — [k], [aa], #196 |
+| R25 Clustered VRP (#128) | a cluster id per client, served contiguously | `absent`; `cut` — §Rulings |
+| R26 VRP with Transshipment (#129) | satellite nodes and a two-echelon solution | `absent`; `cut` — §Rulings |
+| R27 TRSP (#130) | `skills`, R2's windows, **team formation** | `skills` dropped ([k], [aa]); team formation `absent` and `cut` — §Rulings. #175's "covered at schema level" is corrected |
+| R28 HHCRP (#131) | `skills`, R2's windows, **synchronised visits** | `skills` dropped; sync `absent`, `extend` #224 — §Rulings |
+| TSP (preamble ruling) | one vehicle, no capacity | **expressible now**: `tests/routing/routing_model_test.cpp` "RoutingModel: one uncapacitated vehicle solves a TSP" returns the unique 40-unit perimeter tour of a 10 × 10 square, where every tour using a diagonal costs 48 |
+| TSPTW (preamble ruling) | TSP plus enforced windows | after #194. The `SKIP`-ed "RoutingModel: TSPTW solves as one time-feasible tour" holds the assertion |
+| PC-TSP (preamble ruling) | TSP plus `prize` and `required` | after #196. The `SKIP`-ed "RoutingModel: an unprofitable optional client is left unserved" holds it |
+| README "CVRP, VRPTW, PDPTW, heterogeneous fleet, multi-depot, multi-trip, …" | — | four of the six named are dropped, and the `…` claims an unbounded rest. Rewritten in the same commit from this table — §Rulings |
+
+### Rulings
+
+**The deletion rule is suspended, so each cut below needed a *modelling* reason** — the feature
+cannot be said coherently, it duplicates another, or it belongs to a different archetype
+(CLAUDE.md, **Current phase**). "Dead natively and `—` for PyVRP" is not one of them, which is
+why three of #200's eight candidates are kept.
+
+| candidate | verdict | reason |
+|---|---|---|
+| `ClientParams::quantity` | **delete** | *Redundant.* It is documented "for pickup/delivery requests", and a request's per-dimension quantity is already declared twice over: the pickup client's `pickup[]` and the delivery client's `demand[]`. `quantity` is a single scalar with no dimension index, so it cannot even carry what those two carry. PyVRP puts the same number in one place, `Shipment.amount`, which is the shape an `add_request` `extend` should take — not a third field on `Client` |
+| `ClientParams::setup_time` | **delete** | *Redundant with `service`.* Both are a fixed time charged at a client, and nothing in the schema distinguishes them: there is no "setup" entity, and `DurationResource` would add them into the same segment duration. The form of setup time that is *not* redundant is the sequence-dependent one, `setup(i, j)`, and that is `absent` — a matrix the schema has no place for. A second name for `service` is a smaller schema, not a bigger one |
+| `ClientParams::location` | **delete** | *Redundant.* A client's node id already is its location: it indexes every distance, duration and cost matrix, and it is what PyVRP calls `Client.location`. The field's own comment, "location id for location-aware setup", names the feature it existed for — the `setup_time` above — and that is going too. Two clients at the same place are declared by giving them the same explicit node id |
+| `VehicleTypeParams::speed_factor` | **delete** | *Redundant with `profile`.* A per-type multiplier on travel time is a duration matrix scaled by that factor, and per-type duration matrices are exactly what `profile` and `set_profile_duration` already declare. Keeping both means two ways to say one thing and an unstated question about which wins. PyVRP made the same call: one duration matrix per profile, no per-type scaling |
+| `CostParams::per_task_hour_cost` | **delete** | *Redundant with `unit_duration_cost`.* The "task hours" it would price are the clients' `service` times, and those are already inside `Route::duration()`, which `unit_duration_cost` prices. There is no task entity in the schema distinct from a client visit, and — alone among all 32 slots — the field names a physical unit, the hour, that nothing in the model defines: every other time is a dimensionless integer |
+| `ClientParams::extra_tw` | **keep**, `drops`/dead | Multiple time windows is a **real and distinct VRP feature**, and this file's own granularity rule uses `time_windows` versus `multiple_time_windows` as its worked example of two features rather than one. That no engine in #173's map has it is evidence about the engines. It stays declarable and its row says it is dropped |
+| `RoutingModel::set_cost_matrix()` | **keep**, `drops`/dead | A **third arc-cost matrix, independent of distance and duration, is not redundant with either** — that is the whole point of it. Distance and duration are physical; an arc *cost* is a tariff, a toll, a congestion charge or a contract rate, and it is the one of the three a user cannot derive from the other two. PyVRP prices arcs as `unit_distance_cost * distance + unit_duration_cost * duration` and so cannot express it, which is a `—` in its column and not a verdict on the schema |
+| `RoutingModel::add_client_group()` | **keep**, `drops`/dead | It is the **only constructor of a group id**. Deleting it while keeping `ClientParams::group` — which #200 did not propose to cut — makes the feature unsayable: a user could set `group = 3` with nothing that says what group 3 is or which members it has. That is internally inconsistent, and inconsistency is not what the deletion rule is for. Both halves stay, both are `drops`/dead, and PyVRP's `ClientGroup(clients, required, mutually_exclusive)` is the shape #178 would wire them to |
+
+The five deletions land in this section's commit across `src/model/routing_model.h`,
+`src/routing/problem_data.{h,cpp}`, `python/bindings.cpp` and `tests/model/model_test.cpp`. The
+`ProblemData::ClientData` and `VehicleTypeData` mirrors go with them: unlike #195's network
+resources, no engine-layer test reads any of the five, so leaving the fields behind would leave
+members that nothing writes and nothing reads. `CostParams` drops to three fields, which is the
+only one of the five visible in a Python `repr`.
+
+**Principle 4 applied to `set_initial_routes()` and `pin()` — the API splits in two, and the
+split is #176's to make.** `pin(client_id)` is defined against the routes given to
+`set_initial_routes()`: pinning a client means keeping it where that solution put it. So those
+routes are not a hint. They are part of the problem — a **reference solution**, which an engine
+must honour or reject, and which #176 must be able to introspect. The same call is also the
+only warm start the API has, and a warm start with no pins is a pure **hint**: an engine may
+ignore it and still be correct.
+
+The ruling: `set_initial_routes()` + `pin()` stay in the model as one declaration, the
+reference solution; the hint-only role moves to the `solve()` call. **The API change is #176's
+and is not made here** — this section records the split and the reason. Two pieces of evidence
+that it is the right cut: `AssignmentModel::set_published_schedule()` + `set_change_penalty()`
+is already the declaration form of the same idea, and PyVRP puts the hint exactly where this
+ruling puts it — `Model.solve(stop, …, initial_solution: Solution | None = None)` is a
+parameter of the call, not of `ProblemData`, and PyVRP has no pinning at all. `src/search/
+daemon.h` stays engine-only for the same reason: a model is a declaration, and re-solving
+against a reference solution is the protocol, not a mode.
+
+**Synchronised visits — `extend`, filed as #224.** R28 (HHCRP) and half of R27 are about two
+vehicles visiting the same client within a tolerance of each other, and there is no way to say
+it: `RoutingModel` has no cross-route constraint of any kind. The engine has the resource —
+`src/routing/resources/sync_resource.h` defines a `SyncGroup` with a group id, its member
+clients and a time tolerance — and it is idle with no model-side declaration to fill it, which
+is #175's correction. The sketch, additive per principle 5:
+
+```cpp
+/// A set of clients that must be visited within `tolerance` time units of
+/// each other, by different vehicles.  Returns the sync group id.
+int add_sync_group(std::vector<int> const& clients, int tolerance);
+```
+
+A model with no `add_sync_group` call is exactly today's model. Owner: #131 (R28), with #130
+(R27) as the second consumer; #178 must reject it, since PyVRP 0.14.0 has no synchronisation.
+It is an `extend` rather than a `cut` because it is the one feature in this section that COSO's
+own engine already has code for and a funded product category asks for.
+
+**Team formation — `cut`.** R27's other half is technicians grouped into teams for a job, where
+the *team* is a decision: which technicians ride together, and therefore what the combined
+skill set of the vehicle is. That is not a wider routing schema; it is a set-partitioning
+decision over technicians feeding a routing decision, which is principle 1 (a formulation, not
+a structure) sitting on top of principle 2 (two structures joined by an outer loop). Cut, and
+R27 is expressible as TRSP with **fixed** teams — each team declared as one vehicle type
+carrying that team's skills — once `skills` is wired. Say so on #130 rather than leaving the
+issue implying the model will grow a team entity.
+
+**R5 open VRP — `extend`, filed as #222.** "No return to the depot" is one bit and the schema
+has nowhere to put it: `Route`'s distance and duration both close the tour at `depot_`
+(`route.cpp:288`, `route.cpp:249-250`), and there is no field that could say otherwise. PyVRP
+solves it with `VehicleType.start_depot` / `end_depot`, which is the more general form and the
+one to copy — an open route is a route whose end depot is a zero-cost sink. #222 covers the
+whole of what PyVRP's vehicle type has and COSO's lacks, since it is one issue's worth of the
+same idea: `start_depot`, `end_depot`, a vehicle shift window (`tw_early` / `tw_late`),
+`start_late`, `initial_load`, and `Depot.service_duration`. All additive; owner #178.
+
+**R23 location-routing — `extend`, filed as #223.** LRP is one model with a wider schema, not a
+composition: depots become decisions with a fixed cost and a capacity, and the routing is the
+same routing. That makes it a scope ruling under principle 2's second sentence, and the scope
+answer is yes — it is the routing analogue of the fixed-charge design arc that #184 is adding to
+`NetworkModel`, and the facility-location reduction in the network section is the same shape.
+Sketch: `DepotParams::fixed_cost`, `DepotParams::capacity`, and a `Result` that says which
+depots were opened. Blocked behind [ag]: a model whose every route starts at node 0 cannot
+choose a depot. Owner #126, after #196.
+
+**R26 transshipment, R18 split delivery, R21 period VRP, R17 cumulative, R19 time-dependent,
+R20 electric, R25 clustered, R16 CARP — `cut`.** Each for its own reason, and none of them for
+"no engine has it":
+
+| variant | reason |
+|---|---|
+| R16 CARP | The demand is on the **arcs**, not the nodes. The standard treatment is a transformation into a node-routing instance before the model is built, so it is a parser and a preprocessing step, not a schema feature — and the transformation is lossy enough (three nodes per required edge) that it belongs to whoever curates the instances, not to `RoutingModel`. Cut as a model feature; a `gdb`/`egl` reader is #119's if it ever wants one |
+| R17 cumulative CVRP | The objective is the sum of arrival times, not a route length. Every objective row in this table is a **per-route** cost — distance, duration, fixed, prizes — and a cumulative objective is a per-*client* cost that depends on position in the route. It is a different objective family, `Result` has no arrival times to price it with (§Result), and #173's map has no oracle for it. Cut |
+| R18 split delivery | The solution object changes: a client appears in more than one route with a quantity per visit. `Result::routes()` is a list of client ids, `Solution::assigned_` is one bool per client, and `LoadResource` sums a client's whole demand wherever it appears — the representation says a client is served once, everywhere. That is structural, not a missing field. Cut |
+| R19 time-dependent VRP | Travel time becomes a function of departure time, so the duration matrix becomes a matrix of functions and every O(1) merge in `DurationResource` stops being O(1). It is a change to the arithmetic of the resource, not to the declaration; the schema would need a piecewise speed profile per arc and `Result` would need departure times. Cut |
+| R20 electric VRP | Needs a battery resource, recharge stations as a node class distinct from depot and client, and a nonlinear charging function. Three new entities for one variant, none of which any other variant reuses. Cut |
+| R21 period VRP | A horizon plus a visit pattern per client — the solution is one route set *per day*, which `Result` cannot hold, and the choice of pattern is an assignment decision layered on routing. Principle 2's outer loop, over `RoutingModel` per period. Cut |
+| R25 clustered VRP | A cluster id per client with the rule that a cluster is served contiguously by one vehicle. It is expressible as a modelling trick — give each cluster's members a mutual `client_type` incompatibility with every other cluster — but not declarable as itself, and the trick needs [n] wired first. No instance set in #177. Cut, and revisit if #196 wires type incompatibility |
+| R26 transshipment | Two echelons: freight moves depot → satellite → customer, and the second echelon's supply is the first echelon's delivery. That is two coupled route sets, which is principle 2, and it is also `NetworkModel`'s multi-echelon shape once #184 lands. Cut from this model |
+
+**What PyVRP 0.14.0 has and `RoutingModel` cannot say.** Read off the stubs rather than
+inferred, and every row is an `extend` against #178 or a cut with a reason:
+
+| PyVRP | COSO | ruling |
+|---|---|---|
+| `VehicleType.start_depot` / `end_depot` | every route starts and ends at node 0 | `extend` #222 — this is R4 and R5 in one field pair |
+| `VehicleType.tw_early` / `tw_late` / `start_late` | no shift window on a vehicle type | `extend` #222 |
+| `VehicleType.initial_load` | a vehicle starts empty | `extend` #222 |
+| `Depot.service_duration` | no service time at a depot | `extend` #222 |
+| `Shipment` with its own `prize`, `required` and per-step windows | `add_request` is a bare `(pickup, delivery)` pair, and the two clients' `prize` / `required` are independent | `extend`, owner #178 — a request is one optional-or-not unit, and declaring it as two independently-optional clients is not the same problem. Folded into #222 |
+| `ClientGroup.required` / `mutually_exclusive` | `add_client_group()` returns an id and stores nothing | already `drops`/dead ([ai]); the PyVRP shape is the target when #196 wires it |
+| `Route.schedule()`, `distance_cost()`, `duration_cost()`, `fixed_vehicle_cost()`, `prizes()`, `overtime()`, `num_trips()`, `vehicle_type()`, `start_depot()` | `Result::routes()` is client ids | §Result's contract list; #176 |
+| `Solution.is_complete()`, `num_missing_clients()`, `num_missing_groups()` | `feasible()` is load-only | #194 |
+
+And the reverse — what `RoutingModel` says and PyVRP 0.14.0 cannot, which is #178's reject
+list: `extra_tw`, `skills` (both), `client_type`, `min_tasks`, `max_tasks`, `speed_factor`,
+`set_cost_matrix`, `pin`, and — once #224 lands — sync groups. Every one of those is a `—` in
+the PyVRP column above with its reason. `quantity`, `setup_time`, `location` and
+`per_task_hour_cost` were on that list too and are deleted instead, which shortens it by four.
+**And it is shorter by one more than #200 assumed:** paired pickup-delivery is *not* a reject,
+because 0.14.0 has `Shipment`.
+
+**README.** The `RoutingModel` row read
+`CVRP, VRPTW, PDPTW, heterogeneous fleet, multi-depot, multi-trip, ...`. Of the six named,
+VRPTW, PDPTW, multi-depot and multi-trip are declarable and dropped, heterogeneous fleet cannot
+be checked from what is returned, and the `...` claims a rest that this table shows does not
+exist. Rewritten in the same commit to the three that have a native `supported` cell —
+CVRP, VRPSPD and TSP, with multi-dimensional capacity — and pointed at this section for the
+rest. The engine-status row is corrected in the same commit: "validated against standard CVRP
+instances" is true and is also the whole of it, so it now says which declarations the engine
+drops rather than leaving "most mature" to imply coverage.
+
+### Defects
+
+| issue | verdict |
+|---|---|
+| #193 `solve()` ignores `set_initial_routes()` and `pin()` | **dormant** — `src/search/warm_start.h` has `warm_start()`, `PinSet`, `replan()` and `local_search_with_pins()` and no includer. Recorded, not repaired: the disable-and-raise step in that issue is superseded by the current phase's ruling. The principle-4 split above is the modelling half of it, and #176 owns the API change; #178 wires the engine half. Must be zero before the routing milestone closes |
+| #194 `Solution::feasible()` checks load only | The single largest defect in this column: it is why `ClientParams::tw`, `DepotParams::tw`, `service`, `max_distance` and `max_duration` are `drops` rather than `supported`, and why R2 and every variant built on it is not expressible. Five `SKIP`-ed tests in `tests/routing/routing_model_test.cpp` name it and hold the assertions that should pass. Recorded, not repaired |
+| #196 `solve()` silently drops 21 of 32 fields and four methods | Confirmed by this audit's scripts, with two corrections to its arithmetic. **Five of the 21 are deleted here** rather than kept and rejected — `quantity`, `setup_time`, `location`, `speed_factor`, `per_task_hour_cost` — so the count falls to 16 of 27 slots. And `prize` is misfiled as dormant-only: it *is* read on the model path (`cost_evaluator.cpp:80`), it simply cannot matter while every client is always served. The disable-and-raise step is superseded by the current phase's ruling — the fields stay declarable and their rows say what happens to them |
+| #198 `Result::cost` is total distance, not the declared objective | It is what makes all five objective slots `drops` rather than `supported`, since it removes the only quantity a third party could check them against. Also what makes cross-validation against PyVRP (#178 step 4) compare two different numbers. Recorded, not repaired |
+| #220 explicitly-numbered nodes all get the coordinate (0, 0) | **filed by this audit.** `solve()` builds `Coord{d.x, d.y}` regardless of `has_coord` (`routing_model.cpp:133,140`) and `explicit_id` is never read, so a model declared with explicit ids starts from an all-zero distance matrix, every pair the caller did not name stays free, and the granular k-NN lists (`problem_data.cpp:209`) are sorted on that. Not a dropped declaration — a misread one |
+| #221 local-search deltas price a different objective than `CostEvaluator` | **filed by this audit.** No move delta prices `unit_duration_cost` (`cost_evaluator.cpp:122-131` skips it by design, justified by the field's default of 0), and `Exchange11` and `Exchange20` build their own deltas with no time-warp term at all, while `Exchange10` and `SwapStar` go through `CostEvaluator` and have one. So two of the five neighbourhoods the descent runs are time-window blind, and all five are duration-cost blind. `score_assert` cannot catch it: it recomputes the route's *distance*, not its cost |
+| #222 vehicle start/end depot, shift window, initial load, depot service time, `Shipment` | **filed by this audit** as the PyVRP-parity `extend`; it is also R5 (open VRP) and half of R4. Lands with #178 |
+| #223 depots as decisions with a fixed cost and a capacity | **filed by this audit** as R23's `extend`; blocked behind #196's multi-depot wiring. Lands with #126 |
+| #224 no way to declare synchronised visits | **filed by this audit** as R28's `extend`, with `SyncResource::SyncGroup` already in the tree waiting for it. Lands with #131 |
+
+Two findings with no issue of their own:
+
+- **The existing model-level coverage was not evidence.** Before this audit the only routing
+  tests through `RoutingModel::solve()` were `tests/model/model_test.cpp`'s `[routing]` cases,
+  which call the setters and assert they return, plus one solve of a single client. That is the
+  pattern the evidence rule exists to exclude: every one of them passes whatever the engine does
+  with the declaration. "RoutingModel warm start and pin" and "RoutingModel pickup-delivery
+  workflow" name features that `solve()` does not implement and never call `solve()`. They are
+  kept as API-contract tests — that is what the file is for — and every `supported` cell above
+  cites `tests/routing/routing_model_test.cpp` instead.
+- **`ProblemData` is a second copy of the schema.** `ProblemData::ClientData` and
+  `VehicleTypeData` mirror `ClientParams` and `VehicleTypeParams` field for field, and
+  `ProblemData::Builder::add_client` / `add_vehicle_type` copy them across one designated
+  initializer at a time. So every schema change is two edits, and a field added to one and not
+  the other fails silently at the default. Noted for #176 rather than filed: the plugin protocol
+  is where a declaration stops being copied into an engine-specific struct by hand.

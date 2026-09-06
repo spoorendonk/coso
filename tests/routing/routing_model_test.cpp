@@ -116,6 +116,30 @@ TEST_CASE("RoutingModel: vehicle capacity splits a route the demand overfills",
         CHECK(r.routes().size() == 1);
         CHECK(route_delivery(r.routes()[0], 6) == 18);
     }
+
+    SECTION("the second load dimension binds where the first does not") {
+        // Dimension 0 is slack at 3 units against 100; only dimension 1, at 18
+        // units against 10, can split the route.
+        RoutingModel model = make_line_instance({100, 10}, {1, 6}, {}, 3);
+        Result r = model.solve(budget());
+
+        REQUIRE(r.feasible());
+        REQUIRE(serves_every_client(r, 3));
+        CHECK(r.routes().size() == 3);
+        for (auto const& route : r.routes()) {
+            CHECK(route_delivery(route, 1) <= 100);
+            CHECK(route_delivery(route, 6) <= 10);
+        }
+    }
+
+    SECTION("the same two dimensions, both slack, keep them on one route") {
+        RoutingModel model = make_line_instance({100, 100}, {1, 6}, {}, 3);
+        Result r = model.solve(budget());
+
+        REQUIRE(r.feasible());
+        REQUIRE(serves_every_client(r, 3));
+        CHECK(r.routes().size() == 1);
+    }
 }
 
 // ---------------------------------------------------------------------------
