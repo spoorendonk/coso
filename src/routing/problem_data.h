@@ -77,7 +77,7 @@ public:
     class Builder {
     public:
         /// Add a depot. Returns depot index (0-based).
-        int add_depot(Coord coord, DepotParams p = {});
+        int add_depot(Coord coord, DepotParams const& p = {});
 
         /// Add a client. Returns client index (0-based, offset from depots
         /// in the final node numbering).

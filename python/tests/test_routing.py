@@ -384,6 +384,8 @@ def test_routing_model_introspection_round_trip():
 
     dp = coso.DepotParams()
     dp.tw = coso.TimeWindow(5, 500)
+    dp.fixed_cost = 250
+    dp.capacity = [70, 80]
     m.add_depot(1.5, -2.5, dp)
     m.add_depot_id(42, dp)
 
@@ -411,9 +413,13 @@ def test_routing_model_introspection_round_trip():
     d0 = m.depot(0)
     assert (d0.x, d0.y, d0.has_coord, d0.explicit_id) == (1.5, -2.5, True, -1)
     assert (d0.params.tw.start, d0.params.tw.end) == (5, 500)
+    assert d0.params.fixed_cost == 250
+    assert d0.params.capacity == [70, 80]
     # An explicit-id depot stores x = y = 0.0; has_coord is what tells it apart.
     d1 = m.depot(1)
     assert (d1.x, d1.y, d1.has_coord, d1.explicit_id) == (0.0, 0.0, False, 42)
+    assert d1.params.fixed_cost == 250
+    assert d1.params.capacity == [70, 80]
 
     assert m.num_clients() == 2
     c0 = m.client(0)
@@ -511,3 +517,24 @@ def test_routing_model_sync_groups_round_trip():
     assert m.add_sync_group([0], 15) == 3
     assert m.sync_groups()[0].clients == [0, 1]
     assert m.sync_groups()[3].clients == [0]
+
+
+def test_result_reports_start_depots_and_opened_set():
+    """Result carries a start depot per route and the depots those open."""
+    m = coso.RoutingModel()
+    m.add_depot(0.0, 0.0)
+    m.add_depot(100.0, 0.0)
+
+    vt = coso.VehicleTypeParams()
+    vt.capacity = [10]
+    m.add_vehicle_type(2, vt)
+
+    cp = coso.ClientParams()
+    cp.demand = [1]
+    m.add_client(100.0, 10.0, cp)
+
+    r = m.solve(coso.TimeLimit(1.0))
+
+    assert len(r.route_start_depots) == len(r.routes)
+    assert all(0 <= d < m.num_depots() for d in r.route_start_depots)
+    assert r.opened_depots == sorted(set(r.route_start_depots))

@@ -379,3 +379,99 @@ TEST_CASE("RoutingModel: TSPTW solves as one time-feasible tour", "[routing][mod
     REQUIRE(r.routes().size() == 1);
     CHECK(r.routes()[0] == std::vector<int>{0, 1, 2});
 }
+
+// ---------------------------------------------------------------------------
+//  Depots as decisions: the Result shape is here, the choice is not (#196)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("RoutingModel: Result reports a start depot per route and the opened set",
+          "[routing][model]") {
+    // Two depots 100 apart, with the two clients sitting next to depot 1.  A
+    // model that could choose a depot would start there; every route starts at
+    // node 0 instead (#196), so what this asserts is the shape of the report,
+    // not the choice behind it.
+    RoutingModel model;
+    model.add_depot(0.0, 0.0);
+    model.add_depot(100.0, 0.0);
+    model.add_vehicle_type(2, {.capacity = {100}});
+    model.add_client(100.0, 10.0, {.demand = {1}});
+    model.add_client(100.0, 20.0, {.demand = {1}});
+
+    Result r = model.solve(budget());
+
+    REQUIRE_FALSE(r.routes().empty());
+    // One start depot per returned route, in the same order.
+    REQUIRE(r.route_start_depots().size() == r.routes().size());
+    for (int d : r.route_start_depots()) {
+        CHECK(d >= 0);
+        CHECK(d < model.num_depots());
+    }
+
+    // The opened set is exactly the distinct start depots, ascending.
+    std::vector<int> distinct = r.route_start_depots();
+    std::sort(distinct.begin(), distinct.end());
+    distinct.erase(std::unique(distinct.begin(), distinct.end()), distinct.end());
+    CHECK(r.opened_depots() == distinct);
+
+    SECTION("both are empty when no route is returned") {
+        RoutingModel empty;
+        empty.add_depot(0.0, 0.0);
+        empty.add_depot(100.0, 0.0);
+        empty.add_vehicle_type(2, {.capacity = {100}});
+
+        Result e = empty.solve(budget());
+
+        REQUIRE(e.routes().empty());
+        CHECK(e.route_start_depots().empty());
+        CHECK(e.opened_depots().empty());
+    }
+}
+
+TEST_CASE("RoutingModel: a prohibitively expensive depot is not opened", "[routing][model]") {
+    SKIP(
+        "Two defects stand between the declaration and this assertion. Route::depot_ is "
+        "assigned 0 in Route::Route (src/routing/route.cpp:14) and construction.cpp:37,98 "
+        "hardcodes depot = 0, so no route can start anywhere else and "
+        "src/routing/resources/depot_resource.h — which is time-window only in any case — has "
+        "no includer outside src/routing/resources/ — coso#196. And even once a depot could be "
+        "chosen, DepotParams::fixed_cost could not be priced into what comes back: "
+        "RoutingModel::solve() sets result.cost_ = best.total_distance() — coso#198");
+
+    // Depot 0 costs 10000 to open and sits next to the clients; depot 1 is free
+    // and 100 away, so the 200 units of extra travel are the cheaper choice.
+    RoutingModel model;
+    model.add_depot(0.0, 0.0, {.fixed_cost = 10000});
+    model.add_depot(100.0, 0.0, {.fixed_cost = 0});
+    model.add_vehicle_type(2, {.capacity = {100}});
+    model.add_client(10.0, 0.0, {.demand = {1}});
+    model.add_client(20.0, 0.0, {.demand = {1}});
+
+    Result r = model.solve(budget());
+
+    REQUIRE(r.feasible());
+    CHECK(r.opened_depots() == std::vector<int>{1});
+}
+
+TEST_CASE("RoutingModel: a depot capacity below total demand opens a second depot",
+          "[routing][model]") {
+    SKIP(
+        "DepotParams::capacity has no consumer at all: RoutingModel::solve() copies only "
+        "d.params into ProblemData::Builder::add_depot, which keeps p.tw and nothing else "
+        "(src/routing/problem_data.cpp:14-16), and every route starts at node 0 regardless "
+        "(src/routing/route.cpp:14) — coso#196, engine half owned by coso#126");
+
+    // Three clients of demand 4, 12 units in all, against a depot 0 that may
+    // dispatch 8.  The remainder has to leave from depot 1.
+    RoutingModel model;
+    model.add_depot(0.0, 0.0, {.capacity = {8}});
+    model.add_depot(100.0, 0.0, {.capacity = {100}});
+    model.add_vehicle_type(3, {.capacity = {100}});
+    model.add_client(10.0, 0.0, {.demand = {4}});
+    model.add_client(20.0, 0.0, {.demand = {4}});
+    model.add_client(30.0, 0.0, {.demand = {4}});
+
+    Result r = model.solve(budget());
+
+    REQUIRE(r.feasible());
+    CHECK(r.opened_depots().size() == 2);
+}

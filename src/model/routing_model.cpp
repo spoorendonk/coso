@@ -8,6 +8,7 @@
 #include "search/portfolio.h"
 #include "search/stop_criterion.h"
 
+#include <algorithm>
 #include <chrono>
 #include <stdexcept>
 
@@ -19,13 +20,15 @@ namespace coso {
 
 int RoutingModel::add_depot(double x, double y, DepotParams p) {
     int idx = static_cast<int>(depots_.size());
-    depots_.push_back({.x = x, .y = y, .has_coord = true, .explicit_id = -1, .params = p});
+    depots_.push_back(
+        {.x = x, .y = y, .has_coord = true, .explicit_id = -1, .params = std::move(p)});
     return idx;
 }
 
 int RoutingModel::add_depot(int id, DepotParams p) {
     int idx = static_cast<int>(depots_.size());
-    depots_.push_back({.x = 0.0, .y = 0.0, .has_coord = false, .explicit_id = id, .params = p});
+    depots_.push_back(
+        {.x = 0.0, .y = 0.0, .has_coord = false, .explicit_id = id, .params = std::move(p)});
     return idx;
 }
 
@@ -213,7 +216,15 @@ Result RoutingModel::solve(TimeLimit tl) {
             client_ids.push_back(route.client(i));
         }
         result.routes_.push_back(std::move(client_ids));
+        result.route_start_depots_.push_back(route.depot());
     }
+
+    // The opened depots are the distinct start depots of the routes above.
+    result.opened_depots_ = result.route_start_depots_;
+    std::sort(result.opened_depots_.begin(), result.opened_depots_.end());
+    result.opened_depots_.erase(
+        std::unique(result.opened_depots_.begin(), result.opened_depots_.end()),
+        result.opened_depots_.end());
 
     // Extract unserved clients.
     for (int c : best.unassigned()) {

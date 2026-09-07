@@ -1148,7 +1148,7 @@ so idle `.cpp` files are never removed — `required` matches `operators/insert_
 
 | entity | fields |
 |---|---|
-| depot | coordinate `(x, y)` **or** an explicit node id; `tw` |
+| depot | coordinate `(x, y)` **or** an explicit node id; `tw`, `fixed_cost`, `capacity` (one int per load dimension) |
 | vehicle type | `count`; `capacity` (one int per load dimension), `max_duration`, `max_distance`, `min_tasks`, `max_tasks`, `max_overtime`, `unit_overtime_cost`, `reload_depot`, `max_reloads`, `cost` (a `CostParams`), `profile`, `skills` |
 | `CostParams` | `fixed_cost`, `unit_distance_cost` (default 1), `unit_duration_cost` |
 | client | coordinate `(x, y)` **or** an explicit node id; `demand` and `pickup` (one int per load dimension), `tw`, `extra_tw`, `service`, `release_time`, `prize`, `required`, `group`, `skills`, `client_type` |
@@ -1161,9 +1161,10 @@ Convention, and the count this audit is against: a slot is `Struct::field`. At `
 the audit started, `ClientParams` had 14 + `VehicleTypeParams` 13 (`cost` counted — it is a
 declarable member) + `CostParams` 4 + `DepotParams` 1 = **32 slots**, and §Features has a row
 for each. Five of them — `quantity`, `setup_time`, `location`, `speed_factor` and
-`per_task_hour_cost` — are deleted by §Rulings, so the table above is 27 and those five rows
-read `absent`. `ClientParams::tw` and `DepotParams::tw` are two slots, and so are
-`ClientParams::skills` and `VehicleTypeParams::skills`; each pair gets its own row below.
+`per_task_hour_cost` — are deleted by §Rulings and those five rows read `absent`, and #223 has
+since added `DepotParams::fixed_cost` and `DepotParams::capacity`, so the table above is **29**.
+`ClientParams::tw` and `DepotParams::tw` are two slots, and so are `ClientParams::skills` and
+`VehicleTypeParams::skills`; each pair gets its own row below.
 
 Node numbering is the one thing a caller must get right and the API never states: `set_distance`
 and every matrix setter take **full node indices** — depots `0..D-1`, then clients
@@ -1224,6 +1225,8 @@ split it.
 | `CostParams::unit_duration_cost` | `declarable` | `drops` [ad] — **wired**, #198 and #221 | `documented` — `VehicleType.unit_duration_cost` |
 | `CostParams::per_task_hour_cost` | `absent` [ae] | `—` [ae] | `—` [ae] |
 | `DepotParams::tw` | `declarable` | `drops` [af] — **wired**, #194 | `documented` — `Depot.tw_early` / `tw_late` |
+| `DepotParams::fixed_cost` | `declarable` | `drops` [an] — **dead**, #196 and #126 | `—` — `Depot(location, tw_early, tw_late, service_duration, name)` has no cost attribute at all; a PyVRP depot is free to use |
+| `DepotParams::capacity` | `declarable` | `drops` [ao] — **dead**, #196 and #126 | `—` — the same constructor has no capacity attribute; capacity is a `VehicleType` property only |
 
 The structural features, which are methods rather than slots:
 
@@ -1430,6 +1433,28 @@ Evidence:
   are all stored as given. That last is worth naming — `SyncResource::build_lookup` maps each
   client to a single group id with the last declaration winning, so an engine that did read
   these back would silently drop the earlier membership.
+- [an] `DepotParams::fixed_cost` is stored on the `DepotEntry` and read back by `depot(d)`, and
+  has **zero consumers**: `ProblemData::Builder::add_depot` copies `p.tw` alone
+  (`problem_data.cpp:14-16`), so the value never reaches `ProblemData` at all, and the string
+  does not occur anywhere in `src/routing` or `src/search`. `depot_resource.h` is not the file
+  that would read it either — it is a depot *time window* resource, and it is one of the
+  thirteen idle headers the first reachability loop above prints. **Dead**, doubly so: nothing
+  could choose a depot to charge for while every route starts at node 0 ([ag], #196), and
+  nothing could report the charge while `Result::cost()` is total distance (#198). Evidenced on
+  the model axis by `tests/model/model_test.cpp` "RoutingModel reads back every declaration",
+  which sets `fixed_cost = 250` on both `add_depot` overloads and reads it back off
+  `depot(d).params`, and by the `SKIP`-ed "RoutingModel: a prohibitively expensive depot is not
+  opened" in `tests/routing/routing_model_test.cpp`, which holds the assertion that should pass
+  and names #196 and #198. Owner of the engine half: #126.
+- [ao] `DepotParams::capacity` — the same, and for the same two lines of `problem_data.cpp`:
+  stored, read back by `depot(d).params.capacity`, never copied into `ProblemData`, zero
+  consumers in `src/routing` or `src/search`. **Dead.** It counts **delivery `demand` only**: a
+  backhaul `pickup` is loaded at the client and returns to the depot, so it is not load
+  dispatched from one. Nothing validates it — a `capacity` whose length does not match the
+  vehicles' load dimensions, or a negative entry, is stored as given, matching `pin` and
+  `add_sync_group`. Evidenced on the model axis by the same read-back test, which sets
+  `capacity = {70, 80}`, and by the `SKIP`-ed "RoutingModel: a depot capacity below total
+  demand opens a second depot", naming #196 and #126.
 
 **The objective slots are evidenced on the model axis, not on a returned route.** For `cost`,
 `fixed_cost`, `unit_distance_cost`, `unit_duration_cost` and `profile` no route set is
@@ -1458,7 +1483,7 @@ against the declaration, feature by feature:
 | needed for | field |
 |---|---|
 | any per-type feature — capacity, `max_distance`, the cost structure, `profile` (R3 HFVRP) | the **vehicle type** of each route |
-| multi-depot (R4), open VRP (R5) | the **start and end depot** of each route |
+| multi-depot (R4), open VRP (R5) | the **start and end depot** of each route — the start depot is present as of #223 (`route_start_depots()`), the end depot is #222's |
 | multi-trip (R12) | the **trip boundaries**: where the route returns to a reload depot, and which one |
 | time windows and service (R2 VRPTW, R27 TRSP) | **arrival, start-of-service, departure and wait** per visit, and the route's start and end time |
 | optional clients and groups (R8, R11) | the **unserved set** (present today) and, per group, which member was served |
@@ -1480,6 +1505,8 @@ What a returned `Result` carries today:
 | `feasible()` | `Solution::feasible()`: every route load-feasible. Time windows, `max_distance` and `max_duration` are not consulted (#194) |
 | `routes()` | one entry per non-empty route, holding that route's client ids in order. No vehicle type, no depot, no times |
 | `unserved()` | `Solution::unassigned()` — always empty on the model path, since construction serves every client and crossover reinserts every missing one |
+| `route_start_depots()` | one entry per entry of `routes()`, in the same order: the `Route::depot()` the route starts from. **0 on every route today** — `Route::depot_` is assigned 0 in the constructor and never again ([ag], #196) — so the field is the right shape in the wrong state, as `unserved()` is |
+| `opened_depots()` | the distinct start depots of the returned non-empty routes, ascending. "Opened" means **used**: a declared depot no route starts from is not reported open whatever its `fixed_cost`, and `fixed_cost = 0` makes a depot always *available*, not always *reported*. So it is `{0}` whenever any route comes back, and empty when none does |
 | `iterations()`, `work_ticks()` / `work_units()`, `elapsed_seconds()` | search and work counters |
 
 Three findings:
@@ -1534,7 +1561,7 @@ declarable and dropped.
 | R20 Electric VRP (#123) | a battery resource and recharge stations | `absent`; `cut` — §Rulings |
 | R21 Period VRP (#124) | a horizon and a visit pattern per client | `absent`; `cut` — §Rulings |
 | R22 Inventory Routing (#125) | routing plus an inventory balance per customer | `cut` by principle 2 — two models joined by an outer loop, not one archetype |
-| R23 Location-Routing (#126) | optional depots with a fixed cost and a capacity | `absent`; `extend` #223 — §Rulings |
+| R23 Location-Routing (#126) | optional depots with a fixed cost and a capacity | declarable and **dropped** — [an], [ao], #196, #126. Both fields are stored and read back; every route still starts at node 0 |
 | R24 Site-Dependent VRP (#127) | `skills` on clients and vehicle types | declarable and **dropped** — [k], [aa], #196 |
 | R25 Clustered VRP (#128) | a cluster id per client, served contiguously | `absent`; `cut` — §Rulings |
 | R26 VRP with Transshipment (#129) | satellite nodes and a two-echelon solution | `absent`; `cut` — §Rulings |
@@ -1639,14 +1666,26 @@ whole of what PyVRP's vehicle type has and COSO's lacks, since it is one issue's
 same idea: `start_depot`, `end_depot`, a vehicle shift window (`tw_early` / `tw_late`),
 `start_late`, `initial_load`, and `Depot.service_duration`. All additive; owner #178.
 
-**R23 location-routing — `extend`, filed as #223.** LRP is one model with a wider schema, not a
-composition: depots become decisions with a fixed cost and a capacity, and the routing is the
-same routing. That makes it a scope ruling under principle 2's second sentence, and the scope
-answer is yes — it is the routing analogue of the fixed-charge design arc that #184 is adding to
-`NetworkModel`, and the facility-location reduction in the network section is the same shape.
-Sketch: `DepotParams::fixed_cost`, `DepotParams::capacity`, and a `Result` that says which
-depots were opened. Blocked behind [ag]: a model whose every route starts at node 0 cannot
-choose a depot. Owner #126, after #196.
+**R23 location-routing — `extend`, filed as #223; the declaration has landed.** LRP is one model
+with a wider schema, not a composition: depots become decisions with a fixed cost and a
+capacity, and the routing is the same routing. That makes it a scope ruling under principle 2's
+second sentence, and the scope answer is yes — it is the routing analogue of the fixed-charge
+design arc that #184 is adding to `NetworkModel`, and the facility-location reduction in the
+network section is the same shape. The sketch was `DepotParams::fixed_cost`,
+`DepotParams::capacity`, and a `Result` that says which depots were opened, and that is now the
+shipped schema: both fields carry the defaults that make a model declaring neither exactly
+today's model — `fixed_cost = 0` for always open, an empty `capacity` for unlimited — they read
+back through `depot(d).params`, and `Result` reports `route_start_depots()` and
+`opened_depots()`, both taken from `Route::depot()` rather than from a constant in `solve()`.
+Nothing validates either field, matching `pin` and `add_sync_group`.
+
+**Only the modelling half is done.** `solve()` copies neither field into `ProblemData` — the
+builder keeps `p.tw` alone — so both rows are `drops` / **dead** ([an], [ao]) rather than
+`supported`, and the two `Result` fields are truthful about a solution that never chose
+anything: every route starts at node 0, so `opened_depots()` is `{0}`. The engine half is depot
+assignment, blocked behind [ag] and owned by **#126** after #196; pricing the fixed cost into
+what comes back needs #198 as well, and the end depot that completes the §Result contract row
+is #222's.
 
 **R26 transshipment, R18 split delivery, R21 period VRP, R17 cumulative, R19 time-dependent,
 R20 electric, R25 clustered, R16 CARP — `cut`.** Each for its own reason, and none of them for
@@ -1701,12 +1740,12 @@ drops rather than leaving "most mature" to imply coverage.
 |---|---|
 | #193 `solve()` ignores `set_initial_routes()` and `pin()` | **dormant** — `src/search/warm_start.h` has `warm_start()`, `PinSet`, `replan()` and `local_search_with_pins()` and no includer. Recorded, not repaired: the disable-and-raise step in that issue is superseded by the current phase's ruling. The principle-4 split above is the modelling half of it, and #176 owns the API change; #178 wires the engine half. Must be zero before the routing milestone closes |
 | #194 `Solution::feasible()` checks load only | The single largest defect in this column: it is why `ClientParams::tw`, `DepotParams::tw`, `service`, `max_distance` and `max_duration` are `drops` rather than `supported`, and why R2 and every variant built on it is not expressible. Four `SKIP`-ed tests in `tests/routing/routing_model_test.cpp` name it and hold the assertions that should pass. Recorded, not repaired |
-| #196 `solve()` silently drops 21 of 32 fields and four methods | Confirmed by this audit's scripts, with two corrections to its arithmetic. **Five of the 21 are deleted here** rather than kept and rejected — `quantity`, `setup_time`, `location`, `speed_factor`, `per_task_hour_cost` — so 27 slots survive. But the count *rises* rather than falls: this audit reclassifies eight more into `drops` — `ClientParams::tw`, `DepotParams::tw` and `service` under #194, and the five objective slots `cost`, `profile`, `fixed_cost`, `unit_distance_cost`, `unit_duration_cost` under #198 — so the native column is **24 `drops` of 27 slots**, with only `demand`, `pickup` and `capacity` `supported`. Six structural rows are `drops` too, not four: multi-depot, paired pickup-delivery, client groups, the third cost matrix, the reference solution, and explicit node ids. And `prize` is misfiled as dormant-only: it *is* read on the model path (`cost_evaluator.cpp:80`), it simply cannot matter while every client is always served. The disable-and-raise step is superseded by the current phase's ruling — the fields stay declarable and their rows say what happens to them |
+| #196 `solve()` silently drops 21 of 32 fields and four methods | Confirmed by this audit's scripts, with two corrections to its arithmetic. **Five of the 21 are deleted here** rather than kept and rejected — `quantity`, `setup_time`, `location`, `speed_factor`, `per_task_hour_cost` — so 27 slots survive. But the count *rises* rather than falls: this audit reclassifies eight more into `drops` — `ClientParams::tw`, `DepotParams::tw` and `service` under #194, and the five objective slots `cost`, `profile`, `fixed_cost`, `unit_distance_cost`, `unit_duration_cost` under #198 — and #223 has since added two more `drops` in `DepotParams::fixed_cost` and `DepotParams::capacity`, so the native column is **26 `drops` of 29 slots**, with only `demand`, `pickup` and `capacity` `supported`. Six structural rows are `drops` too, not four: multi-depot, paired pickup-delivery, client groups, the third cost matrix, the reference solution, and explicit node ids. And `prize` is misfiled as dormant-only: it *is* read on the model path (`cost_evaluator.cpp:80`), it simply cannot matter while every client is always served. The disable-and-raise step is superseded by the current phase's ruling — the fields stay declarable and their rows say what happens to them |
 | #198 `Result::cost` is total distance, not the declared objective | It is what makes all five objective slots `drops` rather than `supported`, since it removes the only quantity a third party could check them against. Also what makes cross-validation against PyVRP (#178 step 4) compare two different numbers. Recorded, not repaired |
 | #220 explicitly-numbered nodes all get the coordinate (0, 0) | **filed by this audit.** `solve()` builds `Coord{d.x, d.y}` regardless of `has_coord` (`routing_model.cpp:133,139`) and `explicit_id` is never read, so a model declared with explicit ids starts from an all-zero distance matrix, every pair the caller did not name stays free, and the granular k-NN lists (`problem_data.cpp:209`) are sorted on that. Not a dropped declaration — a misread one |
 | #221 local-search deltas price a different objective than `CostEvaluator` | **filed by this audit.** No move delta prices `unit_duration_cost` (`cost_evaluator.cpp:122-131` skips it by design, justified by the field's default of 0), and `Exchange11` and `Exchange20` build their own deltas with no time-warp term at all, while `Exchange10`, `SwapStar` and `SwapTails` go through `CostEvaluator` and have one. So two of the five neighbourhoods the descent runs are time-window blind, and all five are duration-cost blind. `score_assert` cannot catch it: it recomputes the route's *distance*, not its cost |
 | #222 vehicle start/end depot, shift window, initial load, depot service time, `Shipment` | **filed by this audit** as the PyVRP-parity `extend`; it is also R5 (open VRP) and half of R4. Lands with #178 |
-| #223 depots as decisions with a fixed cost and a capacity | **filed by this audit** as R23's `extend`; blocked behind #196's multi-depot wiring. Lands with #126 |
+| #223 depots as decisions with a fixed cost and a capacity | **filed by this audit** as R23's `extend`. **The modelling half has landed**: `DepotParams::fixed_cost` and `DepotParams::capacity` are declarable, bound and read back through `depot(d).params`, and `Result` carries `route_start_depots()` and `opened_depots()`, both derived from `Route::depot()`. The engine half is untouched — `ProblemData::Builder::add_depot` copies `p.tw` alone, so neither field reaches the search and every route still starts at node 0, making `opened_depots()` `{0}` on every returned solution. **#126 owns the engine half**, behind #196; the fixed cost cannot reach `Result::cost()` until #198, and the end depot beside the start depot is #222 |
 | #224 no way to declare synchronised visits | **filed by this audit** as R28's `extend`, with `SyncResource::SyncGroup` already in the tree waiting for it. **The modelling half has landed**: `add_sync_group` declares a group and `sync_groups()` reads it back verbatim, unvalidated. The engine half is untouched — `solve()` never reads the member and `SyncResource` is still idle, so the feature is `drops` / **dormant** [am] and a returned solution relates the members' arrival times in no way. Lands with #131, behind #194 |
 
 Two findings with no issue of their own:

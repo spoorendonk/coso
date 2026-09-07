@@ -11,7 +11,7 @@ namespace coso {
 //  Builder methods
 // ---------------------------------------------------------------------------
 
-int ProblemData::Builder::add_depot(Coord coord, DepotParams p) {
+int ProblemData::Builder::add_depot(Coord coord, DepotParams const& p) {
     int idx = static_cast<int>(depots_.size());
     depots_.push_back({.coord = coord, .tw = p.tw});
     return idx;

@@ -605,6 +605,8 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
     SECTION("depots, clients and vehicle types round-trip field by field") {
         coso::DepotParams dp;
         dp.tw = {5, 500};
+        dp.fixed_cost = 250;
+        dp.capacity = {70, 80};
         REQUIRE(m.add_depot(1.5, -2.5, dp) == 0);
         REQUIRE(m.add_depot(42, dp) == 1);
 
@@ -648,6 +650,8 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(d0.explicit_id == -1);
         REQUIRE(d0.params.tw.start == 5);
         REQUIRE(d0.params.tw.end == 500);
+        REQUIRE(d0.params.fixed_cost == 250);
+        REQUIRE(d0.params.capacity == std::vector<int>{70, 80});
 
         // Trap: a depot added by explicit id stores x = y = 0.0, so has_coord
         // is the only thing telling it apart from a depot at the origin.
@@ -656,6 +660,9 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(d1.y == 0.0);
         REQUIRE_FALSE(d1.has_coord);
         REQUIRE(d1.explicit_id == 42);
+        // Both add_depot overloads store the same DepotParams.
+        REQUIRE(d1.params.fixed_cost == 250);
+        REQUIRE(d1.params.capacity == std::vector<int>{70, 80});
 
         REQUIRE(m.num_clients() == 2);
         auto const& c0 = m.client(0);
@@ -702,6 +709,12 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(v0.params.cost.unit_duration_cost == 4);
         REQUIRE(v0.params.profile == 1);
         REQUIRE(v0.params.skills == std::vector<std::string>{"crane"});
+    }
+
+    SECTION("a depot declared without params carries the documented defaults") {
+        REQUIRE(m.add_depot(0.0, 0.0) == 0);
+        REQUIRE(m.depot(0).params.fixed_cost == 0);   // 0 = always open
+        REQUIRE(m.depot(0).params.capacity.empty());  // empty = unlimited
     }
 
     SECTION("add_pickup and add_delivery store plain clients; only the pairing survives") {

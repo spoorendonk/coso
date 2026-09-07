@@ -44,6 +44,12 @@ struct ClientParams {
 /// Parameters for a depot location.
 struct DepotParams {
     TimeWindow tw = {0, INT_MAX};
+    /// Charged once if any route starts at this depot; 0 = always open.
+    int fixed_cost = 0;
+    /// Total delivery load that may be dispatched from this depot, one int per
+    /// load dimension; empty = unlimited.  Backhaul pickup returns to the
+    /// depot and does not count against it.
+    std::vector<int> capacity;
 };
 
 /// Routing model: declare depots, vehicles, clients, distances, then solve.

@@ -39,6 +39,10 @@ public:
     /// Vehicle type index for this route.
     [[nodiscard]] int vehicle_type() const noexcept { return vehicle_type_; }
 
+    /// Depot index this route starts and ends at.  Assigned 0 in the
+    /// constructor and nowhere else, so it is 0 on every route today (#196).
+    [[nodiscard]] int depot() const noexcept { return depot_; }
+
     /// Number of clients currently in the route.
     [[nodiscard]] int size() const noexcept { return static_cast<int>(clients_.size()); }
 

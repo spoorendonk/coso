@@ -78,6 +78,8 @@ NB_MODULE(_coso, m) {
         .def_prop_ro("work_units", &coso::Result::work_units)
         .def_prop_ro("routes", &coso::Result::routes)
         .def_prop_ro("unserved", &coso::Result::unserved)
+        .def_prop_ro("route_start_depots", &coso::Result::route_start_depots)
+        .def_prop_ro("opened_depots", &coso::Result::opened_depots)
         .def_prop_ro("flows", &coso::Result::flows)
         .def_prop_ro("production", &coso::Result::production)
         .def_prop_ro("inventory", &coso::Result::inventory)
@@ -126,7 +128,9 @@ NB_MODULE(_coso, m) {
 
     nb::class_<coso::DepotParams>(m, "DepotParams")
         .def(nb::init<>())
-        .def_rw("tw", &coso::DepotParams::tw);
+        .def_rw("tw", &coso::DepotParams::tw)
+        .def_rw("fixed_cost", &coso::DepotParams::fixed_cost)
+        .def_rw("capacity", &coso::DepotParams::capacity);
 
     // -- RoutingModel stored entries ------------------------------------------
     //

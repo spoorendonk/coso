@@ -61,9 +61,18 @@ struct Result {
     std::vector<std::vector<int>> routes_;
     /// Clients that could not be served (optional / infeasible).
     std::vector<int> unserved_;
+    /// Start depot of each route: one entry per entry of routes_, in the same
+    /// order, holding a depot index in 0..num_depots-1.
+    std::vector<int> route_start_depots_;
+    /// The depots the solution opened, ascending: the distinct start depots of
+    /// the returned non-empty routes.  A depot no route starts from is not
+    /// opened, whatever its declared fixed cost.
+    std::vector<int> opened_depots_;
 
     [[nodiscard]] auto const& routes() const noexcept { return routes_; }
     [[nodiscard]] auto const& unserved() const noexcept { return unserved_; }
+    [[nodiscard]] auto const& route_start_depots() const noexcept { return route_start_depots_; }
+    [[nodiscard]] auto const& opened_depots() const noexcept { return opened_depots_; }
 
     // -- Scheduling ------------------------------------------------------
 
