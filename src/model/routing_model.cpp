@@ -69,6 +69,11 @@ int RoutingModel::add_client_group() {
     return next_group_id_++;
 }
 
+int RoutingModel::add_sync_group(std::vector<int> const& clients, int tolerance) {
+    sync_groups_.push_back({clients, tolerance});
+    return static_cast<int>(sync_groups_.size()) - 1;
+}
+
 // ---------------------------------------------------------------------------
 //  Distance / duration / cost matrix setters
 // ---------------------------------------------------------------------------

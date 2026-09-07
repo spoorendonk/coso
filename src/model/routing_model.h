@@ -91,6 +91,14 @@ public:
         int value;
     };
 
+    /// A sync group as declared: the member clients and the time tolerance.
+    /// Shaped like SyncResource::SyncGroup but deliberately a distinct type --
+    /// the model does not depend on the engine's headers.
+    struct SyncGroupEntry {
+        std::vector<int> clients;
+        int tolerance = 0;
+    };
+
     /// Add a depot at the given coordinates.
     int add_depot(double x, double y, DepotParams p = {});
 
@@ -120,6 +128,15 @@ public:
 
     /// Create a client group (exactly one member must be served).
     int add_client_group();
+
+    /// Declare that `clients` must be visited within `tolerance` time units of
+    /// each other, by different vehicles.  Returns the sync group id, which is
+    /// the group's index in declaration order.
+    ///
+    /// The native engine drops this: it is stored, read back by sync_groups(),
+    /// and never reaches solve().  See the Routing section of docs/models.md
+    /// and #131.
+    int add_sync_group(std::vector<int> const& clients, int tolerance);
 
     // -- Distance / duration matrices ----------------------------------------
 
@@ -202,6 +219,14 @@ public:
     /// Pinned client ids, as pin() recorded them: no dedup, no range check.
     [[nodiscard]] auto const& pinned() const noexcept { return pinned_; }
 
+    /// Sync groups, as add_sync_group() recorded them: client ids and the
+    /// tolerance are stored exactly as given, with no dedup and no range
+    /// check, so a group may name a client no one declared and a client may
+    /// appear in two groups.  An engine reading them back should know that
+    /// SyncResource::build_lookup maps each client to a single group, last
+    /// declaration wins, so the second membership would be silently dropped.
+    [[nodiscard]] auto const& sync_groups() const noexcept { return sync_groups_; }
+
 private:
     std::vector<DepotEntry> depots_;
     std::vector<ClientEntry> clients_;
@@ -212,6 +237,9 @@ private:
 
     // -- Client groups -------------------------------------------------------
     int next_group_id_ = 0;
+
+    // -- Sync groups ---------------------------------------------------------
+    std::vector<SyncGroupEntry> sync_groups_;
 
     // -- Explicit matrix entries ---------------------------------------------
     std::vector<MatEntry> dist_entries_;

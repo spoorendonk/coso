@@ -479,3 +479,35 @@ def test_routing_model_introspection_of_matrices_and_warm_start():
     m.pin(2)
     m.pin(9999)
     assert m.pinned() == [2, 2, 9999]
+
+
+def test_routing_model_sync_groups_round_trip():
+    """add_sync_group stores clients and tolerance verbatim and reads back."""
+    m = coso.RoutingModel()
+
+    assert m.sync_groups() == []
+
+    # The returned id is the group's index in declaration order.
+    assert m.add_sync_group([0, 1], 30) == 0
+    assert m.add_sync_group([], 0) == 1
+
+    groups = m.sync_groups()
+    assert len(groups) == 2
+    assert isinstance(groups[0], coso.SyncGroupEntry)
+    assert "SyncGroupEntry" in coso.__all__
+    assert groups[0].clients == [0, 1]
+    assert groups[0].tolerance == 30
+    assert groups[1].clients == []
+    assert groups[1].tolerance == 0
+
+    # No range check, no dedup: an id no client owns, a repeat and a negative
+    # tolerance are all stored as given, and no client is created.
+    assert m.add_sync_group([9999, 5, 5, -1], -7) == 2
+    assert m.sync_groups()[2].clients == [9999, 5, 5, -1]
+    assert m.sync_groups()[2].tolerance == -7
+    assert m.num_clients() == 0
+
+    # A client may sit in two groups; the model keeps both.
+    assert m.add_sync_group([0], 15) == 3
+    assert m.sync_groups()[0].clients == [0, 1]
+    assert m.sync_groups()[3].clients == [0]

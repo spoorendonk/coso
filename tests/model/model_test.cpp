@@ -826,6 +826,35 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(m.pinned() == std::vector<int>{2, 2, 9999, -1});
         REQUIRE(m.num_clients() == 0);
     }
+
+    SECTION("sync groups round-trip verbatim and are never validated") {
+        REQUIRE(m.sync_groups().empty());
+
+        // The returned id is the group's index in declaration order.
+        REQUIRE(m.add_sync_group({0, 1}, 30) == 0);
+        REQUIRE(m.add_sync_group({}, 0) == 1);
+        REQUIRE(m.sync_groups().size() == 2);
+        REQUIRE(m.sync_groups()[0].clients == std::vector<int>{0, 1});
+        REQUIRE(m.sync_groups()[0].tolerance == 30);
+        REQUIRE(m.sync_groups()[1].clients.empty());
+        REQUIRE(m.sync_groups()[1].tolerance == 0);
+
+        // Trap: add_sync_group stores what it is given -- no range check, no
+        // dedup -- so a group may name a client no one declared, repeat a
+        // client, and carry a negative tolerance.  Declaring one creates no
+        // clients either.
+        REQUIRE(m.add_sync_group({9999, 5, 5, -1}, -7) == 2);
+        REQUIRE(m.sync_groups()[2].clients == std::vector<int>{9999, 5, 5, -1});
+        REQUIRE(m.sync_groups()[2].tolerance == -7);
+        REQUIRE(m.num_clients() == 0);
+
+        // A client may sit in two groups; the model keeps both, even though
+        // SyncResource::build_lookup would map it to the last one only.
+        REQUIRE(m.add_sync_group({0}, 15) == 3);
+        REQUIRE(m.sync_groups()[0].clients == std::vector<int>{0, 1});
+        REQUIRE(m.sync_groups()[3].clients == std::vector<int>{0});
+        REQUIRE(m.sync_groups().size() == 4);
+    }
 }
 
 TEST_CASE("NetworkModel reads back every declaration", "[network][introspection]") {

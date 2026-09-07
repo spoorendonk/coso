@@ -1153,6 +1153,7 @@ so idle `.cpp` files are never removed — `required` matches `operators/insert_
 | `CostParams` | `fixed_cost`, `unit_distance_cost` (default 1), `unit_duration_cost` |
 | client | coordinate `(x, y)` **or** an explicit node id; `demand` and `pickup` (one int per load dimension), `tw`, `extra_tw`, `service`, `release_time`, `prize`, `required`, `group`, `skills`, `client_type` |
 | request | an ordered `(pickup, delivery)` client pair |
+| sync group | `clients` (a list of client ids), `tolerance` |
 | matrices | `set_distance` / `set_duration` on the current profile, `set_profile_distance` / `set_profile_duration` / `set_cost_matrix` on a named one |
 | reference solution | `set_initial_routes(routes)`, `pin(client_id)` |
 
@@ -1175,10 +1176,10 @@ model validates: no setter throws, an out-of-range client id in `add_request` or
 unchecked, and `solve()` returns a default-constructed `Result` (`feasible() == false`) when
 there is no depot or no vehicle type rather than raising.
 
-Absent, and named because the rulings below turn on them: synchronised visits between vehicles,
-team formation, a route that does not return to a depot, per-client vehicle-type admissibility,
-a battery or recharge resource, time-dependent travel, a client served by more than one route,
-a multi-period visit pattern, and driver breaks.
+Absent, and named because the rulings below turn on them: team formation, a route that does not
+return to a depot, per-client vehicle-type admissibility, a battery or recharge resource,
+time-dependent travel, a client served by more than one route, a multi-period visit pattern,
+and driver breaks.
 
 ### Features
 
@@ -1234,6 +1235,7 @@ The structural features, which are methods rather than slots:
 | third arc-cost matrix (`set_cost_matrix`) | `declarable` | `drops` [aj] — **dead**, #196 | `—` — distance and duration matrices only; cost is `unit_distance_cost * distance + unit_duration_cost * duration` |
 | reference solution (`set_initial_routes`, `pin`) | `declarable` | `drops` [ak] — **dormant**, #193 | `—` as a *declaration*: `solve(…, initial_solution=Solution)` is a hint on the call, and there is no pinning at all. See §Rulings |
 | explicit node ids (`add_client(int id, …)`) | `declarable` | `drops` [al] — **wired wrong**, #220 | `documented` — `Client.location` indexes the matrices directly |
+| synchronised visits (`add_sync_group`) | `declarable` | `drops` [am] — **dormant**, #131 (blocked by #194) | `—` — no synchronisation attribute in `_pyvrp.pyi`; see the four-item list above |
 
 Evidence:
 
@@ -1414,6 +1416,20 @@ Evidence:
   caller's `set_distance` calls override only the pairs they name, leaving every unnamed pair at
   0 — and the granular k-NN lists are sorted on that matrix (`problem_data.cpp:209`). Not
   `drops` in the ordinary sense: the declaration is read, and read wrongly. Filed as **#220**.
+- [am] `add_sync_group` stores the member client ids and the tolerance in a
+  `RoutingModel::SyncGroupEntry` and `sync_groups()` returns them, and nothing downstream reads
+  either. `src/routing/resources/sync_resource.h` still has no includer outside
+  `src/routing/resources/` — it is one of the thirteen the first reachability loop above prints
+  — `ProblemData` has no sync field for the builder to fill, and `solve()` never touches
+  `sync_groups_` (it builds from `depots_`, `clients_`, `vehicle_types_`, `requests_` and the
+  three matrix vectors and nothing else, as [ak] records). So the returned solution puts a
+  declared group's members on any routes at any times, with no relation between their arrival
+  times — which is also the one thing `Solution::feasible()` could not check even if it were
+  wired, per #194. **Dormant.** #131. Nothing validates the declaration either, matching `pin`:
+  an out-of-range client id, a repeated client, a client in two groups and a negative tolerance
+  are all stored as given. That last is worth naming — `SyncResource::build_lookup` maps each
+  client to a single group id with the last declaration winning, so an engine that did read
+  these back would silently drop the earlier membership.
 
 **The objective slots are evidenced on the model axis, not on a returned route.** For `cost`,
 `fixed_cost`, `unit_distance_cost`, `unit_duration_cost` and `profile` no route set is
@@ -1523,7 +1539,7 @@ declarable and dropped.
 | R25 Clustered VRP (#128) | a cluster id per client, served contiguously | `absent`; `cut` — §Rulings |
 | R26 VRP with Transshipment (#129) | satellite nodes and a two-echelon solution | `absent`; `cut` — §Rulings |
 | R27 TRSP (#130) | `skills`, R2's windows, **team formation** | `skills` dropped ([k], [aa]); team formation `absent` and `cut` — §Rulings. #175's "covered at schema level" is corrected |
-| R28 HHCRP (#131) | `skills`, R2's windows, **synchronised visits** | `skills` dropped; sync `absent`, `extend` #224 — §Rulings |
+| R28 HHCRP (#131) | `skills`, R2's windows, **synchronised visits** | `skills` dropped ([k], [aa]); sync declarable and **dropped** — [am], #131/#194 |
 | TSP (preamble ruling) | one vehicle, no capacity | **expressible now**: `tests/routing/routing_model_test.cpp` "RoutingModel: one uncapacitated vehicle solves a TSP" returns the unique 40-unit perimeter tour of a 10 × 10 square, where every tour using a diagonal costs 48 |
 | TSPTW (preamble ruling) | TSP plus enforced windows | after #194. The `SKIP`-ed "RoutingModel: TSPTW solves as one time-feasible tour" holds the assertion |
 | PC-TSP (preamble ruling) | TSP plus `prize` and `required` | after #196. The `SKIP`-ed "RoutingModel: an unprofitable optional client is left unserved" holds it |
@@ -1581,11 +1597,12 @@ parameter of the call, not of `ProblemData`, and PyVRP has no pinning at all. `s
 daemon.h` stays engine-only for the same reason: a model is a declaration, and re-solving
 against a reference solution is the protocol, not a mode.
 
-**Synchronised visits — `extend`, filed as #224.** R28 (HHCRP) and half of R27 are about two
-vehicles visiting the same client within a tolerance of each other, and there is no way to say
-it: `RoutingModel` has no cross-route constraint of any kind. The engine has the resource —
+**Synchronised visits — `extend`, filed as #224; the declaration has landed.** R28 (HHCRP)
+and half of R27 are about two vehicles visiting the same client within a tolerance of each
+other, and when this audit ran there was no way to say it: `RoutingModel` had no cross-route
+constraint of any kind. The engine has the resource —
 `src/routing/resources/sync_resource.h` defines a `SyncGroup` with a group id, its member
-clients and a time tolerance — and it is idle with no model-side declaration to fill it, which
+clients and a time tolerance — and it was idle with no model-side declaration to fill it, which
 is #175's correction. The sketch, additive per principle 5:
 
 ```cpp
@@ -1594,10 +1611,15 @@ is #175's correction. The sketch, additive per principle 5:
 int add_sync_group(std::vector<int> const& clients, int tolerance);
 ```
 
-A model with no `add_sync_group` call is exactly today's model. Owner: #131 (R28), with #130
-(R27) as the second consumer; #178 must reject it, since PyVRP 0.14.0 has no synchronisation.
-It is an `extend` rather than a `cut` because it is the one feature in this section that COSO's
-own engine already has code for and a funded product category asks for.
+That is now the shipped signature, storing a `RoutingModel::SyncGroupEntry` per group and
+reading back through `sync_groups()`. A model with no `add_sync_group` call is exactly today's
+model. **Only the modelling half is done**: `solve()` does not read the member and
+`SyncResource` stays idle, so the row is `drops` / **dormant** [am] rather than `supported`,
+and reaching the resource needs `ProblemData` storage, `Route` state, a cross-route excess term
+and the arrival-time classification of #194. That engine half stays with #131. Owner: #131
+(R28), with #130 (R27) as the second consumer; #178 must reject it, since PyVRP 0.14.0 has no
+synchronisation. It was an `extend` rather than a `cut` because it is the one feature in this
+section that COSO's own engine already has code for and a funded product category asks for.
 
 **Team formation — `cut`.** R27's other half is technicians grouped into teams for a job, where
 the *team* is a decision: which technicians ride together, and therefore what the combined
@@ -1657,7 +1679,7 @@ inferred, and every row is an `extend` against #178 or a cut with a reason:
 
 And the reverse — what `RoutingModel` says and PyVRP 0.14.0 cannot, which is #178's reject
 list: `extra_tw`, `skills` (both), `client_type`, `min_tasks`, `max_tasks`, `speed_factor`,
-`set_cost_matrix`, `pin`, and — once #224 lands — sync groups. Every one of those is a `—` in
+`set_cost_matrix`, `pin`, and sync groups (`add_sync_group`). Every one of those is a `—` in
 the PyVRP column above with its reason. `quantity`, `setup_time`, `location` and
 `per_task_hour_cost` were on that list too and are deleted instead, which shortens it by four.
 **And it is shorter by one more than #200 assumed:** paired pickup-delivery is *not* a reject,
@@ -1685,7 +1707,7 @@ drops rather than leaving "most mature" to imply coverage.
 | #221 local-search deltas price a different objective than `CostEvaluator` | **filed by this audit.** No move delta prices `unit_duration_cost` (`cost_evaluator.cpp:122-131` skips it by design, justified by the field's default of 0), and `Exchange11` and `Exchange20` build their own deltas with no time-warp term at all, while `Exchange10`, `SwapStar` and `SwapTails` go through `CostEvaluator` and have one. So two of the five neighbourhoods the descent runs are time-window blind, and all five are duration-cost blind. `score_assert` cannot catch it: it recomputes the route's *distance*, not its cost |
 | #222 vehicle start/end depot, shift window, initial load, depot service time, `Shipment` | **filed by this audit** as the PyVRP-parity `extend`; it is also R5 (open VRP) and half of R4. Lands with #178 |
 | #223 depots as decisions with a fixed cost and a capacity | **filed by this audit** as R23's `extend`; blocked behind #196's multi-depot wiring. Lands with #126 |
-| #224 no way to declare synchronised visits | **filed by this audit** as R28's `extend`, with `SyncResource::SyncGroup` already in the tree waiting for it. Lands with #131 |
+| #224 no way to declare synchronised visits | **filed by this audit** as R28's `extend`, with `SyncResource::SyncGroup` already in the tree waiting for it. **The modelling half has landed**: `add_sync_group` declares a group and `sync_groups()` reads it back verbatim, unvalidated. The engine half is untouched — `solve()` never reads the member and `SyncResource` is still idle, so the feature is `drops` / **dormant** [am] and a returned solution relates the members' arrival times in no way. Lands with #131, behind #194 |
 
 Two findings with no issue of their own:
 

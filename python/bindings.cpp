@@ -157,6 +157,10 @@ NB_MODULE(_coso, m) {
         .def_ro("to_node", &coso::RoutingModel::MatEntry::to)
         .def_ro("value", &coso::RoutingModel::MatEntry::value);
 
+    nb::class_<coso::RoutingModel::SyncGroupEntry>(m, "SyncGroupEntry")
+        .def_ro("clients", &coso::RoutingModel::SyncGroupEntry::clients)
+        .def_ro("tolerance", &coso::RoutingModel::SyncGroupEntry::tolerance);
+
     // -- RoutingModel ---------------------------------------------------------
 
     nb::class_<coso::RoutingModel>(m, "RoutingModel")
@@ -198,6 +202,7 @@ NB_MODULE(_coso, m) {
         .def("add_pickup_delivery", &coso::RoutingModel::add_pickup_delivery, "pickup"_a,
              "delivery"_a)
         .def("add_client_group", &coso::RoutingModel::add_client_group)
+        .def("add_sync_group", &coso::RoutingModel::add_sync_group, "clients"_a, "tolerance"_a)
 
         // Distance / duration matrices
         .def("set_distance", &coso::RoutingModel::set_distance, "from_node"_a, "to_node"_a,
@@ -231,7 +236,8 @@ NB_MODULE(_coso, m) {
         .def("duration_entries", &coso::RoutingModel::duration_entries)
         .def("cost_entries", &coso::RoutingModel::cost_entries)
         .def("initial_routes", &coso::RoutingModel::initial_routes)
-        .def("pinned", &coso::RoutingModel::pinned);
+        .def("pinned", &coso::RoutingModel::pinned)
+        .def("sync_groups", &coso::RoutingModel::sync_groups);
 
     // -- Free function: solve instance file -----------------------------------
 
