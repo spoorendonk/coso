@@ -386,16 +386,24 @@ TEST_CASE("RoutingModel: TSPTW solves as one time-feasible tour", "[routing][mod
 
 TEST_CASE("RoutingModel: Result reports a start depot per route and the opened set",
           "[routing][model]") {
-    // Two depots 100 apart, with the two clients sitting next to depot 1.  A
-    // model that could choose a depot would start there; every route starts at
-    // node 0 instead (#196), so what this asserts is the shape of the report,
-    // not the choice behind it.
+    // Two depots 100 apart, with the clients sitting next to depot 1.  A model
+    // that could choose a depot would start there; every route starts at node 0
+    // instead (#196), so what this asserts is the shape of the report, not the
+    // choice behind it.
+    //
+    // The capacity is what makes the opened set worth asserting: nine demand-1
+    // clients against a capacity of 3 come back as three routes, so the
+    // deduplication that turns three start depots into one opened depot is
+    // exercised rather than being a no-op on a single-element vector.  The
+    // ascending half of the claim is not reachable while every start depot is 0
+    // (#196) -- one distinct value cannot be out of order.
     RoutingModel model;
     model.add_depot(0.0, 0.0);
     model.add_depot(100.0, 0.0);
-    model.add_vehicle_type(2, {.capacity = {100}});
-    model.add_client(100.0, 10.0, {.demand = {1}});
-    model.add_client(100.0, 20.0, {.demand = {1}});
+    model.add_vehicle_type(4, {.capacity = {3}});
+    for (int i = 1; i <= 9; ++i) {
+        model.add_client(100.0, 10.0 * i, {.demand = {1}});
+    }
 
     Result r = model.solve(budget());
 
@@ -406,6 +414,11 @@ TEST_CASE("RoutingModel: Result reports a start depot per route and the opened s
         CHECK(d >= 0);
         CHECK(d < model.num_depots());
     }
+
+    // Guard the premise: with one route the deduplication below is a no-op on a
+    // one-element vector and would pass however opened_depots() were built.
+    REQUIRE(r.routes().size() > 1);
+    REQUIRE(r.opened_depots().size() < r.route_start_depots().size());
 
     // The opened set is exactly the distinct start depots, ascending.
     std::vector<int> distinct = r.route_start_depots();

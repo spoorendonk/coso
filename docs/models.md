@@ -1435,8 +1435,10 @@ Evidence:
   these back would silently drop the earlier membership.
 - [an] `DepotParams::fixed_cost` is stored on the `DepotEntry` and read back by `depot(d)`, and
   has **zero consumers**: `ProblemData::Builder::add_depot` copies `p.tw` alone
-  (`problem_data.cpp:14-16`), so the value never reaches `ProblemData` at all, and the string
-  does not occur anywhere in `src/routing` or `src/search`. `depot_resource.h` is not the file
+  (`problem_data.cpp:14-16`), so the value never reaches `ProblemData` at all. The nine
+  occurrences of `fixed_cost` in `src/routing` and `src/search` are every one of them
+  `CostParams::fixed_cost`, the per-vehicle-type charge, which is a different slot with its own
+  row above. `depot_resource.h` is not the file
   that would read it either — it is a depot *time window* resource, and it is one of the
   thirteen idle headers the first reachability loop above prints. **Dead**, doubly so: nothing
   could choose a depot to charge for while every route starts at node 0 ([ag], #196), and
