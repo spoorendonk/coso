@@ -3,6 +3,7 @@
 #include "types.h"
 
 #include <climits>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -37,6 +38,33 @@ struct DemandParams {
 /// Supports nurse rostering, timetabling, and related assignment problems.
 class AssignmentModel {
 public:
+    /// One demand entry: (shift_type, day) -> DemandParams.
+    struct DemandEntry {
+        int shift_type;
+        int day;
+        DemandParams params;
+    };
+
+    /// One all-days demand entry: shift_type -> DemandParams.
+    struct DemandAllEntry {
+        int shift_type;
+        DemandParams params;
+    };
+
+    /// One preference entry.
+    struct PrefEntry {
+        int employee;
+        int day;
+        int shift_type;
+        int weight;
+    };
+
+    /// One unavailability entry.
+    struct UnavailEntry {
+        int employee;
+        int day;
+    };
+
     /// Add a shift type.
     int add_shift_type(ShiftTypeParams p);
 
@@ -88,6 +116,54 @@ public:
     /// Solve the assignment problem within the given time limit.
     Result solve(TimeLimit tl);
 
+    // -- Accessors -----------------------------------------------------------
+
+    [[nodiscard]] int num_shift_types() const noexcept {
+        return static_cast<int>(shift_types_.size());
+    }
+    [[nodiscard]] ShiftTypeParams const& shift_type(int s) const {
+        if (s < 0 || static_cast<size_t>(s) >= shift_types_.size()) {
+            throw std::out_of_range("AssignmentModel::shift_type: invalid index");
+        }
+        return shift_types_[s];
+    }
+
+    [[nodiscard]] int num_employees() const noexcept { return static_cast<int>(employees_.size()); }
+    [[nodiscard]] EmployeeParams const& employee(int e) const {
+        if (e < 0 || static_cast<size_t>(e) >= employees_.size()) {
+            throw std::out_of_range("AssignmentModel::employee: invalid index");
+        }
+        return employees_[e];
+    }
+
+    [[nodiscard]] int horizon() const noexcept { return horizon_; }
+
+    /// Per-day demands from add_demand(shift_type, day, p), in declaration
+    /// order: no dedup, no range check, and never merged with demands_all().
+    [[nodiscard]] auto const& demands() const noexcept { return demands_; }
+
+    /// All-days demands from add_demand(shift_type, p), in declaration order:
+    /// stored apart from demands(), unexpanded over the horizon.
+    [[nodiscard]] auto const& demands_all() const noexcept { return demands_all_; }
+
+    [[nodiscard]] int max_consecutive_shifts() const noexcept { return max_consecutive_shifts_; }
+    [[nodiscard]] int min_rest_between_shifts() const noexcept { return min_rest_between_shifts_; }
+
+    /// Forbidden shift-type sequences, as add_forbidden_sequence() recorded
+    /// them: no dedup, no range check.
+    [[nodiscard]] auto const& forbidden_sequences() const noexcept { return forbidden_sequences_; }
+
+    /// Preferences in declaration order: no dedup, no range check.
+    [[nodiscard]] auto const& preferences() const noexcept { return preferences_; }
+
+    /// Unavailabilities in declaration order: no dedup, no range check.
+    [[nodiscard]] auto const& unavailabilities() const noexcept { return unavailabilities_; }
+
+    /// The reference schedule from set_published_schedule(), employee x day.
+    [[nodiscard]] auto const& published_schedule() const noexcept { return published_schedule_; }
+
+    [[nodiscard]] int change_penalty() const noexcept { return change_penalty_; }
+
 private:
     // -- Shift types & employees ---------------------------------------------
     std::vector<ShiftTypeParams> shift_types_;
@@ -97,18 +173,9 @@ private:
     int horizon_ = 0;
 
     // -- Demand entries: (shift_type, day) -> DemandParams -------------------
-    struct DemandEntry {
-        int shift_type;
-        int day;
-        DemandParams params;
-    };
     std::vector<DemandEntry> demands_;
 
     // -- Demand for all days: shift_type -> DemandParams ---------------------
-    struct DemandAllEntry {
-        int shift_type;
-        DemandParams params;
-    };
     std::vector<DemandAllEntry> demands_all_;
 
     // -- Hard constraints ----------------------------------------------------
@@ -117,19 +184,9 @@ private:
     std::vector<std::vector<int>> forbidden_sequences_;
 
     // -- Preferences ---------------------------------------------------------
-    struct PrefEntry {
-        int employee;
-        int day;
-        int shift_type;
-        int weight;
-    };
     std::vector<PrefEntry> preferences_;
 
     // -- Unavailabilities ----------------------------------------------------
-    struct UnavailEntry {
-        int employee;
-        int day;
-    };
     std::vector<UnavailEntry> unavailabilities_;
 
     // -- Replanning ----------------------------------------------------------

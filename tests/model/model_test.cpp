@@ -7,6 +7,7 @@
 #include <model/packing_model.h>
 #include <model/routing_model.h>
 #include <model/schedule_model.h>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1038,5 +1039,139 @@ TEST_CASE("ScheduleModel reads back every declaration", "[scheduling][introspect
         std::vector<std::pair<int, int>> assignments = {{0, 0}, {1, 12}};
         m.set_initial_schedule(assignments);
         REQUIRE(m.initial_schedule() == assignments);
+    }
+}
+
+TEST_CASE("AssignmentModel reads back every declaration", "[assignment][introspection]") {
+    coso::AssignmentModel m;
+
+    SECTION("a fresh model reads back empty defaults") {
+        REQUIRE(m.num_shift_types() == 0);
+        REQUIRE(m.num_employees() == 0);
+        REQUIRE(m.horizon() == 0);
+        REQUIRE(m.max_consecutive_shifts() == INT_MAX);
+        REQUIRE(m.min_rest_between_shifts() == 0);
+        REQUIRE(m.change_penalty() == 0);
+        REQUIRE(m.demands().empty());
+        REQUIRE(m.demands_all().empty());
+        REQUIRE(m.forbidden_sequences().empty());
+        REQUIRE(m.preferences().empty());
+        REQUIRE(m.unavailabilities().empty());
+        REQUIRE(m.published_schedule().empty());
+    }
+
+    SECTION("shift types, employees and the horizon round-trip") {
+        int night = m.add_shift_type(
+            {.name = "night", .start_hour = 22, .end_hour = 6, .duration_hours = 8});
+        int early = m.add_shift_type(
+            {.name = "early", .start_hour = 6, .end_hour = 14, .duration_hours = 7});
+        REQUIRE(m.num_shift_types() == 2);
+        REQUIRE(m.shift_type(night).name == "night");
+        REQUIRE(m.shift_type(night).start_hour == 22);
+        REQUIRE(m.shift_type(night).end_hour == 6);
+        REQUIRE(m.shift_type(night).duration_hours == 8);
+        REQUIRE(m.shift_type(early).name == "early");
+        REQUIRE(m.shift_type(early).start_hour == 6);
+        REQUIRE(m.shift_type(early).end_hour == 14);
+        REQUIRE(m.shift_type(early).duration_hours == 7);
+
+        int ana = m.add_employee({.name = "ana",
+                                  .skills = {"icu", "triage"},
+                                  .max_hours_per_week = 32,
+                                  .max_consecutive_days = 3,
+                                  .min_rest_hours = 9});
+        int bo = m.add_employee({.name = "bo",
+                                 .skills = {"triage"},
+                                 .max_hours_per_week = 24,
+                                 .max_consecutive_days = 2,
+                                 .min_rest_hours = 14});
+        REQUIRE(m.num_employees() == 2);
+        REQUIRE(m.employee(ana).name == "ana");
+        REQUIRE(m.employee(ana).skills == std::vector<std::string>{"icu", "triage"});
+        REQUIRE(m.employee(ana).max_hours_per_week == 32);
+        REQUIRE(m.employee(ana).max_consecutive_days == 3);
+        REQUIRE(m.employee(ana).min_rest_hours == 9);
+        REQUIRE(m.employee(bo).name == "bo");
+        REQUIRE(m.employee(bo).skills == std::vector<std::string>{"triage"});
+        REQUIRE(m.employee(bo).max_hours_per_week == 24);
+        REQUIRE(m.employee(bo).max_consecutive_days == 2);
+        REQUIRE(m.employee(bo).min_rest_hours == 14);
+
+        m.set_horizon(14);
+        REQUIRE(m.horizon() == 14);
+    }
+
+    SECTION("the two demand overloads land in different containers, unmerged") {
+        int night = m.add_shift_type({.name = "night"});
+        int early = m.add_shift_type({.name = "early"});
+        m.set_horizon(7);
+
+        m.add_demand(night, 3, {.min_employees = 2, .max_employees = 5, .required_skill = "icu"});
+        m.add_demand(early, {.min_employees = 1, .max_employees = 4, .required_skill = "triage"});
+
+        // Trap: the per-day and all-days overloads never merge, so a reader
+        // must expand demands_all() over the horizon itself.
+        REQUIRE(m.demands().size() == 1);
+        REQUIRE(m.demands()[0].shift_type == night);
+        REQUIRE(m.demands()[0].day == 3);
+        REQUIRE(m.demands()[0].params.min_employees == 2);
+        REQUIRE(m.demands()[0].params.max_employees == 5);
+        REQUIRE(m.demands()[0].params.required_skill == "icu");
+
+        REQUIRE(m.demands_all().size() == 1);
+        REQUIRE(m.demands_all()[0].shift_type == early);
+        REQUIRE(m.demands_all()[0].params.min_employees == 1);
+        REQUIRE(m.demands_all()[0].params.max_employees == 4);
+        REQUIRE(m.demands_all()[0].params.required_skill == "triage");
+    }
+
+    SECTION("hard constraints, preferences and unavailabilities keep declaration order") {
+        m.set_max_consecutive_shifts(4);
+        m.set_min_rest_between_shifts(11);
+        REQUIRE(m.max_consecutive_shifts() == 4);
+        REQUIRE(m.min_rest_between_shifts() == 11);
+
+        m.add_forbidden_sequence({1, 0});
+        m.add_forbidden_sequence({0, 1, 2});
+        m.add_forbidden_sequence({1, 0});  // no dedup
+        REQUIRE(m.forbidden_sequences() ==
+                std::vector<std::vector<int>>{{1, 0}, {0, 1, 2}, {1, 0}});
+
+        m.add_preference(1, 2, 0, -3);
+        m.add_preference(0, 5, 1, 7);
+        REQUIRE(m.preferences().size() == 2);
+        REQUIRE(m.preferences()[0].employee == 1);
+        REQUIRE(m.preferences()[0].day == 2);
+        REQUIRE(m.preferences()[0].shift_type == 0);
+        REQUIRE(m.preferences()[0].weight == -3);
+        REQUIRE(m.preferences()[1].employee == 0);
+        REQUIRE(m.preferences()[1].day == 5);
+        REQUIRE(m.preferences()[1].shift_type == 1);
+        REQUIRE(m.preferences()[1].weight == 7);
+
+        m.add_unavailability(1, 4);
+        m.add_unavailability(0, 6);
+        REQUIRE(m.unavailabilities().size() == 2);
+        REQUIRE(m.unavailabilities()[0].employee == 1);
+        REQUIRE(m.unavailabilities()[0].day == 4);
+        REQUIRE(m.unavailabilities()[1].employee == 0);
+        REQUIRE(m.unavailabilities()[1].day == 6);
+    }
+
+    SECTION("the published schedule and its penalty round-trip verbatim") {
+        std::vector<std::vector<int>> published = {{0, 1, -1}, {-1, 0, 1}};
+        m.set_published_schedule(published);
+        m.set_change_penalty(25);
+        REQUIRE(m.published_schedule() == published);
+        REQUIRE(m.change_penalty() == 25);
+    }
+
+    SECTION("element accessors bounds-check both ends") {
+        m.add_shift_type({.name = "night"});
+        m.add_employee({.name = "ana"});
+        REQUIRE_THROWS_AS(m.shift_type(1), std::out_of_range);
+        REQUIRE_THROWS_AS(m.shift_type(-1), std::out_of_range);
+        REQUIRE_THROWS_AS(m.employee(1), std::out_of_range);
+        REQUIRE_THROWS_AS(m.employee(-1), std::out_of_range);
     }
 }
