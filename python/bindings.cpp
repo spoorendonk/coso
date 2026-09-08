@@ -284,11 +284,6 @@ NB_MODULE(_coso, m) {
         .def_ro("unit_production_cost", &coso::LotSizingModel::ProductEntry::unit_production_cost)
         .def_ro("holding_cost", &coso::LotSizingModel::ProductEntry::holding_cost);
 
-    nb::class_<coso::LotSizingModel::BomEntry>(m, "BomEntry")
-        .def_ro("parent", &coso::LotSizingModel::BomEntry::parent)
-        .def_ro("child", &coso::LotSizingModel::BomEntry::child)
-        .def_ro("quantity", &coso::LotSizingModel::BomEntry::quantity);
-
     // -- LotSizingModel -------------------------------------------------------
 
     nb::class_<coso::LotSizingModel>(m, "LotSizingModel")
@@ -298,7 +293,6 @@ NB_MODULE(_coso, m) {
              "unit_production_cost"_a, "holding_cost"_a)
         .def("set_demand", &coso::LotSizingModel::set_demand, "product"_a, "period"_a, "demand"_a)
         .def("set_capacity", &coso::LotSizingModel::set_capacity, "period"_a, "capacity"_a)
-        .def("add_bom", &coso::LotSizingModel::add_bom, "parent"_a, "child"_a, "quantity"_a = 1.0)
         .def("solve", &coso::LotSizingModel::solve, "time_limit"_a)
 
         // Accessors
@@ -306,6 +300,5 @@ NB_MODULE(_coso, m) {
         .def("num_products", &coso::LotSizingModel::num_products)
         .def("product", &coso::LotSizingModel::product, "p"_a)
         .def("demands", &coso::LotSizingModel::demands)
-        .def("capacities", &coso::LotSizingModel::capacities)
-        .def("bom", &coso::LotSizingModel::bom);
+        .def("capacities", &coso::LotSizingModel::capacities);
 }

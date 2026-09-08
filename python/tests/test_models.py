@@ -128,7 +128,6 @@ def test_lotsizing_model_introspection_round_trip():
     m.set_demand(p0, 0, 10.0)
     m.set_demand(p1, 1, 5.0)
     m.set_capacity(0, 80.0)
-    m.add_bom(p0, p1, 2.5)
 
     assert m.num_periods() == 3
     assert m.num_products() == 2
@@ -137,8 +136,6 @@ def test_lotsizing_model_introspection_round_trip():
     assert (prod.unit_production_cost, prod.holding_cost) == (1.5, 0.25)
     assert m.demands() == [[10.0, 0.0, 0.0], [0.0, 5.0, 0.0]]
     assert m.capacities() == [80.0, 0.0, 0.0]
-    bom = m.bom()
-    assert (bom[0].parent, bom[0].child, bom[0].quantity) == (p0, p1, 2.5)
 
 
 def test_lotsizing_model_introspection_shows_the_call_order_traps():

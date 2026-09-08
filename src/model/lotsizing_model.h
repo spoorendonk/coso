@@ -6,8 +6,8 @@
 
 namespace coso {
 
-/// Public lot-sizing model API for CLSP. add_bom() is accepted but never read
-/// by solve(), so a multi-level instance silently solves as CLSP -- see #210.
+/// Public lot-sizing model API for single-level, single-resource CLSP with hard
+/// capacity.
 class LotSizingModel {
 public:
     // -- Stored entry types --------------------------------------------------
@@ -18,13 +18,6 @@ public:
         double setup_time = 0.0;
         double unit_production_cost = 0.0;
         double holding_cost = 0.0;
-    };
-
-    /// A BOM edge as declared: one unit of `parent` consumes `quantity` of `child`.
-    struct BomEntry {
-        int parent = -1;
-        int child = -1;
-        double quantity = 1.0;
     };
 
     /// Set number of planning periods.
@@ -39,10 +32,6 @@ public:
 
     /// Set production capacity for a period.
     void set_capacity(int period, double capacity);
-
-    /// Add BOM dependency: producing one unit of `parent` consumes `quantity`
-    /// units of `child`.
-    void add_bom(int parent, int child, double quantity = 1.0);
 
     /// Solve with constructive heuristic + local improvements.
     Result solve(TimeLimit tl);
@@ -67,9 +56,6 @@ public:
     /// Per-period production capacity; wiped by set_num_periods().
     [[nodiscard]] auto const& capacities() const noexcept { return capacities_; }
 
-    /// BOM edges, in declaration order.
-    [[nodiscard]] auto const& bom() const noexcept { return bom_; }
-
 private:
     int num_periods_ = 0;
     int num_products_ = 0;
@@ -77,7 +63,6 @@ private:
     std::vector<ProductEntry> products_;
     std::vector<std::vector<double>> demands_;
     std::vector<double> capacities_;
-    std::vector<BomEntry> bom_;
 };
 
 }  // namespace coso

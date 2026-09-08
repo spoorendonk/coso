@@ -85,25 +85,6 @@ TEST_CASE("LotSizingModel solves basic CLSP instance", "[lotsizing][model]") {
     REQUIRE(result.cost() > 0.0);
 }
 
-TEST_CASE("LotSizingModel accepts a BOM declaration", "[lotsizing][model]") {
-    LotSizingModel model;
-    model.set_num_periods(3);
-    int parent = model.add_product(120.0, 2.0, 1.0, 2.0);
-    int child = model.add_product(80.0, 1.0, 0.5, 1.5);
-
-    model.add_bom(parent, child, 2.0);
-    model.set_demand(parent, 0, 5.0);
-    model.set_demand(parent, 1, 6.0);
-    model.set_demand(parent, 2, 7.0);
-    for (int t = 0; t < 3; ++t) {
-        model.set_capacity(t, 100.0);
-    }
-
-    Result result = model.solve(TimeLimit(1.0));
-    REQUIRE(result.production().size() == 2);
-    REQUIRE(result.inventory().size() == 2);
-}
-
 TEST_CASE("LotSizingModel validates indices", "[lotsizing][model]") {
     LotSizingModel model;
     model.set_num_periods(2);
@@ -113,7 +94,6 @@ TEST_CASE("LotSizingModel validates indices", "[lotsizing][model]") {
     REQUIRE_THROWS_AS(model.set_demand(2, 0, 1.0), std::out_of_range);
     REQUIRE_THROWS_AS(model.set_demand(0, 2, 1.0), std::out_of_range);
     REQUIRE_THROWS_AS(model.set_capacity(3, 5.0), std::out_of_range);
-    REQUIRE_THROWS_AS(model.add_bom(0, 1, 1.0), std::out_of_range);
 }
 
 // ---------------------------------------------------------------------------
@@ -223,36 +203,4 @@ TEST_CASE("LotSizingModel: CLSP with capacity binding in one period", "[lotsizin
         CHECK_THAT(period_usage(free_result, {0.0, 0.0}, 0), WithinAbs(20.0, 1e-9));
         CHECK_THAT(free_result.cost(), WithinAbs(330.0, 1e-9));
     }
-}
-
-TEST_CASE("LotSizingModel: BOM generates dependent demand for the child", "[lotsizing][model]") {
-    SKIP(
-        "add_bom() is stored, copied into LotsizingData and never read again: "
-        "LotsizingSolution::recompute_inventory_ balances external demand only, and neither "
-        "the constructions nor the operators mention the BOM, so a component with no external "
-        "demand is never produced and the result is reported feasible — coso#210");
-
-    LotSizingModel model;
-    model.set_num_periods(3);
-    int parent = model.add_product(120.0, 2.0, 1.0, 2.0);
-    int child = model.add_product(80.0, 1.0, 0.5, 1.5);
-
-    model.add_bom(parent, child, 2.0);
-    for (int t = 0; t < 3; ++t) {
-        model.set_demand(parent, t, 5.0);
-        model.set_capacity(t, 1000.0);
-    }
-
-    Result result = model.solve(TimeLimit(1.0));
-
-    REQUIRE(result.feasible());
-    double parent_total = 0.0;
-    double child_total = 0.0;
-    for (int t = 0; t < 3; ++t) {
-        parent_total += result.production()[0][static_cast<size_t>(t)];
-        child_total += result.production()[1][static_cast<size_t>(t)];
-    }
-    CHECK_THAT(parent_total, WithinAbs(15.0, 1e-9));
-    // Two units of child per unit of parent, and no external demand for it.
-    CHECK_THAT(child_total, WithinAbs(2.0 * parent_total, 1e-9));
 }

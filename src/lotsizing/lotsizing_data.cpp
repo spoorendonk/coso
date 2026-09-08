@@ -35,18 +35,6 @@ LotsizingData LotsizingData::Builder::build() const {
         data.capacities_[t] = capacities_[t];
     }
 
-    // Copy BOM and build adjacency lists.
-    data.bom_ = bom_;
-    data.children_.resize(P);
-    data.parents_.resize(P);
-    for (auto const& e : bom_) {
-        assert(e.parent >= 0 && e.parent < P);
-        assert(e.child >= 0 && e.child < P);
-        assert(e.parent != e.child);
-        data.children_[e.parent].push_back(e);
-        data.parents_[e.child].push_back(e);
-    }
-
     return data;
 }
 

@@ -51,23 +51,6 @@ coso::LotsizingData make_multi_product_instance() {
     return b.build();
 }
 
-/// Build a 2-level MLCLSP: product 0 (end) requires 2 units of product 1.
-coso::LotsizingData make_mlclsp_instance() {
-    coso::LotsizingData::Builder b;
-    b.set_num_periods(3);
-    int p0 = b.add_product(100.0, 2.0, 1.0, 3.0);  // end product
-    int p1 = b.add_product(50.0, 1.0, 0.5, 1.0);   // component
-    b.set_demand(p0, 0, 5.0);
-    b.set_demand(p0, 1, 10.0);
-    b.set_demand(p0, 2, 8.0);
-    // Component has no external demand; only dependent demand via BOM.
-    b.add_bom(p0, p1, 2.0);
-    for (int t = 0; t < 3; ++t) {
-        b.set_capacity(t, 100.0);
-    }
-    return b.build();
-}
-
 }  // anonymous namespace
 
 // ===========================================================================
@@ -98,24 +81,6 @@ TEST_CASE("LotsizingData: multi-product", "[lotsizing]") {
     CHECK(data.num_periods() == 3);
     CHECK_THAT(data.demand(1, 2), WithinAbs(8.0, 1e-9));
     CHECK_THAT(data.setup_cost(1), WithinAbs(120.0, 1e-9));
-}
-
-TEST_CASE("LotsizingData: MLCLSP BOM", "[lotsizing]") {
-    auto data = make_mlclsp_instance();
-
-    CHECK(data.is_multi_level());
-    CHECK(data.num_bom_entries() == 1);
-    CHECK(data.is_end_product(0));
-    CHECK_FALSE(data.is_end_product(1));
-
-    auto children = data.children(0);
-    REQUIRE(children.size() == 1);
-    CHECK(children[0].first == 1);
-    CHECK_THAT(children[0].second, WithinAbs(2.0, 1e-9));
-
-    auto parents = data.parents(1);
-    REQUIRE(parents.size() == 1);
-    CHECK(parents[0].first == 0);
 }
 
 // ===========================================================================

@@ -141,11 +141,7 @@ void LotsizingSolution::recompute_inventory_(int p, int from) {
     for (int t = from; t < T; ++t) {
         int idx = p * T + t;
 
-        // Gross demand = external demand + dependent demand from BOM parents.
         double gross_demand = data_->demand(p, t);
-        // For multi-level: dependent demand is handled at the planning level,
-        // not here. The solution stores net production; BOM requirements are
-        // accounted for in construction heuristics and operators.
 
         double prev_inv = (t > 0) ? inventory_[p * T + t - 1] : 0.0;
         inventory_[idx] = prev_inv + production_[idx] - gross_demand;

@@ -904,7 +904,7 @@ TEST_CASE("NetworkModel reads back every declaration", "[network][introspection]
 }
 
 TEST_CASE("LotSizingModel reads back every declaration", "[lotsizing][introspection]") {
-    SECTION("products, demand, capacity and BOM round-trip") {
+    SECTION("products, demand and capacity round-trip") {
         coso::LotSizingModel m;
         REQUIRE(m.num_periods() == 0);
         REQUIRE(m.num_products() == 0);
@@ -935,12 +935,6 @@ TEST_CASE("LotSizingModel reads back every declaration", "[lotsizing][introspect
         REQUIRE(m.demands()[p0] == std::vector<double>{10.0, 0.0, 30.0});
         REQUIRE(m.demands()[p1] == std::vector<double>{0.0, 5.0, 0.0});
         REQUIRE(m.capacities() == std::vector<double>{80.0, 0.0, 90.0});
-
-        m.add_bom(p0, p1, 2.5);
-        REQUIRE(m.bom().size() == 1);
-        REQUIRE(m.bom()[0].parent == p0);
-        REQUIRE(m.bom()[0].child == p1);
-        REQUIRE(m.bom()[0].quantity == 2.5);
     }
 
     SECTION("set_num_periods wipes demand and capacity, so call order is load-bearing") {
@@ -970,7 +964,6 @@ TEST_CASE("LotSizingModel reads back every declaration", "[lotsizing][introspect
         REQUIRE(m.demands().size() == 1);
         REQUIRE(m.demands()[p].empty());
         REQUIRE(m.capacities().empty());
-        REQUIRE(m.bom().empty());
     }
 }
 

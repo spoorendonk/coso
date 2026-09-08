@@ -58,16 +58,6 @@ void LotSizingModel::set_capacity(int period, double capacity) {
     capacities_[period] = capacity;
 }
 
-void LotSizingModel::add_bom(int parent, int child, double quantity) {
-    if (parent < 0 || parent >= num_products_ || child < 0 || child >= num_products_) {
-        throw std::out_of_range("LotSizingModel::add_bom: invalid product index");
-    }
-    if (parent == child) {
-        throw std::invalid_argument("LotSizingModel::add_bom: parent and child must differ");
-    }
-    bom_.push_back({parent, child, quantity});
-}
-
 Result LotSizingModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
@@ -94,10 +84,6 @@ Result LotSizingModel::solve(TimeLimit tl) {
     }
     for (int t = 0; t < num_periods_; ++t) {
         builder.set_capacity(t, capacities_[t]);
-        work.count(1);
-    }
-    for (auto const& e : bom_) {
-        builder.add_bom(e.parent, e.child, e.quantity);
         work.count(1);
     }
 

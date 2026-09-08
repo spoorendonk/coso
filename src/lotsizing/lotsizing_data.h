@@ -9,26 +9,16 @@ namespace coso {
 
 /// Compiled, immutable representation of a lot sizing instance.
 ///
-/// Carries CLSP (Capacitated Lot Sizing Problem) instances. The
-/// bill-of-materials fields are populated but no solver reads them, so MLCLSP
-/// (Multi-Level CLSP) is stored, not solved -- see #210.
+/// Carries single-level, single-resource CLSP (Capacitated Lot Sizing Problem)
+/// instances.
 ///
 /// Data layout:
 ///   - Products with demand per period
 ///   - Production capacity per period
 ///   - Setup costs and times per product
 ///   - Holding costs per product per period
-///   - BOM gozinto factors for multi-level problems
 class LotsizingData {
 public:
-    /// Bill-of-materials entry: producing one unit of `parent` requires
-    /// `quantity` units of `child`.
-    struct BomEntry {
-        int parent = -1;
-        int child = -1;
-        double quantity = 1.0;
-    };
-
     // -------------------------------------------------------------------
     //  Builder
     // -------------------------------------------------------------------
@@ -73,13 +63,6 @@ public:
             return *this;
         }
 
-        /// Add a BOM relationship: producing 1 unit of parent requires
-        /// `quantity` units of child.
-        Builder& add_bom(int parent, int child, double quantity = 1.0) {
-            bom_.push_back({parent, child, quantity});
-            return *this;
-        }
-
         /// Build the immutable LotsizingData.
         [[nodiscard]] LotsizingData build() const;
 
@@ -93,7 +76,6 @@ public:
         std::vector<double> holding_costs_;
         std::vector<double> demands_;  // flat: [p * max_periods_ + t]
         std::vector<double> capacities_;
-        std::vector<BomEntry> bom_;
 
         void ensure_demand_size_(int p, int t) {
             int needed_periods = t + 1;
@@ -172,45 +154,6 @@ public:
         return holding_costs_[p];
     }
 
-    /// Number of BOM entries.
-    [[nodiscard]] int num_bom_entries() const noexcept { return static_cast<int>(bom_.size()); }
-
-    /// BOM entry at index i.
-    [[nodiscard]] BomEntry const& bom_entry(int i) const {
-        assert(i >= 0 && i < static_cast<int>(bom_.size()));
-        return bom_[i];
-    }
-
-    /// All BOM entries.
-    [[nodiscard]] std::vector<BomEntry> const& bom() const noexcept { return bom_; }
-
-    /// Children of product p (with quantities). Returns pairs of (child, qty).
-    [[nodiscard]] std::vector<std::pair<int, double>> children(int p) const {
-        std::vector<std::pair<int, double>> result;
-        for (auto const& e : children_[p]) {
-            result.emplace_back(e.child, e.quantity);
-        }
-        return result;
-    }
-
-    /// Parents of product p (with quantities). Returns pairs of (parent, qty).
-    [[nodiscard]] std::vector<std::pair<int, double>> parents(int p) const {
-        std::vector<std::pair<int, double>> result;
-        for (auto const& e : parents_[p]) {
-            result.emplace_back(e.parent, e.quantity);
-        }
-        return result;
-    }
-
-    /// Whether product p is a final (end) product (has no parents in BOM).
-    [[nodiscard]] bool is_end_product(int p) const {
-        assert(p >= 0 && p < num_products_);
-        return parents_[p].empty();
-    }
-
-    /// Whether this is a multi-level problem (has BOM entries).
-    [[nodiscard]] bool is_multi_level() const noexcept { return !bom_.empty(); }
-
 private:
     int num_products_ = 0;
     int num_periods_ = 0;
@@ -221,11 +164,6 @@ private:
     std::vector<double> holding_costs_;
     std::vector<double> demands_;  // flat: [p * num_periods_ + t]
     std::vector<double> capacities_;
-
-    std::vector<BomEntry> bom_;
-    // Adjacency lists for BOM graph.
-    std::vector<std::vector<BomEntry>> children_;  // children_[p] = BOM entries where parent == p
-    std::vector<std::vector<BomEntry>> parents_;   // parents_[p] = BOM entries where child == p
 };
 
 }  // namespace coso
