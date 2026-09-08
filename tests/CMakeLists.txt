@@ -29,7 +29,7 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  RoutingModel evidence tests (docs/models.md, Routing)                       #
+#  RoutingModel evidence tests (v1 scope ruling, #200)                         #
 # --------------------------------------------------------------------------- #
 
 add_executable(routing_model_test routing/routing_model_test.cpp)

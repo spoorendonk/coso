@@ -308,7 +308,7 @@ TEST_CASE("PackingModel: simple 1D instance end-to-end", "[packing][model]") {
 }
 
 // ---------------------------------------------------------------------------
-//  Variant coverage through the model API (docs/models.md §Packing)
+//  Variant coverage through the model API (v1 scope ruling, #204)
 //
 //  Each case pairs the declaration with a control that drops the feature, so
 //  the assertions fail if the engine ignores what was declared.

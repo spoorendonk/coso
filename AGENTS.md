@@ -21,8 +21,9 @@ a returned `Result` must carry, and what a backend has to promise. The engine be
 reference implementation — useful for proving a declaration is well-formed and round-trips,
 not the thing being built.
 
-**The engine is broken in places, and that is intentional.** Scheduling aborts on real input,
-lot sizing ignores a declared bill of materials, routing drops most of its declarable fields.
+**The engine is broken in places, and that is intentional.** Scheduling aborts on real input
+(#188), routing reports total distance whatever objective was declared (#198), rostering hardcodes
+the staffing weights its own benchmarks set (#230) and accepts a shift duration nothing reads (#233).
 These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
 over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a
 reason an audit or a spec decision cannot proceed. File it, cite it, and carry on.
@@ -31,8 +32,8 @@ What this changes in practice:
 
 - An engine defect is **recorded**, not repaired, unless the issue you are on asks for the repair.
 - A model feature is **not** deleted because no engine implements it. Engine capability is
-  evidence about an engine, not a verdict on the schema. See the note on `docs/models.md`'s
-  deletion rule below.
+  evidence about an engine, not a verdict on the schema. What *does* decide the schema is
+  benchmark evidence — see **Architecture**.
 - A test may assert a declaration is accepted and round-trips even where no engine honours it;
   the engine-side assertion is `SKIP`-ed with its issue number.
 - "It cannot be verified because the engine is broken" is not a reason to reject a modelling
@@ -89,7 +90,7 @@ cmake -B build -DCOSO_USE_TBB=ON && cmake --build build -j$(nproc)
 
 `cmake -B build` compiles through `ccache` wherever it is installed, and says
 so; without it the build is unchanged. It is what makes the `clean` fence cheap
-— rebuilding all 265 translation units after `rm -rf build` takes 5s from a warm
+— rebuilding all 263 translation units after `rm -rf build` takes 5s from a warm
 cache against 42s without one. 116 of those are Catch2's and nanobind's and
 never change at all; the rest are recompiled only when their own source does.
 The dependencies are fetched `GIT_SHALLOW`, so re-cloning them costs ~5s of the
@@ -104,17 +105,32 @@ clang-tidy and the gates that call it see the same compile lines either way.
 
 ## Architecture
 
-`docs/models.md` is the model spec: what can be declared, and what each engine does with it.
-Every cell in it carries the evidence its value requires — a cell without that evidence is a
-review finding.
+The model spec lives in the **v1 scope rulings**, one per archetype, as the last comment on each
+audit issue: #200 routing, #201 network, #202 scheduling, #203 rostering, #204 packing, #205 lot
+sizing. There is no `docs/` file; the ruling is the spec.
 
-Its **deletion rule** was written when the engine was the product: it deleted a declarable
-feature no engine supported. That is suspended for this phase — see **Current phase**. A
-feature with no supporting engine stays declarable and is recorded as such; the engine columns
-say what each engine does, and nothing about whether the schema should carry it. Deletions now
-need a *modelling* reason: the feature is unsayable, redundant, or belongs to another
-archetype. The three deletions already made under the old rule (#201's network resource API,
-#204's `minimize_bins_`) each also have a modelling reason, so they stand.
+Each ruling carries the same three things, and they are what a modelling decision cites:
+
+- the **benchmark sets** verified for that archetype — fetched in-session, format documented, and
+  ideally published best-known or optimal values to score against;
+- the **kept** declarations, each against the instance-file field that demands it;
+- the **cut** declarations, each with its reason.
+
+**The inclusion rule.** A declaration is in v1 only if a publicly downloadable benchmark instance
+format actually carries that data, so a solver ignoring it reads the instance wrong. Not because it
+is standard, not because an engine implements it, and not because a paper describes it. Adding a
+declaration means finding the instance file whose field demands it, and saying which.
+
+That rule replaces the old deletion rule, which deleted a declarable feature no engine supported —
+making the schema a function of engine capability, which is the coupling this phase exists to break.
+Engine capability is still evidence about an engine and never a verdict on the schema; benchmark
+evidence is what decides the schema now.
+
+**Reading an instance is not scoring it.** Three archetypes can read their benchmarks and cannot yet
+be scored against published values, because the objective is not declarable: routing cannot state
+Solomon's lexicographic (vehicles, then distance) or OP/TOP's budget-constrained maximisation (#228),
+and rostering cannot state the weighted soft constraints every nurse-rostering format carries (#229).
+A run that is not comparable to a published number is not evidence.
 
 ### Layered Design
 
@@ -133,17 +149,16 @@ Model APIs (public) → Engine (domain-specific) → Search (generic metaheurist
 The routing engine is the reference architecture for other engines:
 
 - **ProblemData** (`src/routing/problem_data.h`): Immutable compiled instance. Struct-of-arrays layout for cache efficiency. Precomputed granular neighbor lists (k-NN). Node numbering: depots `0..n_d-1`, clients `n_d..n_d+n_c-1`.
-- **Resources** (`src/routing/resources/`): Pluggable constraint modules (load, duration, distance, breaks, depot, precedence, sync, compartment, skill, type incompatibility). Constraints are resources attached to routes, not embedded in the solution.
+- **Resources** (`src/routing/resources/`): Pluggable constraint modules (load, duration, distance, breaks, depot, precedence, compartment, loading). Constraints are resources attached to routes, not embedded in the solution.
 - **Solution/Route** (`src/routing/solution.h`, `route.h`): Solution = all routes + unassigned clients. Route = single vehicle's client sequence.
 - **Local search** (`src/routing/local_search.h`): First-improvement descent over granular neighborhoods.
-- **Operators** (`src/routing/operators/`): Exchange, swap-star, route-split, insert-optional, pair operators, relocate-with-depot.
+- **Operators** (`src/routing/operators/`): Exchange, swap-star, route-split, insert-optional, pair operators.
 
 ### Key Design Patterns
 
 - **Compiled instance**: Models compile to immutable `*Data` structs (e.g., `ProblemData`, `ScheduleData`). This enables caching and efficient repeated solving.
 - **Resource-based constraints**: Constraints are pluggable resource objects, not hardcoded into solutions.
 - **Deterministic work counting** (`src/common/work_units.h`): Cross-machine performance comparison via work units instead of wall time. The `deterministic_work` E2E check uses it; there is no perf-regression gate tooling in the repo.
-- **Warm start + pinning**: `set_initial_routes()` and `pin()` on RoutingModel for re-optimization.
 
 ### Python Bindings
 
@@ -158,7 +173,7 @@ The routing engine is the reference architecture for other engines:
 - **E2E tests**: the `e2e_smoke` ctest target runs `tests/e2e/run_pack.sh` over `examples/e2e/scenarios/smoke/*.json` — **six scenarios, one per model type**. `e2e_runner` builds a hardcoded toy instance per model type (`examples/e2e/e2e_runner.cpp`, `solve_once`); scenario JSON only supplies id, time limit, and which checks to assert. This is a smoke gate, not variant or benchmark coverage — per-variant instances land in the M1–M6 milestones.
   - `COSO_E2E_APPLY_QUARANTINE=1` makes `run_pack.sh` skip scenario ids listed in `tests/e2e/quarantine.csv`.
   - A scenario asserting `deterministic_work` must set `"seconds": 0` and `work_units > 0`. `StopCriterion` ORs its limits, so any wall clock lets a loaded machine stop the two solves at different iterations — the flake of #209. `e2e_runner` rejects such a scenario at parse time, and `tests/e2e/fixtures/` carries one fixture per bad spelling: a clock with a work budget, a clock without one, and neither bound at all. That makes `e2e_smoke` runtime load-proportional, so it carries an explicit ctest `TIMEOUT` rather than the 1500s default.
-- **Benchmark tests**: `benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`, `assignment_benchmark_test`, `packing_benchmark_test` (label `benchmark`). Instances come from `tests/data/download_benchmarks.sh`. **No results are published anywhere until a verified run exists** — see #177.
+- **Benchmark tests**: `benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`, `rostering_benchmark_test`, `packing_benchmark_test` (label `benchmark`). Instances come from `tests/data/download_benchmarks.sh`. **No results are published anywhere until a verified run exists** — see #177.
 
 ### Engine state
 
@@ -171,9 +186,9 @@ verified benchmark run backs them (#177).
 | Routing | Most mature; validated against standard CVRP instances |
 | Network | Target scope is multi-commodity flow + network design (#184) — neither implemented. The existing single-commodity min-cost flow solver is not a COSO target: that problem is solved |
 | Packing | Functional — FFD + move/swap local search (1-D, vector, conflicts) |
-| Lot sizing | Single-level CLSP. Lot-for-lot / Silver-Meal / part-period balancing plus a shift/merge/split descent; there is no fix-and-optimize in the tree. `add_bom()` is accepted and never read, so MLCLSP silently solves as CLSP (#210), and no construction respects capacity, so an instance needing a pre-build returns `feasible() == false` (#211) |
+| Lot sizing | Single-level CLSP, which is now also the declarable scope (#205 cut `add_bom`). Lot-for-lot / Silver-Meal / part-period balancing plus a shift/merge/split descent; there is no fix-and-optimize in the tree. No construction respects capacity, so an instance needing a pre-build returns `feasible() == false` (#211) |
 | Scheduling | **Broken by acceptance, not by accident.** `ScheduleModel::solve()` calls `construct_neh()`, which aborts the process on any instance with two or more jobs (#188), so nothing that solves can be asserted here; the `e2e_smoke` scenario passes only because it uses a single job. The *declaration* is still auditable and is what #202 covers. Also: `construct_dispatch()` indexes `machine_free[-1]` for an operation no machine can run (#191), the operators and perturbations can still build cyclic disjunctive graphs (#189), and the local search in `src/scheduling/schedule_operators.cpp` is not wired into `solve()` at all and carries the unsound cycle guard of #185. Every test covering these is `SKIP`-ed, each naming its issue |
-| Assignment | Construction + VND; not validated |
+| Rostering | Construction + VND; not validated |
 
 ## Gates
 
@@ -222,7 +237,7 @@ advisory and currently empty; because the check families are wildcards, a newer
 clang-tidy knows more checks and may add to it, which means a longer or shorter
 advisory list, never a different verdict.
 
-clang-tidy runs clean today, at 0 findings over all 149 translation units, and
+clang-tidy runs clean today, at 0 findings over all 147 translation units, and
 should stay that way — a list people scroll past is worth no more than no check
 at all. Getting there needed two things beyond tuning: the vendored dependencies
 are fetched `SYSTEM` so their headers are not analysed, and the 39 checks the

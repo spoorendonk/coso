@@ -13,7 +13,7 @@ namespace coso {
 /// capacity bounds, then solve.
 ///
 /// Single-commodity minimum-cost flow. Multi-commodity flow and network design
-/// are not declarable (see docs/models.md, Network).
+/// are not declarable (see the v1 scope ruling on #201).
 class NetworkModel {
 public:
     // -- Stored entry types --------------------------------------------------

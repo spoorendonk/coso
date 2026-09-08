@@ -67,14 +67,18 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 
 Python bindings currently cover `RoutingModel`, `NetworkModel`, and `LotSizingModel`.
 
-What each model can actually declare, and what each engine does with it, is specified in
-[`docs/models.md`](docs/models.md).
+What each model can declare is set by the v1 scope rulings, one per archetype, as the last comment
+on each audit issue: [#200](../../issues/200) routing, [#201](../../issues/201) network,
+[#202](../../issues/202) scheduling, [#203](../../issues/203) rostering, [#204](../../issues/204)
+packing, [#205](../../issues/205) lot sizing. A declaration is in v1 only if a publicly downloadable
+benchmark instance format carries that data — each ruling names the sets it verified and the
+instance field behind every kept declaration.
 
 ```cpp
 coso::NetworkModel m;
 int s = m.add_node(5, "source");
 int t = m.add_node(-5, "sink");
-m.add_arc(s, t, /*cost=*/2, /*lower=*/0, /*upper=*/5);
+m.add_arc(s, t, /*cost=*/2, /*upper=*/5);
 auto r = m.solve(coso::TimeLimit(10));
 ```
 
@@ -85,9 +89,9 @@ benchmark run backs it. That work is [#177](../../issues/177) and the per-model 
 
 | Engine | Status |
 |---|---|
-| **Routing** | Most mature, and narrower than the schema. What it enforces is demand against an N-dimensional vehicle capacity, minimising distance; it is validated against standard CVRP instances. Time windows are penalised but never enforced, so a violating solution comes back feasible ([#194](../../issues/194)); `Result::cost` is total distance whatever objective was declared ([#198](../../issues/198)); and 26 of the 29 declarable fields, plus six more structural declarations — multi-depot, pickup-delivery pairs, client groups, a third cost matrix, a reference solution, explicit node ids — are accepted and dropped ([#196](../../issues/196)). Per-field verdicts are in [`docs/models.md`](docs/models.md). |
+| **Routing** | Most mature, and narrower than the schema. What it enforces is demand against an N-dimensional vehicle capacity, minimising distance; it is validated against standard CVRP instances. Time windows are penalised but never enforced, so a violating solution comes back feasible ([#194](../../issues/194)); `Result::cost` is total distance whatever objective was declared ([#198](../../issues/198)); The schema is now the 13 slots [#200](../../issues/200) kept on benchmark evidence, so most of what [#196](../../issues/196) recorded as accepted-and-dropped has been cut rather than fixed. What remains declarable but unhonoured is time windows and service times ([#194](../../issues/194)). |
 | **Packing** | Functional — FFD construction with move/swap local search. |
-| **Lot sizing** | Single-level CLSP only. Constructions (lot-for-lot, Silver-Meal, part-period balancing) plus a shift/merge/split descent — there is no fix-and-optimize anywhere in the tree. A declared bill of materials is accepted and never read ([#210](../../issues/210)), and an instance whose only feasible plans build ahead of a capacity spike comes back infeasible ([#211](../../issues/211)). |
+| **Lot sizing** | Single-level CLSP only. Constructions (lot-for-lot, Silver-Meal, part-period balancing) plus a shift/merge/split descent — there is no fix-and-optimize anywhere in the tree. An instance whose only feasible plans build ahead of a capacity spike comes back infeasible ([#211](../../issues/211)). Multi-level lot sizing is no longer declarable — [#205](../../issues/205) cut `add_bom`. |
 | **Network** | Target scope is **multi-commodity flow and network design** ([#184](../../issues/184)) — neither is implemented. What exists is a single-commodity min-cost flow solver, which is not a COSO target: that problem is solved. |
 | **Scheduling** | **Construction-only** (SGS / SPT dispatch / NEH). `ScheduleModel::solve()` validates every candidate and returns feasible-but-unoptimised schedules. There is no working local search: the disjunctive-graph operators are not wired into `solve()` and carry the unsound cycle guard of [#185](../../issues/185). |
 | **Rostering** | Construction + VND. Not validated. |

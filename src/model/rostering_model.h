@@ -33,7 +33,7 @@ struct DemandParams {
 /// Rostering model: declare employees, shift types, coverage demand, constraints, then solve.
 ///
 /// Employees x days x shift types. What it can express, and what each engine does
-/// with it, is specified in docs/models.md.
+/// with it, is specified by the v1 scope ruling on #203.
 class RosteringModel {
 public:
     /// One demand entry: (shift_type, day) -> DemandParams.
