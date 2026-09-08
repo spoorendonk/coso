@@ -1,14 +1,14 @@
 #include "model/rostering_model.h"
 
-#include "rostering/rostering_data.h"
-#include "rostering/rostering_solution.h"
+#include "common/work_units.h"
 #include "rostering/construction.h"
 #include "rostering/cost_evaluator.h"
 #include "rostering/operators/block_swap.h"
 #include "rostering/operators/pillar_move.h"
 #include "rostering/operators/shift_move.h"
 #include "rostering/operators/shift_swap.h"
-#include "common/work_units.h"
+#include "rostering/rostering_data.h"
+#include "rostering/rostering_solution.h"
 #include "search/stop_criterion.h"
 
 #include <algorithm>
@@ -118,7 +118,7 @@ Result RosteringModel::solve(TimeLimit tl) {
         return result;
     }
 
-    // Compile the declared state into an RosteringData instance.
+    // Compile the declared state into a RosteringData instance.
     RosteringData data;
 
     // Shift types.
