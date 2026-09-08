@@ -1,7 +1,7 @@
 #include "rostering/cp_filter.h"
 
-#include "rostering/rostering_data.h"
 #include "rostering/constraints/constraint.h"
+#include "rostering/rostering_data.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -20,26 +20,14 @@ RosteringData make_instance() {
     RosteringData data;
 
     data.shift_types = {
-        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
+        {.name = "Day", .duration_hours = 8},
+        {.name = "Night", .duration_hours = 8},
     };
 
     data.employees = {
-        {.name = "Alice",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Bob",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Carol",
-         .skills = {"nurse", "senior"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
+        {.name = "Alice", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Bob", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Carol", .skills = {"nurse", "senior"}, .max_consecutive_days = 5},
     };
 
     data.horizon = 7;
@@ -50,9 +38,6 @@ RosteringData make_instance() {
         data.demand[RosteringData::demand_key(1, d)] = {
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
-
-    data.max_consecutive_shifts = 5;
-    data.min_rest_between_shifts = 11;
 
     return data;
 }
@@ -65,7 +50,6 @@ RosteringData make_instance() {
 
 TEST_CASE("CPFilter: max consecutive prunes gap in long run", "[rostering][cp_filter]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -95,7 +79,6 @@ TEST_CASE("CPFilter: max consecutive prunes gap in long run", "[rostering][cp_fi
 
 TEST_CASE("CPFilter: max consecutive allows within limit", "[rostering][cp_filter]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -113,67 +96,6 @@ TEST_CASE("CPFilter: max consecutive allows within limit", "[rostering][cp_filte
     REQUIRE(filter.domain_size(0, 1) == 2);
     REQUIRE(filter.is_feasible(0, 1, 0) == true);
     REQUIRE(filter.is_feasible(0, 1, 1) == true);
-}
-
-// ===========================================================================
-//  Min rest pruning
-// ===========================================================================
-
-TEST_CASE("CPFilter: min rest prunes early shift after late shift", "[rostering][cp_filter]") {
-    RosteringData data;
-    data.shift_types = {
-        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
-    };
-    data.employees = {{.name = "X",
-                       .skills = {},
-                       .max_hours_per_week = 40,
-                       .max_consecutive_days = 7,
-                       .min_rest_hours = 11}};
-    data.horizon = 3;
-    data.min_rest_between_shifts = 11;
-
-    CPFilter filter(data);
-
-    // Late on day 0 (ends 20:00).
-    // Early on day 1 (starts 06:00): rest = (24-20) + 6 = 10 < 11 -> pruned.
-    // Late on day 1 (starts 12:00): rest = (24-20) + 12 = 16 >= 11 -> ok.
-    std::vector<std::vector<int>> sched(1, std::vector<int>(3, -1));
-    sched[0][0] = 0;  // Late
-
-    filter.propagate(sched);
-
-    REQUIRE(filter.is_feasible(0, 1, 0) == true);   // Late->Late ok
-    REQUIRE(filter.is_feasible(0, 1, 1) == false);  // Late->Early pruned
-    REQUIRE(filter.domain_size(0, 1) == 1);
-}
-
-TEST_CASE("CPFilter: min rest prunes based on successor shift", "[rostering][cp_filter]") {
-    RosteringData data;
-    data.shift_types = {
-        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
-    };
-    data.employees = {{.name = "X",
-                       .skills = {},
-                       .max_hours_per_week = 40,
-                       .max_consecutive_days = 7,
-                       .min_rest_hours = 11}};
-    data.horizon = 3;
-    data.min_rest_between_shifts = 11;
-
-    CPFilter filter(data);
-
-    // Early on day 2 (starts 06:00).
-    // Day 1 -> Early day 2: Late on day 1 ends 20:00, rest = 4+6=10 < 11 -> pruned.
-    //                        Early on day 1 ends 14:00, rest = 10+6=16 >= 11 -> ok.
-    std::vector<std::vector<int>> sched(1, std::vector<int>(3, -1));
-    sched[0][2] = 1;  // Early on day 2
-
-    filter.propagate(sched);
-
-    REQUIRE(filter.is_feasible(0, 1, 0) == false);  // Late then Early: pruned
-    REQUIRE(filter.is_feasible(0, 1, 1) == true);   // Early then Early: ok
 }
 
 // ===========================================================================
@@ -264,7 +186,6 @@ TEST_CASE("CPFilter: unavailability prunes all shifts", "[rostering][cp_filter]"
 
 TEST_CASE("CPFilter: filtered moves violate constraints", "[rostering][cp_filter]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -318,7 +239,6 @@ TEST_CASE("CPFilter: filtered moves violate constraints", "[rostering][cp_filter
 
 TEST_CASE("CPFilter: filter_moves reduces candidate count", "[rostering][cp_filter]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 2;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 2;
     }
@@ -377,7 +297,6 @@ TEST_CASE("CPFilter: unassign moves are never filtered", "[rostering][cp_filter]
 
 TEST_CASE("CPFilter: multiple rules interact correctly", "[rostering][cp_filter]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 5;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 5;
     }

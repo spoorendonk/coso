@@ -19,19 +19,7 @@ struct RosteringData {
 
     struct ShiftType {
         std::string name;
-        int start_hour = 0;
-        int end_hour = 8;
-        int duration_hours = 0;  ///< 0 = computed from start/end
-
-        /// Effective duration in hours.
-        [[nodiscard]] int effective_duration() const noexcept {
-            if (duration_hours > 0) {
-                return duration_hours;
-            }
-            // Handle overnight shifts (e.g., 22:00 - 06:00).
-            int dur = end_hour - start_hour;
-            return dur > 0 ? dur : dur + 24;
-        }
+        int duration_hours = 0;
     };
 
     std::vector<ShiftType> shift_types;
@@ -45,9 +33,7 @@ struct RosteringData {
     struct Employee {
         std::string name;
         std::vector<std::string> skills;
-        int max_hours_per_week = 40;
         int max_consecutive_days = 5;
-        int min_rest_hours = 11;
     };
 
     std::vector<Employee> employees;
@@ -82,10 +68,7 @@ struct RosteringData {
         return it != demand.end() ? it->second : Demand{};
     }
 
-    // -- Hard constraints (global) -------------------------------------------
-
-    int max_consecutive_shifts = INT_MAX;  ///< Global cap (can be tighter than per-employee).
-    int min_rest_between_shifts = 0;       ///< In hours.
+    // -- Hard constraints ----------------------------------------------------
 
     /// Forbidden shift-type sequences.
     std::vector<std::vector<int>> forbidden_sequences;
@@ -113,14 +96,6 @@ struct RosteringData {
     [[nodiscard]] bool is_unavailable(int employee, int day) const {
         return unavailabilities.count(unavail_key(employee, day)) > 0;
     }
-
-    // -- Replanning ----------------------------------------------------------
-
-    /// Published schedule: published_schedule[employee][day] = shift_type.
-    /// Empty if no published schedule was provided.
-    std::vector<std::vector<int>> published_schedule;
-
-    int change_penalty = 0;  ///< Penalty cost per deviation from published schedule.
 };
 
 }  // namespace coso

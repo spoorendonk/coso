@@ -1,7 +1,7 @@
 #include "rostering/constraints/automaton.h"
 
-#include "rostering/rostering_data.h"
 #include "rostering/constraints/constraint.h"
+#include "rostering/rostering_data.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -20,27 +20,15 @@ RosteringData make_instance() {
     RosteringData data;
 
     data.shift_types = {
-        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
-        {.name = "Evening", .start_hour = 16, .end_hour = 22, .duration_hours = 0},
+        {.name = "Day", .duration_hours = 8},
+        {.name = "Night", .duration_hours = 8},
+        {.name = "Evening", .duration_hours = 6},
     };
 
     data.employees = {
-        {.name = "Alice",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 7,
-         .min_rest_hours = 11},
-        {.name = "Bob",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 7,
-         .min_rest_hours = 11},
-        {.name = "Carol",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 7,
-         .min_rest_hours = 11},
+        {.name = "Alice", .skills = {"nurse"}, .max_consecutive_days = 7},
+        {.name = "Bob", .skills = {"nurse"}, .max_consecutive_days = 7},
+        {.name = "Carol", .skills = {"nurse"}, .max_consecutive_days = 7},
     };
 
     data.horizon = 7;
@@ -241,8 +229,7 @@ TEST_CASE("AutomatonConstraint: delta matches full — max consecutive", "[roste
     REQUIRE(delta == 10000);
 }
 
-TEST_CASE("AutomatonConstraint: delta matches full — forbidden pattern",
-          "[rostering][automaton]") {
+TEST_CASE("AutomatonConstraint: delta matches full — forbidden pattern", "[rostering][automaton]") {
     auto data = make_instance();
     int const DAY = 0;
     int const NIGHT = 1;
@@ -290,8 +277,7 @@ TEST_CASE("AutomatonConstraint: delta — removing violation", "[rostering][auto
     REQUIRE(delta == -10000);
 }
 
-TEST_CASE("AutomatonConstraint: delta — sequential moves stay accurate",
-          "[rostering][automaton]") {
+TEST_CASE("AutomatonConstraint: delta — sequential moves stay accurate", "[rostering][automaton]") {
     auto data = make_instance();
     int const DAY = 0;
     int const NIGHT = 1;

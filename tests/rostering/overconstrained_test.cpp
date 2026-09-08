@@ -9,13 +9,13 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 3 employees, 2 shift types, 5-day horizon, demand of 1 per shift per day.
-/// max_consecutive_shifts = 5 (no consecutive violation possible in 5 days).
+/// max_consecutive_days defaults to 5 (no consecutive violation possible in 5 days).
 static RosteringData make_basic_data() {
     RosteringData data;
     data.horizon = 5;
 
-    data.shift_types.push_back({.name = "Day", .start_hour = 8, .end_hour = 16});
-    data.shift_types.push_back({.name = "Night", .start_hour = 22, .end_hour = 6});
+    data.shift_types.push_back({.name = "Day", .duration_hours = 8});
+    data.shift_types.push_back({.name = "Night", .duration_hours = 8});
 
     data.employees.push_back({.name = "Alice"});
     data.employees.push_back({.name = "Bob"});
@@ -24,12 +24,9 @@ static RosteringData make_basic_data() {
     // Demand: 1 employee per shift per day.
     for (int s = 0; s < 2; ++s) {
         for (int d = 0; d < 5; ++d) {
-            data.demand[RosteringData::demand_key(s, d)] = {.min_employees = 1,
-                                                             .max_employees = 2};
+            data.demand[RosteringData::demand_key(s, d)] = {.min_employees = 1, .max_employees = 2};
         }
     }
-
-    data.max_consecutive_shifts = 5;
 
     return data;
 }
@@ -39,7 +36,7 @@ static RosteringData make_overconstrained_data() {
     RosteringData data;
     data.horizon = 3;
 
-    data.shift_types.push_back({.name = "Day", .start_hour = 8, .end_hour = 16});
+    data.shift_types.push_back({.name = "Day", .duration_hours = 8});
 
     data.employees.push_back({.name = "Alice"});
     data.employees.push_back({.name = "Bob"});
@@ -136,7 +133,9 @@ TEST_CASE("assignment overconstrained: no violations with valid schedule",
 TEST_CASE("assignment overconstrained: consecutive violations detected",
           "[overconstrained][rostering]") {
     auto data = make_basic_data();
-    data.max_consecutive_shifts = 3;
+    for (auto& e : data.employees) {
+        e.max_consecutive_days = 3;
+    }
 
     RosteringCostEvaluator eval(data);
     auto sched = make_empty_schedule(data);
@@ -169,8 +168,7 @@ TEST_CASE("assignment overconstrained: penalty is zero when all satisfied",
     CHECK(rostering_overconstrained_penalty(data, eval, sched, config) == 0);
 }
 
-TEST_CASE("assignment overconstrained: penalty for understaffing",
-          "[overconstrained][rostering]") {
+TEST_CASE("assignment overconstrained: penalty for understaffing", "[overconstrained][rostering]") {
     auto data = make_basic_data();
     RosteringCostEvaluator eval(data);
     auto sched = make_empty_schedule(data);

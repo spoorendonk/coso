@@ -51,7 +51,7 @@ bool is_feasible_assignment(RosteringData const& data,
     }
 
     // Consecutive days limit.
-    int max_consec = std::min(data.max_consecutive_shifts, data.employees[e].max_consecutive_days);
+    int max_consec = data.employees[e].max_consecutive_days;
     int run_before = 0;
     for (int dd = d - 1; dd >= 0 && schedule[e][dd] >= 0; --dd) {
         ++run_before;
@@ -62,34 +62,6 @@ bool is_feasible_assignment(RosteringData const& data,
     }
     if (run_before + 1 + run_after > max_consec) {
         return false;
-    }
-
-    // Minimum rest between shifts.
-    int min_rest = std::max(data.min_rest_between_shifts, data.employees[e].min_rest_hours);
-    if (min_rest > 0) {
-        int ns = data.num_shift_types();
-        if (d > 0) {
-            int prev = schedule[e][d - 1];
-            if (prev >= 0 && prev < ns) {
-                int end_prev = data.shift_types[prev].end_hour;
-                int start_cur = data.shift_types[s].start_hour;
-                int rest = (24 - end_prev) + start_cur;
-                if (rest < min_rest) {
-                    return false;
-                }
-            }
-        }
-        if (d + 1 < data.horizon) {
-            int next = schedule[e][d + 1];
-            if (next >= 0 && next < ns) {
-                int end_cur = data.shift_types[s].end_hour;
-                int start_next = data.shift_types[next].start_hour;
-                int rest = (24 - end_cur) + start_next;
-                if (rest < min_rest) {
-                    return false;
-                }
-            }
-        }
     }
 
     // Forbidden sequences.

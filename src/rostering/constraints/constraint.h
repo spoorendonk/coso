@@ -57,8 +57,7 @@ public:
 
 /// Penalizes exceeding the maximum number of consecutive working days.
 ///
-/// Uses the per-employee limit (Employee::max_consecutive_days) clamped by the
-/// global limit (RosteringData::max_consecutive_shifts).
+/// Uses the per-employee limit (Employee::max_consecutive_days).
 class MaxConsecutiveConstraint final : public Constraint {
 public:
     explicit MaxConsecutiveConstraint(int penalty = 10000) : penalty_(penalty) {}
@@ -77,29 +76,6 @@ private:
 
     /// Count violations for a single employee row.
     [[nodiscard]] int employee_cost(int max_consec, std::vector<int> const& row, int horizon) const;
-};
-
-/// Penalizes insufficient rest hours between consecutive shifts.
-///
-/// Rest is computed as (24 - end_hour_of_prev_shift) + start_hour_of_next_shift.
-class MinRestConstraint final : public Constraint {
-public:
-    explicit MinRestConstraint(int penalty = 10000) : penalty_(penalty) {}
-
-    [[nodiscard]] int evaluate(RosteringData const& data,
-                               std::vector<std::vector<int>> const& schedule) const override;
-
-    [[nodiscard]] int evaluate_delta(RosteringData const& data,
-                                     std::vector<std::vector<int>> const& schedule,
-                                     RosteringMove const& move) const override;
-
-    [[nodiscard]] std::string name() const override { return "MinRest"; }
-
-private:
-    int penalty_;
-
-    /// Check rest between two shifts.  Returns penalty if violated, 0 otherwise.
-    [[nodiscard]] int check_rest(RosteringData const& data, int min_rest, int s1, int s2) const;
 };
 
 /// Penalizes under-staffing and over-staffing relative to demand.

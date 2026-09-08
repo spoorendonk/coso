@@ -49,24 +49,12 @@ void RosteringModel::add_demand(int shift_type, int day, DemandParams p) {
     demands_.push_back({shift_type, day, std::move(p)});
 }
 
-void RosteringModel::add_demand(int shift_type, DemandParams p) {
-    demands_all_.push_back({shift_type, std::move(p)});
-}
-
 // ---------------------------------------------------------------------------
 //  Hard constraints
 // ---------------------------------------------------------------------------
 
-void RosteringModel::set_max_consecutive_shifts(int n) {
-    max_consecutive_shifts_ = n;
-}
-
-void RosteringModel::set_min_rest_between_shifts(int hours) {
-    min_rest_between_shifts_ = hours;
-}
-
-void RosteringModel::add_forbidden_sequence(const std::vector<int>& shift_types) {
-    forbidden_sequences_.push_back(shift_types);
+void RosteringModel::add_forbidden_sequence(int first, int second) {
+    forbidden_sequences_.emplace_back(first, second);
 }
 
 // ---------------------------------------------------------------------------
@@ -82,18 +70,6 @@ void RosteringModel::add_unavailability(int employee, int day) {
 }
 
 // ---------------------------------------------------------------------------
-//  Replanning
-// ---------------------------------------------------------------------------
-
-void RosteringModel::set_published_schedule(const std::vector<std::vector<int>>& schedule) {
-    published_schedule_ = schedule;
-}
-
-void RosteringModel::set_change_penalty(int penalty) {
-    change_penalty_ = penalty;
-}
-
-// ---------------------------------------------------------------------------
 //  solve()
 // ---------------------------------------------------------------------------
 
@@ -105,7 +81,6 @@ Result RosteringModel::solve(TimeLimit tl) {
 
     work.count(static_cast<uint64_t>(shift_types_.size()) +
                static_cast<uint64_t>(employees_.size()) + static_cast<uint64_t>(demands_.size()) +
-               static_cast<uint64_t>(demands_all_.size()) +
                static_cast<uint64_t>(forbidden_sequences_.size()) +
                static_cast<uint64_t>(preferences_.size()) +
                static_cast<uint64_t>(unavailabilities_.size()) + 1);
@@ -126,8 +101,6 @@ Result RosteringModel::solve(TimeLimit tl) {
     for (auto const& st : shift_types_) {
         data.shift_types.push_back({
             .name = st.name,
-            .start_hour = st.start_hour,
-            .end_hour = st.end_hour,
             .duration_hours = st.duration_hours,
         });
     }
@@ -138,9 +111,7 @@ Result RosteringModel::solve(TimeLimit tl) {
         data.employees.push_back({
             .name = e.name,
             .skills = e.skills,
-            .max_hours_per_week = e.max_hours_per_week,
             .max_consecutive_days = e.max_consecutive_days,
-            .min_rest_hours = e.min_rest_hours,
         });
     }
 
@@ -157,25 +128,11 @@ Result RosteringModel::solve(TimeLimit tl) {
         };
     }
 
-    // Demand entries (all days).
-    for (auto const& d : demands_all_) {
-        for (int day = 0; day < data.horizon; ++day) {
-            auto key = RosteringData::demand_key(d.shift_type, day);
-            // Only set if not already set by a specific-day entry.
-            if (data.demand.find(key) == data.demand.end()) {
-                data.demand[key] = {
-                    .min_employees = d.params.min_employees,
-                    .max_employees = d.params.max_employees,
-                    .required_skill = d.params.required_skill,
-                };
-            }
-        }
-    }
-
     // Hard constraints.
-    data.max_consecutive_shifts = max_consecutive_shifts_;
-    data.min_rest_between_shifts = min_rest_between_shifts_;
-    data.forbidden_sequences = forbidden_sequences_;
+    data.forbidden_sequences.reserve(forbidden_sequences_.size());
+    for (auto const& [first, second] : forbidden_sequences_) {
+        data.forbidden_sequences.push_back({first, second});
+    }
 
     // Preferences.
     data.preferences.reserve(preferences_.size());
@@ -193,9 +150,6 @@ Result RosteringModel::solve(TimeLimit tl) {
         data.unavailabilities.insert(RosteringData::unavail_key(u.employee, u.day));
     }
 
-    // Replanning.
-    data.published_schedule = published_schedule_;
-    data.change_penalty = change_penalty_;
     work.count(static_cast<uint64_t>(data.num_employees()) +
                static_cast<uint64_t>(data.num_shift_types()) + static_cast<uint64_t>(data.horizon));
 

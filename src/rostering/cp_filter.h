@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rostering/rostering_data.h"
 #include "rostering/constraints/constraint.h"
+#include "rostering/rostering_data.h"
 
 #include <algorithm>
 #include <climits>
@@ -46,7 +46,6 @@ public:
         reset_domains();
         prune_unavailabilities();
         prune_max_consecutive(schedule);
-        prune_min_rest(schedule);
         prune_forbidden_sequences(schedule);
         prune_demand_limits(schedule);
     }
@@ -112,8 +111,7 @@ private:
         int const H = data_.horizon;
 
         for (int e = 0; e < ne; ++e) {
-            int max_consec =
-                std::min(data_.max_consecutive_shifts, data_.employees[e].max_consecutive_days);
+            int max_consec = data_.employees[e].max_consecutive_days;
             if (max_consec >= H) {
                 continue;  // Can never violate.
             }
@@ -140,54 +138,6 @@ private:
                 // If placing any shift here creates run > max_consec, prune all.
                 if (before + 1 + after > max_consec) {
                     domains_[e][d] = 0;
-                }
-            }
-        }
-    }
-
-    void prune_min_rest(std::vector<std::vector<int>> const& schedule) {
-        if (data_.min_rest_between_shifts <= 0) {
-            return;
-        }
-
-        int const ne = data_.num_employees();
-        int const H = data_.horizon;
-
-        for (int e = 0; e < ne; ++e) {
-            int min_rest =
-                std::max(data_.min_rest_between_shifts, data_.employees[e].min_rest_hours);
-
-            for (int d = 0; d < H; ++d) {
-                if (schedule[e][d] >= 0) {
-                    continue;  // Already assigned.
-                }
-
-                // Check against predecessor shift (day d-1).
-                if (d > 0 && schedule[e][d - 1] >= 0) {
-                    int prev_shift = schedule[e][d - 1];
-                    int end_prev = data_.shift_types[prev_shift].end_hour;
-
-                    for (int s = 0; s < num_shifts_; ++s) {
-                        int start_s = data_.shift_types[s].start_hour;
-                        int rest = (24 - end_prev) + start_s;
-                        if (rest < min_rest) {
-                            domains_[e][d] &= ~(1u << s);
-                        }
-                    }
-                }
-
-                // Check against successor shift (day d+1).
-                if (d + 1 < H && schedule[e][d + 1] >= 0) {
-                    int next_shift = schedule[e][d + 1];
-                    int start_next = data_.shift_types[next_shift].start_hour;
-
-                    for (int s = 0; s < num_shifts_; ++s) {
-                        int end_s = data_.shift_types[s].end_hour;
-                        int rest = (24 - end_s) + start_next;
-                        if (rest < min_rest) {
-                            domains_[e][d] &= ~(1u << s);
-                        }
-                    }
                 }
             }
         }

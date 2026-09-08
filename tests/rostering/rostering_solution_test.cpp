@@ -1,7 +1,7 @@
 #include "rostering/rostering_solution.h"
 
-#include "rostering/rostering_data.h"
 #include "rostering/cost_evaluator.h"
+#include "rostering/rostering_data.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -21,27 +21,15 @@ RosteringData make_small_instance() {
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
+        {.name = "Day", .duration_hours = 8},
+        {.name = "Night", .duration_hours = 8},
     };
 
     // 3 employees with default constraints.
     data.employees = {
-        {.name = "Alice",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Bob",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Carol",
-         .skills = {"nurse", "senior"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
+        {.name = "Alice", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Bob", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Carol", .skills = {"nurse", "senior"}, .max_consecutive_days = 5},
     };
 
     data.horizon = 7;
@@ -53,10 +41,6 @@ RosteringData make_small_instance() {
         data.demand[RosteringData::demand_key(1, d)] = {
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
-
-    // Global hard constraints.
-    data.max_consecutive_shifts = 5;
-    data.min_rest_between_shifts = 11;
 
     return data;
 }
@@ -170,7 +154,6 @@ TEST_CASE("RosteringSolution: overstaffing penalty", "[rostering]") {
 TEST_CASE("RosteringSolution: max consecutive shifts", "[rostering]") {
     auto data = make_small_instance();
     // Tighten: max 3 consecutive.
-    data.max_consecutive_shifts = 3;
     data.employees[0].max_consecutive_days = 3;
 
     RosteringCostEvaluator evaluator(data);
@@ -188,53 +171,6 @@ TEST_CASE("RosteringSolution: max consecutive shifts", "[rostering]") {
     sol.unassign(0, 3);
     int consec_cost = evaluator.consecutive_violation_cost(sol.schedule());
     REQUIRE(consec_cost == 0);
-}
-
-// ---------------------------------------------------------------------------
-//  Test: minimum rest between shifts
-// ---------------------------------------------------------------------------
-
-TEST_CASE("RosteringSolution: min rest between shifts", "[rostering]") {
-    auto data = make_small_instance();
-    data.min_rest_between_shifts = 11;
-
-    RosteringCostEvaluator evaluator(data);
-    RosteringSolution sol(data, evaluator);
-
-    // Day shift ends at 16:00, Night shift starts at 22:00.
-    // Rest = (24 - 16) + 22 = 30 hours -> OK.
-    sol.assign(0, 0, 0);  // Alice Day on day 0
-    sol.assign(0, 1, 1);  // Alice Night on day 1
-    REQUIRE(evaluator.rest_violation_cost(sol.schedule()) == 0);
-
-    // Night shift ends at 06:00, Day shift starts at 08:00.
-    // Rest = (24 - 6) + 8 = 26 hours -> OK.
-    sol.unassign(0, 0);
-    sol.unassign(0, 1);
-    sol.assign(0, 0, 1);  // Alice Night on day 0
-    sol.assign(0, 1, 0);  // Alice Day on day 1
-    REQUIRE(evaluator.rest_violation_cost(sol.schedule()) == 0);
-
-    // Create a tight scenario: shift ending at 20, next starting at 6.
-    // Rest = (24 - 20) + 6 = 10 hours < 11 -> violation.
-    RosteringData data2;
-    data2.shift_types = {
-        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
-    };
-    data2.employees = {{.name = "X",
-                        .skills = {},
-                        .max_hours_per_week = 40,
-                        .max_consecutive_days = 7,
-                        .min_rest_hours = 11}};
-    data2.horizon = 2;
-    data2.min_rest_between_shifts = 11;
-
-    RosteringCostEvaluator eval2(data2);
-    RosteringSolution sol2(data2, eval2);
-    sol2.assign(0, 0, 0);  // Late on day 0
-    sol2.assign(0, 1, 1);  // Early on day 1
-    REQUIRE(eval2.rest_violation_cost(sol2.schedule()) > 0);
 }
 
 // ---------------------------------------------------------------------------

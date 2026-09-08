@@ -157,7 +157,9 @@ coso::Result solve_once(Scenario const& s) {
         m.add_employee({.name = "Alice"});
         m.add_employee({.name = "Bob"});
         m.set_horizon(4);
-        m.add_demand(day, {.min_employees = 1, .max_employees = 1});
+        for (int d = 0; d < 4; ++d) {
+            m.add_demand(day, d, {.min_employees = 1, .max_employees = 1});
+        }
         return m.solve(tl);
     }
 

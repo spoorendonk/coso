@@ -10,7 +10,7 @@ namespace coso {
 // ---------------------------------------------------------------------------
 
 int rostering_total_understaffing(RosteringData const& data,
-                                   std::vector<std::vector<int>> const& schedule) {
+                                  std::vector<std::vector<int>> const& schedule) {
     int total = 0;
     int const ne = data.num_employees();
     int const ns = data.num_shift_types();
@@ -47,9 +47,8 @@ int rostering_total_understaffing(RosteringData const& data,
 //  Hard constraint violation counting
 // ---------------------------------------------------------------------------
 
-int rostering_total_hard_violations(RosteringData const& data,
-                                     RosteringCostEvaluator const& eval,
-                                     std::vector<std::vector<int>> const& schedule) {
+int rostering_total_hard_violations(RosteringData const& data, RosteringCostEvaluator const& eval,
+                                    std::vector<std::vector<int>> const& schedule) {
     // The cost evaluator computes hard violation cost as
     // count * weight.  We divide by the hard_violation weight
     // to recover the count.  For unavailability, divide by that weight.
@@ -58,8 +57,8 @@ int rostering_total_hard_violations(RosteringData const& data,
     int violations = 0;
 
     if (w.hard_violation > 0) {
-        int cost = eval.consecutive_violation_cost(schedule) + eval.rest_violation_cost(schedule) +
-                   eval.forbidden_sequence_cost(schedule);
+        int cost =
+            eval.consecutive_violation_cost(schedule) + eval.forbidden_sequence_cost(schedule);
         violations += cost / w.hard_violation;
     }
 
@@ -75,9 +74,9 @@ int rostering_total_hard_violations(RosteringData const& data,
 // ---------------------------------------------------------------------------
 
 int64_t rostering_overconstrained_penalty(RosteringData const& data,
-                                           RosteringCostEvaluator const& eval,
-                                           std::vector<std::vector<int>> const& schedule,
-                                           RosteringOverconstrainedConfig const& config) {
+                                          RosteringCostEvaluator const& eval,
+                                          std::vector<std::vector<int>> const& schedule,
+                                          RosteringOverconstrainedConfig const& config) {
     int64_t penalty = 0;
 
     // Understaffing penalty.
@@ -92,17 +91,17 @@ int64_t rostering_overconstrained_penalty(RosteringData const& data,
 }
 
 int64_t rostering_overconstrained_cost(RosteringData const& data,
-                                        RosteringCostEvaluator const& eval,
-                                        std::vector<std::vector<int>> const& schedule,
-                                        RosteringOverconstrainedConfig const& config) {
+                                       RosteringCostEvaluator const& eval,
+                                       std::vector<std::vector<int>> const& schedule,
+                                       RosteringOverconstrainedConfig const& config) {
     // Soft costs that we keep as-is.
-    int64_t base = eval.preference_cost(schedule) + eval.replanning_cost(schedule);
+    int64_t base = eval.preference_cost(schedule);
 
     return base + rostering_overconstrained_penalty(data, eval, schedule, config);
 }
 
 bool rostering_overconstrained_feasible(RosteringCostEvaluator const& eval,
-                                         std::vector<std::vector<int>> const& schedule) {
+                                        std::vector<std::vector<int>> const& schedule) {
     return eval.is_feasible(schedule);
 }
 

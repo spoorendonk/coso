@@ -20,26 +20,14 @@ RosteringData make_instance() {
     RosteringData data;
 
     data.shift_types = {
-        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
+        {.name = "Day", .duration_hours = 8},
+        {.name = "Night", .duration_hours = 8},
     };
 
     data.employees = {
-        {.name = "Alice",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Bob",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Carol",
-         .skills = {"nurse", "senior"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
+        {.name = "Alice", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Bob", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Carol", .skills = {"nurse", "senior"}, .max_consecutive_days = 5},
     };
 
     data.horizon = 7;
@@ -50,9 +38,6 @@ RosteringData make_instance() {
         data.demand[RosteringData::demand_key(1, d)] = {
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
-
-    data.max_consecutive_shifts = 5;
-    data.min_rest_between_shifts = 11;
 
     return data;
 }
@@ -70,7 +55,6 @@ void apply_move(std::vector<std::vector<int>>& schedule, RosteringMove const& mo
 
 TEST_CASE("MaxConsecutiveConstraint: no violation", "[rostering][constraint]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -88,7 +72,6 @@ TEST_CASE("MaxConsecutiveConstraint: no violation", "[rostering][constraint]") {
 
 TEST_CASE("MaxConsecutiveConstraint: violation on 4th day", "[rostering][constraint]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -106,7 +89,6 @@ TEST_CASE("MaxConsecutiveConstraint: violation on 4th day", "[rostering][constra
 
 TEST_CASE("MaxConsecutiveConstraint: delta matches full", "[rostering][constraint]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -120,79 +102,6 @@ TEST_CASE("MaxConsecutiveConstraint: delta matches full", "[rostering][constrain
 
     // Assign 4th day: should create exactly 1 violation.
     RosteringMove move{.employee = 0, .day = 3, .old_shift = -1, .new_shift = 0};
-    int delta = c.evaluate_delta(data, sched, move);
-
-    auto after = sched;
-    apply_move(after, move);
-    int expected = c.evaluate(data, after) - c.evaluate(data, sched);
-
-    REQUIRE(delta == expected);
-    REQUIRE(delta == 10000);
-}
-
-// ===========================================================================
-//  MinRestConstraint
-// ===========================================================================
-
-TEST_CASE("MinRestConstraint: sufficient rest", "[rostering][constraint]") {
-    auto data = make_instance();
-    MinRestConstraint c(10000);
-
-    // Day ends 16:00, Night starts 22:00 next day.
-    // Rest = (24-16) + 22 = 30h -> OK.
-    std::vector<std::vector<int>> sched(3, std::vector<int>(7, -1));
-    sched[0][0] = 0;  // Day
-    sched[0][1] = 1;  // Night
-
-    REQUIRE(c.evaluate(data, sched) == 0);
-}
-
-TEST_CASE("MinRestConstraint: insufficient rest", "[rostering][constraint]") {
-    RosteringData data;
-    data.shift_types = {
-        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
-    };
-    data.employees = {{.name = "X",
-                       .skills = {},
-                       .max_hours_per_week = 40,
-                       .max_consecutive_days = 7,
-                       .min_rest_hours = 11}};
-    data.horizon = 2;
-    data.min_rest_between_shifts = 11;
-
-    MinRestConstraint c(10000);
-
-    // Late ends 20:00, Early starts 06:00.
-    // Rest = (24-20) + 6 = 10h < 11h -> violation.
-    std::vector<std::vector<int>> sched(1, std::vector<int>(2, -1));
-    sched[0][0] = 0;  // Late
-    sched[0][1] = 1;  // Early
-
-    REQUIRE(c.evaluate(data, sched) == 10000);
-}
-
-TEST_CASE("MinRestConstraint: delta matches full", "[rostering][constraint]") {
-    RosteringData data;
-    data.shift_types = {
-        {.name = "Late", .start_hour = 12, .end_hour = 20, .duration_hours = 0},
-        {.name = "Early", .start_hour = 6, .end_hour = 14, .duration_hours = 0},
-    };
-    data.employees = {{.name = "X",
-                       .skills = {},
-                       .max_hours_per_week = 40,
-                       .max_consecutive_days = 7,
-                       .min_rest_hours = 11}};
-    data.horizon = 3;
-    data.min_rest_between_shifts = 11;
-
-    MinRestConstraint c(10000);
-
-    std::vector<std::vector<int>> sched(1, std::vector<int>(3, -1));
-    sched[0][0] = 0;  // Late on day 0
-
-    // Assign Early on day 1 -> violation with day 0.
-    RosteringMove move{.employee = 0, .day = 1, .old_shift = -1, .new_shift = 1};
     int delta = c.evaluate_delta(data, sched, move);
 
     auto after = sched;
@@ -386,7 +295,6 @@ TEST_CASE("PreferenceConstraint: delta matches full", "[rostering][constraint]")
 
 TEST_CASE("ConstraintEvaluator: composite evaluate", "[rostering][constraint]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -397,12 +305,11 @@ TEST_CASE("ConstraintEvaluator: composite evaluate", "[rostering][constraint]") 
 
     ConstraintEvaluator eval;
     eval.add(std::make_unique<MaxConsecutiveConstraint>(10000));
-    eval.add(std::make_unique<MinRestConstraint>(10000));
     eval.add(std::make_unique<DemandConstraint>(1000, 100));
     eval.add(std::make_unique<ForbiddenSequenceConstraint>(10000));
     eval.add(std::make_unique<PreferenceConstraint>(1));
 
-    REQUIRE(eval.size() == 5);
+    REQUIRE(eval.size() == 4);
 
     std::vector<std::vector<int>> sched(3, std::vector<int>(7, -1));
 
@@ -419,7 +326,6 @@ TEST_CASE("ConstraintEvaluator: composite evaluate", "[rostering][constraint]") 
 
 TEST_CASE("ConstraintEvaluator: composite delta matches full", "[rostering][constraint]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -430,7 +336,6 @@ TEST_CASE("ConstraintEvaluator: composite delta matches full", "[rostering][cons
 
     ConstraintEvaluator eval;
     eval.add(std::make_unique<MaxConsecutiveConstraint>(10000));
-    eval.add(std::make_unique<MinRestConstraint>(10000));
     eval.add(std::make_unique<DemandConstraint>(1000, 100));
     eval.add(std::make_unique<ForbiddenSequenceConstraint>(10000));
     eval.add(std::make_unique<PreferenceConstraint>(1));
@@ -474,7 +379,6 @@ TEST_CASE("ConstraintEvaluator: breakdown reports per-constraint costs",
 
 TEST_CASE("Constraint delta: sequential moves stay accurate", "[rostering][constraint]") {
     auto data = make_instance();
-    data.max_consecutive_shifts = 3;
     for (auto& e : data.employees) {
         e.max_consecutive_days = 3;
     }
@@ -485,7 +389,6 @@ TEST_CASE("Constraint delta: sequential moves stay accurate", "[rostering][const
 
     ConstraintEvaluator eval;
     eval.add(std::make_unique<MaxConsecutiveConstraint>(10000));
-    eval.add(std::make_unique<MinRestConstraint>(10000));
     eval.add(std::make_unique<DemandConstraint>(1000, 100));
     eval.add(std::make_unique<ForbiddenSequenceConstraint>(10000));
     eval.add(std::make_unique<PreferenceConstraint>(1));

@@ -1,9 +1,9 @@
 #include "rostering/replanning.h"
 
-#include "rostering/rostering_data.h"
-#include "rostering/rostering_solution.h"
 #include "rostering/construction.h"
 #include "rostering/cost_evaluator.h"
+#include "rostering/rostering_data.h"
+#include "rostering/rostering_solution.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -24,32 +24,16 @@ RosteringData make_replan_instance() {
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day", .start_hour = 8, .end_hour = 16, .duration_hours = 0},
-        {.name = "Night", .start_hour = 22, .end_hour = 6, .duration_hours = 0},
+        {.name = "Day", .duration_hours = 8},
+        {.name = "Night", .duration_hours = 8},
     };
 
     // 4 employees.
     data.employees = {
-        {.name = "Alice",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Bob",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Carol",
-         .skills = {"nurse", "senior"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
-        {.name = "Dave",
-         .skills = {"nurse"},
-         .max_hours_per_week = 40,
-         .max_consecutive_days = 5,
-         .min_rest_hours = 11},
+        {.name = "Alice", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Bob", .skills = {"nurse"}, .max_consecutive_days = 5},
+        {.name = "Carol", .skills = {"nurse", "senior"}, .max_consecutive_days = 5},
+        {.name = "Dave", .skills = {"nurse"}, .max_consecutive_days = 5},
     };
 
     data.horizon = 14;
@@ -61,9 +45,6 @@ RosteringData make_replan_instance() {
         data.demand[RosteringData::demand_key(1, d)] = {
             .min_employees = 1, .max_employees = 1, .required_skill = ""};
     }
-
-    data.max_consecutive_shifts = 5;
-    data.min_rest_between_shifts = 11;
 
     return data;
 }

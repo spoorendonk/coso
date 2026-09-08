@@ -73,12 +73,6 @@ SECTION_COVER
     CHECK(data.employees[1].name == "Bob");
     CHECK(data.employees[2].name == "Carol");
 
-    // MaxTotalMinutes=2400 -> 40 hours.
-    CHECK(data.employees[0].max_hours_per_week == 40);
-    CHECK(data.employees[1].max_hours_per_week == 40);
-    // MaxTotalMinutes=1920 -> 32 hours.
-    CHECK(data.employees[2].max_hours_per_week == 32);
-
     // MaxConsecutiveShifts.
     CHECK(data.employees[0].max_consecutive_days == 5);
     CHECK(data.employees[1].max_consecutive_days == 4);
@@ -160,7 +154,6 @@ SECTION_COVER
     REQUIRE(data.num_shift_types() == 1);
     REQUIRE(data.num_employees() == 1);
     CHECK(data.employees[0].name == "E0");
-    CHECK(data.employees[0].max_hours_per_week == 8);
 
     auto dem = data.get_demand(0, 0);
     CHECK(dem.min_employees == 1);

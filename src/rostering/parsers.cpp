@@ -200,8 +200,6 @@ RosteringData parse_nrp(const std::string& content) {
                     //             [3]=MinTotalMinutes, [4]=MaxConsecutiveShifts,
                     //             [5]=MinConsecutiveShifts, [6]=MinConsecutiveDaysOff,
                     //             [7]=MaxWeekends
-                    int max_total_minutes = std::stoi(tokens[2]);
-                    emp.max_hours_per_week = max_total_minutes / 60;
                     emp.max_consecutive_days = std::stoi(tokens[4]);
                 } else {
                     // Named key=value format.
@@ -213,10 +211,7 @@ RosteringData parse_nrp(const std::string& content) {
                         auto key = tokens[i].substr(0, eq);
                         auto val = tokens[i].substr(eq + 1);
 
-                        if (key == "MaxTotalMinutes") {
-                            int minutes = std::stoi(val);
-                            emp.max_hours_per_week = minutes / 60;
-                        } else if (key == "MaxConsecutiveShifts") {
+                        if (key == "MaxConsecutiveShifts") {
                             emp.max_consecutive_days = std::stoi(val);
                         }
                     }

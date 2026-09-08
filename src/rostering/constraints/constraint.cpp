@@ -47,8 +47,7 @@ int MaxConsecutiveConstraint::evaluate(RosteringData const& data,
     int const H = data.horizon;
 
     for (int e = 0; e < ne; ++e) {
-        int max_consec =
-            std::min(data.max_consecutive_shifts, data.employees[e].max_consecutive_days);
+        int max_consec = data.employees[e].max_consecutive_days;
         cost += employee_cost(max_consec, schedule[e], H);
     }
     return cost;
@@ -59,7 +58,7 @@ int MaxConsecutiveConstraint::evaluate_delta(RosteringData const& data,
                                              RosteringMove const& move) const {
     // Only the affected employee's row changes.
     int e = move.employee;
-    int max_consec = std::min(data.max_consecutive_shifts, data.employees[e].max_consecutive_days);
+    int max_consec = data.employees[e].max_consecutive_days;
     int H = data.horizon;
 
     int before = employee_cost(max_consec, schedule[e], H);
@@ -70,71 +69,6 @@ int MaxConsecutiveConstraint::evaluate_delta(RosteringData const& data,
     int after = employee_cost(max_consec, row, H);
 
     return after - before;
-}
-
-// --------------------------------------------------------------------------- //
-//  MinRestConstraint                                                            //
-// --------------------------------------------------------------------------- //
-
-int MinRestConstraint::check_rest(RosteringData const& data, int min_rest, int s1, int s2) const {
-    int ns = data.num_shift_types();
-    if (s1 < 0 || s2 < 0 || s1 >= ns || s2 >= ns) {
-        return 0;
-    }
-    int end1 = data.shift_types[s1].end_hour;
-    int start2 = data.shift_types[s2].start_hour;
-    int rest = (24 - end1) + start2;
-    return rest < min_rest ? penalty_ : 0;
-}
-
-int MinRestConstraint::evaluate(RosteringData const& data,
-                                std::vector<std::vector<int>> const& schedule) const {
-    if (data.min_rest_between_shifts <= 0) {
-        return 0;
-    }
-
-    int cost = 0;
-    int const ne = data.num_employees();
-    int const H = data.horizon;
-
-    for (int e = 0; e < ne; ++e) {
-        int min_rest = std::max(data.min_rest_between_shifts, data.employees[e].min_rest_hours);
-        for (int d = 0; d + 1 < H; ++d) {
-            cost += check_rest(data, min_rest, schedule[e][d], schedule[e][d + 1]);
-        }
-    }
-    return cost;
-}
-
-int MinRestConstraint::evaluate_delta(RosteringData const& data,
-                                      std::vector<std::vector<int>> const& schedule,
-                                      RosteringMove const& move) const {
-    if (data.min_rest_between_shifts <= 0) {
-        return 0;
-    }
-
-    int e = move.employee;
-    int d = move.day;
-    int H = data.horizon;
-    int min_rest = std::max(data.min_rest_between_shifts, data.employees[e].min_rest_hours);
-
-    int delta = 0;
-
-    // Pair (d-1, d): rest from previous day's shift to this day's shift.
-    if (d > 0) {
-        int prev = schedule[e][d - 1];
-        delta -= check_rest(data, min_rest, prev, move.old_shift);
-        delta += check_rest(data, min_rest, prev, move.new_shift);
-    }
-
-    // Pair (d, d+1): rest from this day's shift to next day's shift.
-    if (d + 1 < H) {
-        int next = schedule[e][d + 1];
-        delta -= check_rest(data, min_rest, move.old_shift, next);
-        delta += check_rest(data, min_rest, move.new_shift, next);
-    }
-
-    return delta;
 }
 
 // --------------------------------------------------------------------------- //

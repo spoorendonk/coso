@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rostering/rostering_data.h"
 #include "rostering/cost_evaluator.h"
+#include "rostering/rostering_data.h"
 
 #include <cstdint>
 #include <vector>
@@ -35,7 +35,7 @@ struct RosteringOverconstrainedConfig {
 
 /// Compute the total overconstrained cost for an assignment schedule.
 ///
-/// Total = preference_cost + replanning_cost + overconstrained_penalty.
+/// Total = preference_cost + overconstrained_penalty.
 /// This excludes the regular demand and hard constraint costs from the
 /// evaluator (they are replaced by the overconstrained penalties).
 ///
@@ -44,9 +44,10 @@ struct RosteringOverconstrainedConfig {
 /// @param schedule  The schedule matrix.
 /// @param config    Overconstrained configuration.
 /// @return Total overconstrained cost.
-[[nodiscard]] int64_t rostering_overconstrained_cost(
-    RosteringData const& data, RosteringCostEvaluator const& eval,
-    std::vector<std::vector<int>> const& schedule, RosteringOverconstrainedConfig const& config);
+[[nodiscard]] int64_t rostering_overconstrained_cost(RosteringData const& data,
+                                                     RosteringCostEvaluator const& eval,
+                                                     std::vector<std::vector<int>> const& schedule,
+                                                     RosteringOverconstrainedConfig const& config);
 
 /// Count total understaffing across all shift types and days.
 ///
@@ -57,7 +58,7 @@ struct RosteringOverconstrainedConfig {
 /// @param schedule  The schedule matrix.
 /// @return Total number of missing employee-shifts.
 [[nodiscard]] int rostering_total_understaffing(RosteringData const& data,
-                                                 std::vector<std::vector<int>> const& schedule);
+                                                std::vector<std::vector<int>> const& schedule);
 
 /// Count total hard constraint violations.
 ///
@@ -69,8 +70,8 @@ struct RosteringOverconstrainedConfig {
 /// @param schedule  The schedule matrix.
 /// @return Total number of hard constraint violations (weighted by eval).
 [[nodiscard]] int rostering_total_hard_violations(RosteringData const& data,
-                                                   RosteringCostEvaluator const& eval,
-                                                   std::vector<std::vector<int>> const& schedule);
+                                                  RosteringCostEvaluator const& eval,
+                                                  std::vector<std::vector<int>> const& schedule);
 
 /// Check whether a schedule is overconstrained-feasible.
 ///
