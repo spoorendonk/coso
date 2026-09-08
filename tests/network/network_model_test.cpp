@@ -10,9 +10,9 @@ TEST_CASE("NetworkModel solves a simple minimum-cost flow", "[network][model]") 
     int m = model.add_node(0, "middle");
     int t = model.add_node(-5, "sink");
 
-    model.add_arc(s, m, 1, 0, 5);
-    model.add_arc(m, t, 1, 0, 5);
-    model.add_arc(s, t, 5, 0, 5);
+    model.add_arc(s, m, 1, 5);
+    model.add_arc(m, t, 1, 5);
+    model.add_arc(s, t, 5, 5);
 
     Result result = model.solve(TimeLimit(1.0));
 
@@ -27,8 +27,8 @@ TEST_CASE("NetworkModel respects arc upper capacity", "[network][model]") {
     NetworkModel model;
     int s = model.add_node(4, "source");
     int t = model.add_node(-4, "sink");
-    model.add_arc(s, t, 1, 0, 2);  // cheap, capped at 2
-    model.add_arc(s, t, 5, 0, 4);  // expensive, wide open
+    model.add_arc(s, t, 1, 2);  // cheap, capped at 2
+    model.add_arc(s, t, 5, 4);  // expensive, wide open
 
     Result result = model.solve(TimeLimit(1.0));
 
@@ -37,36 +37,20 @@ TEST_CASE("NetworkModel respects arc upper capacity", "[network][model]") {
     REQUIRE(result.cost() == 12.0);
 }
 
-TEST_CASE("NetworkModel respects arc lower bounds", "[network][model]") {
-    NetworkModel model;
-    int s = model.add_node(2, "source");
-    int m = model.add_node(0, "middle");
-    int t = model.add_node(-2, "sink");
-    model.add_arc(s, t, 1, 0, 10);  // cheap direct arc
-    model.add_arc(s, m, 5, 1, 3);   // detour, at least one unit mandatory
-    model.add_arc(m, t, 0, 0, 3);
-
-    Result result = model.solve(TimeLimit(1.0));
-
-    REQUIRE(result.feasible());
-    // Without the lower bound both units take the cheap arc for cost 2.
-    REQUIRE(result.cost() == 6.0);
-}
-
 TEST_CASE("NetworkModel invalid arc indices throw", "[network][model]") {
     NetworkModel model;
     model.add_node(1, "s");
     model.add_node(-1, "t");
 
-    REQUIRE_THROWS_AS(model.add_arc(0, 2, 1, 0, 1), std::out_of_range);
-    REQUIRE_THROWS_AS(model.add_arc(-1, 1, 1, 0, 1), std::out_of_range);
+    REQUIRE_THROWS_AS(model.add_arc(0, 2, 1, 1), std::out_of_range);
+    REQUIRE_THROWS_AS(model.add_arc(-1, 1, 1, 1), std::out_of_range);
 }
 
 TEST_CASE("NetworkModel deterministic work units repeat", "[network][model]") {
     NetworkModel model;
     int s = model.add_node(5, "s");
     int t = model.add_node(-5, "t");
-    model.add_arc(s, t, 2, 0, 5);
+    model.add_arc(s, t, 2, 5);
 
     Result r1 = model.solve(TimeLimit(1.0, 0.05));
     Result r2 = model.solve(TimeLimit(1.0, 0.05));

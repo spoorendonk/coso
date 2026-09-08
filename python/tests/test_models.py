@@ -7,7 +7,7 @@ def test_result_exposes_new_sections():
     m = coso.NetworkModel()
     s = m.add_node(5, "s")
     t = m.add_node(-5, "t")
-    m.add_arc(s, t, 2, 0, 5)
+    m.add_arc(s, t, 2, 5)
 
     r = m.solve(coso.TimeLimit(1.0))
 
@@ -22,9 +22,9 @@ def test_network_model_solve_and_flows():
     mid = m.add_node(0, "mid")
     t = m.add_node(-5, "sink")
 
-    m.add_arc(s, mid, 1, 0, 5)
-    m.add_arc(mid, t, 1, 0, 5)
-    m.add_arc(s, t, 5, 0, 5)
+    m.add_arc(s, mid, 1, 5)
+    m.add_arc(mid, t, 1, 5)
+    m.add_arc(s, t, 5, 5)
 
     r = m.solve(coso.TimeLimit(1.0))
 
@@ -39,7 +39,7 @@ def test_network_model_deterministic_work_units():
     m = coso.NetworkModel()
     s = m.add_node(5, "s")
     t = m.add_node(-5, "t")
-    m.add_arc(s, t, 2, 0, 5)
+    m.add_arc(s, t, 2, 5)
 
     r1 = m.solve(coso.TimeLimit(1.0, 0.05))
     r2 = m.solve(coso.TimeLimit(1.0, 0.05))
@@ -99,7 +99,7 @@ def test_network_model_introspection_round_trip():
     s = m.add_node(15, "source")
     t = m.add_node(-15, "sink")
     mid = m.add_node()
-    a = m.add_arc(s, mid, 7, 2, 20)
+    a = m.add_arc(s, mid, 7, 20)
     b = m.add_arc(mid, t)
 
     assert m.num_nodes() == 3
@@ -110,9 +110,9 @@ def test_network_model_introspection_round_trip():
     assert m.num_arcs() == 2
     arc_a = m.arc(a)
     assert (arc_a.tail, arc_a.head, arc_a.cost) == (s, mid, 7)
-    assert (arc_a.lower_cap, arc_a.upper_cap) == (2, 20)
+    assert arc_a.upper_cap == 20
     arc_b = m.arc(b)
-    assert (arc_b.tail, arc_b.head, arc_b.cost, arc_b.lower_cap) == (mid, t, 0, 0)
+    assert (arc_b.tail, arc_b.head, arc_b.cost) == (mid, t, 0)
     assert arc_b.upper_cap == 2**31 - 1
 
 

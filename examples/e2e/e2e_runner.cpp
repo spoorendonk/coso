@@ -126,7 +126,7 @@ coso::Result solve_once(Scenario const& s) {
         coso::NetworkModel m;
         int src = m.add_node(5, "src");
         int dst = m.add_node(-5, "dst");
-        m.add_arc(src, dst, 2, 0, 5);
+        m.add_arc(src, dst, 2, 5);
         return m.solve(tl);
     }
 

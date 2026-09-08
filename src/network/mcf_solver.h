@@ -33,8 +33,7 @@ private:
     ///
     /// The residual graph has:
     ///   - Forward arcs (a) with residual = upper_cap - flow, cost = cost
-    ///   - Backward arcs (a + num_arcs) with residual = flow - lower_cap,
-    ///     cost = -cost
+    ///   - Backward arcs (a + num_arcs) with residual = flow, cost = -cost
     struct PathResult {
         bool found = false;
         int bottleneck = 0;         ///< max flow that can be sent

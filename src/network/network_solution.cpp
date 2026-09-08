@@ -52,7 +52,7 @@ bool NetworkSolution::flow_conservation() const {
 bool NetworkSolution::capacity_feasible() const {
     for (int a = 0; a < data_.num_arcs(); ++a) {
         auto const& ad = data_.arc(a);
-        if (flow_[a] < ad.lower_cap || flow_[a] > ad.upper_cap) {
+        if (flow_[a] < 0 || flow_[a] > ad.upper_cap) {
             return false;
         }
     }
@@ -90,7 +90,7 @@ int NetworkSolution::num_capacity_violations() const {
     int count = 0;
     for (int a = 0; a < data_.num_arcs(); ++a) {
         auto const& ad = data_.arc(a);
-        if (flow_[a] < ad.lower_cap || flow_[a] > ad.upper_cap) {
+        if (flow_[a] < 0 || flow_[a] > ad.upper_cap) {
             ++count;
         }
     }

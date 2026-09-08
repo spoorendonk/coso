@@ -69,7 +69,7 @@ public:
     /// Check flow conservation: excess == 0 at every node.
     [[nodiscard]] bool flow_conservation() const;
 
-    /// Check capacity bounds: lower_cap <= flow <= upper_cap for all arcs.
+    /// Check capacity bounds: 0 <= flow <= upper_cap for all arcs.
     [[nodiscard]] bool capacity_feasible() const;
 
     /// Check resource constraints (if any). For each resource, the total

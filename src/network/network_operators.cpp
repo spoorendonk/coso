@@ -176,12 +176,12 @@ std::vector<AdjustCapacityMove> AdjustCapacity::enumerate(NetworkData const& dat
         auto const& ad = data.arc(a);
         int f = sol.flow(a);
 
-        // Try reducing flow to lower bound if cost is positive.
-        if (ad.cost > 0 && f > ad.lower_cap) {
+        // Try reducing flow to zero if cost is positive.
+        if (ad.cost > 0 && f > 0) {
             AdjustCapacityMove m;
             m.arc = a;
-            m.new_flow = ad.lower_cap;
-            m.delta = static_cast<long long>(ad.lower_cap - f) * ad.cost;
+            m.new_flow = 0;
+            m.delta = -static_cast<long long>(f) * ad.cost;
             moves.push_back(m);
         }
 
@@ -214,7 +214,7 @@ CycleCancelMove CycleCancel::find_negative_cycle(NetworkData const& data,
     // Bellman-Ford on the residual graph to detect negative cycles.
     // Residual arcs:
     //   Forward: arc a, cost = cost[a], residual = upper_cap - flow
-    //   Backward: for arc a with flow > lower_cap, cost = -cost[a]
+    //   Backward: for arc a with flow > 0, cost = -cost[a]
 
     std::vector<long long> dist(nn, 0);  // start at 0 to find any neg cycle
     std::vector<int> pred_arc(nn, -1);
@@ -244,7 +244,7 @@ CycleCancelMove CycleCancel::find_negative_cycle(NetworkData const& data,
 
         // Backward arcs.
         for (int a = 0; a < na; ++a) {
-            int res = sol.flow(a) - data.arc(a).lower_cap;
+            int res = sol.flow(a);
             if (res <= 0) {
                 continue;
             }
@@ -285,7 +285,7 @@ CycleCancelMove CycleCancel::find_negative_cycle(NetworkData const& data,
 
         if (pa >= na) {
             int a = pa - na;
-            int res = sol.flow(a) - data.arc(a).lower_cap;
+            int res = sol.flow(a);
             move.amount = std::min(move.amount, res);
             move.delta -= data.arc(a).cost;
             cur = pred_node[cur];

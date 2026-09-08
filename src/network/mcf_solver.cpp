@@ -58,7 +58,7 @@ McfSolver::PathResult McfSolver::find_shortest_path(NetworkData const& data,
         // Backward arcs from u (reverse of incoming arcs to u).
         // For each arc a: tail -> u, we can push flow back.
         for (int a : data.incoming(u)) {
-            int res = sol.flow(a) - data.arc(a).lower_cap;
+            int res = sol.flow(a);
             if (res <= 0) {
                 continue;
             }
@@ -95,7 +95,7 @@ McfSolver::PathResult McfSolver::find_shortest_path(NetworkData const& data,
         if (pa >= na) {
             // Backward arc.
             int a = pa - na;
-            int res = sol.flow(a) - data.arc(a).lower_cap;
+            int res = sol.flow(a);
             result.bottleneck = std::min(result.bottleneck, res);
             cur = data.arc(a).head;  // predecessor is head of original arc
         } else {
@@ -112,17 +112,6 @@ McfSolver::PathResult McfSolver::find_shortest_path(NetworkData const& data,
 NetworkSolution McfSolver::solve(NetworkData const& data) {
     NetworkSolution sol(data);
     int const na = data.num_arcs();
-
-    // Handle lower bounds: push mandatory flow on arcs with lower_cap > 0.
-    for (int a = 0; a < na; ++a) {
-        if (data.arc(a).lower_cap > 0) {
-            sol.set_flow(a, data.arc(a).lower_cap);
-        }
-    }
-
-    // Collect supply and demand nodes.
-    // After lower-bound handling, excess might have changed.
-    // We need to route flow from nodes with positive excess to negative excess.
 
     // Successive shortest paths: repeatedly find cheapest augmenting paths.
     bool progress = true;

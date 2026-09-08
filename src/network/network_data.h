@@ -12,7 +12,7 @@ namespace coso {
 ///
 /// Directed graph with:
 ///   - Nodes with supply/demand (positive = supply, negative = demand)
-///   - Arcs with capacity bounds, unit cost, and optional resource constraints
+///   - Arcs with an upper capacity, unit cost, and optional resource constraints
 ///   - Resource types (e.g., transit time, fuel) with per-arc consumption
 ///     and per-path upper bounds
 class NetworkData {
@@ -24,7 +24,6 @@ public:
     struct ArcData {
         int tail = -1;            ///< source node index
         int head = -1;            ///< destination node index
-        int lower_cap = 0;        ///< minimum flow on this arc
         int upper_cap = INT_MAX;  ///< maximum flow on this arc
         int cost = 0;             ///< unit cost per flow on this arc
     };
@@ -49,7 +48,7 @@ public:
         int add_node(int supply = 0, std::string name = "");
 
         /// Add an arc from tail to head. Returns arc index (0-based).
-        int add_arc(int tail, int head, int cost = 0, int lower_cap = 0, int upper_cap = INT_MAX);
+        int add_arc(int tail, int head, int cost = 0, int upper_cap = INT_MAX);
 
         /// Add a resource type. Returns resource index (0-based).
         int add_resource(std::string name = "", int upper_bound = INT_MAX);
@@ -71,7 +70,6 @@ public:
             int tail = -1;
             int head = -1;
             int cost = 0;
-            int lower_cap = 0;
             int upper_cap = INT_MAX;
         };
         std::vector<ArcEntry> arcs_;

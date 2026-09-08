@@ -258,7 +258,6 @@ NB_MODULE(_coso, m) {
         .def_ro("tail", &coso::NetworkModel::ArcEntry::tail)
         .def_ro("head", &coso::NetworkModel::ArcEntry::head)
         .def_ro("cost", &coso::NetworkModel::ArcEntry::cost)
-        .def_ro("lower_cap", &coso::NetworkModel::ArcEntry::lower_cap)
         .def_ro("upper_cap", &coso::NetworkModel::ArcEntry::upper_cap);
 
     // -- NetworkModel ---------------------------------------------------------
@@ -267,7 +266,7 @@ NB_MODULE(_coso, m) {
         .def(nb::init<>())
         .def("add_node", &coso::NetworkModel::add_node, "supply"_a = 0, "name"_a = "")
         .def("add_arc", &coso::NetworkModel::add_arc, "tail"_a, "head"_a, "cost"_a = 0,
-             "lower_cap"_a = 0, "upper_cap"_a = INT_MAX)
+             "upper_cap"_a = INT_MAX)
         .def("solve", &coso::NetworkModel::solve, "time_limit"_a)
 
         // Accessors

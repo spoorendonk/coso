@@ -115,17 +115,17 @@ int NetworkModel::add_node(int supply, std::string name) {
     return idx;
 }
 
-int NetworkModel::add_arc(int tail, int head, int cost, int lower_cap, int upper_cap) {
+int NetworkModel::add_arc(int tail, int head, int cost, int upper_cap) {
     int n = static_cast<int>(nodes_.size());
     if (tail < 0 || tail >= n || head < 0 || head >= n) {
         throw std::out_of_range("NetworkModel::add_arc: invalid node index");
     }
-    if (lower_cap < 0 || upper_cap < lower_cap) {
+    if (upper_cap < 0) {
         throw std::invalid_argument("NetworkModel::add_arc: invalid capacity bounds");
     }
 
     int idx = static_cast<int>(arcs_.size());
-    arcs_.push_back({tail, head, cost, lower_cap, upper_cap});
+    arcs_.push_back({tail, head, cost, upper_cap});
     return idx;
 }
 
@@ -146,7 +146,7 @@ Result NetworkModel::solve(TimeLimit tl) {
         work.count(1);
     }
     for (auto const& a : arcs_) {
-        builder.add_arc(a.tail, a.head, a.cost, a.lower_cap, a.upper_cap);
+        builder.add_arc(a.tail, a.head, a.cost, a.upper_cap);
         work.count(1);
     }
 

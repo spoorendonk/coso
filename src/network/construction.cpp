@@ -142,14 +142,7 @@ NetworkSolution construct_greedy(NetworkData const& data) {
 NetworkSolution construct_feasible(NetworkData const& data) {
     NetworkSolution sol(data);
 
-    // Step 1: Satisfy lower bounds.
-    for (int a = 0; a < data.num_arcs(); ++a) {
-        if (data.arc(a).lower_cap > 0) {
-            sol.set_flow(a, data.arc(a).lower_cap);
-        }
-    }
-
-    // Step 2: Route remaining excess via greedy augmentation.
+    // Route excess via greedy augmentation.
     bool progress = true;
     while (progress) {
         progress = false;

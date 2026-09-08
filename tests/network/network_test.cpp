@@ -26,10 +26,10 @@ static NetworkData build_simple_network() {
     b.add_node(0, "relay_b");  // 2
     b.add_node(-10, "sink");   // 3
 
-    b.add_arc(0, 1, /*cost=*/2, /*lower=*/0, /*upper=*/10);  // arc 0
-    b.add_arc(1, 3, /*cost=*/3, /*lower=*/0, /*upper=*/10);  // arc 1
-    b.add_arc(0, 2, /*cost=*/1, /*lower=*/0, /*upper=*/10);  // arc 2
-    b.add_arc(2, 3, /*cost=*/4, /*lower=*/0, /*upper=*/10);  // arc 3
+    b.add_arc(0, 1, /*cost=*/2, /*upper=*/10);  // arc 0
+    b.add_arc(1, 3, /*cost=*/3, /*upper=*/10);  // arc 1
+    b.add_arc(0, 2, /*cost=*/1, /*upper=*/10);  // arc 2
+    b.add_arc(2, 3, /*cost=*/4, /*upper=*/10);  // arc 3
 
     return b.build();
 }
@@ -50,9 +50,9 @@ static NetworkData build_asymmetric_network() {
     b.add_node(0, "middle");  // 1
     b.add_node(-5, "dst");    // 2
 
-    b.add_arc(0, 1, /*cost=*/1, 0, 10);   // arc 0: cheap
-    b.add_arc(1, 2, /*cost=*/1, 0, 10);   // arc 1: cheap
-    b.add_arc(0, 2, /*cost=*/10, 0, 10);  // arc 2: expensive direct
+    b.add_arc(0, 1, /*cost=*/1, 10);   // arc 0: cheap
+    b.add_arc(1, 2, /*cost=*/1, 10);   // arc 1: cheap
+    b.add_arc(0, 2, /*cost=*/10, 10);  // arc 2: expensive direct
 
     return b.build();
 }
@@ -80,10 +80,10 @@ static NetworkData build_shipping_network() {
     int time_res = b.add_resource("transit_time", 100);
 
     // Shipping legs.
-    int a0 = b.add_arc(A, H, /*cost=*/5, 0, 5);   // A -> H
-    int a1 = b.add_arc(H, B, /*cost=*/3, 0, 3);   // H -> B
-    int a2 = b.add_arc(H, C, /*cost=*/4, 0, 3);   // H -> C
-    int a3 = b.add_arc(A, B, /*cost=*/12, 0, 3);  // direct A -> B (expensive)
+    int a0 = b.add_arc(A, H, /*cost=*/5, 5);   // A -> H
+    int a1 = b.add_arc(H, B, /*cost=*/3, 3);   // H -> B
+    int a2 = b.add_arc(H, C, /*cost=*/4, 3);   // H -> C
+    int a3 = b.add_arc(A, B, /*cost=*/12, 3);  // direct A -> B (expensive)
 
     // Transit times.
     b.set_resource_usage(a0, time_res, 2);  // 2 days A -> H
@@ -123,7 +123,6 @@ TEST_CASE("NetworkData construction", "[network]") {
         REQUIRE(data.arc(0).tail == 0);
         REQUIRE(data.arc(0).head == 1);
         REQUIRE(data.arc(0).cost == 2);
-        REQUIRE(data.arc(0).lower_cap == 0);
         REQUIRE(data.arc(0).upper_cap == 10);
     }
 
@@ -208,9 +207,9 @@ TEST_CASE("MCF solver with capacity constraints", "[network]") {
     b.add_node(0, "mid");
     b.add_node(-5, "dst");
 
-    b.add_arc(0, 1, 1, 0, 3);   // cheap but limited to 3
-    b.add_arc(1, 2, 1, 0, 3);   // cheap but limited to 3
-    b.add_arc(0, 2, 10, 0, 5);  // expensive but big capacity
+    b.add_arc(0, 1, 1, 3);   // cheap but limited to 3
+    b.add_arc(1, 2, 1, 3);   // cheap but limited to 3
+    b.add_arc(0, 2, 10, 5);  // expensive but big capacity
 
     auto data = b.build();
     auto sol = McfSolver::solve(data);
@@ -267,22 +266,6 @@ TEST_CASE("Greedy construction", "[network]") {
     }
 }
 
-TEST_CASE("Feasible construction with lower bounds", "[network]") {
-    NetworkData::Builder b;
-    b.add_node(5, "src");
-    b.add_node(-5, "dst");
-    b.add_arc(0, 1, 3, /*lower=*/2, /*upper=*/5);  // must send at least 2
-    b.add_arc(0, 1, 1, /*lower=*/0, /*upper=*/5);  // cheaper alternative
-
-    auto data = b.build();
-    auto sol = construct_feasible(data);
-
-    REQUIRE(sol.flow_conservation());
-    REQUIRE(sol.capacity_feasible());
-    // Arc 0 must have at least 2 flow.
-    REQUIRE(sol.flow(0) >= 2);
-}
-
 // ===========================================================================
 //  Operator tests
 // ===========================================================================
@@ -322,9 +305,9 @@ TEST_CASE("CycleCancel on suboptimal flow", "[network]") {
     b.add_node(0);
     b.add_node(-5);
 
-    b.add_arc(0, 1, 1, 0, 10);   // arc 0: cheap
-    b.add_arc(1, 2, 1, 0, 10);   // arc 1: cheap
-    b.add_arc(0, 2, 10, 0, 10);  // arc 2: expensive
+    b.add_arc(0, 1, 1, 10);   // arc 0: cheap
+    b.add_arc(1, 2, 1, 10);   // arc 1: cheap
+    b.add_arc(0, 2, 10, 10);  // arc 2: expensive
 
     auto data = b.build();
     NetworkSolution sol(data);
@@ -346,8 +329,8 @@ TEST_CASE("AdjustCapacity enumeration", "[network]") {
     NetworkData::Builder b;
     b.add_node(3);
     b.add_node(-3);
-    b.add_arc(0, 1, 5, 0, 10);   // positive cost, flow can be reduced
-    b.add_arc(0, 1, -2, 0, 10);  // negative cost, flow can be increased
+    b.add_arc(0, 1, 5, 10);   // positive cost, flow can be reduced
+    b.add_arc(0, 1, -2, 10);  // negative cost, flow can be increased
 
     auto data = b.build();
     NetworkSolution sol(data);
@@ -423,10 +406,10 @@ TEST_CASE("Balanced multi-commodity flow", "[network]") {
     b.add_node(-3);  // 3: demand
     b.add_node(-2);  // 4: demand
 
-    b.add_arc(0, 2, 1, 0, 5);
-    b.add_arc(1, 2, 2, 0, 5);
-    b.add_arc(2, 3, 1, 0, 5);
-    b.add_arc(2, 4, 3, 0, 5);
+    b.add_arc(0, 2, 1, 5);
+    b.add_arc(1, 2, 2, 5);
+    b.add_arc(2, 3, 1, 5);
+    b.add_arc(2, 4, 3, 5);
 
     auto data = b.build();
     REQUIRE(data.total_supply() == 0);

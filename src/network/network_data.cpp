@@ -15,9 +15,9 @@ int NetworkData::Builder::add_node(int supply, std::string name) {
     return idx;
 }
 
-int NetworkData::Builder::add_arc(int tail, int head, int cost, int lower_cap, int upper_cap) {
+int NetworkData::Builder::add_arc(int tail, int head, int cost, int upper_cap) {
     int idx = static_cast<int>(arcs_.size());
-    arcs_.push_back({tail, head, cost, lower_cap, upper_cap});
+    arcs_.push_back({tail, head, cost, upper_cap});
     return idx;
 }
 
@@ -67,7 +67,6 @@ NetworkData NetworkData::Builder::build() const {
         data.arcs_[a].tail = arcs_[a].tail;
         data.arcs_[a].head = arcs_[a].head;
         data.arcs_[a].cost = arcs_[a].cost;
-        data.arcs_[a].lower_cap = arcs_[a].lower_cap;
         data.arcs_[a].upper_cap = arcs_[a].upper_cap;
     }
 

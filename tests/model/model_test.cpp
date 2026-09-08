@@ -262,8 +262,8 @@ TEST_CASE("NetworkModel add nodes and arcs", "[network]") {
     REQUIRE(mid == 1);
     REQUIRE(dst == 2);
 
-    int a0 = m.add_arc(src, mid, 1, 0, 5);
-    int a1 = m.add_arc(mid, dst, 1, 0, 5);
+    int a0 = m.add_arc(src, mid, 1, 5);
+    int a1 = m.add_arc(mid, dst, 1, 5);
     REQUIRE(a0 == 0);
     REQUIRE(a1 == 1);
 }
@@ -272,7 +272,7 @@ TEST_CASE("NetworkModel solve returns flow result", "[network]") {
     coso::NetworkModel m;
     int src = m.add_node(5, "src");
     int dst = m.add_node(-5, "dst");
-    m.add_arc(src, dst, 2, 0, 5);
+    m.add_arc(src, dst, 2, 5);
 
     coso::Result r = m.solve(coso::TimeLimit(1.0));
     REQUIRE(r.feasible());
@@ -536,7 +536,7 @@ TEST_CASE("Deterministic stop parity across model APIs", "[model][work_units]") 
         coso::NetworkModel m;
         int s = m.add_node(5, "s");
         int t = m.add_node(-5, "t");
-        m.add_arc(s, t, 2, 0, 5);
+        m.add_arc(s, t, 2, 5);
 
         auto r1 = m.solve(coso::TimeLimit(1.0, 0.05));
         auto r2 = m.solve(coso::TimeLimit(1.0, 0.05));
@@ -856,8 +856,8 @@ TEST_CASE("NetworkModel reads back every declaration", "[network][introspection]
     int s = m.add_node(15, "source");
     int t = m.add_node(-15, "sink");
     int mid = m.add_node();  // defaults: supply 0, empty name
-    int a = m.add_arc(s, mid, 7, 2, 20);
-    int b = m.add_arc(mid, t);  // defaults: cost 0, lower 0, upper INT_MAX
+    int a = m.add_arc(s, mid, 7, 20);
+    int b = m.add_arc(mid, t);  // defaults: cost 0, upper INT_MAX
 
     REQUIRE(m.num_nodes() == 3);
     REQUIRE(m.node(s).supply == 15);
@@ -871,12 +871,10 @@ TEST_CASE("NetworkModel reads back every declaration", "[network][introspection]
     REQUIRE(m.arc(a).tail == s);
     REQUIRE(m.arc(a).head == mid);
     REQUIRE(m.arc(a).cost == 7);
-    REQUIRE(m.arc(a).lower_cap == 2);
     REQUIRE(m.arc(a).upper_cap == 20);
     REQUIRE(m.arc(b).tail == mid);
     REQUIRE(m.arc(b).head == t);
     REQUIRE(m.arc(b).cost == 0);
-    REQUIRE(m.arc(b).lower_cap == 0);
     REQUIRE(m.arc(b).upper_cap == INT_MAX);
 }
 
