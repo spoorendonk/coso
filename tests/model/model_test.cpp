@@ -1,10 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <climits>
-#include <model/assignment_model.h>
 #include <model/lotsizing_model.h>
 #include <model/network_model.h>
 #include <model/packing_model.h>
+#include <model/rostering_model.h>
 #include <model/routing_model.h>
 #include <model/schedule_model.h>
 #include <stdexcept>
@@ -36,7 +36,7 @@ TEST_CASE("Result default-constructs to infeasible with zero cost", "[types]") {
     REQUIRE(r.unserved().empty());
     REQUIRE(r.schedule().empty());
     REQUIRE(r.makespan() == 0);
-    REQUIRE(r.assignments().empty());
+    REQUIRE(r.roster().empty());
     REQUIRE(r.unassigned().empty());
     REQUIRE(r.bins().empty());
     REQUIRE(r.num_bins() == 0);
@@ -406,32 +406,32 @@ TEST_CASE("Free function solve_jsp links", "[scheduling]") {
 }
 
 // --------------------------------------------------------------------------
-//  AssignmentModel
+//  RosteringModel
 // --------------------------------------------------------------------------
 
-TEST_CASE("AssignmentModel can be default-constructed", "[assignment]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel can be default-constructed", "[rostering]") {
+    coso::RosteringModel m;
     (void)m;
 }
 
-TEST_CASE("AssignmentModel add_shift_type and add_employee", "[assignment]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel add_shift_type and add_employee", "[rostering]") {
+    coso::RosteringModel m;
     int s = m.add_shift_type({.name = "Morning", .start_hour = 6, .end_hour = 14});
     REQUIRE(s >= 0);
     int e = m.add_employee({.name = "Alice", .skills = {"ICU"}});
     REQUIRE(e >= 0);
 }
 
-TEST_CASE("AssignmentModel planning horizon and demand", "[assignment]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel planning horizon and demand", "[rostering]") {
+    coso::RosteringModel m;
     int s = m.add_shift_type({.name = "Day"});
     m.set_horizon(7);
     m.add_demand(s, 0, {.min_employees = 2});
     m.add_demand(s, {.min_employees = 1});  // all days
 }
 
-TEST_CASE("AssignmentModel hard constraints", "[assignment]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel hard constraints", "[rostering]") {
+    coso::RosteringModel m;
     m.set_max_consecutive_shifts(5);
     m.set_min_rest_between_shifts(11);
     int s1 = m.add_shift_type({.name = "Night"});
@@ -439,8 +439,8 @@ TEST_CASE("AssignmentModel hard constraints", "[assignment]") {
     m.add_forbidden_sequence({s1, s2});
 }
 
-TEST_CASE("AssignmentModel soft constraints", "[assignment]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel soft constraints", "[rostering]") {
+    coso::RosteringModel m;
     int s = m.add_shift_type({.name = "Day"});
     int e = m.add_employee({.name = "Bob"});
     m.set_horizon(7);
@@ -448,14 +448,14 @@ TEST_CASE("AssignmentModel soft constraints", "[assignment]") {
     m.add_unavailability(e, 3);
 }
 
-TEST_CASE("AssignmentModel warm start and replanning", "[assignment]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel warm start and replanning", "[rostering]") {
+    coso::RosteringModel m;
     m.set_published_schedule({{0, 1}, {1, 0}});
     m.set_change_penalty(50);
 }
 
-TEST_CASE("AssignmentModel solve returns a Result", "[assignment]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel solve returns a Result", "[rostering]") {
+    coso::RosteringModel m;
     m.add_shift_type({.name = "Day"});
     m.add_employee({.name = "Alice"});
     m.set_horizon(7);
@@ -524,8 +524,8 @@ TEST_CASE("Deterministic stop parity across model APIs", "[model][work_units]") 
         REQUIRE(r1.work_units() == r2.work_units());
     }
 
-    SECTION("AssignmentModel") {
-        coso::AssignmentModel m;
+    SECTION("RosteringModel") {
+        coso::RosteringModel m;
         int day = m.add_shift_type({.name = "Day"});
         m.add_employee({.name = "Alice"});
         m.add_employee({.name = "Bob"});
@@ -1084,8 +1084,8 @@ TEST_CASE("ScheduleModel reads back every declaration", "[scheduling][introspect
     }
 }
 
-TEST_CASE("AssignmentModel reads back every declaration", "[assignment][introspection]") {
-    coso::AssignmentModel m;
+TEST_CASE("RosteringModel reads back every declaration", "[rostering][introspection]") {
+    coso::RosteringModel m;
 
     SECTION("a fresh model reads back empty defaults") {
         REQUIRE(m.num_shift_types() == 0);

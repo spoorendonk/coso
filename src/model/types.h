@@ -36,7 +36,7 @@ struct TimeLimit {
 /// convenience methods.  Only the relevant engine populates its section:
 ///   - routing:    routes(), unserved()
 ///   - scheduling: makespan(), schedule()
-///   - assignment: assignments(), day()
+///   - rostering:  roster(), day()
 ///   - packing:    bins(), num_bins()
 ///   - network:    flows()
 ///   - lotsizing:  production(), inventory()
@@ -87,22 +87,22 @@ struct Result {
     [[nodiscard]] auto const& schedule() const noexcept { return schedule_; }
     [[nodiscard]] int makespan() const noexcept { return makespan_; }
 
-    // -- Assignment (nurse rostering) ------------------------------------
+    // -- Rostering (nurse rostering, employee scheduling) ----------------
 
-    struct Assignment {
+    struct RosterEntry {
         int employee = -1;
         int shift = -1;
         std::string employee_name;
         std::string shift_name;
     };
-    /// Indexed by day: assignments_[day] is the list of assignments.
-    std::vector<std::vector<Assignment>> assignments_;
+    /// Indexed by day: roster_[day] is that day's roster entries.
+    std::vector<std::vector<RosterEntry>> roster_;
     std::vector<int> unassigned_;
 
-    [[nodiscard]] auto const& assignments() const noexcept { return assignments_; }
+    [[nodiscard]] auto const& roster() const noexcept { return roster_; }
     [[nodiscard]] auto const& unassigned() const noexcept { return unassigned_; }
-    /// Convenience: assignments for a given day.
-    [[nodiscard]] auto const& day(int d) const { return assignments_.at(d); }
+    /// Convenience: the roster for a given day.
+    [[nodiscard]] auto const& day(int d) const { return roster_.at(d); }
 
     // -- Packing ---------------------------------------------------------
 

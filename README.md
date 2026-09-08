@@ -60,7 +60,7 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 |---|---|
 | `RoutingModel` | CVRP, multi-dimensional CVRP, VRP with simultaneous pickup and delivery, TSP |
 | `ScheduleModel` | JSP, FJSP, RCPSP, flow shop, open shop |
-| `AssignmentModel` | Nurse rostering, employee scheduling, multi-activity scheduling |
+| `RosteringModel` | Nurse rostering, employee scheduling, multi-activity scheduling |
 | `PackingModel` | Bin packing, vector bin packing, bin packing with conflicts |
 | `NetworkModel` | Min-cost flow (single commodity) |
 | `LotSizingModel` | CLSP (capacitated lot sizing) |
@@ -90,7 +90,7 @@ benchmark run backs it. That work is [#177](../../issues/177) and the per-model 
 | **Lot sizing** | Single-level CLSP only. Constructions (lot-for-lot, Silver-Meal, part-period balancing) plus a shift/merge/split descent — there is no fix-and-optimize anywhere in the tree. A declared bill of materials is accepted and never read ([#210](../../issues/210)), and an instance whose only feasible plans build ahead of a capacity spike comes back infeasible ([#211](../../issues/211)). |
 | **Network** | Target scope is **multi-commodity flow and network design** ([#184](../../issues/184)) — neither is implemented. What exists is a single-commodity min-cost flow solver, which is not a COSO target: that problem is solved. |
 | **Scheduling** | **Construction-only** (SGS / SPT dispatch / NEH). `ScheduleModel::solve()` validates every candidate and returns feasible-but-unoptimised schedules. There is no working local search: the disjunctive-graph operators are not wired into `solve()` and carry the unsound cycle guard of [#185](../../issues/185). |
-| **Assignment** | Construction + VND. Not validated. |
+| **Rostering** | Construction + VND. Not validated. |
 
 ## Tests and coverage
 
@@ -101,7 +101,7 @@ bounded by work ([#209](../../issues/209)). It is a smoke gate: it proves the mo
 Per-variant instances arrive with the per-model milestones (M1–M6 in [#173](../../issues/173)).
 
 Benchmark executables (`benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`,
-`assignment_benchmark_test`, `packing_benchmark_test`, label `benchmark`) run against instances
+`rostering_benchmark_test`, `packing_benchmark_test`, label `benchmark`) run against instances
 fetched by `tests/data/download_benchmarks.sh`. Their results are not published until they are
 reproducible under [#177](../../issues/177).
 
@@ -109,7 +109,7 @@ reproducible under [#177](../../issues/177).
 
 One runnable C++ example per model family in `examples/canonical/`:
 `routing_example.cpp`, `network_example.cpp`, `lotsizing_example.cpp`, `schedule_example.cpp`,
-`assignment_example.cpp`, `packing_example.cpp`.
+`rostering_example.cpp`, `packing_example.cpp`.
 
 ## Build
 

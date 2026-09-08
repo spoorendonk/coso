@@ -1,1 +1,347 @@
-CLAUDE.md
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project
+
+COSO (Combinatorial Structure-aware Optimization) — two things, built in that order:
+
+1. **The Model API** — declare-then-solve, one typed model per problem class. Backend-flexible by design: the same declaration is meant to be solvable by COSO's own engine or by a plugged-in backend (PyVRP, OR-Tools CP-SAT, HiGHS, user-supplied). The plugin protocol is **not built yet** — see #176.
+2. **The COSO engine** — C++23 with Python bindings (nanobind). Exploits problem structure with domain-specific local search, construction heuristics, and metaheuristics instead of LP/MIP flattening.
+
+Direction and open work live in GitHub issues; the charter is #173. There is no roadmap file.
+
+## Current phase — modelling first
+
+**The model API is the work. The engine is not, right now.**
+
+Treat the two as separate products that happen to share a repo. What is being designed,
+reviewed and gated at the moment is what a user can *declare*: the schema, its semantics, what
+a returned `Result` must carry, and what a backend has to promise. The engine behind it is a
+reference implementation — useful for proving a declaration is well-formed and round-trips,
+not the thing being built.
+
+**The engine is broken in places, and that is intentional.** Scheduling aborts on real input,
+lot sizing ignores a declared bill of materials, routing drops most of its declarable fields.
+These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
+over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a
+reason an audit or a spec decision cannot proceed. File it, cite it, and carry on.
+
+What this changes in practice:
+
+- An engine defect is **recorded**, not repaired, unless the issue you are on asks for the repair.
+- A model feature is **not** deleted because no engine implements it. Engine capability is
+  evidence about an engine, not a verdict on the schema. See the note on `docs/models.md`'s
+  deletion rule below.
+- A test may assert a declaration is accepted and round-trips even where no engine honours it;
+  the engine-side assertion is `SKIP`-ed with its issue number.
+- "It cannot be verified because the engine is broken" is not a reason to reject a modelling
+  issue. Verify the declaration instead.
+
+## Build & Test
+
+```clean
+rm -rf build
+```
+
+```build
+cmake -B build && cmake --build build -j$(nproc)
+```
+
+```test
+ctest --test-dir build --output-on-failure -j$(nproc)
+```
+
+`pre-push` runs the blocks above, so they must not depend on anything that is
+not a build dependency. `test` is therefore C++ only: pytest is not required to
+build COSO, and a fence ending in `pytest` exits 127 wherever it is absent,
+which blocks every push. CI gates on `ctest` alone for the same reason. The
+Python suite still runs — `pre-commit` runs it, guarded, whenever a `.py` file
+is staged, and you can run it directly.
+
+Run a single C++ test executable:
+```bash
+./build/tests/route_test                          # run one test binary
+./build/tests/route_test "test name substring"    # run specific test case
+```
+
+Python tests (needs `pip install -e '.[dev]'`; the bindings are built by the
+default `cmake -B build` above):
+```bash
+pytest python/tests -q
+pytest python/tests/test_routing.py::test_name -q
+```
+Without the bindings the suite skips itself and says why, rather than failing
+collection — see `python/tests/conftest.py`.
+
+The Python bindings build by default wherever the Python development headers are
+present, so `python/bindings.cpp` is compiled and linted with everything else.
+Without those headers CMake says so and carries on without them. To force it
+either way:
+```bash
+cmake -B build -DCOSO_BUILD_PYTHON=OFF && cmake --build build -j$(nproc)
+```
+
+Build with TBB (parallel solving):
+```bash
+cmake -B build -DCOSO_USE_TBB=ON && cmake --build build -j$(nproc)
+```
+
+`cmake -B build` compiles through `ccache` wherever it is installed, and says
+so; without it the build is unchanged. It is what makes the `clean` fence cheap
+— rebuilding all 270 translation units after `rm -rf build` takes 5s from a warm
+cache against 42s without one. 116 of those are Catch2's and nanobind's and
+never change at all; the rest are recompiled only when their own source does.
+The dependencies are fetched `GIT_SHALLOW`, so re-cloning them costs ~5s of the
+~6s configure. To build without the cache, or to swap in
+another one:
+```bash
+cmake -B build -DCOSO_USE_CCACHE=OFF
+cmake -B build -DCMAKE_CXX_COMPILER_LAUNCHER=sccache   # respected as given
+```
+The launcher does not reach `compile_commands.json` — CMake strips it — so
+clang-tidy and the gates that call it see the same compile lines either way.
+
+## Architecture
+
+`docs/models.md` is the model spec: what can be declared, and what each engine does with it.
+Every cell in it carries the evidence its value requires — a cell without that evidence is a
+review finding.
+
+Its **deletion rule** was written when the engine was the product: it deleted a declarable
+feature no engine supported. That is suspended for this phase — see **Current phase**. A
+feature with no supporting engine stays declarable and is recorded as such; the engine columns
+say what each engine does, and nothing about whether the schema should carry it. Deletions now
+need a *modelling* reason: the feature is unsayable, redundant, or belongs to another
+archetype. The three deletions already made under the old rule (#201's network resource API,
+#204's `minimize_bins_`) each also have a modelling reason, so they stand.
+
+### Layered Design
+
+```
+Model APIs (public) → Engine (domain-specific) → Search (generic metaheuristics)
+```
+
+1. **Model layer** (`src/model/`): Six typed APIs — `RoutingModel`, `NetworkModel`, `LotSizingModel`, `ScheduleModel`, `RosteringModel`, `PackingModel`. Each compiles user input into an immutable engine-specific data structure. Public headers are in `src/model/*.h`.
+
+2. **Engine layer** (`src/routing/`, `src/scheduling/`, `src/rostering/`, `src/packing/`, `src/network/`, `src/lotsizing/`): Domain-specific solvers. Each engine has its own compiled data representation, solution type, construction heuristic, and local search operators.
+
+3. **Search layer** (`src/search/`): Problem-agnostic metaheuristics — ILS, GA/HGS, GLS, portfolio solver. These wrap engine-specific operators and solutions. Portfolio runs ILS (fast convergence) then GA (deeper exploration).
+
+### Routing Engine (most mature)
+
+The routing engine is the reference architecture for other engines:
+
+- **ProblemData** (`src/routing/problem_data.h`): Immutable compiled instance. Struct-of-arrays layout for cache efficiency. Precomputed granular neighbor lists (k-NN). Node numbering: depots `0..n_d-1`, clients `n_d..n_d+n_c-1`.
+- **Resources** (`src/routing/resources/`): Pluggable constraint modules (load, duration, distance, breaks, depot, precedence, sync, compartment, skill, type incompatibility). Constraints are resources attached to routes, not embedded in the solution.
+- **Solution/Route** (`src/routing/solution.h`, `route.h`): Solution = all routes + unassigned clients. Route = single vehicle's client sequence.
+- **Local search** (`src/routing/local_search.h`): First-improvement descent over granular neighborhoods.
+- **Operators** (`src/routing/operators/`): Exchange, swap-star, route-split, insert-optional, pair operators, relocate-with-depot.
+
+### Key Design Patterns
+
+- **Compiled instance**: Models compile to immutable `*Data` structs (e.g., `ProblemData`, `ScheduleData`). This enables caching and efficient repeated solving.
+- **Resource-based constraints**: Constraints are pluggable resource objects, not hardcoded into solutions.
+- **Deterministic work counting** (`src/common/work_units.h`): Cross-machine performance comparison via work units instead of wall time. The `deterministic_work` E2E check uses it; there is no perf-regression gate tooling in the repo.
+- **Warm start + pinning**: `set_initial_routes()` and `pin()` on RoutingModel for re-optimization.
+
+### Python Bindings
+
+- `python/bindings.cpp`: nanobind wrappings for types and models.
+- `python/coso/__init__.py`: Re-exports. `from coso import RoutingModel, solve_instance`.
+- Currently bound: `RoutingModel`, `NetworkModel`, `LotSizingModel` (not all six models yet).
+
+### Testing Structure
+
+- **C++ tests** (`tests/`): Catch2 v3. One executable per module (e.g., `route_test`, `solution_test`, `model_test`). Test executables are defined in `tests/CMakeLists.txt`.
+- **Python tests** (`python/tests/`): pytest. `test_routing.py` for routing + shared types, `test_models.py` for other models.
+- **E2E tests**: the `e2e_smoke` ctest target runs `tests/e2e/run_pack.sh` over `examples/e2e/scenarios/smoke/*.json` — **six scenarios, one per model type**. `e2e_runner` builds a hardcoded toy instance per model type (`examples/e2e/e2e_runner.cpp`, `solve_once`); scenario JSON only supplies id, time limit, and which checks to assert. This is a smoke gate, not variant or benchmark coverage — per-variant instances land in the M1–M6 milestones.
+  - `COSO_E2E_APPLY_QUARANTINE=1` makes `run_pack.sh` skip scenario ids listed in `tests/e2e/quarantine.csv`.
+  - A scenario asserting `deterministic_work` must set `"seconds": 0` and `work_units > 0`. `StopCriterion` ORs its limits, so any wall clock lets a loaded machine stop the two solves at different iterations — the flake of #209. `e2e_runner` rejects such a scenario at parse time, and `tests/e2e/fixtures/` carries one fixture per bad spelling: a clock with a work budget, a clock without one, and neither bound at all. That makes `e2e_smoke` runtime load-proportional, so it carries an explicit ctest `TIMEOUT` rather than the 1500s default.
+- **Benchmark tests**: `benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`, `assignment_benchmark_test`, `packing_benchmark_test` (label `benchmark`). Instances come from `tests/data/download_benchmarks.sh`. **No results are published anywhere until a verified run exists** — see #177.
+
+### Engine state
+
+Not the current product — see **Current phase**. This table exists so a modelling decision can
+cite what an engine actually does, not so the gaps read as a work queue. No numbers here until a
+verified benchmark run backs them (#177).
+
+| Engine | Status |
+|--------|--------|
+| Routing | Most mature; validated against standard CVRP instances |
+| Network | Target scope is multi-commodity flow + network design (#184) — neither implemented. The existing single-commodity min-cost flow solver is not a COSO target: that problem is solved |
+| Packing | Functional — FFD + move/swap local search (1-D, vector, conflicts) |
+| Lot sizing | Single-level CLSP. Lot-for-lot / Silver-Meal / part-period balancing plus a shift/merge/split descent; there is no fix-and-optimize in the tree. `add_bom()` is accepted and never read, so MLCLSP silently solves as CLSP (#210), and no construction respects capacity, so an instance needing a pre-build returns `feasible() == false` (#211) |
+| Scheduling | **Broken by acceptance, not by accident.** `ScheduleModel::solve()` calls `construct_neh()`, which aborts the process on any instance with two or more jobs (#188), so nothing that solves can be asserted here; the `e2e_smoke` scenario passes only because it uses a single job. The *declaration* is still auditable and is what #202 covers. Also: `construct_dispatch()` indexes `machine_free[-1]` for an operation no machine can run (#191), the operators and perturbations can still build cyclic disjunctive graphs (#189), and the local search in `src/scheduling/schedule_operators.cpp` is not wired into `solve()` at all and carries the unsound cycle guard of #185. Every test covering these is `SKIP`-ed, each naming its issue |
+| Assignment | Construction + VND; not validated |
+
+## Gates
+
+Three git hooks live in `.githooks/`, tracked in the repo. `cmake -B build` points
+`core.hooksPath` at that directory, so **configuring the build is what turns the
+gates on** — a fresh clone has them inert until then.
+
+| Hook | Runs | On failure |
+|---|---|---|
+| `commit-msg` | Conventional Commits format, subject ≤ 72 chars | blocks |
+| `pre-commit` | Formats and auto-fixes staged files, re-stages, builds, then runs the tests for the languages that changed | blocks on build or test failure |
+| `pre-push` | Build + full suite, then clang-tidy, shellcheck, ruff complexity, mypy | blocks on build/test failure; lint findings warn only |
+
+Both hooks count `CMakeLists.txt` as code, not as the prose its extension
+suggests. `pre-commit` triggers the C++ build and tests on it even when no
+`.cpp` is staged, and `pre-push`'s docs-only skip does not apply to it — a
+change that can break `cmake -B build` for everyone is the last one that should
+push ungated.
+
+`pre-push` takes its build and test commands from the fenced blocks in
+**## Build & Test** above, so that section is executable configuration, not just
+documentation. Renaming a fence or moving the heading makes the hook block and
+say which fence it could not find — including on a docs-only push, since
+CLAUDE.md is itself the file that can break them. The `sed` range that reads it
+ends at the next `## ` heading, so **## Build & Test** must stay followed by
+another level-2 heading.
+
+The `clean` fence is opt-in: `COSO_PREPUSH_CLEAN=1 git push` discards `build/`
+and rebuilds from scratch. By default `pre-push` builds incrementally, which
+gates the same code without spending minutes per push or deleting the directory
+`pre-commit` builds in.
+
+`pre-commit` will not re-stage a file that already had unstaged changes — `git
+add` takes the whole file, so re-adding one would commit hunks you deliberately
+kept back. Such files are formatted, left unstaged, and named in the output.
+
+Tools resolve from `.venv/bin` first, then `PATH` (`.githooks/resolve-tools.sh`).
+A tool that is missing everywhere is reported, never skipped in silence.
+
+**clang 18 or newer**, so the distro's own package works: Ubuntu 24.04 ships
+clang 18, 26.04 ships 21. Everything that can *block* is version-stable, and was
+measured rather than assumed — clang-format 18.1.8 through 23.1.0 all leave the
+tree byte-identical, and clang-tidy 18 reports nothing for the four checks
+`pre-commit` auto-fixes or for the naming rules. `pre-push`'s clang-tidy list is
+advisory and currently empty; because the check families are wildcards, a newer
+clang-tidy knows more checks and may add to it, which means a longer or shorter
+advisory list, never a different verdict.
+
+clang-tidy runs clean today, at 0 findings over all 155 translation units, and
+should stay that way — a list people scroll past is worth no more than no check
+at all. Getting there needed two things beyond tuning: the vendored dependencies
+are fetched `SYSTEM` so their headers are not analysed, and the 39 checks the
+codebase does not currently satisfy are switched off in `.clang-tidy` and
+tracked in #190 with counts and a re-enable order. The other 166 stay on. When a
+new finding appears, fix it or add the check to #190 — do not let the list grow.
+
+There are no Claude Code hooks. Two rules they used to enforce are now
+conventions, and still expected:
+
+- **Branch from `main`, never from another feature branch.** Run
+  `git checkout main && git pull` first.
+- **Use the project venv explicitly** (`.venv/bin/python`, `.venv/bin/pytest`)
+  rather than bare `python`/`pip`/`pytest`.
+
+A `PostToolUse` formatter is not possible: the hook cannot see which file was
+edited, so it can never format anything.
+
+## Workflow
+
+Trunk-based, linear history on `main`. Commit directly to `main` and push once
+the hooks pass. Feature branches are optional, short-lived, and always cut from
+`main`; rebase or squash to keep `main` linear.
+
+Commit messages follow Conventional Commits — `type: description` or
+`type(scope): description`, subject ≤ 72 chars, explaining **why** rather than
+what. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `perf`, `chore`,
+`build`, `ci`.
+
+`/review` runs a multi-agent review of the diff against `main`. It is available
+only where `.claude/` exists, which is gitignored — so a fresh clone or worktree
+does not have it, and nothing gates on it having run.
+
+When Claude gets something wrong, fix this file in the same commit. That is the
+feedback loop.
+
+## Code Standards
+
+### C++
+
+- Target C++23. Use modern features where they earn their place (concepts,
+  ranges, `constexpr`). `std::expected` is not used anywhere yet.
+- Style is enforced by `.clang-format` (Google base, 100 cols, 4-space indent)
+  and `.clang-tidy`. Do not hand-fix formatting — `pre-commit` rewrites it.
+- `SortIncludes` and `IncludeBlocks: Regroup` are on, so a reformat reorders
+  includes and can expose a header that leaned on a transitive include.
+- `#pragma once` for include guards. Minimize includes in headers;
+  forward-declare where possible.
+
+Naming, as `.clang-tidy` enforces it:
+
+| Kind | Form | Example |
+|---|---|---|
+| Types (class/struct/enum) | `CamelCase` | `ProblemData` |
+| Functions and methods | `lower_case` | `add_client` |
+| Variables and parameters | `lower_case` | `vehicle_type` |
+| Private/protected members | `lower_case_` | `num_machines_` |
+| Non-public helper methods | `lower_case` or `lower_case_` | `update_` |
+| Compile-time constants | `kCamelCase` | `kTickToUnit` |
+| Namespaces | `lower_case` | `coso` |
+
+Two deliberate exceptions are encoded in `.clang-tidy`: enumerators that mirror
+an external spec or are standard acronyms stay upper-case (`EUC_2D`,
+`FULL_MATRIX`, `SPT`), and a bare uppercase letter is OR notation from the
+literature (`P` products, `T` periods, `D` dimensions).
+
+### CMake
+
+- `CMAKE_EXPORT_COMPILE_COMMANDS` is on; clang-tidy needs it.
+- Dependencies come in via `FetchContent`.
+- Sources are listed in the root `CMakeLists.txt`; only `tests/` and `python/`
+  have their own.
+
+### Testing (Catch2 v3)
+
+- Test files: `<module>_test.cpp` under `tests/`, one executable per module,
+  registered in `tests/CMakeLists.txt`.
+- `TEST_CASE("descriptive sentence", "[tag][tag]")`, with `SECTION` for variants.
+- A test for known-broken code is `SKIP`-ed with the issue number in the message,
+  never deleted and never left failing.
+
+### Python
+
+- Style is enforced by `ruff` (format + lint) and `mypy --strict`, both
+  configured in `pyproject.toml`. There are no quiet defaults — `pre-commit`
+  passes the flags it needs.
+- Full type annotations everywhere; built-in generics (`list[int]`) and `|`
+  unions.
+- Test files: `test_<module>.py` in `python/tests/`, with shared fixtures in
+  `conftest.py`.
+- Dependencies pin `>=` lower bounds in `pyproject.toml`.
+
+### nanobind Bindings
+
+- All bindings live in the single file `python/bindings.cpp`; `python/coso/__init__.py`
+  re-exports them.
+- C++ methods are already `snake_case`, so they bind through unchanged.
+- Default to nanobind-managed ownership. Use `nb::rv_policy::reference` only when
+  C++ keeps ownership and guarantees the object outlives Python's reference; never
+  return a raw pointer without an explicit lifetime annotation.
+- Test bindings from Python with pytest, not from C++ — round-trip where possible.
+
+## Working Style
+
+- Don't over-engineer. Three similar lines beat a premature abstraction. Avoid
+  abstractions, features, and error handling beyond what the task needs.
+- Don't add unrequested features, and don't refactor code adjacent to a fix.
+- Comment only where the logic isn't self-evident.
+- Performance matters; profile before optimising, and don't trade it away for
+  tidiness.
+- Read a file before modifying it. Verify an API exists before calling it.
+- Say so when you change approach — don't quietly switch strategies.
+- Follow an agreed plan; if it should change, stop and discuss rather than
+  diverging silently. No TODO placeholders or stubs unless asked.
+- When implementing from a paper or reference implementation, match it exactly.
+  No early exits, iteration caps, or shortcuts that change behaviour unless
+  asked for them.
+- The model API must never lie. A declaration is accepted and honoured, or rejected with a
+  clear error, or documented as accepted-and-dropped with its issue number — silently
+  ignoring what a user declared is the one defect that still blocks. This is where the old
+  "disable it or delete it" rule now applies, and only here.
+- The engine may ship broken (see **Current phase**). Record it, cite the issue, move on.

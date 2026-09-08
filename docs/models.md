@@ -30,7 +30,7 @@ The six per-model sections are filled by the audits (#200–#205), each in the t
    introspectable, and an engine must honour or reject it. A prior solution with no semantic
    effect is a hint: it travels on the `solve()` call, not in the model, and an engine may
    ignore it. Today `RoutingModel::set_initial_routes()` plays both roles;
-   `ScheduleModel::set_initial_schedule()` is a hint; `AssignmentModel::set_published_schedule()`
+   `ScheduleModel::set_initial_schedule()` is a hint; `RosteringModel::set_published_schedule()`
    + `set_change_penalty()` is a declaration. Each audit applies this to its model; #176
    introspects reference solutions and pins and carries hints on the call.
 5. **Cuts land in E2; additions are additive.** #176 builds introspection on the schema
@@ -43,7 +43,7 @@ The six per-model sections are filled by the audits (#200–#205), each in the t
 **Model axis**, per feature: `declarable` (the API accepts it) | `absent` (it cannot be said).
 
 **Engine axis**, one column per engine in #173's map for that model — routing: native, PyVRP;
-scheduling and assignment: native, CP-SAT; packing and lot sizing: native, HiGHS; network:
+scheduling and rostering: native, CP-SAT; packing and lot sizing: native, HiGHS; network:
 native, OR-Tools min-cost flow, later mcfcg / HiGHS. Cell values and their evidence:
 
 | cell | meaning | evidence |
@@ -105,7 +105,7 @@ Every model section has six parts, in this order:
 | knapsack | `cut` — HiGHS solves it exactly, nothing structure-aware is planned, and the objective is not bin minimisation. The packing audit records it | preamble |
 | TSP and variants | expressible now: `RoutingModel`, one vehicle, no capacity (TSPTW and PC-TSP likewise). No archetype. Says nothing about engine competitiveness — that is #178's | routing audit adds the tests |
 | cutting stock (1-D) | deferred to the packing audit: expected `extend` via item multiplicity, since BPPLIB carries CSP instances and #182's arc-flow formulation is the CSP formulation | packing audit |
-| crew rostering | deferred to the assignment audit: it is what `AssignmentModel` already is, modulo "shift" vs "duty" — pending that audit's archetype ruling | assignment audit |
+| crew rostering | deferred to the rostering audit: it is what `RosteringModel` already is, modulo "shift" vs "duty" — pending that audit's archetype ruling | rostering audit |
 
 ## Network
 
@@ -529,9 +529,9 @@ Two findings:
    variable-sized test above therefore asserts `cost()` and the bin count, and identifies the
    large bin only indirectly — the size-8 item fits no other type. Filed as #207; it belongs
    with #176's `Result` contract, next to #206.
-2. **`Result::unassigned_` reads as assignment-only.** In `src/model/types.h` the field sits in
-   the "Assignment (nurse rostering)" block and carries no comment of its own, and the class
-   header comment lists `unassigned()` under neither assignment nor packing. But
+2. **`Result::unassigned_` reads as rostering-only.** In `src/model/types.h` the field sits in
+   the "Rostering (nurse rostering, employee scheduling)" block and carries no comment of its
+   own, and the class header comment lists `unassigned()` under neither rostering nor packing. But
    `PackingModel::solve()` populates it, and packing has no other channel for unpacked items —
    [c]'s two unassigned items arrive there. The placement is the documentation, and it is
    wrong. Noted on #176.
@@ -616,7 +616,7 @@ packing, K2.
 |---|---|
 | #207 packing `Result` does not say which bin type each returned bin is | filed by this audit. It is what stops the heterogeneous-bin cells being evidenced on the returned solution rather than on `cost()`. Belongs with #176's `Result` contract |
 | #208 `ItemParams` has no multiplicity, so cutting stock is one `add_item` per unit of demand | filed by this audit as the cutting-stock `extend`; lands in #182 |
-| `Result::unassigned_` documented as assignment-only, populated by packing | noted on #176; a comment fix on a shared field, not a schema change |
+| `Result::unassigned_` documented as rostering-only, populated by packing | noted on #176; a comment fix on a shared field, not a schema change |
 
 Two findings with no issue of their own, both for #182:
 
@@ -1091,7 +1091,7 @@ the stub file is `PiecewiseLinearFunction.breakpoints`.
 **Reachability from `solve()`, re-run at `26046c6`.** A declaration counts only if code that consumes it is reachable from `solve()`. Reachability is
 derived from includers, not assumed. #200's second loop matched **basenames**, so
 `src/routing/overconstrained.h` was credited with an includer it does not have —
-`src/assignment/overconstrained.cpp:1` includes `assignment/overconstrained.h`. Both loops below
+`src/rostering/overconstrained.cpp:1` includes `rostering/overconstrained.h`. Both loops below
 match the **path** an includer would have to write:
 
 ```sh
@@ -1619,7 +1619,7 @@ ignore it and still be correct.
 The ruling: `set_initial_routes()` + `pin()` stay in the model as one declaration, the
 reference solution; the hint-only role moves to the `solve()` call. **The API change is #176's
 and is not made here** — this section records the split and the reason. Two pieces of evidence
-that it is the right cut: `AssignmentModel::set_published_schedule()` + `set_change_penalty()`
+that it is the right cut: `RosteringModel::set_published_schedule()` + `set_change_penalty()`
 is already the declaration form of the same idea, and PyVRP puts the hint exactly where this
 ruling puts it — `Model.solve(stop, …, initial_solution: Solution | None = None)` is a
 parameter of the call, not of `ProblemData`, and PyVRP has no pinning at all. `src/search/

@@ -122,9 +122,9 @@ archetype. The three deletions already made under the old rule (#201's network r
 Model APIs (public) → Engine (domain-specific) → Search (generic metaheuristics)
 ```
 
-1. **Model layer** (`src/model/`): Six typed APIs — `RoutingModel`, `NetworkModel`, `LotSizingModel`, `ScheduleModel`, `AssignmentModel`, `PackingModel`. Each compiles user input into an immutable engine-specific data structure. Public headers are in `src/model/*.h`.
+1. **Model layer** (`src/model/`): Six typed APIs — `RoutingModel`, `NetworkModel`, `LotSizingModel`, `ScheduleModel`, `RosteringModel`, `PackingModel`. Each compiles user input into an immutable engine-specific data structure. Public headers are in `src/model/*.h`.
 
-2. **Engine layer** (`src/routing/`, `src/scheduling/`, `src/assignment/`, `src/packing/`, `src/network/`, `src/lotsizing/`): Domain-specific solvers. Each engine has its own compiled data representation, solution type, construction heuristic, and local search operators.
+2. **Engine layer** (`src/routing/`, `src/scheduling/`, `src/rostering/`, `src/packing/`, `src/network/`, `src/lotsizing/`): Domain-specific solvers. Each engine has its own compiled data representation, solution type, construction heuristic, and local search operators.
 
 3. **Search layer** (`src/search/`): Problem-agnostic metaheuristics — ILS, GA/HGS, GLS, portfolio solver. These wrap engine-specific operators and solutions. Portfolio runs ILS (fast convergence) then GA (deeper exploration).
 
@@ -158,7 +158,7 @@ The routing engine is the reference architecture for other engines:
 - **E2E tests**: the `e2e_smoke` ctest target runs `tests/e2e/run_pack.sh` over `examples/e2e/scenarios/smoke/*.json` — **six scenarios, one per model type**. `e2e_runner` builds a hardcoded toy instance per model type (`examples/e2e/e2e_runner.cpp`, `solve_once`); scenario JSON only supplies id, time limit, and which checks to assert. This is a smoke gate, not variant or benchmark coverage — per-variant instances land in the M1–M6 milestones.
   - `COSO_E2E_APPLY_QUARANTINE=1` makes `run_pack.sh` skip scenario ids listed in `tests/e2e/quarantine.csv`.
   - A scenario asserting `deterministic_work` must set `"seconds": 0` and `work_units > 0`. `StopCriterion` ORs its limits, so any wall clock lets a loaded machine stop the two solves at different iterations — the flake of #209. `e2e_runner` rejects such a scenario at parse time, and `tests/e2e/fixtures/` carries one fixture per bad spelling: a clock with a work budget, a clock without one, and neither bound at all. That makes `e2e_smoke` runtime load-proportional, so it carries an explicit ctest `TIMEOUT` rather than the 1500s default.
-- **Benchmark tests**: `benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`, `assignment_benchmark_test`, `packing_benchmark_test` (label `benchmark`). Instances come from `tests/data/download_benchmarks.sh`. **No results are published anywhere until a verified run exists** — see #177.
+- **Benchmark tests**: `benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`, `rostering_benchmark_test`, `packing_benchmark_test` (label `benchmark`). Instances come from `tests/data/download_benchmarks.sh`. **No results are published anywhere until a verified run exists** — see #177.
 
 ### Engine state
 
@@ -173,7 +173,7 @@ verified benchmark run backs them (#177).
 | Packing | Functional — FFD + move/swap local search (1-D, vector, conflicts) |
 | Lot sizing | Single-level CLSP. Lot-for-lot / Silver-Meal / part-period balancing plus a shift/merge/split descent; there is no fix-and-optimize in the tree. `add_bom()` is accepted and never read, so MLCLSP silently solves as CLSP (#210), and no construction respects capacity, so an instance needing a pre-build returns `feasible() == false` (#211) |
 | Scheduling | **Broken by acceptance, not by accident.** `ScheduleModel::solve()` calls `construct_neh()`, which aborts the process on any instance with two or more jobs (#188), so nothing that solves can be asserted here; the `e2e_smoke` scenario passes only because it uses a single job. The *declaration* is still auditable and is what #202 covers. Also: `construct_dispatch()` indexes `machine_free[-1]` for an operation no machine can run (#191), the operators and perturbations can still build cyclic disjunctive graphs (#189), and the local search in `src/scheduling/schedule_operators.cpp` is not wired into `solve()` at all and carries the unsound cycle guard of #185. Every test covering these is `SKIP`-ed, each naming its issue |
-| Assignment | Construction + VND; not validated |
+| Rostering | Construction + VND; not validated |
 
 ## Gates
 

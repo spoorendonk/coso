@@ -699,49 +699,49 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment model tests                                                      #
+#  Rostering model tests                                                      #
 # --------------------------------------------------------------------------- #
 
-add_executable(assignment_model_test assignment/assignment_model_test.cpp)
-target_link_libraries(assignment_model_test PRIVATE coso Catch2::Catch2WithMain)
+add_executable(rostering_model_test rostering/rostering_model_test.cpp)
+target_link_libraries(rostering_model_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
-    catch_discover_tests(assignment_model_test)
+    catch_discover_tests(rostering_model_test)
 else()
-    add_test(NAME assignment_model_test COMMAND assignment_model_test)
+    add_test(NAME rostering_model_test COMMAND rostering_model_test)
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment solution + cost evaluator tests                                  #
+#  Rostering solution + cost evaluator tests                                  #
 # --------------------------------------------------------------------------- #
 
-add_executable(assignment_solution_test assignment/assignment_solution_test.cpp)
-target_link_libraries(assignment_solution_test PRIVATE coso Catch2::Catch2WithMain)
+add_executable(rostering_solution_test rostering/rostering_solution_test.cpp)
+target_link_libraries(rostering_solution_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
-    catch_discover_tests(assignment_solution_test)
+    catch_discover_tests(rostering_solution_test)
 else()
-    add_test(NAME assignment_solution_test COMMAND assignment_solution_test)
+    add_test(NAME rostering_solution_test COMMAND rostering_solution_test)
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment operator tests                                                   #
+#  Rostering operator tests                                                   #
 # --------------------------------------------------------------------------- #
 
-add_executable(assignment_operators_test assignment/assignment_operators_test.cpp)
-target_link_libraries(assignment_operators_test PRIVATE coso Catch2::Catch2WithMain)
+add_executable(rostering_operators_test rostering/rostering_operators_test.cpp)
+target_link_libraries(rostering_operators_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
-    catch_discover_tests(assignment_operators_test)
+    catch_discover_tests(rostering_operators_test)
 else()
-    add_test(NAME assignment_operators_test COMMAND assignment_operators_test)
+    add_test(NAME rostering_operators_test COMMAND rostering_operators_test)
 endif()
 
 # --------------------------------------------------------------------------- #
 #  Pillar operator tests                                                       #
 # --------------------------------------------------------------------------- #
 
-add_executable(pillar_operators_test assignment/pillar_operators_test.cpp)
+add_executable(pillar_operators_test rostering/pillar_operators_test.cpp)
 target_link_libraries(pillar_operators_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
@@ -751,36 +751,36 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment construction heuristic tests                                     #
+#  Rostering construction heuristic tests                                     #
 # --------------------------------------------------------------------------- #
 
-add_executable(assignment_construction_test assignment/construction_test.cpp)
-target_link_libraries(assignment_construction_test PRIVATE coso Catch2::Catch2WithMain)
+add_executable(rostering_construction_test rostering/construction_test.cpp)
+target_link_libraries(rostering_construction_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
-    catch_discover_tests(assignment_construction_test)
+    catch_discover_tests(rostering_construction_test)
 else()
-    add_test(NAME assignment_construction_test COMMAND assignment_construction_test)
+    add_test(NAME rostering_construction_test COMMAND rostering_construction_test)
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment parser tests                                                     #
+#  Rostering parser tests                                                     #
 # --------------------------------------------------------------------------- #
 
-add_executable(assignment_parser_test assignment/parser_test.cpp)
-target_link_libraries(assignment_parser_test PRIVATE coso Catch2::Catch2WithMain)
+add_executable(rostering_parser_test rostering/parser_test.cpp)
+target_link_libraries(rostering_parser_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
-    catch_discover_tests(assignment_parser_test)
+    catch_discover_tests(rostering_parser_test)
 else()
-    add_test(NAME assignment_parser_test COMMAND assignment_parser_test)
+    add_test(NAME rostering_parser_test COMMAND rostering_parser_test)
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment constraint framework tests                                       #
+#  Rostering constraint framework tests                                       #
 # --------------------------------------------------------------------------- #
 
-add_executable(constraint_test assignment/constraint_test.cpp)
+add_executable(constraint_test rostering/constraint_test.cpp)
 target_link_libraries(constraint_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
@@ -790,10 +790,10 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment CP filter tests                                                  #
+#  Rostering CP filter tests                                                  #
 # --------------------------------------------------------------------------- #
 
-add_executable(cp_filter_test assignment/cp_filter_test.cpp)
+add_executable(cp_filter_test rostering/cp_filter_test.cpp)
 target_link_libraries(cp_filter_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
@@ -806,7 +806,7 @@ endif()
 #  Automaton constraint tests                                                  #
 # --------------------------------------------------------------------------- #
 
-add_executable(automaton_test assignment/automaton_test.cpp)
+add_executable(automaton_test rostering/automaton_test.cpp)
 target_link_libraries(automaton_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
@@ -816,37 +816,37 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment overconstrained handling tests                                   #
+#  Rostering overconstrained handling tests                                   #
 # --------------------------------------------------------------------------- #
 
-add_executable(assignment_overconstrained_test assignment/overconstrained_test.cpp)
-target_link_libraries(assignment_overconstrained_test PRIVATE coso Catch2::Catch2WithMain)
+add_executable(rostering_overconstrained_test rostering/overconstrained_test.cpp)
+target_link_libraries(rostering_overconstrained_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)
-    catch_discover_tests(assignment_overconstrained_test)
+    catch_discover_tests(rostering_overconstrained_test)
 else()
-    add_test(NAME assignment_overconstrained_test COMMAND assignment_overconstrained_test)
+    add_test(NAME rostering_overconstrained_test COMMAND rostering_overconstrained_test)
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Assignment benchmark tests (require downloaded NRP instances)               #
+#  Rostering benchmark tests (require downloaded NRP instances)               #
 # --------------------------------------------------------------------------- #
 
-add_executable(assignment_benchmark_test assignment/assignment_benchmark_test.cpp)
-target_link_libraries(assignment_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
+add_executable(rostering_benchmark_test rostering/rostering_benchmark_test.cpp)
+target_link_libraries(rostering_benchmark_test PRIVATE coso Catch2::Catch2WithMain)
 
-add_test(NAME assignment_benchmark_test COMMAND assignment_benchmark_test)
-set_tests_properties(assignment_benchmark_test PROPERTIES
+add_test(NAME rostering_benchmark_test COMMAND rostering_benchmark_test)
+set_tests_properties(rostering_benchmark_test PROPERTIES
     ENVIRONMENT "COSO_DATA_DIR=${CMAKE_CURRENT_SOURCE_DIR}/data"
     SKIP_RETURN_CODE 4
     LABELS "benchmark"
 )
 
 # --------------------------------------------------------------------------- #
-#  Assignment replanning tests                                                 #
+#  Rostering replanning tests                                                 #
 # --------------------------------------------------------------------------- #
 
-add_executable(replanning_test assignment/replanning_test.cpp)
+add_executable(replanning_test rostering/replanning_test.cpp)
 target_link_libraries(replanning_test PRIVATE coso Catch2::Catch2WithMain)
 
 if(COMMAND catch_discover_tests)

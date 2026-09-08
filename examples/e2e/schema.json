@@ -22,7 +22,7 @@
         "network",
         "lotsizing",
         "schedule",
-        "assignment",
+        "rostering",
         "packing"
       ]
     },

@@ -137,7 +137,7 @@ add_library(coso STATIC
     src/model/network_model.cpp
     src/model/lotsizing_model.cpp
     src/model/schedule_model.cpp
-    src/model/assignment_model.cpp
+    src/model/rostering_model.cpp
     src/model/packing_model.cpp
     src/model/instance_reader.cpp
     src/routing/problem_data.cpp
@@ -169,12 +169,12 @@ add_library(coso STATIC
     src/packing/packing_operators.cpp
     src/packing/bin_capacity.cpp
     src/routing/overconstrained.cpp
-    src/assignment/overconstrained.cpp
-    src/assignment/construction.cpp
-    src/assignment/replanning.cpp
-    src/assignment/parsers.cpp
-    src/assignment/constraints/constraint.cpp
-    src/assignment/constraints/automaton.cpp
+    src/rostering/overconstrained.cpp
+    src/rostering/construction.cpp
+    src/rostering/replanning.cpp
+    src/rostering/parsers.cpp
+    src/rostering/constraints/constraint.cpp
+    src/rostering/constraints/automaton.cpp
     src/scheduling/parsers.cpp
     src/scheduling/schedule_data.cpp
     src/scheduling/construction.cpp
@@ -248,8 +248,8 @@ target_link_libraries(canonical_lotsizing_example PRIVATE coso)
 add_executable(canonical_schedule_example examples/canonical/schedule_example.cpp)
 target_link_libraries(canonical_schedule_example PRIVATE coso)
 
-add_executable(canonical_assignment_example examples/canonical/assignment_example.cpp)
-target_link_libraries(canonical_assignment_example PRIVATE coso)
+add_executable(canonical_rostering_example examples/canonical/rostering_example.cpp)
+target_link_libraries(canonical_rostering_example PRIVATE coso)
 
 add_executable(canonical_packing_example examples/canonical/packing_example.cpp)
 target_link_libraries(canonical_packing_example PRIVATE coso)

@@ -1,8 +1,8 @@
 #include "checks.h"
-#include "model/assignment_model.h"
 #include "model/lotsizing_model.h"
 #include "model/network_model.h"
 #include "model/packing_model.h"
+#include "model/rostering_model.h"
 #include "model/routing_model.h"
 #include "model/schedule_model.h"
 
@@ -151,8 +151,8 @@ coso::Result solve_once(Scenario const& s) {
         return m.solve(tl);
     }
 
-    if (s.model == "assignment") {
-        coso::AssignmentModel m;
+    if (s.model == "rostering") {
+        coso::RosteringModel m;
         int day = m.add_shift_type({.name = "Day"});
         m.add_employee({.name = "Alice"});
         m.add_employee({.name = "Bob"});
