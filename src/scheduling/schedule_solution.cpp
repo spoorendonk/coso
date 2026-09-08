@@ -88,26 +88,12 @@ int ScheduleSolution::total_weighted_tardiness() const {
     return twt;
 }
 
-int ScheduleSolution::total_flow_time() const {
-    int tft = 0;
-    for (int j = 0; j < data_.num_jobs(); ++j) {
-        int cj = job_completion_time(j);
-        if (cj < 0) {
-            continue;
-        }
-        tft += cj;
-    }
-    return tft;
-}
-
 int ScheduleSolution::objective() const {
     switch (data_.objective()) {
         case ScheduleObjective::Makespan:
             return makespan();
         case ScheduleObjective::TotalWeightedTardiness:
             return total_weighted_tardiness();
-        case ScheduleObjective::TotalFlowTime:
-            return total_flow_time();
     }
     return makespan();  // unreachable, but silence warnings
 }
@@ -118,10 +104,6 @@ int ScheduleSolution::objective() const {
 
 bool ScheduleSolution::all_assigned() const {
     for (int o = 0; o < data_.num_operations(); ++o) {
-        auto const& od = data_.operation(o);
-        if (od.optional) {
-            continue;
-        }
         if (!assignments_[o].assigned()) {
             return false;
         }

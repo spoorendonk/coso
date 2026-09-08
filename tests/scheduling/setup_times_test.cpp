@@ -86,10 +86,10 @@ TEST_CASE("SetupTimeMatrix: out-of-range set throws", "[scheduling][setup]") {
 TEST_CASE("ScheduleData: setup times via Builder", "[scheduling][setup]") {
     ScheduleData::Builder builder;
 
-    builder.add_machine({.name = "M0"});
-    builder.add_machine({.name = "M1"});
-    builder.add_job({.name = "J0"});
-    builder.add_job({.name = "J1"});
+    builder.add_machine({});
+    builder.add_machine({});
+    builder.add_job({});
+    builder.add_job({});
 
     // J0: op0 on M0, J1: op1 on M0
     builder.add_operation(0, {.machine = 0, .duration = 3});
@@ -109,10 +109,10 @@ TEST_CASE("ScheduleData: setup times via Builder", "[scheduling][setup]") {
 TEST_CASE("ScheduleData: uniform setup times via Builder", "[scheduling][setup]") {
     ScheduleData::Builder builder;
 
-    builder.add_machine({.name = "M0"});
-    builder.add_machine({.name = "M1"});
-    builder.add_job({.name = "J0"});
-    builder.add_job({.name = "J1"});
+    builder.add_machine({});
+    builder.add_machine({});
+    builder.add_job({});
+    builder.add_job({});
 
     builder.add_operation(0, {.machine = 0, .duration = 3});
     builder.add_operation(1, {.machine = 1, .duration = 4});
@@ -129,8 +129,8 @@ TEST_CASE("ScheduleData: uniform setup times via Builder", "[scheduling][setup]"
 
 TEST_CASE("ScheduleData: no setup times by default", "[scheduling][setup]") {
     ScheduleData::Builder builder;
-    builder.add_machine({.name = "M0"});
-    builder.add_job({.name = "J0"});
+    builder.add_machine({});
+    builder.add_job({});
     builder.add_operation(0, {.machine = 0, .duration = 3});
 
     auto data = builder.build();

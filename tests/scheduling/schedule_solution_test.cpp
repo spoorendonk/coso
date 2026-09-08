@@ -16,13 +16,13 @@ using namespace coso;
 
 static ScheduleData make_3x3_jsp() {
     ScheduleData::Builder b;
-    b.add_machine({.name = "M0"});
-    b.add_machine({.name = "M1"});
-    b.add_machine({.name = "M2"});
+    b.add_machine({});
+    b.add_machine({});
+    b.add_machine({});
 
-    b.add_job({.name = "J0"});
-    b.add_job({.name = "J1"});
-    b.add_job({.name = "J2"});
+    b.add_job({});
+    b.add_job({});
+    b.add_job({});
 
     // Job 0: ops 0, 1, 2
     b.add_operation(0, {.machine = 0, .duration = 3});
@@ -154,23 +154,14 @@ TEST_CASE("ScheduleSolution: job completion times", "[scheduling]") {
     CHECK(sol.job_completion_time(2) == 12);  // op8 ends at 12
 }
 
-TEST_CASE("ScheduleSolution: total flow time", "[scheduling]") {
-    auto data = make_3x3_jsp();
-    ScheduleSolution sol(data);
-    build_feasible_schedule(sol);
-
-    // Flow time = sum of job completion times = 8 + 10 + 12 = 30.
-    CHECK(sol.total_flow_time() == 30);
-}
-
 TEST_CASE("ScheduleSolution: weighted tardiness", "[scheduling]") {
     // Build a problem with due dates and weights.
     ScheduleData::Builder b;
-    b.add_machine({.name = "M0"});
-    b.add_machine({.name = "M1"});
+    b.add_machine({});
+    b.add_machine({});
 
-    b.add_job({.name = "J0", .due_date = 5, .weight = 2});
-    b.add_job({.name = "J1", .due_date = 10, .weight = 3});
+    b.add_job({.due_date = 5, .weight = 2});
+    b.add_job({.due_date = 10, .weight = 3});
 
     // Job 0: op0(M0, 3) -> op1(M1, 2)
     b.add_operation(0, {.machine = 0, .duration = 3});
@@ -266,10 +257,10 @@ TEST_CASE("ScheduleSolution: machine_operations returns sorted", "[scheduling]")
 
 TEST_CASE("ScheduleSolution: FJSP with flexible machine assignment", "[scheduling]") {
     ScheduleData::Builder b;
-    b.add_machine({.name = "M0"});
-    b.add_machine({.name = "M1"});
+    b.add_machine({});
+    b.add_machine({});
 
-    b.add_job({.name = "J0"});
+    b.add_job({});
 
     // Single flexible operation: can run on M0 (dur 5) or M1 (dur 3).
     b.add_operation(0, {

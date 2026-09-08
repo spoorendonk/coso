@@ -21,22 +21,6 @@ namespace coso {
 [[nodiscard]] ScheduleData read_taillard_jsp(const std::string& path);
 
 // ---------------------------------------------------------------------------
-//  PSPLIB RCPSP format (.sm files)
-// ---------------------------------------------------------------------------
-//  Header section with project info (jobs, resources).
-//  PRECEDENCE RELATIONS section: job_id  num_successors  successor_ids...
-//  REQUESTS/DURATIONS section:   job_id  mode  duration  resource_usages...
-//  RESOURCEAVAILABILITIES section: capacities per resource.
-//
-//  Jobs 1 and N are dummy source/sink with duration 0.
-
-/// Parse a PSPLIB RCPSP instance from a string (.sm format).
-[[nodiscard]] ScheduleData parse_psplib(const std::string& content);
-
-/// Read a PSPLIB RCPSP instance from a file.
-[[nodiscard]] ScheduleData read_psplib(const std::string& path);
-
-// ---------------------------------------------------------------------------
 //  Flexible Job Shop (FJSP) standard format
 // ---------------------------------------------------------------------------
 //  First line:  num_jobs  num_machines  [avg_ops_per_job]

@@ -180,7 +180,6 @@ add_library(coso STATIC
     src/scheduling/construction.cpp
     src/scheduling/disjunctive_graph.cpp
     src/scheduling/schedule_solution.cpp
-    src/scheduling/mode_selection.cpp
     src/scheduling/schedule_operators.cpp
     src/scheduling/perturbation.cpp
     src/scheduling/setup_times.cpp

@@ -60,52 +60,6 @@ int compute_makespan(ScheduleData const& data, std::vector<Result::OpSchedule> c
     return ms;
 }
 
-/// Check whether scheduling operation op at start_time on machine m
-/// would violate any renewable resource capacity constraint at any
-/// time unit during its execution.
-///
-/// resource_profile[r][t] = current usage of resource r at time t.
-bool resource_feasible(ScheduleData const& data, int op, int start_time, int duration,
-                       std::vector<std::vector<int>> const& resource_profile) {
-    if (data.num_resources() == 0) {
-        return true;
-    }
-
-    for (int r = 0; r < data.num_resources(); ++r) {
-        int usage = data.resource_usage(op, r);
-        if (usage == 0) {
-            continue;
-        }
-        int cap = data.resource_capacity(r);
-        for (int t = start_time; t < start_time + duration; ++t) {
-            int current =
-                (t < static_cast<int>(resource_profile[r].size())) ? resource_profile[r][t] : 0;
-            if (current + usage > cap) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
-/// Update resource profile after scheduling an operation.
-void update_resource_profile(ScheduleData const& data, int op, int start_time, int duration,
-                             std::vector<std::vector<int>>& resource_profile) {
-    for (int r = 0; r < data.num_resources(); ++r) {
-        int usage = data.resource_usage(op, r);
-        if (usage == 0) {
-            continue;
-        }
-        int end = start_time + duration;
-        if (end > static_cast<int>(resource_profile[r].size())) {
-            resource_profile[r].resize(end, 0);
-        }
-        for (int t = start_time; t < end; ++t) {
-            resource_profile[r][t] += usage;
-        }
-    }
-}
-
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -121,9 +75,6 @@ Result construct_sgs(ScheduleData const& data) {
 
     // Completion time per operation (-1 = not yet scheduled).
     std::vector<int> completion(n, -1);
-
-    // Resource profiles: resource_profile[r][t] = current usage at time t.
-    std::vector<std::vector<int>> resource_profile(data.num_resources());
 
     Result result;
     result.schedule_.resize(n);
@@ -160,12 +111,6 @@ Result construct_sgs(ScheduleData const& data) {
                 }
             }
 
-            // Also respect job release time.
-            auto const& opdata = data.operation(op);
-            if (opdata.job >= 0) {
-                es = std::max(es, data.job(opdata.job).release_time);
-            }
-
             // Pick best machine for this operation.
             auto [m, dur] = best_machine(data, op);
             if (m < 0) {
@@ -174,11 +119,6 @@ Result construct_sgs(ScheduleData const& data) {
 
             // Earliest start on this machine.
             int start = std::max(es, machine_free[m]);
-
-            // Resource feasibility: advance start until feasible.
-            while (!resource_feasible(data, op, start, dur, resource_profile)) {
-                ++start;
-            }
 
             // Pick operation with smallest earliest start (ties: lowest index).
             if (start < best_start || (start == best_start && op < best_op)) {
@@ -197,8 +137,6 @@ Result construct_sgs(ScheduleData const& data) {
         result.schedule_[best_op] = {.machine = best_mach, .start_time = best_start};
         completion[best_op] = best_start + best_dur;
         machine_free[best_mach] = best_start + best_dur;
-
-        update_resource_profile(data, best_op, best_start, best_dur, resource_profile);
 
         // Decrement in-degree for successors.
         for (int succ : successors[best_op]) {
@@ -252,7 +190,7 @@ Result construct_neh(ScheduleData const& data) {
 
         for (int j : seq) {
             auto const& ops = data.job(j).operations;
-            int prev_finish = data.job(j).release_time;
+            int prev_finish = 0;
             for (int op : ops) {
                 auto [m, dur] = best_machine(data, op);
                 int start = std::max(prev_finish, machine_free[m]);
@@ -362,11 +300,6 @@ Result construct_dispatch(ScheduleData const& data, DispatchRule rule) {
             if (arc.after == op && completion[arc.before] >= 0) {
                 es = std::max(es, completion[arc.before]);
             }
-        }
-
-        auto const& opdata = data.operation(op);
-        if (opdata.job >= 0) {
-            es = std::max(es, data.job(opdata.job).release_time);
         }
 
         int start = std::max(es, machine_free[m]);

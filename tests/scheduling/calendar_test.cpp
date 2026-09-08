@@ -147,9 +147,9 @@ TEST_CASE("MachineCalendar: out-of-range machine", "[scheduling][calendar]") {
 TEST_CASE("ScheduleData: calendar via Builder", "[scheduling][calendar]") {
     ScheduleData::Builder builder;
 
-    builder.add_machine({.name = "M0"});
-    builder.add_machine({.name = "M1"});
-    builder.add_job({.name = "J0"});
+    builder.add_machine({});
+    builder.add_machine({});
+    builder.add_job({});
     builder.add_operation(0, {.machine = 0, .duration = 5});
 
     // Machine 0: available [0, 100), Machine 1: available [50, 150)
@@ -170,8 +170,8 @@ TEST_CASE("ScheduleData: calendar via Builder", "[scheduling][calendar]") {
 
 TEST_CASE("ScheduleData: no calendar by default", "[scheduling][calendar]") {
     ScheduleData::Builder builder;
-    builder.add_machine({.name = "M0"});
-    builder.add_job({.name = "J0"});
+    builder.add_machine({});
+    builder.add_job({});
     builder.add_operation(0, {.machine = 0, .duration = 3});
 
     auto data = builder.build();

@@ -38,43 +38,7 @@ int ScheduleModel::add_operation(int job, OperationParams p) {
     int idx = static_cast<int>(operations_.size());
     operations_.push_back({.job = job, .params = std::move(p)});
     job_operations_[job].push_back(idx);
-
-    // Extend resource_usage_ to accommodate the new operation.
-    resource_usage_.emplace_back();
     return idx;
-}
-
-// ---------------------------------------------------------------------------
-//  Resources (RCPSP)
-// ---------------------------------------------------------------------------
-
-int ScheduleModel::add_resource(int capacity) {
-    int idx = static_cast<int>(resource_capacities_.size());
-    resource_capacities_.push_back(capacity);
-    return idx;
-}
-
-void ScheduleModel::set_resource_usage(int operation, int resource, int amount) {
-    if (operation < 0 || operation >= static_cast<int>(operations_.size())) {
-        throw std::out_of_range("ScheduleModel::set_resource_usage: invalid operation");
-    }
-    if (resource < 0 || resource >= static_cast<int>(resource_capacities_.size())) {
-        throw std::out_of_range("ScheduleModel::set_resource_usage: invalid resource");
-    }
-
-    auto& usage = resource_usage_[operation];
-    if (static_cast<int>(usage.size()) <= resource) {
-        usage.resize(resource + 1, 0);
-    }
-    usage[resource] = amount;
-}
-
-// ---------------------------------------------------------------------------
-//  Precedence
-// ---------------------------------------------------------------------------
-
-void ScheduleModel::add_precedence(int op_before, int op_after) {
-    extra_precedences_.push_back({op_before, op_after});
 }
 
 // ---------------------------------------------------------------------------
@@ -87,14 +51,6 @@ void ScheduleModel::set_objective(ScheduleObjective obj) {
 
 void ScheduleModel::minimize_makespan() {
     objective_ = ScheduleObjective::Makespan;
-}
-
-// ---------------------------------------------------------------------------
-//  Warm start
-// ---------------------------------------------------------------------------
-
-void ScheduleModel::set_initial_schedule(const std::vector<std::pair<int, int>>& op_assignments) {
-    initial_schedule_ = op_assignments;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,28 +87,6 @@ Result ScheduleModel::solve(TimeLimit tl) {
     for (auto const& op : operations_) {
         builder.add_operation(op.job, op.params);
         work.count(2);
-    }
-
-    for (int r = 0; r < static_cast<int>(resource_capacities_.size()); ++r) {
-        builder.add_resource(resource_capacities_[r]);
-        work.count(1);
-    }
-
-    // Set resource usage.
-    for (int o = 0; o < static_cast<int>(resource_usage_.size()); ++o) {
-        for (int r = 0; r < static_cast<int>(resource_usage_[o].size()); ++r) {
-            work.count(1);
-            if (resource_usage_[o][r] != 0) {
-                builder.set_resource_usage(o, r, resource_usage_[o][r]);
-                work.count(1);
-            }
-        }
-    }
-
-    // Extra precedences.
-    for (auto const& p : extra_precedences_) {
-        builder.add_precedence(p.before, p.after);
-        work.count(1);
     }
 
     builder.set_objective(objective_);
@@ -211,31 +145,16 @@ Result ScheduleModel::solve(TimeLimit tl) {
         }
     };
 
-    // Resource-constrained instances are best handled by SGS directly.
     consider(construct_sgs(data));
     work.count(3);
 
-    if (!stop.should_stop() && data.num_resources() == 0) {
+    if (!stop.should_stop()) {
         consider(construct_dispatch(data, DispatchRule::SPT));
         work.count(2);
     }
-    if (!stop.should_stop() && data.num_resources() == 0) {
+    if (!stop.should_stop()) {
         consider(construct_neh(data));
         work.count(2);
-    }
-
-    if (!stop.should_stop() &&
-        initial_schedule_.size() == static_cast<size_t>(data.num_operations())) {
-        Result warm;
-        warm.schedule_.resize(initial_schedule_.size());
-        for (size_t i = 0; i < initial_schedule_.size(); ++i) {
-            warm.schedule_[i] = {
-                .machine = initial_schedule_[i].first,
-                .start_time = initial_schedule_[i].second,
-            };
-            work.count(1);
-        }
-        consider(std::move(warm));
     }
 
     Result result = have_best ? best : Result{};

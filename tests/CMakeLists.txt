@@ -673,19 +673,6 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Mode selection tests                                                        #
-# --------------------------------------------------------------------------- #
-
-add_executable(mode_selection_test scheduling/mode_selection_test.cpp)
-target_link_libraries(mode_selection_test PRIVATE coso Catch2::Catch2WithMain)
-
-if(COMMAND catch_discover_tests)
-    catch_discover_tests(mode_selection_test)
-else()
-    add_test(NAME mode_selection_test COMMAND mode_selection_test)
-endif()
-
-# --------------------------------------------------------------------------- #
 #  Scheduling parser tests                                                     #
 # --------------------------------------------------------------------------- #
 
@@ -947,7 +934,7 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Scheduling benchmark tests (Taillard JSP + PSPLIB RCPSP)                   #
+#  Scheduling benchmark tests (Taillard JSP)                                  #
 # --------------------------------------------------------------------------- #
 
 add_executable(scheduling_benchmark_test scheduling/scheduling_benchmark_test.cpp)

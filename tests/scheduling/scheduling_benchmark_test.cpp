@@ -84,27 +84,6 @@ static void check_feasible(ScheduleData const& data, Result const& result) {
             CHECK(intervals[i].end <= intervals[i + 1].start);
         }
     }
-
-    // Resource constraints: at each time step, usage <= capacity.
-    if (data.num_resources() > 0) {
-        int ms = result.makespan();
-        for (int r = 0; r < data.num_resources(); ++r) {
-            std::vector<int> usage(ms + 1, 0);
-            for (int o = 0; o < data.num_operations(); ++o) {
-                int u = data.resource_usage(o, r);
-                if (u == 0) {
-                    continue;
-                }
-                int m = result.schedule()[o].machine;
-                int dur = data.processing_time(o, m);
-                int st = result.schedule()[o].start_time;
-                for (int t = st; t < st + dur; ++t) {
-                    usage[t] += u;
-                    CHECK(usage[t] <= data.resource_capacity(r));
-                }
-            }
-        }
-    }
 }
 
 // ---------------------------------------------------------------------------
@@ -298,71 +277,4 @@ TEST_CASE("ta09 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
 
 TEST_CASE("ta10 JSP benchmark (15x15)", "[benchmark][scheduling][jsp]") {
     run_jsp_benchmark("taillard/ta10.txt", 15, 15, 1241);
-}
-
-// ---------------------------------------------------------------------------
-//  PSPLIB RCPSP benchmarks (j30 instances)
-// ---------------------------------------------------------------------------
-//
-//  j30 instances have 32 activities (30 real + source/sink), 4 resources.
-//  We verify feasibility of the SGS solution.  BKS values from PSPLIB:
-//    j301_1: BKS = 43
-//    j301_2: BKS = 47
-//    j301_3: BKS = 47
-//    j301_4: BKS = 62
-//    j301_5: BKS = 39
-// ---------------------------------------------------------------------------
-
-static void run_rcpsp_benchmark(const std::string& file, int expected_activities,
-                                int expected_resources, int bks, double max_gap = 0.50) {
-    if (!instance_exists(file)) {
-        SKIP("Benchmark instance " + file +
-             " not found. "
-             "Run tests/data/download_benchmarks.sh first.");
-    }
-
-    INFO("Instance: " << instance_path(file));
-
-    auto data = read_psplib(instance_path(file));
-    REQUIRE(data.num_operations() == expected_activities);
-    REQUIRE(data.num_resources() == expected_resources);
-
-    // Construct a feasible schedule via SGS (respects resources).
-    auto result = construct_sgs(data);
-    check_feasible(data, result);
-
-    std::cout << "\n=== " << file << " RCPSP benchmark ===\n"
-              << "  Activities: " << data.num_operations() << "\n"
-              << "  Resources:  " << data.num_resources() << "\n"
-              << "  SGS ms:     " << result.makespan() << "\n"
-              << "  BKS:        " << bks << "\n";
-
-    double gap = static_cast<double>(result.makespan() - bks) / bks;
-    std::cout << "  Gap to BKS: " << (gap * 100.0) << "%\n" << std::endl;
-
-    // The solution must be feasible.
-    CHECK(result.feasible());
-
-    // Makespan should be within the allowed gap.
-    CHECK(result.makespan() <= static_cast<int>(bks * (1.0 + max_gap)));
-}
-
-TEST_CASE("j301_1 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
-    run_rcpsp_benchmark("psplib/j301_1.sm", 32, 4, 43);
-}
-
-TEST_CASE("j301_2 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
-    run_rcpsp_benchmark("psplib/j301_2.sm", 32, 4, 47);
-}
-
-TEST_CASE("j301_3 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
-    run_rcpsp_benchmark("psplib/j301_3.sm", 32, 4, 47);
-}
-
-TEST_CASE("j301_4 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
-    run_rcpsp_benchmark("psplib/j301_4.sm", 32, 4, 62);
-}
-
-TEST_CASE("j301_5 RCPSP benchmark (j30)", "[benchmark][scheduling][rcpsp]") {
-    run_rcpsp_benchmark("psplib/j301_5.sm", 32, 4, 39);
 }

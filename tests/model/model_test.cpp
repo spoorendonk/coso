@@ -335,13 +335,13 @@ TEST_CASE("ScheduleModel can be default-constructed", "[scheduling]") {
 
 TEST_CASE("ScheduleModel add_machine", "[scheduling]") {
     coso::ScheduleModel m;
-    int mach = m.add_machine({.name = "M1"});
+    int mach = m.add_machine({});
     REQUIRE(mach >= 0);
 }
 
 TEST_CASE("ScheduleModel add_job and add_operation", "[scheduling]") {
     coso::ScheduleModel m;
-    int j = m.add_job({.name = "Job0", .weight = 2});
+    int j = m.add_job({.weight = 2});
     REQUIRE(j >= 0);
     int op = m.add_operation(j, {.machine = 0, .duration = 10});
     REQUIRE(op >= 0);
@@ -349,8 +349,8 @@ TEST_CASE("ScheduleModel add_job and add_operation", "[scheduling]") {
 
 TEST_CASE("ScheduleModel FJSP flexible operations", "[scheduling]") {
     coso::ScheduleModel m;
-    m.add_machine({.name = "M1"});
-    m.add_machine({.name = "M2"});
+    m.add_machine({});
+    m.add_machine({});
     int j = m.add_job();
     int op = m.add_operation(j, {
                                     .eligible_machines = {0, 1},
@@ -359,34 +359,11 @@ TEST_CASE("ScheduleModel FJSP flexible operations", "[scheduling]") {
     REQUIRE(op >= 0);
 }
 
-TEST_CASE("ScheduleModel resource constraints (RCPSP)", "[scheduling]") {
-    coso::ScheduleModel m;
-    int res = m.add_resource(3);
-    REQUIRE(res >= 0);
-    int j = m.add_job();
-    int op = m.add_operation(j, {.duration = 5});
-    m.set_resource_usage(op, res, 2);
-}
-
-TEST_CASE("ScheduleModel precedence constraints", "[scheduling]") {
-    coso::ScheduleModel m;
-    int j = m.add_job();
-    int op1 = m.add_operation(j, {.duration = 3});
-    int op2 = m.add_operation(j, {.duration = 4});
-    m.add_precedence(op1, op2);
-}
-
 TEST_CASE("ScheduleModel objectives", "[scheduling]") {
     coso::ScheduleModel m;
     m.set_objective(coso::ScheduleObjective::Makespan);
     m.set_objective(coso::ScheduleObjective::TotalWeightedTardiness);
-    m.set_objective(coso::ScheduleObjective::TotalFlowTime);
     m.minimize_makespan();
-}
-
-TEST_CASE("ScheduleModel warm start", "[scheduling]") {
-    coso::ScheduleModel m;
-    m.set_initial_schedule({{0, 0}, {1, 5}});
 }
 
 TEST_CASE("ScheduleModel solve returns a Result", "[scheduling]") {
@@ -970,32 +947,24 @@ TEST_CASE("LotSizingModel reads back every declaration", "[lotsizing][introspect
 TEST_CASE("ScheduleModel reads back every declaration", "[scheduling][introspection]") {
     coso::ScheduleModel m;
 
-    SECTION("machines, jobs, operations and precedences round-trip") {
+    SECTION("machines, jobs and operations round-trip") {
         REQUIRE(m.num_machines() == 0);
         REQUIRE(m.num_jobs() == 0);
         REQUIRE(m.num_operations() == 0);
         REQUIRE(m.objective() == coso::ScheduleObjective::Makespan);
 
-        int m0 = m.add_machine({.name = "drill"});
+        int m0 = m.add_machine({});
         int m1 = m.add_machine();
         REQUIRE(m.num_machines() == 2);
-        REQUIRE(m.machine(m0).name == "drill");
-        REQUIRE(m.machine(m1).name.empty());
 
         coso::JobParams jp;
-        jp.name = "widget";
-        jp.release_time = 3;
         jp.due_date = 100;
         jp.weight = 4;
         int j0 = m.add_job(jp);
         int j1 = m.add_job();
         REQUIRE(m.num_jobs() == 2);
-        REQUIRE(m.job(j0).name == "widget");
-        REQUIRE(m.job(j0).release_time == 3);
         REQUIRE(m.job(j0).due_date == 100);
         REQUIRE(m.job(j0).weight == 4);
-        REQUIRE(m.job(j1).name.empty());
-        REQUIRE(m.job(j1).release_time == 0);
         REQUIRE(m.job(j1).due_date == INT_MAX);
         REQUIRE(m.job(j1).weight == 1);
 
@@ -1007,7 +976,6 @@ TEST_CASE("ScheduleModel reads back every declaration", "[scheduling][introspect
         coso::OperationParams flexible;
         flexible.eligible_machines = {m0, m1};
         flexible.durations_per_machine = {7, 9};
-        flexible.optional = true;
         int o1 = m.add_operation(j0, flexible);
         int o2 = m.add_operation(j1, fixed);
 
@@ -1017,63 +985,19 @@ TEST_CASE("ScheduleModel reads back every declaration", "[scheduling][introspect
         REQUIRE(m.operation(o0).params.duration == 12);
         REQUIRE(m.operation(o0).params.eligible_machines.empty());
         REQUIRE(m.operation(o0).params.durations_per_machine.empty());
-        REQUIRE_FALSE(m.operation(o0).params.optional);
         REQUIRE(m.operation(o1).job == j0);
         REQUIRE(m.operation(o1).params.machine == -1);
         REQUIRE(m.operation(o1).params.eligible_machines == std::vector<int>{m0, m1});
         REQUIRE(m.operation(o1).params.durations_per_machine == std::vector<int>{7, 9});
-        REQUIRE(m.operation(o1).params.optional);
 
         REQUIRE(m.job_operations() == std::vector<std::vector<int>>{{o0, o1}, {o2}});
-
-        m.add_precedence(o0, o2);
-        m.add_precedence(o2, o1);
-        REQUIRE(m.extra_precedences().size() == 2);
-        REQUIRE(m.extra_precedences()[0].before == o0);
-        REQUIRE(m.extra_precedences()[0].after == o2);
-        REQUIRE(m.extra_precedences()[1].before == o2);
-        REQUIRE(m.extra_precedences()[1].after == o1);
     }
 
-    SECTION("resource usage comes back ragged, unset meaning zero") {
-        m.add_machine();
-        int j = m.add_job();
-        int o0 = m.add_operation(j, {.machine = 0, .duration = 5});
-        int o1 = m.add_operation(j, {.machine = 0, .duration = 5});
-        int o2 = m.add_operation(j, {.machine = 0, .duration = 5});
-
-        int r0 = m.add_resource(10);
-        int r1 = m.add_resource(20);
-        int r2 = m.add_resource(30);
-        REQUIRE(m.num_resources() == 3);
-        REQUIRE(m.resource_capacities() == std::vector<int>{10, 20, 30});
-
-        m.set_resource_usage(o0, r0, 4);
-        m.set_resource_usage(o1, r2, 6);
-
-        // Trap: rows are grown only to resource + 1, so they are ragged and
-        // nothing is padded out to num_resources().
-        REQUIRE(m.resource_usage().size() == 3);
-        REQUIRE(m.resource_usage()[o0] == std::vector<int>{4});
-        REQUIRE(m.resource_usage()[o1] == std::vector<int>{0, 0, 6});
-        REQUIRE(m.resource_usage()[o2].empty());
-        // Which means a reader must treat a short row as unset, i.e. 0.
-        REQUIRE(static_cast<int>(m.resource_usage()[o0].size()) < m.num_resources());
-        REQUIRE(r1 == 1);
-    }
-
-    SECTION("objective and initial schedule round-trip") {
+    SECTION("objective round-trips") {
         m.set_objective(coso::ScheduleObjective::TotalWeightedTardiness);
         REQUIRE(m.objective() == coso::ScheduleObjective::TotalWeightedTardiness);
-        m.set_objective(coso::ScheduleObjective::TotalFlowTime);
-        REQUIRE(m.objective() == coso::ScheduleObjective::TotalFlowTime);
         m.minimize_makespan();
         REQUIRE(m.objective() == coso::ScheduleObjective::Makespan);
-
-        REQUIRE(m.initial_schedule().empty());
-        std::vector<std::pair<int, int>> assignments = {{0, 0}, {1, 12}};
-        m.set_initial_schedule(assignments);
-        REQUIRE(m.initial_schedule() == assignments);
     }
 }
 

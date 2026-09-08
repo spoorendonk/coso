@@ -11,7 +11,7 @@ namespace coso {
 /// Mutable schedule solution: tracks operation-to-(machine, start_time)
 /// assignments for JSP and FJSP problems.
 ///
-/// Provides objective evaluation (makespan, weighted tardiness, flow time)
+/// Provides objective evaluation (makespan, weighted tardiness)
 /// and feasibility checking (no machine overlaps, precedences respected).
 class ScheduleSolution {
 public:
@@ -46,9 +46,6 @@ public:
     /// Total weighted tardiness: sum of w_j * max(0, C_j - d_j).
     /// C_j = completion time of last operation in job j.
     [[nodiscard]] int total_weighted_tardiness() const;
-
-    /// Total flow time: sum of C_j over all jobs (completion of last op).
-    [[nodiscard]] int total_flow_time() const;
 
     /// Evaluate the objective function configured in the ScheduleData.
     [[nodiscard]] int objective() const;

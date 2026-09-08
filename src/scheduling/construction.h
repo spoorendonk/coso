@@ -11,12 +11,12 @@ namespace coso {
 /// populated with a feasible schedule (machine assignments and start times
 /// for every operation, plus the makespan).
 
-/// Serial Generation Scheme (SGS) for RCPSP.
+/// Serial Generation Scheme (SGS).
 ///
 /// Schedules operations one by one in precedence-feasible order, using an
 /// earliest-start-time priority rule. At each step the operation with the
-/// smallest earliest feasible start (respecting both precedence and renewable
-/// resource capacity constraints) is selected and scheduled.
+/// smallest earliest feasible start (respecting precedence and machine
+/// availability) is selected and scheduled.
 [[nodiscard]] Result construct_sgs(ScheduleData const& data);
 
 /// NEH heuristic for flow-shop / job-shop problems.

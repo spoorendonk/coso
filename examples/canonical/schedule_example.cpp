@@ -4,8 +4,8 @@
 
 int main() {
     coso::ScheduleModel model;
-    model.add_machine({.name = "M0"});
-    int job = model.add_job({.name = "J0"});
+    model.add_machine({});
+    int job = model.add_job({});
     model.add_operation(job, {.machine = 0, .duration = 3});
     model.minimize_makespan();
 

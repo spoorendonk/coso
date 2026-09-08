@@ -50,27 +50,6 @@ void check_feasible(ScheduleData const& data, Result const& result) {
             CHECK(intervals[i].end <= intervals[i + 1].start);
         }
     }
-
-    // Resource constraints: at each time step, usage <= capacity.
-    if (data.num_resources() > 0) {
-        int ms = result.makespan();
-        for (int r = 0; r < data.num_resources(); ++r) {
-            std::vector<int> usage(ms + 1, 0);
-            for (int o = 0; o < data.num_operations(); ++o) {
-                int u = data.resource_usage(o, r);
-                if (u == 0) {
-                    continue;
-                }
-                int m = result.schedule()[o].machine;
-                int dur = data.processing_time(o, m);
-                int st = result.schedule()[o].start_time;
-                for (int t = st; t < st + dur; ++t) {
-                    usage[t] += u;
-                    CHECK(usage[t] <= data.resource_capacity(r));
-                }
-            }
-        }
-    }
 }
 
 /// Build a small JSP instance (2 jobs x 3 machines, classic example).
@@ -79,12 +58,12 @@ void check_feasible(ScheduleData const& data, Result const& result) {
 ///  Job 1: M1(2) -> M0(3) -> M2(1)
 ScheduleData make_jsp_2x3() {
     ScheduleData::Builder b;
-    b.add_machine({.name = "M0"});
-    b.add_machine({.name = "M1"});
-    b.add_machine({.name = "M2"});
+    b.add_machine({});
+    b.add_machine({});
+    b.add_machine({});
 
-    b.add_job({.name = "J0"});
-    b.add_job({.name = "J1"});
+    b.add_job({});
+    b.add_job({});
 
     // Job 0
     b.add_operation(0, {.machine = 0, .duration = 3});  // op 0
@@ -99,42 +78,6 @@ ScheduleData make_jsp_2x3() {
     return b.build();
 }
 
-/// Build a small RCPSP instance.
-///
-///  4 operations on 4 separate machines, 1 resource with capacity 2.
-///  Job 0: op0 (M0, dur=3) -> op1 (M1, dur=3)
-///  Job 1: op2 (M2, dur=3) -> op3 (M3, dur=3)
-///  Resource usage = 1 per op, capacity = 2.
-///  Ops 0 and 2 can run in parallel (different machines, usage 1+1=2 <= cap).
-///  Then ops 1 and 3 can run in parallel. Optimal makespan = 6.
-ScheduleData make_rcpsp_small() {
-    ScheduleData::Builder b;
-    b.add_machine({.name = "M0"});
-    b.add_machine({.name = "M1"});
-    b.add_machine({.name = "M2"});
-    b.add_machine({.name = "M3"});
-
-    b.add_job({.name = "J0"});
-    b.add_job({.name = "J1"});
-
-    // Job 0: op0 (M0) -> op1 (M1)
-    b.add_operation(0, {.machine = 0, .duration = 3});  // op 0
-    b.add_operation(0, {.machine = 1, .duration = 3});  // op 1
-
-    // Job 1: op2 (M2) -> op3 (M3)
-    b.add_operation(1, {.machine = 2, .duration = 3});  // op 2
-    b.add_operation(1, {.machine = 3, .duration = 3});  // op 3
-
-    // Resource with capacity 2.
-    int r = b.add_resource(2);
-    b.set_resource_usage(0, r, 1);
-    b.set_resource_usage(1, r, 1);
-    b.set_resource_usage(2, r, 1);
-    b.set_resource_usage(3, r, 1);
-
-    return b.build();
-}
-
 /// Build a flow-shop instance (3 jobs x 2 machines).
 ///
 ///  Each job visits M0 then M1.
@@ -143,12 +86,12 @@ ScheduleData make_rcpsp_small() {
 ///  Job 2: M0(3), M1(2)
 ScheduleData make_flowshop_3x2() {
     ScheduleData::Builder b;
-    b.add_machine({.name = "M0"});
-    b.add_machine({.name = "M1"});
+    b.add_machine({});
+    b.add_machine({});
 
-    b.add_job({.name = "J0"});
-    b.add_job({.name = "J1"});
-    b.add_job({.name = "J2"});
+    b.add_job({});
+    b.add_job({});
+    b.add_job({});
 
     // Job 0: M0(4), M1(3)
     b.add_operation(0, {.machine = 0, .duration = 4});  // op 0
@@ -179,16 +122,6 @@ TEST_CASE("SGS: small JSP instance", "[scheduling][construction]") {
     CHECK(result.makespan() > 0);
     // The optimal makespan for this instance is 9.
     CHECK(result.makespan() <= 11);  // SGS should find a reasonable schedule.
-}
-
-TEST_CASE("SGS: RCPSP with resource constraints", "[scheduling][construction]") {
-    auto data = make_rcpsp_small();
-    auto result = construct_sgs(data);
-
-    check_feasible(data, result);
-    // With capacity 2 and usage 1 per op, two ops can run in parallel.
-    // Optimal makespan = 6 (two parallel pairs of duration 3).
-    CHECK(result.makespan() == 6);
 }
 
 // ---------------------------------------------------------------------------
@@ -243,22 +176,10 @@ TEST_CASE("Dispatch LPT: small JSP instance", "[scheduling][construction]") {
     CHECK(result.makespan() > 0);
 }
 
-TEST_CASE("Dispatch SPT: RCPSP instance (no resource check in dispatch)",
-          "[scheduling][construction]") {
-    // Dispatching without resource constraints — uses single machine,
-    // so resource constraints are implicitly satisfied by sequencing.
-    auto data = make_rcpsp_small();
-    auto result = construct_dispatch(data, DispatchRule::SPT);
-
-    // Feasibility check includes precedence and machine overlap checks.
-    check_feasible(data, result);
-    CHECK(result.makespan() > 0);
-}
-
 TEST_CASE("Dispatch: single job, operations ordered correctly", "[scheduling][construction]") {
     ScheduleData::Builder b;
-    b.add_machine({.name = "M0"});
-    b.add_job({.name = "J0"});
+    b.add_machine({});
+    b.add_job({});
 
     b.add_operation(0, {.machine = 0, .duration = 5});  // op 0
     b.add_operation(0, {.machine = 0, .duration = 3});  // op 1
