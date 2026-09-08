@@ -105,7 +105,7 @@ static int local_search(PackingSolution& sol) {
 
 static PackingData make_1d_instance(int capacity, std::vector<int> const& sizes) {
     PackingModel model;
-    model.add_bin_type({.capacity = {capacity}});
+    model.set_bin_capacity({capacity});
     for (int s : sizes) {
         model.add_item({.size = {s}});
     }
@@ -344,7 +344,7 @@ TEST_CASE("2D vector bin packing", "[benchmark][packing]") {
     // {(60,20)+(40,30)=(100,50)}, {(30,50)+(50,40)+(20,10)=(100,100)}. 2 bins!
 
     PackingModel model;
-    model.add_bin_type({.capacity = {100, 100}});
+    model.set_bin_capacity({100, 100});
     model.add_item({.size = {60, 20}});
     model.add_item({.size = {40, 30}});
     model.add_item({.size = {30, 50}});
@@ -381,7 +381,7 @@ TEST_CASE("Bin packing with conflicts benchmark", "[benchmark][packing]") {
     // Optimal = 2 bins.
 
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     for (int i = 0; i < 6; ++i) {
         model.add_item({.size = {30}});
     }
@@ -408,7 +408,7 @@ TEST_CASE("Dense conflicts force many bins", "[benchmark][packing]") {
     // 5 items of size 10, cap 100. Full conflict clique: every pair conflicts.
     // Each item must be in its own bin. Optimal = 5.
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     for (int i = 0; i < 5; ++i) {
         model.add_item({.size = {10}});
     }

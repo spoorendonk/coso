@@ -163,7 +163,7 @@ coso::Result solve_once(Scenario const& s) {
 
     if (s.model == "packing") {
         coso::PackingModel m;
-        m.add_bin_type({.capacity = {10}});
+        m.set_bin_capacity({10});
         m.add_item({.size = {6}});
         m.add_item({.size = {4}});
         m.add_item({.size = {3}});

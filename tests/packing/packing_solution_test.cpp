@@ -13,7 +13,7 @@ using namespace coso;
 
 static PackingData make_simple_1d() {
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
     model.add_item({.size = {3}});  // 0
     model.add_item({.size = {5}});  // 1
     model.add_item({.size = {7}});  // 2
@@ -111,11 +111,10 @@ TEST_CASE("PackingSolution: move item between bins", "[packing][solution]") {
 //  Cost computation
 // ---------------------------------------------------------------------------
 
-TEST_CASE("PackingSolution: cost with default bin cost", "[packing][solution]") {
+TEST_CASE("PackingSolution: cost counts the bins used", "[packing][solution]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
-    // Default bin cost = 1.
     sol.assign(0, 0);
     REQUIRE(sol.cost() == 1);
 
@@ -126,44 +125,6 @@ TEST_CASE("PackingSolution: cost with default bin cost", "[packing][solution]") 
     REQUIRE(sol.cost() == 2);  // same bins used
 }
 
-TEST_CASE("PackingSolution: cost with custom bin cost", "[packing][solution]") {
-    PackingModel model;
-    model.add_bin_type({.capacity = {10}, .cost = 5});
-    model.add_item({.size = {3}});
-    model.add_item({.size = {7}});
-    model.add_item({.size = {4}});
-
-    auto data = PackingData::build(model);
-    PackingSolution sol(data);
-
-    sol.assign(0, 0);
-    REQUIRE(sol.cost() == 5);
-
-    sol.assign(1, 1);
-    REQUIRE(sol.cost() == 10);
-
-    sol.assign(2, 0);
-    REQUIRE(sol.cost() == 10);  // still 2 bins
-}
-
-TEST_CASE("PackingSolution: cost with multiple bin types", "[packing][solution]") {
-    PackingModel model;
-    model.add_bin_type({.capacity = {10}, .cost = 3, .count = 2});
-    model.add_bin_type({.capacity = {20}, .cost = 7, .count = 2});
-    model.add_item({.size = {5}});
-    model.add_item({.size = {15}});
-
-    auto data = PackingData::build(model);
-    PackingSolution sol(data);
-
-    // Bins 0,1 are type 0 (cost 3); bins 2,3 are type 1 (cost 7).
-    sol.assign(0, 0);  // type 0 bin
-    REQUIRE(sol.cost() == 3);
-
-    sol.assign(1, 2);  // type 1 bin
-    REQUIRE(sol.cost() == 10);
-}
-
 // ---------------------------------------------------------------------------
 //  Delta evaluation
 // ---------------------------------------------------------------------------
@@ -172,7 +133,7 @@ TEST_CASE("PackingSolution: assign_cost_delta", "[packing][solution]") {
     auto data = make_simple_1d();
     PackingSolution sol(data);
 
-    // Assigning to an empty bin opens it -> delta = bin cost (1).
+    // Assigning to an empty bin opens it -> delta = 1.
     REQUIRE(sol.assign_cost_delta(0, 0) == 1);
 
     sol.assign(0, 0);
@@ -276,7 +237,7 @@ TEST_CASE("PackingSolution: capacity violation resolved by move", "[packing][sol
 
 TEST_CASE("PackingSolution: conflict violation detected", "[packing][solution]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {10}});  // 0
     model.add_item({.size = {10}});  // 1
     model.add_item({.size = {10}});  // 2
@@ -297,7 +258,7 @@ TEST_CASE("PackingSolution: conflict violation detected", "[packing][solution]")
 
 TEST_CASE("PackingSolution: conflict resolved by move", "[packing][solution]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {10}});  // 0
     model.add_item({.size = {10}});  // 1
     model.add_item({.size = {10}});  // 2
@@ -321,7 +282,7 @@ TEST_CASE("PackingSolution: conflict resolved by move", "[packing][solution]") {
 
 TEST_CASE("PackingSolution: multiple conflicts in same bin", "[packing][solution]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {10}});  // 0
     model.add_item({.size = {10}});  // 1
     model.add_item({.size = {10}});  // 2
@@ -359,7 +320,7 @@ TEST_CASE("PackingSolution: multiple conflicts in same bin", "[packing][solution
 TEST_CASE("PackingSolution: 2D packing", "[packing][solution]") {
     PackingModel model;
     // 2D: weight and volume.
-    model.add_bin_type({.capacity = {10, 20}});
+    model.set_bin_capacity({10, 20});
     model.add_item({.size = {3, 8}});   // 0
     model.add_item({.size = {5, 10}});  // 1
     model.add_item({.size = {4, 7}});   // 2
@@ -387,7 +348,7 @@ TEST_CASE("PackingSolution: 2D packing", "[packing][solution]") {
 
 TEST_CASE("PackingSolution: 2D feasible packing", "[packing][solution]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {10, 20}});
+    model.set_bin_capacity({10, 20});
     model.add_item({.size = {3, 8}});   // 0
     model.add_item({.size = {5, 10}});  // 1
     model.add_item({.size = {4, 7}});   // 2
@@ -431,7 +392,7 @@ TEST_CASE("PackingSolution: item_fits checks", "[packing][solution]") {
 
 TEST_CASE("PackingSolution: item_fits with conflicts", "[packing][solution]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {10}});  // 0
     model.add_item({.size = {10}});  // 1
     model.add_conflict(0, 1);
@@ -448,29 +409,4 @@ TEST_CASE("PackingSolution: item_fits with conflicts", "[packing][solution]") {
 
     // Item 1 fits in a different bin.
     REQUIRE(sol.item_fits(1, 1));
-}
-
-// ---------------------------------------------------------------------------
-//  Bin type mapping
-// ---------------------------------------------------------------------------
-
-TEST_CASE("PackingSolution: bin type mapping correct", "[packing][solution]") {
-    PackingModel model;
-    model.add_bin_type({.capacity = {10}, .cost = 2, .count = 3});
-    model.add_bin_type({.capacity = {20}, .cost = 5, .count = 2});
-    model.add_item({.size = {5}});
-
-    auto data = PackingData::build(model);
-    PackingSolution sol(data);
-
-    // 5 total bins: slots 0-2 are type 0, slots 3-4 are type 1.
-    REQUIRE(sol.num_bins() == 5);
-    REQUIRE(sol.bin_type(0) == 0);
-    REQUIRE(sol.bin_type(1) == 0);
-    REQUIRE(sol.bin_type(2) == 0);
-    REQUIRE(sol.bin_type(3) == 1);
-    REQUIRE(sol.bin_type(4) == 1);
-
-    sol.assign(0, 3);  // use a type-1 bin
-    REQUIRE(sol.cost() == 5);
 }

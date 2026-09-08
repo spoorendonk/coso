@@ -24,11 +24,10 @@ int BinCapacity::residual(int bin, int dim) const {
 double BinCapacity::utilization(int bin) const {
     auto const& data = sol_->data();
     int D = data.num_dims();
-    int bt = sol_->bin_type(bin);
 
     double total = 0.0;
     for (int d = 0; d < D; ++d) {
-        int cap = data.bin_capacity(bt, d);
+        int cap = data.bin_capacity(d);
         if (cap > 0) {
             total += static_cast<double>(sol_->bin_load(bin, d)) / static_cast<double>(cap);
         }

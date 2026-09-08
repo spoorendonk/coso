@@ -25,10 +25,9 @@ MoveItem evaluate_move(PackingSolution const& sol, int item, int to_bin) {
 bool is_feasible(PackingSolution const& sol, MoveItem const& move) {
     // Check capacity: does item fit in target bin?
     int const D = sol.data().num_dims();
-    int const bt = sol.bin_type(move.to_bin);
     for (int d = 0; d < D; ++d) {
         if (sol.bin_load(move.to_bin, d) + sol.data().item_size(move.item, d) >
-            sol.data().bin_capacity(bt, d)) {
+            sol.data().bin_capacity(d)) {
             return false;
         }
     }
@@ -63,13 +62,13 @@ std::vector<MoveItem> enumerate_moves(PackingSolution const& sol) {
                 continue;
             }
 
-            // Only consider non-empty bins or the first empty bin of each type
-            // to avoid symmetric moves to equivalent empty bins.
+            // Only consider non-empty bins or the first empty bin, to avoid
+            // symmetric moves to equivalent empty bins.
             if (sol.bin_items(b).empty()) {
-                // Skip if there is an earlier empty bin of the same type.
+                // Skip if there is an earlier empty bin.
                 bool first_empty = true;
                 for (int bb = 0; bb < b; ++bb) {
-                    if (sol.bin_items(bb).empty() && sol.bin_type(bb) == sol.bin_type(b)) {
+                    if (sol.bin_items(bb).empty()) {
                         first_empty = false;
                         break;
                     }
@@ -117,15 +116,13 @@ bool is_feasible(PackingSolution const& sol, SwapItems const& swap) {
     int const D = sol.data().num_dims();
     int const bin_a = sol.item_bin(swap.item_a);
     int const bin_b = sol.item_bin(swap.item_b);
-    int const bt_a = sol.bin_type(bin_a);
-    int const bt_b = sol.bin_type(bin_b);
 
     // Check: item_b fits in bin_a after removing item_a.
     // New load in bin_a = current_load - size(item_a) + size(item_b).
     for (int d = 0; d < D; ++d) {
         int new_load = sol.bin_load(bin_a, d) - sol.data().item_size(swap.item_a, d) +
                        sol.data().item_size(swap.item_b, d);
-        if (new_load > sol.data().bin_capacity(bt_a, d)) {
+        if (new_load > sol.data().bin_capacity(d)) {
             return false;
         }
     }
@@ -134,7 +131,7 @@ bool is_feasible(PackingSolution const& sol, SwapItems const& swap) {
     for (int d = 0; d < D; ++d) {
         int new_load = sol.bin_load(bin_b, d) - sol.data().item_size(swap.item_b, d) +
                        sol.data().item_size(swap.item_a, d);
-        if (new_load > sol.data().bin_capacity(bt_b, d)) {
+        if (new_load > sol.data().bin_capacity(d)) {
             return false;
         }
     }
@@ -211,11 +208,11 @@ MergeBins evaluate_merge(PackingSolution const& sol, int source_bin, int target_
     assert(!sol.bin_items(source_bin).empty());
 
     // Merging source into target: source bin closes.
-    int delta = -sol.data().bin_cost(sol.bin_type(source_bin));
+    int delta = -1;
 
     // If target is currently empty, it opens.
     if (sol.bin_items(target_bin).empty()) {
-        delta += sol.data().bin_cost(sol.bin_type(target_bin));
+        delta += 1;
     }
 
     return MergeBins{
@@ -227,12 +224,11 @@ MergeBins evaluate_merge(PackingSolution const& sol, int source_bin, int target_
 
 bool is_feasible(PackingSolution const& sol, MergeBins const& merge) {
     int const D = sol.data().num_dims();
-    int const bt = sol.bin_type(merge.target_bin);
 
     // Check capacity: can target bin hold all source items too?
     for (int d = 0; d < D; ++d) {
         int combined = sol.bin_load(merge.target_bin, d) + sol.bin_load(merge.source_bin, d);
-        if (combined > sol.data().bin_capacity(bt, d)) {
+        if (combined > sol.data().bin_capacity(d)) {
             return false;
         }
     }
@@ -304,13 +300,13 @@ SplitBin evaluate_split(PackingSolution const& sol, int source_bin, int target_b
     // Source bin stays open (some items remain), target bin opens.
     int delta = 0;
     if (sol.bin_items(target_bin).empty()) {
-        delta += sol.data().bin_cost(sol.bin_type(target_bin));
+        delta += 1;
     }
 
     // If we are moving ALL items from source, source closes.
     if (static_cast<int>(items_to_move.size()) ==
         static_cast<int>(sol.bin_items(source_bin).size())) {
-        delta -= sol.data().bin_cost(sol.bin_type(source_bin));
+        delta -= 1;
     }
 
     return SplitBin{
@@ -323,7 +319,6 @@ SplitBin evaluate_split(PackingSolution const& sol, int source_bin, int target_b
 
 bool is_feasible(PackingSolution const& sol, SplitBin const& split) {
     int const D = sol.data().num_dims();
-    int const bt = sol.bin_type(split.target_bin);
 
     // Check capacity: do moved items fit in target bin?
     for (int d = 0; d < D; ++d) {
@@ -331,7 +326,7 @@ bool is_feasible(PackingSolution const& sol, SplitBin const& split) {
         for (int item : split.items_to_move) {
             load += sol.data().item_size(item, d);
         }
-        if (load > sol.data().bin_capacity(bt, d)) {
+        if (load > sol.data().bin_capacity(d)) {
             return false;
         }
     }
@@ -377,9 +372,8 @@ std::vector<SplitBin> enumerate_splits(PackingSolution const& sol) {
 
         // Check if bin is overloaded in any dimension.
         bool overloaded = false;
-        int bt = sol.bin_type(b);
         for (int d = 0; d < D; ++d) {
-            if (sol.bin_load(b, d) > sol.data().bin_capacity(bt, d)) {
+            if (sol.bin_load(b, d) > sol.data().bin_capacity(d)) {
                 overloaded = true;
                 break;
             }
@@ -388,10 +382,10 @@ std::vector<SplitBin> enumerate_splits(PackingSolution const& sol) {
             continue;
         }
 
-        // Find the first empty bin of the same type.
+        // Find the first empty bin.
         int target = -1;
         for (int tb = 0; tb < B; ++tb) {
-            if (sol.bin_items(tb).empty() && sol.bin_type(tb) == bt) {
+            if (sol.bin_items(tb).empty()) {
                 target = tb;
                 break;
             }
@@ -418,8 +412,7 @@ std::vector<SplitBin> enumerate_splits(PackingSolution const& sol) {
             // Check if moving this item to target would exceed target capacity.
             bool fits = true;
             for (int d = 0; d < D; ++d) {
-                if (target_load[d] + sol.data().item_size(item, d) >
-                    sol.data().bin_capacity(bt, d)) {
+                if (target_load[d] + sol.data().item_size(item, d) > sol.data().bin_capacity(d)) {
                     fits = false;
                     break;
                 }
@@ -438,7 +431,7 @@ std::vector<SplitBin> enumerate_splits(PackingSolution const& sol) {
             // Check if source is now feasible.
             bool source_ok = true;
             for (int d = 0; d < D; ++d) {
-                if (remaining_load[d] > sol.data().bin_capacity(bt, d)) {
+                if (remaining_load[d] > sol.data().bin_capacity(d)) {
                     source_ok = false;
                     break;
                 }

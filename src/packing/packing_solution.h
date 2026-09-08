@@ -14,9 +14,8 @@ namespace coso {
 /// Supports incremental assign/unassign/move operations with O(D) cost
 /// (where D is the number of dimensions), and O(1) cost/feasibility queries.
 ///
-/// Bin slots are pre-allocated: one slot per bin type instance. For bin type b
-/// with count limit C, slots run from offset[b] to offset[b]+C-1. When count
-/// is unlimited (0), a generous upper bound (num_items) is used per type.
+/// Bin slots are pre-allocated: the bin supply is unlimited, so a generous
+/// upper bound (num_items) of slots is allocated.
 class PackingSolution {
 public:
     /// Construct an empty solution (all items unassigned).
@@ -34,12 +33,6 @@ public:
 
     /// Number of non-empty bins.
     [[nodiscard]] int num_bins_used() const noexcept { return bins_used_; }
-
-    /// Bin type index for bin slot b.
-    [[nodiscard]] int bin_type(int b) const noexcept {
-        assert(b >= 0 && b < num_bins_);
-        return bin_type_[b];
-    }
 
     /// Which bin an item is assigned to, or -1 if unassigned.
     [[nodiscard]] int item_bin(int item) const noexcept {
@@ -61,8 +54,7 @@ public:
 
     /// Remaining capacity of bin b in dimension d.
     [[nodiscard]] int bin_remaining(int b, int d) const noexcept {
-        int bt = bin_type_[b];
-        return data_->bin_capacity(bt, d) - bin_load(b, d);
+        return data_->bin_capacity(d) - bin_load(b, d);
     }
 
     /// Whether item fits in bin b (all dimensions and no conflicts).
@@ -91,8 +83,8 @@ public:
     //  Objective
     // -------------------------------------------------------------------
 
-    /// Total cost: sum of bin_cost for each non-empty bin.
-    [[nodiscard]] int cost() const noexcept { return cost_; }
+    /// Total cost: the number of non-empty bins.
+    [[nodiscard]] int cost() const noexcept { return bins_used_; }
 
     /// Delta cost if we were to assign an unassigned item to bin b.
     /// Returns the change in cost (positive = increase).
@@ -125,9 +117,6 @@ private:
 
     int num_bins_ = 0;
 
-    // bin_type_[b] = type index for bin slot b.
-    std::vector<int> bin_type_;
-
     // item_bin_[i] = bin slot index, or -1 if unassigned.
     std::vector<int> item_bin_;
 
@@ -139,7 +128,6 @@ private:
 
     // Cached aggregates.
     int bins_used_ = 0;
-    int cost_ = 0;
     int capacity_violations_ = 0;
     int conflict_violations_ = 0;
     int unassigned_count_ = 0;

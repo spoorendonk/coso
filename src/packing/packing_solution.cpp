@@ -7,29 +7,12 @@ namespace coso {
 
 PackingSolution::PackingSolution(PackingData const& data)
     : data_(&data), unassigned_count_(data.num_items()) {
-    // Allocate bin slots: for each bin type, use its count (or num_items as
-    // upper bound when count is unlimited).
-    int total_bins = 0;
-    for (int bt = 0; bt < data.num_bin_types(); ++bt) {
-        int c = data.bin_count(bt);
-        total_bins += (c > 0) ? c : data.num_items();
-    }
-    num_bins_ = total_bins;
+    // Allocate bin slots: the bin supply is unlimited, so num_items is an
+    // upper bound on the number of bins any solution can use.
+    num_bins_ = data.num_items();
 
-    bin_type_.resize(num_bins_);
     bin_items_.resize(num_bins_);
     bin_load_.resize(num_bins_ * data.num_dims(), 0);
-
-    // Map each slot to its bin type.
-    int slot = 0;
-    for (int bt = 0; bt < data.num_bin_types(); ++bt) {
-        int c = data.bin_count(bt);
-        int n = (c > 0) ? c : data.num_items();
-        for (int k = 0; k < n; ++k) {
-            bin_type_[slot++] = bt;
-        }
-    }
-    assert(slot == num_bins_);
 
     // All items start unassigned.
     item_bin_.assign(data.num_items(), -1);
@@ -40,10 +23,9 @@ PackingSolution::PackingSolution(PackingData const& data)
 // ---------------------------------------------------------------------------
 
 bool PackingSolution::item_fits_capacity(int item, int b) const {
-    int bt = bin_type_[b];
     int D = data_->num_dims();
     for (int d = 0; d < D; ++d) {
-        if (bin_load_[b * D + d] + data_->item_size(item, d) > data_->bin_capacity(bt, d)) {
+        if (bin_load_[b * D + d] + data_->item_size(item, d) > data_->bin_capacity(d)) {
             return false;
         }
     }
@@ -78,7 +60,6 @@ void PackingSolution::assign(int item, int bin) {
     assert(item_bin_[item] == -1);  // must be unassigned
 
     int D = data_->num_dims();
-    int bt = bin_type_[bin];
     bool was_empty = bin_items_[bin].empty();
 
     // Update load and track capacity violations.
@@ -101,10 +82,8 @@ void PackingSolution::assign(int item, int bin) {
     item_bin_[item] = bin;
     --unassigned_count_;
 
-    // Update bins_used and cost.
     if (was_empty) {
         ++bins_used_;
-        cost_ += data_->bin_cost(bt);
     }
 }
 
@@ -114,7 +93,6 @@ void PackingSolution::unassign(int item) {
     assert(bin >= 0 && bin < num_bins_);
 
     int D = data_->num_dims();
-    int bt = bin_type_[bin];
 
     // Remove conflict violations involving this item in its bin.
     for (int other : bin_items_[bin]) {
@@ -137,10 +115,8 @@ void PackingSolution::unassign(int item) {
     item_bin_[item] = -1;
     ++unassigned_count_;
 
-    // Update bins_used and cost.
     if (items.empty()) {
         --bins_used_;
-        cost_ -= data_->bin_cost(bt);
     }
 }
 
@@ -165,7 +141,7 @@ int PackingSolution::assign_cost_delta(int item, int b) const {
 
     if (bin_items_[b].empty()) {
         // Opening a new bin.
-        return data_->bin_cost(bin_type_[b]);
+        return 1;
     }
     // Bin already open, no cost change.
     return 0;
@@ -182,12 +158,12 @@ int PackingSolution::move_cost_delta(int item, int to_bin) const {
 
     // Cost of opening to_bin if currently empty.
     if (bin_items_[to_bin].empty()) {
-        delta += data_->bin_cost(bin_type_[to_bin]);
+        delta += 1;
     }
 
     // Cost saved if from_bin becomes empty (only item there).
     if (bin_items_[from_bin].size() == 1) {
-        delta -= data_->bin_cost(bin_type_[from_bin]);
+        delta -= 1;
     }
 
     return delta;
@@ -202,11 +178,10 @@ bool PackingSolution::feasible() const noexcept {
 }
 
 int PackingSolution::count_capacity_violations(int b) const {
-    int bt = bin_type_[b];
     int D = data_->num_dims();
     int violations = 0;
     for (int d = 0; d < D; ++d) {
-        if (bin_load_[b * D + d] > data_->bin_capacity(bt, d)) {
+        if (bin_load_[b * D + d] > data_->bin_capacity(d)) {
             ++violations;
         }
     }

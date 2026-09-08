@@ -474,10 +474,10 @@ TEST_CASE("PackingModel can be default-constructed", "[packing]") {
     (void)m;
 }
 
-TEST_CASE("PackingModel add_bin_type", "[packing]") {
+TEST_CASE("PackingModel set_bin_capacity", "[packing]") {
     coso::PackingModel m;
-    int bt = m.add_bin_type({.capacity = {100}, .cost = 1});
-    REQUIRE(bt >= 0);
+    m.set_bin_capacity({100});
+    REQUIRE(m.bin_capacity() == std::vector<int>{100});
 }
 
 TEST_CASE("PackingModel add_item", "[packing]") {
@@ -495,7 +495,7 @@ TEST_CASE("PackingModel conflicts", "[packing]") {
 
 TEST_CASE("PackingModel solve returns a Result", "[packing]") {
     coso::PackingModel m;
-    m.add_bin_type({.capacity = {100}});
+    m.set_bin_capacity({100});
     m.add_item({.size = {30}});
     m.add_item({.size = {40}});
     coso::Result r = m.solve(coso::TimeLimit(1.0));
@@ -542,7 +542,7 @@ TEST_CASE("Deterministic stop parity across model APIs", "[model][work_units]") 
 
     SECTION("PackingModel") {
         coso::PackingModel m;
-        m.add_bin_type({.capacity = {10}});
+        m.set_bin_capacity({10});
         m.add_item({.size = {6}});
         m.add_item({.size = {4}});
         m.add_item({.size = {3}});

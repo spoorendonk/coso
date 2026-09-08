@@ -63,7 +63,6 @@ public:
 
     /// Continuous lower bound on the number of bins needed:
     ///   max over dimensions of ceil(sum_item_sizes / bin_capacity).
-    /// Uses bin type 0 as the reference.
     [[nodiscard]] int continuous_lower_bound() const;
 
     // -------------------------------------------------------------------

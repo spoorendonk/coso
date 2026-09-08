@@ -16,7 +16,7 @@ using Catch::Matchers::WithinAbs;
 
 static PackingData make_1d() {
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
     model.add_item({.size = {3}});  // 0
     model.add_item({.size = {5}});  // 1
     model.add_item({.size = {7}});  // 2
@@ -27,7 +27,7 @@ static PackingData make_1d() {
 
 static PackingData make_2d() {
     PackingModel model;
-    model.add_bin_type({.capacity = {10, 20}});
+    model.set_bin_capacity({10, 20});
     model.add_item({.size = {3, 8}});   // 0
     model.add_item({.size = {5, 10}});  // 1
     model.add_item({.size = {4, 7}});   // 2
@@ -36,7 +36,7 @@ static PackingData make_2d() {
 
 static PackingData make_3d() {
     PackingModel model;
-    model.add_bin_type({.capacity = {10, 20, 30}});
+    model.set_bin_capacity({10, 20, 30});
     model.add_item({.size = {3, 8, 10}});   // 0
     model.add_item({.size = {5, 10, 15}});  // 1
     model.add_item({.size = {4, 7, 12}});   // 2
@@ -154,10 +154,10 @@ TEST_CASE("BinCapacity: best_fit finds tightest bin", "[packing][bin_capacity]")
 
 TEST_CASE("BinCapacity: best_fit returns -1 when nothing fits", "[packing][bin_capacity]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {5}, .count = 2});
+    model.set_bin_capacity({5});
     model.add_item({.size = {3}});  // 0
     model.add_item({.size = {3}});  // 1
-    model.add_item({.size = {4}});  // 2
+    model.add_item({.size = {6}});  // 2, larger than the bin
 
     auto data = PackingData::build(model);
     PackingSolution sol(data);
@@ -166,7 +166,7 @@ TEST_CASE("BinCapacity: best_fit returns -1 when nothing fits", "[packing][bin_c
     cap.add_item(0, 0);  // bin 0: load 3, residual 2
     cap.add_item(1, 1);  // bin 1: load 3, residual 2
 
-    // Item 2 (size 4) does not fit in either bin.
+    // Item 2 (size 6) does not fit in any bin.
     REQUIRE(cap.best_fit(2) == -1);
 }
 
@@ -206,7 +206,7 @@ TEST_CASE("BinCapacity: first_fit returns first feasible bin", "[packing][bin_ca
 
 TEST_CASE("BinCapacity: first_fit returns -1 when nothing fits", "[packing][bin_capacity]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {3}, .count = 1});
+    model.set_bin_capacity({3});
     model.add_item({.size = {5}});  // too big for any bin
 
     auto data = PackingData::build(model);
@@ -252,7 +252,7 @@ TEST_CASE("BinCapacity: continuous lower bound 2D", "[packing][bin_capacity]") {
 
 TEST_CASE("BinCapacity: continuous lower bound exact", "[packing][bin_capacity]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
     model.add_item({.size = {10}});
     model.add_item({.size = {10}});
     model.add_item({.size = {10}});

@@ -13,24 +13,21 @@
 
 namespace coso {
 
-int PackingModel::add_bin_type(BinTypeParams p) {
-    int idx = static_cast<int>(bin_types_.size());
-
+void PackingModel::set_bin_capacity(std::vector<int> capacity) {
     // Infer or validate dimensionality.
-    int dims = static_cast<int>(p.capacity.size());
+    int dims = static_cast<int>(capacity.size());
     if (dims == 0) {
-        throw std::invalid_argument("bin type must have at least one capacity dimension");
+        throw std::invalid_argument("bin capacity must have at least one dimension");
     }
 
     if (num_dims_ == 0) {
         num_dims_ = dims;
     } else if (dims != num_dims_) {
-        throw std::invalid_argument("bin type capacity has " + std::to_string(dims) +
+        throw std::invalid_argument("bin capacity has " + std::to_string(dims) +
                                     " dimensions, expected " + std::to_string(num_dims_));
     }
 
-    bin_types_.push_back(std::move(p));
-    return idx;
+    bin_capacity_ = std::move(capacity);
 }
 
 int PackingModel::add_item(ItemParams p) {
@@ -69,7 +66,7 @@ Result PackingModel::solve(TimeLimit tl) {
     WorkUnits work;
     StopCriterion stop(tl.seconds);
     stop.set_work_limit(&work, WorkUnits::ticks_from_units(tl.work_units));
-    work.count(static_cast<uint64_t>(bin_types_.size()) + static_cast<uint64_t>(items_.size()) +
+    work.count(static_cast<uint64_t>(bin_capacity_.size()) + static_cast<uint64_t>(items_.size()) +
                static_cast<uint64_t>(conflicts_.size()));
     if (stop.should_stop()) {
         Result result;
@@ -80,14 +77,13 @@ Result PackingModel::solve(TimeLimit tl) {
         return result;
     }
 
-    // Validate: need at least one bin type and one item.
-    if (bin_types_.empty() || items_.empty()) {
+    // Validate: need a bin capacity and at least one item.
+    if (bin_capacity_.empty() || items_.empty()) {
         return {};  // cannot solve without bins/items
     }
 
     PackingData data = PackingData::build(*this);
-    work.count(static_cast<uint64_t>(data.num_items()) +
-               static_cast<uint64_t>(data.num_bin_types()));
+    work.count(static_cast<uint64_t>(data.num_items()));
 
     PackingSolution sol(data);
     int const N = data.num_items();

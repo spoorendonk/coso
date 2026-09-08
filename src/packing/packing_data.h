@@ -27,23 +27,10 @@ public:
     static PackingData build(PackingModel const& model) {
         PackingData data;
 
-        data.num_bin_types_ = model.num_bin_types();
         data.num_items_ = model.num_items();
         data.num_dims_ = model.num_dimensions();
 
-        // Copy bin type data into flat arrays.
-        data.bin_capacities_.resize(data.num_bin_types_ * data.num_dims_);
-        data.bin_costs_.resize(data.num_bin_types_);
-        data.bin_counts_.resize(data.num_bin_types_);
-
-        for (int b = 0; b < data.num_bin_types_; ++b) {
-            auto const& bt = model.bin_type(b);
-            for (int d = 0; d < data.num_dims_; ++d) {
-                data.bin_capacities_[b * data.num_dims_ + d] = bt.capacity[d];
-            }
-            data.bin_costs_[b] = bt.cost;
-            data.bin_counts_[b] = bt.count;
-        }
+        data.bin_capacities_ = model.bin_capacity();
 
         // Copy item sizes into flat array.
         data.item_sizes_.resize(data.num_items_ * data.num_dims_);
@@ -71,26 +58,14 @@ public:
     //  Accessors
     // -------------------------------------------------------------------
 
-    [[nodiscard]] int num_bin_types() const noexcept { return num_bin_types_; }
     [[nodiscard]] int num_items() const noexcept { return num_items_; }
     [[nodiscard]] int num_dims() const noexcept { return num_dims_; }
 
-    /// Capacity of bin type b in dimension d.
-    [[nodiscard]] int bin_capacity(int b, int d) const {
-        assert(b >= 0 && b < num_bin_types_ && d >= 0 && d < num_dims_);
-        return bin_capacities_[b * num_dims_ + d];
-    }
-
-    /// Cost of bin type b.
-    [[nodiscard]] int bin_cost(int b) const {
-        assert(b >= 0 && b < num_bin_types_);
-        return bin_costs_[b];
-    }
-
-    /// Count limit of bin type b (0 = unlimited).
-    [[nodiscard]] int bin_count(int b) const {
-        assert(b >= 0 && b < num_bin_types_);
-        return bin_counts_[b];
+    /// Bin capacity in dimension d. A model that declared no capacity has
+    /// none, whatever dimensionality its items imply.
+    [[nodiscard]] int bin_capacity(int d) const {
+        assert(d >= 0 && d < static_cast<int>(bin_capacities_.size()));
+        return bin_capacities_[d];
     }
 
     /// Size of item i in dimension d.
@@ -113,22 +88,19 @@ public:
     }
 
     /// Continuous lower bound: ceil(sum of item sizes / bin capacity) per dim,
-    /// taking the max across dimensions. Uses bin type 0.
+    /// taking the max across dimensions.
     [[nodiscard]] int continuous_lower_bound() const noexcept { return continuous_lb_; }
 
-    /// L2 lower bound (Martello & Toth, 1990) for single-dimension case
-    /// using bin type 0. Falls back to continuous LB for multi-dim.
+    /// L2 lower bound (Martello & Toth, 1990) for single-dimension case.
+    /// Falls back to continuous LB for multi-dim.
     [[nodiscard]] int l2_lower_bound() const noexcept { return l2_lb_; }
 
 private:
-    int num_bin_types_ = 0;
     int num_items_ = 0;
     int num_dims_ = 0;
 
-    // Flat arrays: bin_capacities_[b * num_dims_ + d], item_sizes_[i * num_dims_ + d].
+    // bin_capacities_[d]; flat array item_sizes_[i * num_dims_ + d].
     std::vector<int> bin_capacities_;
-    std::vector<int> bin_costs_;
-    std::vector<int> bin_counts_;
     std::vector<int> item_sizes_;
 
     // Adjacency-list conflict graph.
@@ -139,19 +111,18 @@ private:
     int l2_lb_ = 0;
 
     void compute_lower_bounds_() {
-        if (num_items_ == 0 || num_bin_types_ == 0) {
+        if (num_items_ == 0 || bin_capacities_.empty()) {
             return;
         }
 
         // Continuous lower bound: max over dimensions of ceil(sum_sizes / capacity).
-        // Use bin type 0 as the reference bin.
         int clb = 0;
         for (int d = 0; d < num_dims_; ++d) {
             int total_size = 0;
             for (int i = 0; i < num_items_; ++i) {
                 total_size += item_sizes_[i * num_dims_ + d];
             }
-            int cap = bin_capacities_[0 * num_dims_ + d];
+            int cap = bin_capacities_[d];
             if (cap > 0) {
                 int lb = (total_size + cap - 1) / cap;
                 clb = std::max(clb, lb);
@@ -159,7 +130,7 @@ private:
         }
         continuous_lb_ = clb;
 
-        // L2 lower bound (for 1D only, using bin type 0).
+        // L2 lower bound (for 1D only).
         if (num_dims_ == 1) {
             int cap = bin_capacities_[0];
             int half = cap / 2;

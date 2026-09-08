@@ -12,10 +12,10 @@ using namespace coso;
 //  Helpers
 // ---------------------------------------------------------------------------
 
-/// 1D instance: items {3, 5, 7, 2, 4}, bin cap 10, cost 1.
+/// 1D instance: items {3, 5, 7, 2, 4}, bin cap 10.
 static PackingData make_simple_1d() {
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
     model.add_item({.size = {3}});  // 0
     model.add_item({.size = {5}});  // 1
     model.add_item({.size = {7}});  // 2
@@ -27,7 +27,7 @@ static PackingData make_simple_1d() {
 /// 1D instance with conflicts: items {10, 10, 10}, cap 100, conflict(0,1).
 static PackingData make_conflict_instance() {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {10}});  // 0
     model.add_item({.size = {10}});  // 1
     model.add_item({.size = {10}});  // 2
@@ -167,7 +167,7 @@ TEST_CASE("SwapItems: feasibility - capacity", "[packing][operators]") {
 
 TEST_CASE("SwapItems: feasibility - capacity violation", "[packing][operators]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
     model.add_item({.size = {3}});  // 0
     model.add_item({.size = {4}});  // 1
     model.add_item({.size = {8}});  // 2
@@ -433,7 +433,7 @@ TEST_CASE("MoveItem: conflict prevents move", "[packing][operators]") {
 
 TEST_CASE("SwapItems: conflict prevents swap", "[packing][operators]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {10}});  // 0
     model.add_item({.size = {10}});  // 1
     model.add_item({.size = {10}});  // 2
@@ -483,7 +483,7 @@ TEST_CASE("MergeBins: conflict prevents merge", "[packing][operators]") {
 
 TEST_CASE("MoveItem: 2D feasibility check", "[packing][operators]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {10, 20}});
+    model.set_bin_capacity({10, 20});
     model.add_item({.size = {3, 15}});  // 0: fits weight but tight on volume
     model.add_item({.size = {2, 8}});   // 1
 

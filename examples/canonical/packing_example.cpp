@@ -4,7 +4,7 @@
 
 int main() {
     coso::PackingModel model;
-    model.add_bin_type({.capacity = {10}, .cost = 1, .count = 0});
+    model.set_bin_capacity({10});
     model.add_item({.size = {6}});
     model.add_item({.size = {4}});
     model.add_item({.size = {3}});

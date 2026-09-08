@@ -13,30 +13,20 @@ using namespace coso;
 //  Adding bin types and items
 // ---------------------------------------------------------------------------
 
-TEST_CASE("PackingModel: add bin types", "[packing][model]") {
+TEST_CASE("PackingModel: set bin capacity", "[packing][model]") {
     PackingModel model;
 
-    int b0 = model.add_bin_type({.capacity = {100}});
-    REQUIRE(b0 == 0);
-    REQUIRE(model.num_bin_types() == 1);
+    model.set_bin_capacity({100});
+    REQUIRE(model.bin_capacity() == std::vector<int>{100});
 
-    int b1 = model.add_bin_type({.capacity = {200}, .cost = 3, .count = 5});
-    REQUIRE(b1 == 1);
-    REQUIRE(model.num_bin_types() == 2);
-
-    // Check stored parameters.
-    REQUIRE(model.bin_type(0).capacity == std::vector<int>{100});
-    REQUIRE(model.bin_type(0).cost == 1);
-    REQUIRE(model.bin_type(0).count == 0);
-
-    REQUIRE(model.bin_type(1).capacity == std::vector<int>{200});
-    REQUIRE(model.bin_type(1).cost == 3);
-    REQUIRE(model.bin_type(1).count == 5);
+    // Setting it again replaces the capacity.
+    model.set_bin_capacity({200});
+    REQUIRE(model.bin_capacity() == std::vector<int>{200});
 }
 
 TEST_CASE("PackingModel: add items", "[packing][model]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
 
     int i0 = model.add_item({.size = {30}});
     int i1 = model.add_item({.size = {50}});
@@ -60,7 +50,7 @@ TEST_CASE("PackingModel: multi-dimensional capacity", "[packing][model]") {
     PackingModel model;
 
     // 2D: weight and volume.
-    model.add_bin_type({.capacity = {100, 200}});
+    model.set_bin_capacity({100, 200});
     REQUIRE(model.num_dimensions() == 2);
 
     model.add_item({.size = {30, 50}});
@@ -73,7 +63,7 @@ TEST_CASE("PackingModel: multi-dimensional capacity", "[packing][model]") {
 
 TEST_CASE("PackingModel: dimension mismatch throws", "[packing][model]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100, 200}});  // 2D
+    model.set_bin_capacity({100, 200});  // 2D
 
     // Adding a 1D item should throw.
     REQUIRE_THROWS_AS(model.add_item({.size = {30}}), std::invalid_argument);
@@ -83,13 +73,13 @@ TEST_CASE("PackingModel: dimension mismatch throws", "[packing][model]") {
 
     // Adding a 2D bin type with different dim count should throw.
     PackingModel model2;
-    model2.add_bin_type({.capacity = {100}});  // 1D
-    REQUIRE_THROWS_AS(model2.add_bin_type({.capacity = {100, 200}}), std::invalid_argument);
+    model2.set_bin_capacity({100});  // 1D
+    REQUIRE_THROWS_AS(model2.set_bin_capacity({100, 200}), std::invalid_argument);
 }
 
 TEST_CASE("PackingModel: empty capacity/size throws", "[packing][model]") {
     PackingModel model;
-    REQUIRE_THROWS_AS(model.add_bin_type({.capacity = {}}), std::invalid_argument);
+    REQUIRE_THROWS_AS(model.set_bin_capacity({}), std::invalid_argument);
     REQUIRE_THROWS_AS(model.add_item({.size = {}}), std::invalid_argument);
 }
 
@@ -99,7 +89,7 @@ TEST_CASE("PackingModel: empty capacity/size throws", "[packing][model]") {
 
 TEST_CASE("PackingModel: add conflicts", "[packing][model]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {30}});
     model.add_item({.size = {40}});
     model.add_item({.size = {50}});
@@ -114,7 +104,7 @@ TEST_CASE("PackingModel: add conflicts", "[packing][model]") {
 
 TEST_CASE("PackingModel: conflict validation", "[packing][model]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {30}});
     model.add_item({.size = {40}});
 
@@ -132,7 +122,7 @@ TEST_CASE("PackingModel: conflict validation", "[packing][model]") {
 
 TEST_CASE("PackingModel: solve returns baseline packed result", "[packing][model]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {30}});
     model.add_item({.size = {50}});
 
@@ -156,20 +146,17 @@ TEST_CASE("PackingModel: solve with empty model returns default", "[packing][mod
 
 TEST_CASE("PackingData: build from model", "[packing][data]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}, .cost = 2, .count = 10});
+    model.set_bin_capacity({100});
     model.add_item({.size = {30}});
     model.add_item({.size = {50}});
     model.add_item({.size = {20}});
 
     auto data = PackingData::build(model);
 
-    REQUIRE(data.num_bin_types() == 1);
     REQUIRE(data.num_items() == 3);
     REQUIRE(data.num_dims() == 1);
 
-    REQUIRE(data.bin_capacity(0, 0) == 100);
-    REQUIRE(data.bin_cost(0) == 2);
-    REQUIRE(data.bin_count(0) == 10);
+    REQUIRE(data.bin_capacity(0) == 100);
 
     REQUIRE(data.item_size(0, 0) == 30);
     REQUIRE(data.item_size(1, 0) == 50);
@@ -178,15 +165,15 @@ TEST_CASE("PackingData: build from model", "[packing][data]") {
 
 TEST_CASE("PackingData: multi-dimensional", "[packing][data]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100, 200}});
+    model.set_bin_capacity({100, 200});
     model.add_item({.size = {30, 50}});
     model.add_item({.size = {40, 60}});
 
     auto data = PackingData::build(model);
 
     REQUIRE(data.num_dims() == 2);
-    REQUIRE(data.bin_capacity(0, 0) == 100);
-    REQUIRE(data.bin_capacity(0, 1) == 200);
+    REQUIRE(data.bin_capacity(0) == 100);
+    REQUIRE(data.bin_capacity(1) == 200);
     REQUIRE(data.item_size(0, 0) == 30);
     REQUIRE(data.item_size(0, 1) == 50);
     REQUIRE(data.item_size(1, 0) == 40);
@@ -195,7 +182,7 @@ TEST_CASE("PackingData: multi-dimensional", "[packing][data]") {
 
 TEST_CASE("PackingData: conflict graph", "[packing][data]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
     model.add_item({.size = {30}});
     model.add_item({.size = {40}});
     model.add_item({.size = {50}});
@@ -228,7 +215,7 @@ TEST_CASE("PackingData: conflict graph", "[packing][data]") {
 
 TEST_CASE("PackingData: continuous lower bound", "[packing][data]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
 
     // 7 items of size 3 => total 21, capacity 10 => ceil(21/10) = 3.
     for (int i = 0; i < 7; ++i) {
@@ -241,7 +228,7 @@ TEST_CASE("PackingData: continuous lower bound", "[packing][data]") {
 
 TEST_CASE("PackingData: L2 lower bound", "[packing][data]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
 
     // Items: 7, 7, 6, 6, 5, 5 (total = 36, cap = 10)
     // Continuous LB: ceil(36/10) = 4
@@ -263,7 +250,7 @@ TEST_CASE("PackingData: L2 lower bound", "[packing][data]") {
 
 TEST_CASE("PackingData: L2 bound tighter than continuous", "[packing][data]") {
     PackingModel model;
-    model.add_bin_type({.capacity = {100}});
+    model.set_bin_capacity({100});
 
     // 3 items of size 51 => total = 153, cap = 100
     // Continuous: ceil(153/100) = 2
@@ -286,7 +273,7 @@ TEST_CASE("PackingData: L2 bound tighter than continuous", "[packing][data]") {
 TEST_CASE("PackingModel: simple 1D instance end-to-end", "[packing][model]") {
     // Classic bin packing: bin capacity 10, items of various sizes.
     PackingModel model;
-    model.add_bin_type({.capacity = {10}});
+    model.set_bin_capacity({10});
 
     model.add_item({.size = {6}});
     model.add_item({.size = {6}});
@@ -296,7 +283,6 @@ TEST_CASE("PackingModel: simple 1D instance end-to-end", "[packing][model]") {
     model.add_item({.size = {3}});
     model.add_item({.size = {3}});
 
-    REQUIRE(model.num_bin_types() == 1);
     REQUIRE(model.num_items() == 7);
     REQUIRE(model.num_dimensions() == 1);
 
@@ -350,7 +336,7 @@ TEST_CASE("PackingModel: vector bin packing respects every dimension", "[packing
 
     SECTION("control: dimension 0 alone packs items 0 and 1 together") {
         PackingModel model;
-        model.add_bin_type({.capacity = {10}});
+        model.set_bin_capacity({10});
         for (auto const& s : items) {
             model.add_item({.size = {s[0]}});
         }
@@ -363,7 +349,7 @@ TEST_CASE("PackingModel: vector bin packing respects every dimension", "[packing
 
     SECTION("both dimensions declared") {
         PackingModel model;
-        model.add_bin_type({.capacity = {10, 10}});
+        model.set_bin_capacity({10, 10});
         for (auto const& s : items) {
             model.add_item({.size = s});
         }
@@ -397,7 +383,7 @@ TEST_CASE("PackingModel: bin packing with conflicts keeps the pair apart", "[pac
     // Two items of size 5 fit one bin of capacity 10 — unless they conflict.
     SECTION("control: no conflict declared") {
         PackingModel model;
-        model.add_bin_type({.capacity = {10}});
+        model.set_bin_capacity({10});
         model.add_item({.size = {5}});
         model.add_item({.size = {5}});
 
@@ -411,7 +397,7 @@ TEST_CASE("PackingModel: bin packing with conflicts keeps the pair apart", "[pac
 
     SECTION("conflict declared") {
         PackingModel model;
-        model.add_bin_type({.capacity = {10}});
+        model.set_bin_capacity({10});
         int a = model.add_item({.size = {5}});
         int b = model.add_item({.size = {5}});
         model.add_conflict(a, b);
@@ -427,63 +413,4 @@ TEST_CASE("PackingModel: bin packing with conflicts keeps the pair apart", "[pac
         REQUIRE(bin_of(result, a) >= 0);
         REQUIRE(bin_of(result, a) != bin_of(result, b));
     }
-}
-
-TEST_CASE("PackingModel: variable-sized bin packing costs the mix", "[packing][model]") {
-    // Two bin types: small (capacity 5, cost 1) and large (capacity 10,
-    // cost 5). Items 8, 5, 5. Only a large bin holds the 8; the two 5s are
-    // cheaper in small bins (1 + 1) than sharing a second large bin (5).
-    SECTION("control: large bins only") {
-        PackingModel model;
-        model.add_bin_type({.capacity = {10}, .cost = 5});
-        model.add_item({.size = {8}});
-        model.add_item({.size = {5}});
-        model.add_item({.size = {5}});
-
-        Result result = model.solve(TimeLimit(1.0));
-
-        REQUIRE(result.feasible());
-        REQUIRE(result.num_bins() == 2);
-        REQUIRE(result.cost() == 10.0);
-    }
-
-    SECTION("both bin types declared") {
-        PackingModel model;
-        // The large type is declared first deliberately. Construction breaks
-        // ties on lowest slot index, so an engine that ignored the declared
-        // costs would fill the large bins and return 2 bins costing 10; only
-        // one that reads them returns 3 bins costing 7.
-        model.add_bin_type({.capacity = {10}, .cost = 5});
-        model.add_bin_type({.capacity = {5}, .cost = 1});
-        int big = model.add_item({.size = {8}});
-        model.add_item({.size = {5}});
-        model.add_item({.size = {5}});
-
-        Result result = model.solve(TimeLimit(1.0));
-
-        REQUIRE(result.feasible());
-        REQUIRE(result.unassigned().empty());
-        REQUIRE(result.num_bins() == 3);
-        REQUIRE(result.cost() == 7.0);
-
-        // The size-8 item is alone: no small bin holds it, and no other item
-        // fits beside it in a large bin.
-        REQUIRE(bin_of(result, big) >= 0);
-        REQUIRE(result.bins()[bin_of(result, big)].size() == 1);
-    }
-}
-
-TEST_CASE("PackingModel: bin count limits the slots of a type", "[packing][model]") {
-    // One small bin available, three items: two go unassigned.
-    PackingModel model;
-    model.add_bin_type({.capacity = {5}, .cost = 1, .count = 1});
-    model.add_item({.size = {5}});
-    model.add_item({.size = {5}});
-    model.add_item({.size = {5}});
-
-    Result result = model.solve(TimeLimit(1.0));
-
-    REQUIRE(result.num_bins() == 1);
-    REQUIRE(result.unassigned().size() == 2);
-    REQUIRE_FALSE(result.feasible());  // unpacked items make the result infeasible
 }
