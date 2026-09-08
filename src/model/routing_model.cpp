@@ -20,15 +20,7 @@ namespace coso {
 
 int RoutingModel::add_depot(double x, double y, DepotParams p) {
     int idx = static_cast<int>(depots_.size());
-    depots_.push_back(
-        {.x = x, .y = y, .has_coord = true, .explicit_id = -1, .params = std::move(p)});
-    return idx;
-}
-
-int RoutingModel::add_depot(int id, DepotParams p) {
-    int idx = static_cast<int>(depots_.size());
-    depots_.push_back(
-        {.x = 0.0, .y = 0.0, .has_coord = false, .explicit_id = id, .params = std::move(p)});
+    depots_.push_back({.x = x, .y = y, .params = std::move(p)});
     return idx;
 }
 
@@ -40,15 +32,7 @@ int RoutingModel::add_vehicle_type(int count, VehicleTypeParams p) {
 
 int RoutingModel::add_client(double x, double y, ClientParams p) {
     int idx = static_cast<int>(clients_.size());
-    clients_.push_back(
-        {.x = x, .y = y, .has_coord = true, .explicit_id = -1, .params = std::move(p)});
-    return idx;
-}
-
-int RoutingModel::add_client(int id, ClientParams p) {
-    int idx = static_cast<int>(clients_.size());
-    clients_.push_back(
-        {.x = 0.0, .y = 0.0, .has_coord = false, .explicit_id = id, .params = std::move(p)});
+    clients_.push_back({.x = x, .y = y, .params = std::move(p)});
     return idx;
 }
 
@@ -68,53 +52,16 @@ void RoutingModel::add_pickup_delivery(int pickup, int delivery) {
     add_request(pickup, delivery);
 }
 
-int RoutingModel::add_client_group() {
-    return next_group_id_++;
-}
-
-int RoutingModel::add_sync_group(std::vector<int> const& clients, int tolerance) {
-    sync_groups_.push_back({clients, tolerance});
-    return static_cast<int>(sync_groups_.size()) - 1;
-}
-
 // ---------------------------------------------------------------------------
-//  Distance / duration / cost matrix setters
+//  Distance / duration matrix setters
 // ---------------------------------------------------------------------------
 
 void RoutingModel::set_distance(int from, int to, int dist) {
-    dist_entries_.push_back({current_profile_, from, to, dist});
+    dist_entries_.push_back({from, to, dist});
 }
 
 void RoutingModel::set_duration(int from, int to, int dur) {
-    dur_entries_.push_back({current_profile_, from, to, dur});
-}
-
-void RoutingModel::set_profile(int profile) {
-    current_profile_ = profile;
-}
-
-void RoutingModel::set_profile_distance(int profile, int from, int to, int dist) {
-    dist_entries_.push_back({profile, from, to, dist});
-}
-
-void RoutingModel::set_profile_duration(int profile, int from, int to, int dur) {
-    dur_entries_.push_back({profile, from, to, dur});
-}
-
-void RoutingModel::set_cost_matrix(int profile, int from, int to, int cost) {
-    cost_entries_.push_back({profile, from, to, cost});
-}
-
-// ---------------------------------------------------------------------------
-//  Warm start / pin
-// ---------------------------------------------------------------------------
-
-void RoutingModel::set_initial_routes(const std::vector<std::vector<int>>& routes) {
-    initial_routes_ = routes;
-}
-
-void RoutingModel::pin(int client_id) {
-    pinned_.push_back(client_id);
+    dur_entries_.push_back({from, to, dur});
 }
 
 // ---------------------------------------------------------------------------
@@ -169,14 +116,13 @@ Result RoutingModel::solve(TimeLimit tl) {
     //
     // For the RoutingModel API, set_distance(from, to, dist) uses node indices
     // where depots are 0..D-1 and clients are D..D+C-1 (matching ProblemData).
+    // ProblemData still carries a profile dimension; the model declares one
+    // matrix, so every entry lands in profile 0.
     for (auto const& e : dist_entries_) {
-        builder.set_distance(e.profile, e.from, e.to, e.value);
+        builder.set_distance(0, e.from, e.to, e.value);
     }
     for (auto const& e : dur_entries_) {
-        builder.set_duration(e.profile, e.from, e.to, e.value);
-    }
-    for (auto const& e : cost_entries_) {
-        builder.set_cost(e.profile, e.from, e.to, e.value);
+        builder.set_duration(0, e.from, e.to, e.value);
     }
 
     // Build with default granularity.
@@ -277,7 +223,7 @@ Result solve(const std::string& instance_path, TimeLimit tl) {
         if (!inst.coords.empty()) {
             model.add_depot(inst.coords[d].x, inst.coords[d].y);
         } else {
-            model.add_depot(d);
+            model.add_depot(0.0, 0.0);
         }
     }
 
@@ -305,7 +251,7 @@ Result solve(const std::string& instance_path, TimeLimit tl) {
         if (!inst.coords.empty()) {
             model.add_client(inst.coords[i].x, inst.coords[i].y, cp);
         } else {
-            model.add_client(i, cp);
+            model.add_client(0.0, 0.0, cp);
         }
 
         // Client index in model numbering is (num_depots + client_idx).

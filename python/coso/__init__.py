@@ -3,7 +3,6 @@
 from coso._coso import (
     __version__,
     Coord,
-    CostParams,
     TimeLimit,
     TimeWindow,
     PathFlow,
@@ -15,7 +14,6 @@ from coso._coso import (
     ClientEntry,
     VehicleTypeEntry,
     MatEntry,
-    SyncGroupEntry,
     NodeEntry,
     ArcEntry,
     ProductEntry,
@@ -28,7 +26,6 @@ from coso._coso import (
 __all__ = [
     "__version__",
     "Coord",
-    "CostParams",
     "TimeLimit",
     "TimeWindow",
     "PathFlow",
@@ -40,7 +37,6 @@ __all__ = [
     "ClientEntry",
     "VehicleTypeEntry",
     "MatEntry",
-    "SyncGroupEntry",
     "NodeEntry",
     "ArcEntry",
     "ProductEntry",

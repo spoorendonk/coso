@@ -89,7 +89,7 @@ cmake -B build -DCOSO_USE_TBB=ON && cmake --build build -j$(nproc)
 
 `cmake -B build` compiles through `ccache` wherever it is installed, and says
 so; without it the build is unchanged. It is what makes the `clean` fence cheap
-— rebuilding all 270 translation units after `rm -rf build` takes 5s from a warm
+— rebuilding all 265 translation units after `rm -rf build` takes 5s from a warm
 cache against 42s without one. 116 of those are Catch2's and nanobind's and
 never change at all; the rest are recompiled only when their own source does.
 The dependencies are fetched `GIT_SHALLOW`, so re-cloning them costs ~5s of the
@@ -222,7 +222,7 @@ advisory and currently empty; because the check families are wildcards, a newer
 clang-tidy knows more checks and may add to it, which means a longer or shorter
 advisory list, never a different verdict.
 
-clang-tidy runs clean today, at 0 findings over all 155 translation units, and
+clang-tidy runs clean today, at 0 findings over all 149 translation units, and
 should stay that way — a list people scroll past is worth no more than no check
 at all. Getting there needed two things beyond tuning: the vendored dependencies
 are fetched `SYSTEM` so their headers are not analysed, and the 39 checks the

@@ -24,35 +24,20 @@ int ProblemData::Builder::add_client(Coord coord, ClientParams p) {
         .demand = std::move(p.demand),
         .pickup = std::move(p.pickup),
         .tw = p.tw,
-        .extra_tw = std::move(p.extra_tw),
         .service = p.service,
-        .release_time = p.release_time,
         .prize = p.prize,
         .required = p.required,
-        .group = p.group,
-        .skills = std::move(p.skills),
-        .client_type = p.client_type,
     });
     return idx;
 }
 
 int ProblemData::Builder::add_vehicle_type(int count, VehicleTypeParams p) {
     int idx = static_cast<int>(vehicle_types_.size());
-    ensure_profile_(p.profile);
     vehicle_types_.push_back({
         .count = count,
         .capacity = std::move(p.capacity),
         .max_duration = p.max_duration,
         .max_distance = p.max_distance,
-        .min_tasks = p.min_tasks,
-        .max_tasks = p.max_tasks,
-        .max_overtime = p.max_overtime,
-        .unit_overtime_cost = p.unit_overtime_cost,
-        .reload_depot = p.reload_depot,
-        .max_reloads = p.max_reloads,
-        .cost = p.cost,
-        .profile = p.profile,
-        .skills = std::move(p.skills),
     });
     return idx;
 }
@@ -69,11 +54,6 @@ void ProblemData::Builder::set_distance(int profile, int from, int to, int dist)
 void ProblemData::Builder::set_duration(int profile, int from, int to, int dur) {
     ensure_profile_(profile);
     dur_entries_.push_back({profile, from, to, dur});
-}
-
-void ProblemData::Builder::set_cost(int profile, int from, int to, int cost) {
-    ensure_profile_(profile);
-    cost_entries_.push_back({profile, from, to, cost});
 }
 
 // ---------------------------------------------------------------------------
@@ -136,7 +116,6 @@ ProblemData ProblemData::Builder::build(int granular_k) const {
     int mat_size = pd.num_profiles_ * n * n;
     pd.dist_matrices_.assign(mat_size, 0);
     pd.dur_matrices_.assign(mat_size, 0);
-    pd.cost_matrices_.assign(mat_size, 0);
 
     // Compute Euclidean distances for all profiles as default.
     for (int p = 0; p < pd.num_profiles_; ++p) {
@@ -147,8 +126,7 @@ ProblemData ProblemData::Builder::build(int granular_k) const {
                 int d = euclidean(ci, cj);
                 int idx = p * n * n + i * n + j;
                 pd.dist_matrices_[idx] = d;
-                pd.dur_matrices_[idx] = d;   // duration = distance by default
-                pd.cost_matrices_[idx] = d;  // cost = distance by default
+                pd.dur_matrices_[idx] = d;  // duration = distance by default
             }
         }
     }
@@ -157,23 +135,10 @@ ProblemData ProblemData::Builder::build(int granular_k) const {
     for (auto const& e : dist_entries_) {
         int idx = e.profile * n * n + e.from * n + e.to;
         pd.dist_matrices_[idx] = e.value;
-        // Also update cost if no explicit cost was set (done below).
     }
     for (auto const& e : dur_entries_) {
         int idx = e.profile * n * n + e.from * n + e.to;
         pd.dur_matrices_[idx] = e.value;
-    }
-
-    // If explicit distances were provided but no explicit cost matrix,
-    // cost defaults to distance.  Apply distance entries to cost first,
-    // then override with any explicit cost entries.
-    for (auto const& e : dist_entries_) {
-        int idx = e.profile * n * n + e.from * n + e.to;
-        pd.cost_matrices_[idx] = e.value;
-    }
-    for (auto const& e : cost_entries_) {
-        int idx = e.profile * n * n + e.from * n + e.to;
-        pd.cost_matrices_[idx] = e.value;
     }
 
     // -------------------------------------------------------------------

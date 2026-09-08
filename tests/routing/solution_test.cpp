@@ -11,13 +11,12 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 1 depot at (0,0), 4 clients, 2 vehicle types (2 vehicles each = 4 total).
-/// Vehicle type 0: capacity 10, unit_distance_cost 1, fixed_cost 0.
-/// Vehicle type 1: capacity 15, unit_distance_cost 1, fixed_cost 20.
+/// Vehicle type 0: capacity 10.  Vehicle type 1: capacity 15.
 static ProblemData make_solution_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
     b.add_vehicle_type(2, {.capacity = {10}});
-    b.add_vehicle_type(2, {.capacity = {15}, .cost = {.fixed_cost = 20}});
+    b.add_vehicle_type(2, {.capacity = {15}});
 
     b.add_client({10.0, 0.0}, {.demand = {3}});  // client 0
     b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1

@@ -89,7 +89,7 @@ cmake -B build -DCOSO_USE_TBB=ON && cmake --build build -j$(nproc)
 
 `cmake -B build` compiles through `ccache` wherever it is installed, and says
 so; without it the build is unchanged. It is what makes the `clean` fence cheap
-— rebuilding all 270 translation units after `rm -rf build` takes 5s from a warm
+— rebuilding all 265 translation units after `rm -rf build` takes 5s from a warm
 cache against 42s without one. 116 of those are Catch2's and nanobind's and
 never change at all; the rest are recompiled only when their own source does.
 The dependencies are fetched `GIT_SHALLOW`, so re-cloning them costs ~5s of the
@@ -133,17 +133,16 @@ Model APIs (public) → Engine (domain-specific) → Search (generic metaheurist
 The routing engine is the reference architecture for other engines:
 
 - **ProblemData** (`src/routing/problem_data.h`): Immutable compiled instance. Struct-of-arrays layout for cache efficiency. Precomputed granular neighbor lists (k-NN). Node numbering: depots `0..n_d-1`, clients `n_d..n_d+n_c-1`.
-- **Resources** (`src/routing/resources/`): Pluggable constraint modules (load, duration, distance, breaks, depot, precedence, sync, compartment, skill, type incompatibility). Constraints are resources attached to routes, not embedded in the solution.
+- **Resources** (`src/routing/resources/`): Pluggable constraint modules (load, duration, distance, breaks, depot, precedence, compartment, loading). Constraints are resources attached to routes, not embedded in the solution.
 - **Solution/Route** (`src/routing/solution.h`, `route.h`): Solution = all routes + unassigned clients. Route = single vehicle's client sequence.
 - **Local search** (`src/routing/local_search.h`): First-improvement descent over granular neighborhoods.
-- **Operators** (`src/routing/operators/`): Exchange, swap-star, route-split, insert-optional, pair operators, relocate-with-depot.
+- **Operators** (`src/routing/operators/`): Exchange, swap-star, route-split, insert-optional, pair operators.
 
 ### Key Design Patterns
 
 - **Compiled instance**: Models compile to immutable `*Data` structs (e.g., `ProblemData`, `ScheduleData`). This enables caching and efficient repeated solving.
 - **Resource-based constraints**: Constraints are pluggable resource objects, not hardcoded into solutions.
 - **Deterministic work counting** (`src/common/work_units.h`): Cross-machine performance comparison via work units instead of wall time. The `deterministic_work` E2E check uses it; there is no perf-regression gate tooling in the repo.
-- **Warm start + pinning**: `set_initial_routes()` and `pin()` on RoutingModel for re-optimization.
 
 ### Python Bindings
 
@@ -222,7 +221,7 @@ advisory and currently empty; because the check families are wildcards, a newer
 clang-tidy knows more checks and may add to it, which means a longer or shorter
 advisory list, never a different verdict.
 
-clang-tidy runs clean today, at 0 findings over all 155 translation units, and
+clang-tidy runs clean today, at 0 findings over all 149 translation units, and
 should stay that way — a list people scroll past is worth no more than no check
 at all. Getting there needed two things beyond tuning: the vendored dependencies
 are fetched `SYSTEM` so their headers are not analysed, and the 39 checks the

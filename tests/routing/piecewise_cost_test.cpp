@@ -190,7 +190,7 @@ TEST_CASE("PiecewiseLinearFunction::overtime: two tiers", "[piecewise_cost]") {
 static ProblemData make_piecewise_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_vehicle_type(2, {.capacity = {100}, .cost = {.fixed_cost = 0, .unit_distance_cost = 1}});
+    b.add_vehicle_type(2, {.capacity = {100}});
 
     b.add_client({10.0, 0.0}, {.demand = {1}});  // client 0
     b.add_client({20.0, 0.0}, {.demand = {1}});  // client 1

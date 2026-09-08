@@ -48,13 +48,6 @@ TEST_CASE("TimeLimit stores seconds", "[types]") {
     REQUIRE(tl.seconds == 30.0);
 }
 
-TEST_CASE("CostParams has sensible defaults", "[types]") {
-    coso::CostParams cp;
-    REQUIRE(cp.fixed_cost == 0);
-    REQUIRE(cp.unit_distance_cost == 1);
-    REQUIRE(cp.unit_duration_cost == 0);
-}
-
 // --------------------------------------------------------------------------
 //  RoutingModel
 // --------------------------------------------------------------------------
@@ -70,12 +63,6 @@ TEST_CASE("RoutingModel add_depot with coordinates", "[routing]") {
     REQUIRE(depot >= 0);
 }
 
-TEST_CASE("RoutingModel add_depot with explicit id", "[routing]") {
-    coso::RoutingModel m;
-    int depot = m.add_depot(0, coso::DepotParams{.tw = {0, 1000}});
-    REQUIRE(depot >= 0);
-}
-
 TEST_CASE("RoutingModel add_vehicle_type", "[routing]") {
     coso::RoutingModel m;
     int vt = m.add_vehicle_type(4, {.capacity = {15}});
@@ -85,12 +72,6 @@ TEST_CASE("RoutingModel add_vehicle_type", "[routing]") {
 TEST_CASE("RoutingModel add_client with coordinates", "[routing]") {
     coso::RoutingModel m;
     int c = m.add_client(1.0, 2.0, {.demand = {5}});
-    REQUIRE(c >= 0);
-}
-
-TEST_CASE("RoutingModel add_client with explicit id", "[routing]") {
-    coso::RoutingModel m;
-    int c = m.add_client(42);
     REQUIRE(c >= 0);
 }
 
@@ -104,26 +85,10 @@ TEST_CASE("RoutingModel pickup-delivery workflow", "[routing]") {
     m.add_pickup_delivery(p, d);
 }
 
-TEST_CASE("RoutingModel client groups", "[routing]") {
-    coso::RoutingModel m;
-    int g = m.add_client_group();
-    REQUIRE(g >= 0);
-}
-
 TEST_CASE("RoutingModel distance and duration setters", "[routing]") {
     coso::RoutingModel m;
     m.set_distance(0, 1, 100);
     m.set_duration(0, 1, 50);
-    m.set_profile(1);
-    m.set_profile_distance(1, 0, 1, 200);
-    m.set_profile_duration(1, 0, 1, 80);
-    m.set_cost_matrix(0, 0, 1, 150);
-}
-
-TEST_CASE("RoutingModel warm start and pin", "[routing]") {
-    coso::RoutingModel m;
-    m.set_initial_routes({{1, 2, 3}, {4, 5}});
-    m.pin(1);
 }
 
 TEST_CASE("RoutingModel solve returns a Result", "[routing]") {
@@ -575,92 +540,41 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
     SECTION("depots, clients and vehicle types round-trip field by field") {
         coso::DepotParams dp;
         dp.tw = {5, 500};
-        dp.fixed_cost = 250;
-        dp.capacity = {70, 80};
         REQUIRE(m.add_depot(1.5, -2.5, dp) == 0);
-        REQUIRE(m.add_depot(42, dp) == 1);
 
         coso::ClientParams cp;
         cp.demand = {3, 4};
         cp.pickup = {1, 2};
         cp.tw = {10, 90};
-        cp.extra_tw = {{100, 110}, {120, 130}};
         cp.service = 7;
-        cp.release_time = 8;
         cp.prize = 9;
         cp.required = false;
-        cp.group = 11;
-        cp.skills = {"crane", "fridge"};
-        cp.client_type = 2;
         REQUIRE(m.add_client(3.5, 4.5, cp) == 0);
-        REQUIRE(m.add_client(77, cp) == 1);
 
         coso::VehicleTypeParams vp;
         vp.capacity = {50, 60};
         vp.max_duration = 480;
         vp.max_distance = 900;
-        vp.min_tasks = 1;
-        vp.max_tasks = 12;
-        vp.max_overtime = 30;
-        vp.unit_overtime_cost = 5;
-        vp.reload_depot = 1;
-        vp.max_reloads = 2;
-        vp.cost.fixed_cost = 100;
-        vp.cost.unit_distance_cost = 3;
-        vp.cost.unit_duration_cost = 4;
-        vp.profile = 1;
-        vp.skills = {"crane"};
         REQUIRE(m.add_vehicle_type(6, vp) == 0);
 
-        REQUIRE(m.num_depots() == 2);
+        REQUIRE(m.num_depots() == 1);
         auto const& d0 = m.depot(0);
         REQUIRE(d0.x == 1.5);
         REQUIRE(d0.y == -2.5);
-        REQUIRE(d0.has_coord);
-        REQUIRE(d0.explicit_id == -1);
         REQUIRE(d0.params.tw.start == 5);
         REQUIRE(d0.params.tw.end == 500);
-        REQUIRE(d0.params.fixed_cost == 250);
-        REQUIRE(d0.params.capacity == std::vector<int>{70, 80});
 
-        // Trap: a depot added by explicit id stores x = y = 0.0, so has_coord
-        // is the only thing telling it apart from a depot at the origin.
-        auto const& d1 = m.depot(1);
-        REQUIRE(d1.x == 0.0);
-        REQUIRE(d1.y == 0.0);
-        REQUIRE_FALSE(d1.has_coord);
-        REQUIRE(d1.explicit_id == 42);
-        // Both add_depot overloads store the same DepotParams.
-        REQUIRE(d1.params.fixed_cost == 250);
-        REQUIRE(d1.params.capacity == std::vector<int>{70, 80});
-
-        REQUIRE(m.num_clients() == 2);
+        REQUIRE(m.num_clients() == 1);
         auto const& c0 = m.client(0);
         REQUIRE(c0.x == 3.5);
         REQUIRE(c0.y == 4.5);
-        REQUIRE(c0.has_coord);
-        REQUIRE(c0.explicit_id == -1);
         REQUIRE(c0.params.demand == std::vector<int>{3, 4});
         REQUIRE(c0.params.pickup == std::vector<int>{1, 2});
         REQUIRE(c0.params.tw.start == 10);
         REQUIRE(c0.params.tw.end == 90);
-        REQUIRE(c0.params.extra_tw.size() == 2);
-        REQUIRE(c0.params.extra_tw[1].start == 120);
-        REQUIRE(c0.params.extra_tw[1].end == 130);
         REQUIRE(c0.params.service == 7);
-        REQUIRE(c0.params.release_time == 8);
         REQUIRE(c0.params.prize == 9);
         REQUIRE_FALSE(c0.params.required);
-        REQUIRE(c0.params.group == 11);
-        REQUIRE(c0.params.skills == std::vector<std::string>{"crane", "fridge"});
-        REQUIRE(c0.params.client_type == 2);
-
-        // Trap: same for clients added by explicit id.
-        auto const& c1 = m.client(1);
-        REQUIRE(c1.x == 0.0);
-        REQUIRE(c1.y == 0.0);
-        REQUIRE_FALSE(c1.has_coord);
-        REQUIRE(c1.explicit_id == 77);
 
         REQUIRE(m.num_vehicle_types() == 1);
         auto const& v0 = m.vehicle_type(0);
@@ -668,23 +582,6 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(v0.params.capacity == std::vector<int>{50, 60});
         REQUIRE(v0.params.max_duration == 480);
         REQUIRE(v0.params.max_distance == 900);
-        REQUIRE(v0.params.min_tasks == 1);
-        REQUIRE(v0.params.max_tasks == 12);
-        REQUIRE(v0.params.max_overtime == 30);
-        REQUIRE(v0.params.unit_overtime_cost == 5);
-        REQUIRE(v0.params.reload_depot == 1);
-        REQUIRE(v0.params.max_reloads == 2);
-        REQUIRE(v0.params.cost.fixed_cost == 100);
-        REQUIRE(v0.params.cost.unit_distance_cost == 3);
-        REQUIRE(v0.params.cost.unit_duration_cost == 4);
-        REQUIRE(v0.params.profile == 1);
-        REQUIRE(v0.params.skills == std::vector<std::string>{"crane"});
-    }
-
-    SECTION("a depot declared without params carries the documented defaults") {
-        REQUIRE(m.add_depot(0.0, 0.0) == 0);
-        REQUIRE(m.depot(0).params.fixed_cost == 0);   // 0 = always open
-        REQUIRE(m.depot(0).params.capacity.empty());  // empty = unlimited
     }
 
     SECTION("add_pickup and add_delivery store plain clients; only the pairing survives") {
@@ -698,8 +595,6 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         m.add_pickup_delivery(d, plain);
 
         REQUIRE(m.num_clients() == 3);
-        REQUIRE(m.client(p).has_coord);
-        REQUIRE(m.client(d).has_coord);
         // Nothing on a stored client distinguishes a pickup from a delivery
         // from a plain client: all three carry default ClientParams.
         REQUIRE(m.client(p).params.required);
@@ -711,132 +606,38 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(m.requests() == std::vector<std::pair<int, int>>{{p, d}, {d, plain}});
     }
 
-    SECTION("client groups count the ids handed out, not the ids clients carry") {
-        REQUIRE(m.num_client_groups() == 0);
-        REQUIRE(m.add_client_group() == 0);
-        REQUIRE(m.add_client_group() == 1);
-        REQUIRE(m.num_client_groups() == 2);
-
-        // ClientParams::group is never validated against next_group_id_, so a
-        // client may name a group that was never created and the count does
-        // not bound it.
-        coso::ClientParams cp;
-        cp.group = 99;
-        m.add_client(0.0, 0.0, cp);
-        REQUIRE(m.client(0).params.group == 99);
-        REQUIRE(m.num_client_groups() == 2);
-    }
-
     SECTION("matrix setters are an append-only log, last entry wins") {
         m.set_distance(0, 1, 10);
         m.set_duration(0, 1, 20);
-        m.set_profile(2);
-        m.set_distance(0, 1, 30);  // same (from, to), new profile
-        m.set_duration(0, 1, 40);
-        m.set_profile_distance(3, 1, 0, 50);
-        m.set_profile_duration(3, 1, 0, 60);
-        m.set_cost_matrix(1, 0, 1, 70);
+        m.set_distance(1, 0, 50);
+        m.set_duration(1, 0, 60);
 
-        REQUIRE(m.distance_entries().size() == 3);
+        REQUIRE(m.distance_entries().size() == 2);
         auto const& e0 = m.distance_entries()[0];
-        REQUIRE(e0.profile == 0);
         REQUIRE(e0.from == 0);
         REQUIRE(e0.to == 1);
         REQUIRE(e0.value == 10);
-        REQUIRE(m.distance_entries()[1].profile == 2);
-        REQUIRE(m.distance_entries()[1].value == 30);
-        REQUIRE(m.distance_entries()[2].profile == 3);
-        REQUIRE(m.distance_entries()[2].from == 1);
-        REQUIRE(m.distance_entries()[2].to == 0);
-        REQUIRE(m.distance_entries()[2].value == 50);
+        REQUIRE(m.distance_entries()[1].from == 1);
+        REQUIRE(m.distance_entries()[1].to == 0);
+        REQUIRE(m.distance_entries()[1].value == 50);
 
-        REQUIRE(m.duration_entries().size() == 3);
+        REQUIRE(m.duration_entries().size() == 2);
         REQUIRE(m.duration_entries()[0].value == 20);
-        REQUIRE(m.duration_entries()[1].value == 40);
-        REQUIRE(m.duration_entries()[2].value == 60);
+        REQUIRE(m.duration_entries()[1].value == 60);
 
-        REQUIRE(m.cost_entries().size() == 1);
-        REQUIRE(m.cost_entries()[0].profile == 1);
-        REQUIRE(m.cost_entries()[0].from == 0);
-        REQUIRE(m.cost_entries()[0].to == 1);
-        REQUIRE(m.cost_entries()[0].value == 70);
-
-        // Trap: a repeated (profile, from, to) appends rather than
-        // overwriting, so the log holds duplicates and the reader must take
-        // the last one.
-        m.set_profile_distance(0, 0, 1, 11);
-        REQUIRE(m.distance_entries().size() == 4);
-        REQUIRE(m.distance_entries()[0].value == 10);
-        REQUIRE(m.distance_entries()[3].profile == 0);
-        REQUIRE(m.distance_entries()[3].from == 0);
-        REQUIRE(m.distance_entries()[3].to == 1);
-        REQUIRE(m.distance_entries()[3].value == 11);
-
-        // The three plain setters append the same way -- asserted separately,
-        // because a set_profile_distance duplicate does not exercise them.
+        // Trap: a repeated (from, to) appends rather than overwriting, so the
+        // log holds duplicates and the reader must take the last one.
         m.set_distance(0, 1, 12);
-        REQUIRE(m.distance_entries().size() == 5);
+        REQUIRE(m.distance_entries().size() == 3);
         REQUIRE(m.distance_entries()[0].value == 10);
-        REQUIRE(m.distance_entries()[4].value == 12);
+        REQUIRE(m.distance_entries()[2].from == 0);
+        REQUIRE(m.distance_entries()[2].to == 1);
+        REQUIRE(m.distance_entries()[2].value == 12);
 
         m.set_duration(0, 1, 21);
-        REQUIRE(m.duration_entries().size() == 4);
+        REQUIRE(m.duration_entries().size() == 3);
         REQUIRE(m.duration_entries()[0].value == 20);
-        REQUIRE(m.duration_entries()[3].value == 21);
-
-        m.set_cost_matrix(1, 0, 1, 71);
-        REQUIRE(m.cost_entries().size() == 2);
-        REQUIRE(m.cost_entries()[0].value == 70);
-        REQUIRE(m.cost_entries()[1].value == 71);
-    }
-
-    SECTION("warm start and pins round-trip verbatim") {
-        std::vector<std::vector<int>> routes = {{0, 1, 2}, {}, {3}};
-        m.set_initial_routes(routes);
-        REQUIRE(m.initial_routes() == routes);
-
-        // set_initial_routes assigns, so a second call replaces the first.
-        m.set_initial_routes({{4}});
-        REQUIRE(m.initial_routes() == std::vector<std::vector<int>>{{4}});
-
-        // Trap: pin() appends with no dedup and no range check, so the same
-        // id can appear twice and an id no client owns is stored as given.
-        REQUIRE(m.pinned().empty());
-        m.pin(2);
-        m.pin(2);
-        m.pin(9999);
-        m.pin(-1);
-        REQUIRE(m.pinned() == std::vector<int>{2, 2, 9999, -1});
-        REQUIRE(m.num_clients() == 0);
-    }
-
-    SECTION("sync groups round-trip verbatim and are never validated") {
-        REQUIRE(m.sync_groups().empty());
-
-        // The returned id is the group's index in declaration order.
-        REQUIRE(m.add_sync_group({0, 1}, 30) == 0);
-        REQUIRE(m.add_sync_group({}, 0) == 1);
-        REQUIRE(m.sync_groups().size() == 2);
-        REQUIRE(m.sync_groups()[0].clients == std::vector<int>{0, 1});
-        REQUIRE(m.sync_groups()[0].tolerance == 30);
-        REQUIRE(m.sync_groups()[1].clients.empty());
-        REQUIRE(m.sync_groups()[1].tolerance == 0);
-
-        // Trap: add_sync_group stores what it is given -- no range check, no
-        // dedup -- so a group may name a client no one declared, repeat a
-        // client, and carry a negative tolerance.  Declaring one creates no
-        // clients either.
-        REQUIRE(m.add_sync_group({9999, 5, 5, -1}, -7) == 2);
-        REQUIRE(m.sync_groups()[2].clients == std::vector<int>{9999, 5, 5, -1});
-        REQUIRE(m.sync_groups()[2].tolerance == -7);
-        REQUIRE(m.num_clients() == 0);
-
-        // A client may sit in two groups; the model keeps both, even though
-        // SyncResource::build_lookup would map it to the last one only.
-        REQUIRE(m.add_sync_group({0}, 15) == 3);
-        REQUIRE(m.sync_groups()[0].clients == std::vector<int>{0, 1});
-        REQUIRE(m.sync_groups()[3].clients == std::vector<int>{0});
-        REQUIRE(m.sync_groups().size() == 4);
+        REQUIRE(m.duration_entries()[2].value == 21);
     }
 }
 

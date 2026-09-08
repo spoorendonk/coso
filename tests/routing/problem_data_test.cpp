@@ -55,10 +55,8 @@ TEST_CASE("ProblemData client data preserves attributes", "[problem_data]") {
                                    .demand = {5, 3},
                                    .tw = {100, 200},
                                    .service = 15,
-                                   .release_time = 50,
                                    .prize = 10,
                                    .required = false,
-                                   .group = 2,
                                });
     b.add_vehicle_type(1, {.capacity = {50, 30}});
     auto pd = b.build(0);
@@ -73,28 +71,18 @@ TEST_CASE("ProblemData client data preserves attributes", "[problem_data]") {
     REQUIRE(c.tw.start == 100);
     REQUIRE(c.tw.end == 200);
     REQUIRE(c.service == 15);
-    REQUIRE(c.release_time == 50);
     REQUIRE(c.prize == 10);
     REQUIRE_FALSE(c.required);
-    REQUIRE(c.group == 2);
 }
 
 TEST_CASE("ProblemData vehicle type data preserves attributes", "[problem_data]") {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
-    b.add_vehicle_type(
-        3, {
-               .capacity = {100, 50},
-               .max_duration = 500,
-               .max_distance = 300,
-               .max_tasks = 10,
-               .max_overtime = 60,
-               .unit_overtime_cost = 5,
-               .reload_depot = 0,
-               .max_reloads = 2,
-               .cost = {.fixed_cost = 20, .unit_distance_cost = 2, .unit_duration_cost = 1},
-               .profile = 0,
-           });
+    b.add_vehicle_type(3, {
+                              .capacity = {100, 50},
+                              .max_duration = 500,
+                              .max_distance = 300,
+                          });
     auto pd = b.build(0);
 
     REQUIRE(pd.num_vehicle_types() == 1);
@@ -104,15 +92,6 @@ TEST_CASE("ProblemData vehicle type data preserves attributes", "[problem_data]"
     REQUIRE(vt.capacity[1] == 50);
     REQUIRE(vt.max_duration == 500);
     REQUIRE(vt.max_distance == 300);
-    REQUIRE(vt.max_tasks == 10);
-    REQUIRE(vt.max_overtime == 60);
-    REQUIRE(vt.unit_overtime_cost == 5);
-    REQUIRE(vt.reload_depot == 0);
-    REQUIRE(vt.max_reloads == 2);
-    REQUIRE(vt.cost.fixed_cost == 20);
-    REQUIRE(vt.cost.unit_distance_cost == 2);
-    REQUIRE(vt.cost.unit_duration_cost == 1);
-    REQUIRE(vt.profile == 0);
 }
 
 TEST_CASE("ProblemData total_vehicles sums across types", "[problem_data]") {
@@ -178,15 +157,6 @@ TEST_CASE("Duration defaults to distance", "[problem_data]") {
     REQUIRE(pd.dur(0, 1) == pd.dist(0, 1));
 }
 
-TEST_CASE("Cost defaults to distance", "[problem_data]") {
-    ProblemData::Builder b;
-    b.add_depot({0.0, 0.0});
-    b.add_client({3.0, 4.0});
-    auto pd = b.build(0);
-
-    REQUIRE(pd.cost(0, 1) == pd.dist(0, 1));
-}
-
 // =========================================================================
 //  Explicit distance overrides
 // =========================================================================
@@ -213,56 +183,6 @@ TEST_CASE("Explicit durations override default", "[problem_data]") {
     REQUIRE(pd.dur(0, 1) == 99);
     // Reverse not set: still defaults to Euclidean.
     REQUIRE(pd.dur(1, 0) == 5);
-}
-
-TEST_CASE("Explicit cost overrides distance-based default", "[problem_data]") {
-    ProblemData::Builder b;
-    b.add_depot({0.0, 0.0});
-    b.add_client({3.0, 4.0});
-    b.set_distance(0, 0, 1, 42);
-    b.set_cost(0, 0, 1, 77);
-    auto pd = b.build(0);
-
-    // Cost uses explicit value, not distance.
-    REQUIRE(pd.cost(0, 1) == 77);
-    // Distance is the explicit distance value.
-    REQUIRE(pd.dist(0, 1) == 42);
-}
-
-TEST_CASE("Cost defaults to explicit distance when no explicit cost", "[problem_data]") {
-    ProblemData::Builder b;
-    b.add_depot({0.0, 0.0});
-    b.add_client({3.0, 4.0});
-    b.set_distance(0, 0, 1, 42);
-    auto pd = b.build(0);
-
-    // Cost should follow explicit distance, not Euclidean.
-    REQUIRE(pd.cost(0, 1) == 42);
-}
-
-// =========================================================================
-//  Multiple profiles
-// =========================================================================
-
-TEST_CASE("Multiple distance profiles", "[problem_data]") {
-    ProblemData::Builder b;
-    b.add_depot({0.0, 0.0});
-    b.add_client({3.0, 4.0});
-    b.add_vehicle_type(1, {.capacity = {10}, .profile = 0});
-    b.add_vehicle_type(1, {.capacity = {20}, .profile = 1});
-
-    // Override profile 1 distances.
-    b.set_distance(1, 0, 1, 100);
-    b.set_distance(1, 1, 0, 100);
-
-    auto pd = b.build(0);
-
-    REQUIRE(pd.num_profiles() == 2);
-    // Profile 0: Euclidean.
-    REQUIRE(pd.dist(0, 0, 1) == 5);
-    // Profile 1: explicit.
-    REQUIRE(pd.dist(1, 0, 1) == 100);
-    REQUIRE(pd.dist(1, 1, 0) == 100);
 }
 
 // =========================================================================

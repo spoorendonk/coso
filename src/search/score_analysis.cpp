@@ -30,7 +30,6 @@ SolutionAnalysis analyze(Solution const& sol, CostEvaluator const& eval, Problem
         ra.load_excess = route.load_excess();
 
         auto const& vt = data.vehicle_type(route.vehicle_type());
-        ra.fixed_cost = vt.cost.fixed_cost;
         ra.objective = eval.route_objective(route);
         ra.penalty = eval.route_penalty(route);
 
@@ -82,7 +81,6 @@ std::string SolutionAnalysis::to_string() const {
         }
         os << "]\n";
         os << std::format("  Distance:    {}\n", ra.distance);
-        os << std::format("  Fixed cost:  {}\n", ra.fixed_cost);
         os << std::format("  Objective:   {}\n", ra.objective);
         os << std::format("  Penalty:     {}\n", ra.penalty);
         os << std::format("  Load excess: {}\n", ra.load_excess);

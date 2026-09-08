@@ -161,21 +161,3 @@ TEST_CASE("analyze — to_string produces output", "[score_analysis]") {
     CHECK(str.find("Clients") != std::string::npos);
     CHECK(str.find("Dim 0") != std::string::npos);
 }
-
-TEST_CASE("analyze — fixed cost included in objective", "[score_analysis]") {
-    ProblemData::Builder b;
-    b.add_depot({0.0, 0.0});
-    b.add_client({10.0, 0.0}, {.demand = {5}});
-    b.add_vehicle_type(1, {.capacity = {10}, .cost = {.fixed_cost = 500}});
-    auto data = b.build();
-
-    CostEvaluator eval;
-    Solution sol(data);
-    sol.set_route_clients(0, {0});
-
-    auto analysis = analyze(sol, eval, data);
-
-    REQUIRE(analysis.routes.size() == 1);
-    CHECK(analysis.routes[0].fixed_cost == 500);
-    CHECK(analysis.total_objective == sol.objective(eval));
-}

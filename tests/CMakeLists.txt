@@ -94,32 +94,6 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  SkillFilter tests                                                           #
-# --------------------------------------------------------------------------- #
-
-add_executable(skill_filter_test routing/skill_filter_test.cpp)
-target_link_libraries(skill_filter_test PRIVATE coso Catch2::Catch2WithMain)
-
-if(COMMAND catch_discover_tests)
-    catch_discover_tests(skill_filter_test)
-else()
-    add_test(NAME skill_filter_test COMMAND skill_filter_test)
-endif()
-
-# --------------------------------------------------------------------------- #
-#  Type incompatibility resource tests                                         #
-# --------------------------------------------------------------------------- #
-
-add_executable(type_incompatibility_test routing/type_incompatibility_test.cpp)
-target_link_libraries(type_incompatibility_test PRIVATE coso Catch2::Catch2WithMain)
-
-if(COMMAND catch_discover_tests)
-    catch_discover_tests(type_incompatibility_test)
-else()
-    add_test(NAME type_incompatibility_test COMMAND type_incompatibility_test)
-endif()
-
-# --------------------------------------------------------------------------- #
 #  BreakResource tests                                                         #
 # --------------------------------------------------------------------------- #
 
@@ -263,19 +237,6 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  RelocateWithDepot operator tests                                            #
-# --------------------------------------------------------------------------- #
-
-add_executable(relocate_with_depot_test routing/relocate_with_depot_test.cpp)
-target_link_libraries(relocate_with_depot_test PRIVATE coso Catch2::Catch2WithMain)
-
-if(COMMAND catch_discover_tests)
-    catch_discover_tests(relocate_with_depot_test)
-else()
-    add_test(NAME relocate_with_depot_test COMMAND relocate_with_depot_test)
-endif()
-
-# --------------------------------------------------------------------------- #
 #  Distance resource tests                                                     #
 # --------------------------------------------------------------------------- #
 
@@ -289,19 +250,6 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
-#  Task count resource tests                                                   #
-# --------------------------------------------------------------------------- #
-
-add_executable(task_count_resource_test routing/task_count_resource_test.cpp)
-target_link_libraries(task_count_resource_test PRIVATE coso Catch2::Catch2WithMain)
-
-if(COMMAND catch_discover_tests)
-    catch_discover_tests(task_count_resource_test)
-else()
-    add_test(NAME task_count_resource_test COMMAND task_count_resource_test)
-endif()
-
-# --------------------------------------------------------------------------- #
 #  Compartment resource tests                                                  #
 # --------------------------------------------------------------------------- #
 
@@ -312,19 +260,6 @@ if(COMMAND catch_discover_tests)
     catch_discover_tests(compartment_resource_test)
 else()
     add_test(NAME compartment_resource_test COMMAND compartment_resource_test)
-endif()
-
-# --------------------------------------------------------------------------- #
-#  Sync resource tests                                                         #
-# --------------------------------------------------------------------------- #
-
-add_executable(sync_resource_test routing/sync_resource_test.cpp)
-target_link_libraries(sync_resource_test PRIVATE coso Catch2::Catch2WithMain)
-
-if(COMMAND catch_discover_tests)
-    catch_discover_tests(sync_resource_test)
-else()
-    add_test(NAME sync_resource_test COMMAND sync_resource_test)
 endif()
 
 # --------------------------------------------------------------------------- #

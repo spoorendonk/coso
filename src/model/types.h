@@ -16,13 +16,6 @@ struct TimeWindow {
     int start, end;
 };
 
-/// Cost parameters for a vehicle type.
-struct CostParams {
-    int fixed_cost = 0;
-    int unit_distance_cost = 1;
-    int unit_duration_cost = 0;
-};
-
 /// Stop criterion passed to solve().
 struct TimeLimit {
     double seconds;

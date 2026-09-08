@@ -17,7 +17,6 @@ struct RouteAnalysis {
     std::vector<int> clients;
     int64_t distance;
     int64_t load_excess;
-    int64_t fixed_cost;
     int64_t objective;
     int64_t penalty;
     std::vector<int> total_demand;  // per dimension

@@ -39,7 +39,7 @@ inline std::vector<ClientLocation> build_client_locations(Solution const& sol) {
 
 /// Distance delta for removing two consecutive clients at pos, pos+1.
 inline int eval_remove_pair_dist(Route const& route, ProblemData const& data, int pos) {
-    int profile = data.vehicle_type(route.vehicle_type()).profile;
+    int profile = 0;
     int nd = data.num_depots();
     int prev = (pos == 0) ? 0 : nd + route.client(pos - 1);
     int u = nd + route.client(pos);
@@ -60,13 +60,7 @@ inline int eval_remove_pair_load(Route const& route, ProblemData const& data, in
 /// Penalized cost delta for removing pair at pos.
 inline int64_t eval_remove_pair_cost(Route const& route, CostEvaluator const& eval,
                                      ProblemData const& data, int pos) {
-    auto const& vt = data.vehicle_type(route.vehicle_type());
-    int64_t delta = 0;
-    delta +=
-        static_cast<int64_t>(eval_remove_pair_dist(route, data, pos)) * vt.cost.unit_distance_cost;
-    if (route.size() == 2) {
-        delta -= vt.cost.fixed_cost;
-    }
+    int64_t delta = eval_remove_pair_dist(route, data, pos);
     delta += data.client(route.client(pos)).prize;
     delta += data.client(route.client(pos + 1)).prize;
     int new_excess = eval_remove_pair_load(route, data, pos);
@@ -77,7 +71,7 @@ inline int64_t eval_remove_pair_cost(Route const& route, CostEvaluator const& ev
 /// Distance delta for inserting clients c1, c2 consecutively at pos.
 inline int eval_insert_pair_dist(Route const& route, ProblemData const& data, int pos, int c1,
                                  int c2) {
-    int profile = data.vehicle_type(route.vehicle_type()).profile;
+    int profile = 0;
     int nd = data.num_depots();
     int prev = (pos == 0) ? 0 : nd + route.client(pos - 1);
     int next = (pos == route.size()) ? 0 : nd + route.client(pos);
@@ -102,13 +96,7 @@ inline int eval_insert_pair_load(Route const& route, ProblemData const& data, in
 /// Penalized cost delta for inserting pair at pos.
 inline int64_t eval_insert_pair_cost(Route const& route, CostEvaluator const& eval,
                                      ProblemData const& data, int pos, int c1, int c2) {
-    auto const& vt = data.vehicle_type(route.vehicle_type());
-    int64_t delta = 0;
-    delta += static_cast<int64_t>(eval_insert_pair_dist(route, data, pos, c1, c2)) *
-             vt.cost.unit_distance_cost;
-    if (route.empty()) {
-        delta += vt.cost.fixed_cost;
-    }
+    int64_t delta = eval_insert_pair_dist(route, data, pos, c1, c2);
     delta -= data.client(c1).prize;
     delta -= data.client(c2).prize;
     int new_excess = eval_insert_pair_load(route, data, pos, c1, c2);
@@ -118,7 +106,7 @@ inline int64_t eval_insert_pair_cost(Route const& route, CostEvaluator const& ev
 
 /// Distance delta for replacing client at pos with new_client.
 inline int eval_replace_dist(Route const& route, ProblemData const& data, int pos, int new_client) {
-    int profile = data.vehicle_type(route.vehicle_type()).profile;
+    int profile = 0;
     int nd = data.num_depots();
     int old_n = nd + route.client(pos);
     int new_n = nd + new_client;
@@ -140,10 +128,7 @@ inline int eval_replace_load(Route const& route, ProblemData const& data, int po
 /// Penalized cost delta for replacing client at pos with new_client.
 inline int64_t eval_replace_cost(Route const& route, CostEvaluator const& eval,
                                  ProblemData const& data, int pos, int new_client) {
-    auto const& vt = data.vehicle_type(route.vehicle_type());
-    int64_t delta = 0;
-    delta += static_cast<int64_t>(eval_replace_dist(route, data, pos, new_client)) *
-             vt.cost.unit_distance_cost;
+    int64_t delta = eval_replace_dist(route, data, pos, new_client);
     delta += data.client(route.client(pos)).prize;
     delta -= data.client(new_client).prize;
     int new_excess = eval_replace_load(route, data, pos, new_client);

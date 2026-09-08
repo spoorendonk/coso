@@ -9,7 +9,6 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 1 depot at (0,0), 4 clients on x-axis, capacity 10.
-/// unit_distance_cost = 1, fixed_cost = 0.
 static ProblemData make_basic_instance() {
     ProblemData::Builder b;
     b.add_depot({0.0, 0.0});
@@ -19,19 +18,6 @@ static ProblemData make_basic_instance() {
     b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1
     b.add_client({30.0, 0.0}, {.demand = {5}});  // client 2
     b.add_client({0.0, 10.0}, {.demand = {2}});  // client 3
-
-    return b.build(0);
-}
-
-/// Instance with fixed cost and non-default unit_distance_cost.
-static ProblemData make_cost_instance() {
-    ProblemData::Builder b;
-    b.add_depot({0.0, 0.0});
-    b.add_vehicle_type(2, {.capacity = {10}, .cost = {.fixed_cost = 50, .unit_distance_cost = 2}});
-
-    b.add_client({10.0, 0.0}, {.demand = {3}});  // client 0
-    b.add_client({20.0, 0.0}, {.demand = {4}});  // client 1
-    b.add_client({30.0, 0.0}, {.demand = {5}});  // client 2
 
     return b.build(0);
 }
@@ -97,22 +83,9 @@ TEST_CASE("CostEvaluator: route_objective with distance cost", "[cost_evaluator]
     CostEvaluator eval;
 
     // depot(0,0) -> c0(10,0) -> c1(20,0) -> depot(0,0)
-    // Distance: 10 + 10 + 20 = 40.  unit_distance_cost = 1.
+    // Distance: 10 + 10 + 20 = 40.
     route.set_clients({0, 1});
     CHECK(eval.route_objective(route) == 40);
-}
-
-TEST_CASE("CostEvaluator: route_objective with fixed cost and cost multiplier",
-          "[cost_evaluator]") {
-    auto data = make_cost_instance();
-    Route route(data, 0);
-    CostEvaluator eval;
-
-    route.set_clients({0, 1});
-    // Distance: 10 + 10 + 20 = 40.  unit_distance_cost = 2 -> 80.
-    // Fixed cost = 50.
-    // Total objective = 130.
-    CHECK(eval.route_objective(route) == 130);
 }
 
 TEST_CASE("CostEvaluator: route_objective subtracts prizes", "[cost_evaluator]") {
@@ -200,23 +173,6 @@ TEST_CASE("CostEvaluator: eval_insert_cost matches actual cost change", "[cost_e
     }
 }
 
-TEST_CASE("CostEvaluator: eval_insert_cost into empty route includes fixed cost",
-          "[cost_evaluator]") {
-    auto data = make_cost_instance();
-    CostEvaluator eval(100);
-
-    Route route(data, 0);
-    CHECK(route.empty());
-
-    int64_t delta = eval.eval_insert_cost(route, 0, 0);
-
-    Route copy(data, 0);
-    copy.insert(0, 0);
-    int64_t actual = eval.route_cost(copy);
-
-    CHECK(delta == actual);  // was zero, now equals full cost
-}
-
 TEST_CASE("CostEvaluator: eval_insert_cost accounts for prizes", "[cost_evaluator]") {
     auto data = make_prize_instance();
     CostEvaluator eval(100);
@@ -224,7 +180,7 @@ TEST_CASE("CostEvaluator: eval_insert_cost accounts for prizes", "[cost_evaluato
     Route route(data, 0);
     int64_t delta = eval.eval_insert_cost(route, 0, 0);
 
-    // Inserting client 0 (prize=50): distance=20, fixed=0, prize=-50.
+    // Inserting client 0 (prize=50): distance=20, prize=-50.
     // Delta = 20 - 50 = -30.
     CHECK(delta == -30);
 }
@@ -251,20 +207,6 @@ TEST_CASE("CostEvaluator: eval_remove_cost matches actual cost change", "[cost_e
 
         CHECK(delta == new_cost - old_cost);
     }
-}
-
-TEST_CASE("CostEvaluator: eval_remove_cost of last client removes fixed cost", "[cost_evaluator]") {
-    auto data = make_cost_instance();
-    CostEvaluator eval(100);
-
-    Route route(data, 0);
-    route.set_clients({0});  // single client
-
-    int64_t delta = eval.eval_remove_cost(route, 0);
-
-    // Cost goes from (dist=20, fixed=50 -> cost_before) to zero.
-    int64_t old_cost = eval.route_cost(route);
-    CHECK(delta == -old_cost);
 }
 
 TEST_CASE("CostEvaluator: eval_remove_cost accounts for prizes", "[cost_evaluator]") {

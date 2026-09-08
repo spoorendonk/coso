@@ -65,7 +65,7 @@ void assert_route_consistency(Route const& route, ProblemData const& data) {
     assert(route.load_excess() == expected_excess);
 
     // Recompute distance.
-    int profile = data.vehicle_type(route.vehicle_type()).profile;
+    int profile = 0;
     int depot = 0;
     int expected_dist = 0;
     if (n > 0) {

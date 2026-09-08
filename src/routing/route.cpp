@@ -74,7 +74,7 @@ int Route::eval_remove_load(int pos) const {
 int Route::eval_insert_distance(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
-    int profile = data_->vehicle_type(vehicle_type_).profile;
+    int profile = 0;
     int new_node = node_(client);
 
     // Previous node (depot if pos == 0, else client at pos-1).
@@ -96,7 +96,7 @@ int Route::eval_insert_distance(int pos, int client) const {
 int Route::eval_remove_distance(int pos) const {
     assert(pos >= 0 && pos < size());
 
-    int profile = data_->vehicle_type(vehicle_type_).profile;
+    int profile = 0;
     int rem_node = node_(clients_[pos]);
 
     // Previous node (depot if pos == 0).
@@ -121,7 +121,7 @@ int Route::eval_insert_time_warp(int pos, int client) const {
     // The TW merge is not associative, so we cannot use suffix arrays for O(1)
     // evaluation.  Instead, reuse the prefix up to pos-1 (O(1)) and then scan
     // forward through the remaining clients (O(n - pos)).
-    int profile = data_->vehicle_type(vehicle_type_).profile;
+    int profile = 0;
     auto state = dur_prefix(pos - 1);
 
     // Merge with the inserted client.
@@ -144,7 +144,7 @@ int Route::eval_insert_time_warp(int pos, int client) const {
 int Route::eval_remove_time_warp(int pos) const {
     assert(pos >= 0 && pos < size());
 
-    int profile = data_->vehicle_type(vehicle_type_).profile;
+    int profile = 0;
     auto state = dur_prefix(pos - 1);
 
     // Skip the removed client; continue from pos+1 onward.
@@ -162,7 +162,7 @@ int Route::eval_remove_time_warp(int pos) const {
 int Route::eval_insert_dist_excess(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
-    int profile = data_->vehicle_type(vehicle_type_).profile;
+    int profile = 0;
     auto client_state = DistanceResource::init(*data_, client);
     auto const& left = dist_prefix(pos - 1);  // depot -> ... -> c[pos-1]
     auto const& right = dist_suffix(pos);     // c[pos] -> ... -> depot
@@ -177,7 +177,7 @@ int Route::eval_insert_dist_excess(int pos, int client) const {
 int Route::eval_remove_dist_excess(int pos) const {
     assert(pos >= 0 && pos < size());
 
-    int profile = data_->vehicle_type(vehicle_type_).profile;
+    int profile = 0;
     auto const& left = dist_prefix(pos - 1);   // depot -> ... -> c[pos-1]
     auto const& right = dist_suffix(pos + 1);  // c[pos+1] -> ... -> depot
 
@@ -224,7 +224,7 @@ void Route::update_() {
     }
 
     // --- Duration resource prefix/suffix ---
-    int profile = data_->vehicle_type(vehicle_type_).profile;
+    int profile = 0;
 
     dur_prefix_.resize(n + 1);
     dur_prefix_[0] = DurationResource::init_depot(*data_, depot_);

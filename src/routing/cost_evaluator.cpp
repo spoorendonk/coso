@@ -34,21 +34,21 @@ bool CostEvaluator::has_duration_cost_function() const noexcept {
 }
 
 // ---------------------------------------------------------------------------
-//  Private helpers: piecewise or linear cost computation
+//  Private helpers: piecewise or plain cost computation
 // ---------------------------------------------------------------------------
 
-int64_t CostEvaluator::distance_cost_(int distance, CostParams const& cost) const {
+int64_t CostEvaluator::distance_cost_(int distance) const {
     if (distance_cost_func_) {
         return distance_cost_func_->evaluate(distance);
     }
-    return static_cast<int64_t>(distance) * cost.unit_distance_cost;
+    return distance;
 }
 
-int64_t CostEvaluator::duration_cost_(int duration, CostParams const& cost) const {
+int64_t CostEvaluator::duration_cost_(int duration) const {
     if (duration_cost_func_) {
         return duration_cost_func_->evaluate(duration);
     }
-    return static_cast<int64_t>(duration) * cost.unit_duration_cost;
+    return 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -60,19 +60,13 @@ int64_t CostEvaluator::route_objective(Route const& route) const {
         return 0;
     }
 
-    auto const& vt = route.data().vehicle_type(route.vehicle_type());
-    auto const& cost = vt.cost;
-
     int64_t obj = 0;
 
-    // Distance cost (piecewise or linear).
-    obj += distance_cost_(route.distance(), cost);
+    // Distance cost (piecewise or plain).
+    obj += distance_cost_(route.distance());
 
-    // Duration cost (piecewise or linear).
-    obj += duration_cost_(route.duration(), cost);
-
-    // Fixed vehicle cost (charged if route is non-empty).
-    obj += cost.fixed_cost;
+    // Duration cost (piecewise, zero otherwise).
+    obj += duration_cost_(route.duration());
 
     // Prize credits for served clients (subtract from cost).
     for (int i = 0; i < route.size(); ++i) {
@@ -104,36 +98,20 @@ int64_t CostEvaluator::route_cost(Route const& route) const {
 // ---------------------------------------------------------------------------
 
 int64_t CostEvaluator::eval_insert_cost(Route const& route, int pos, int client) const {
-    auto const& vt = route.data().vehicle_type(route.vehicle_type());
-    auto const& cost_params = vt.cost;
-
     int64_t delta = 0;
 
-    // Distance cost delta (piecewise or linear).
+    // Distance cost delta (piecewise or plain).
     if (distance_cost_func_) {
         int old_dist = route.distance();
         int new_dist = old_dist + route.eval_insert_distance(pos, client);
         delta += distance_cost_func_->delta(old_dist, new_dist);
     } else {
-        int dist_delta = route.eval_insert_distance(pos, client);
-        delta += static_cast<int64_t>(dist_delta) * cost_params.unit_distance_cost;
+        delta += route.eval_insert_distance(pos, client);
     }
 
-    // Duration cost delta (piecewise or linear).
-    // Note: we approximate duration delta from the distance delta for now,
-    // since Route does not expose eval_insert_duration directly.
-    // When no piecewise duration cost is set, the original linear duration
-    // cost was zero (unit_duration_cost defaults to 0), so this is safe.
-    // With a piecewise function, we would need the actual duration after
-    // insertion. For correctness, we recompute via the route if needed.
-    // (Currently Route doesn't track duration delta for inserts directly,
-    // so we skip duration delta in insert/remove -- it will be captured
-    // in the full route_objective when routes are recomputed.)
-
-    // Fixed cost delta: if the route was empty, we now incur fixed cost.
-    if (route.empty()) {
-        delta += cost_params.fixed_cost;
-    }
+    // Duration cost delta: absent without a piecewise duration function, and
+    // Route exposes no duration delta for an insert, so with one it is
+    // captured only when route_objective recomputes the whole route.
 
     // Prize credit for the inserted client.
     delta -= route.data().client(client).prize;
@@ -152,24 +130,15 @@ int64_t CostEvaluator::eval_insert_cost(Route const& route, int pos, int client)
 }
 
 int64_t CostEvaluator::eval_remove_cost(Route const& route, int pos) const {
-    auto const& vt = route.data().vehicle_type(route.vehicle_type());
-    auto const& cost_params = vt.cost;
-
     int64_t delta = 0;
 
-    // Distance cost delta (piecewise or linear).
+    // Distance cost delta (piecewise or plain).
     if (distance_cost_func_) {
         int old_dist = route.distance();
         int new_dist = old_dist + route.eval_remove_distance(pos);
         delta += distance_cost_func_->delta(old_dist, new_dist);
     } else {
-        int dist_delta = route.eval_remove_distance(pos);
-        delta += static_cast<int64_t>(dist_delta) * cost_params.unit_distance_cost;
-    }
-
-    // Fixed cost delta: if removing the last client, we save the fixed cost.
-    if (route.size() == 1) {
-        delta -= cost_params.fixed_cost;
+        delta += route.eval_remove_distance(pos);
     }
 
     // Prize: removing a client loses its prize credit (cost increases).

@@ -195,68 +195,6 @@ TEST_CASE("RoutingModel: one uncapacitated vehicle solves a TSP", "[routing][mod
 }
 
 // ---------------------------------------------------------------------------
-//  Objective parameters: model-axis round-trip
-// ---------------------------------------------------------------------------
-
-TEST_CASE("RoutingModel: the objective parameters round-trip and solve", "[routing][model]") {
-    // The interim evidence form for the objective slots: the public params
-    // aggregates are the read-back surface until #216 lands accessors on
-    // RoutingModel itself.  No returned-route assertion is possible while
-    // Result::cost_ is total distance (#198) and no route says which vehicle
-    // type served it.
-    VehicleTypeParams vt;
-    vt.capacity = {100};
-    vt.cost.fixed_cost = 1000;
-    vt.cost.unit_distance_cost = 3;
-    vt.cost.unit_duration_cost = 2;
-    vt.profile = 1;
-
-    CHECK(vt.cost.fixed_cost == 1000);
-    CHECK(vt.cost.unit_distance_cost == 3);
-    CHECK(vt.cost.unit_duration_cost == 2);
-    CHECK(vt.profile == 1);
-
-    RoutingModel model;
-    model.add_depot(0.0, 0.0);
-    model.add_vehicle_type(2, vt);
-    model.add_client(10.0, 0.0, {.demand = {1}});
-    model.add_client(20.0, 0.0, {.demand = {1}});
-
-    // Profile 1 must carry its own matrix; node ids are depot 0, clients 1..2.
-    for (int i = 0; i <= 2; ++i) {
-        for (int j = 0; j <= 2; ++j) {
-            model.set_profile_distance(1, i, j, i == j ? 0 : 10);
-            model.set_profile_duration(1, i, j, i == j ? 0 : 5);
-        }
-    }
-
-    Result r = model.solve(budget());
-
-    REQUIRE(r.feasible());
-    REQUIRE(serves_every_client(r, 2));
-}
-
-TEST_CASE("RoutingModel: Result::cost is the value of the declared objective", "[routing][model]") {
-    SKIP(
-        "RoutingModel::solve() sets result.cost_ = best.total_distance() "
-        "(src/model/routing_model.cpp:196) while the portfolio minimises "
-        "Solution::cost(eval) = distance cost + duration cost + fixed cost - prizes, so a "
-        "declared fixed_cost never reaches the caller — coso#198");
-
-    RoutingModel model;
-    model.add_depot(0.0, 0.0);
-    model.add_vehicle_type(1, {.capacity = {100}, .cost = {.fixed_cost = 1000}});
-    model.add_client(10.0, 0.0, {.demand = {1}});
-    model.add_client(20.0, 0.0, {.demand = {1}});
-
-    Result r = model.solve(budget());
-
-    REQUIRE(r.routes().size() == 1);
-    // One vehicle used: 1000 of fixed cost on top of the 40-unit tour.
-    CHECK(r.cost() == 1040.0);
-}
-
-// ---------------------------------------------------------------------------
 //  Time windows and service time: blocked on #194
 // ---------------------------------------------------------------------------
 
@@ -361,6 +299,35 @@ TEST_CASE("RoutingModel: an unprofitable optional client is left unserved", "[ro
     CHECK(r.unserved() == std::vector<int>{1});
 }
 
+// ---------------------------------------------------------------------------
+//  Result::cost against the declared objective
+// ---------------------------------------------------------------------------
+
+TEST_CASE("RoutingModel: Result::cost is the value of the declared objective", "[routing][model]") {
+    SKIP(
+        "CostEvaluator::route_objective subtracts every served client's prize "
+        "(src/routing/cost_evaluator.cpp:71-75) while RoutingModel::solve() sets "
+        "result.cost_ = best.total_distance() (src/model/routing_model.cpp:158), so the "
+        "search minimises distance - prizes and the caller is told distance. A declared "
+        "prize never reaches Result::cost() — coso#198");
+
+    // Both clients are on one 40-unit out-and-back tour and each carries a
+    // prize of 100, so the objective the portfolio actually minimises is
+    // 40 - 200 = -160 while Result::cost() reports the bare 40.
+    RoutingModel model;
+    model.add_depot(0.0, 0.0);
+    model.add_vehicle_type(1, {.capacity = {100}});
+    model.add_client(10.0, 0.0, {.demand = {1}, .prize = 100});
+    model.add_client(20.0, 0.0, {.demand = {1}, .prize = 100});
+
+    Result r = model.solve(budget());
+
+    REQUIRE(r.feasible());
+    REQUIRE(r.routes().size() == 1);
+    REQUIRE(r.routes()[0].size() == 2);
+    CHECK(r.cost() == -160.0);
+}
+
 TEST_CASE("RoutingModel: TSPTW solves as one time-feasible tour", "[routing][model]") {
     SKIP(
         "TSPTW is TSP plus enforced time windows, and Solution::feasible() checks load only, "
@@ -438,53 +405,4 @@ TEST_CASE("RoutingModel: Result reports a start depot per route and the opened s
         CHECK(e.route_start_depots().empty());
         CHECK(e.opened_depots().empty());
     }
-}
-
-TEST_CASE("RoutingModel: a prohibitively expensive depot is not opened", "[routing][model]") {
-    SKIP(
-        "Two defects stand between the declaration and this assertion. Route::depot_ is "
-        "assigned 0 in Route::Route (src/routing/route.cpp:14) and construction.cpp:37,98 "
-        "hardcodes depot = 0, so no route can start anywhere else and "
-        "src/routing/resources/depot_resource.h — which is time-window only in any case — has "
-        "no includer outside src/routing/resources/ — coso#196. And even once a depot could be "
-        "chosen, DepotParams::fixed_cost could not be priced into what comes back: "
-        "RoutingModel::solve() sets result.cost_ = best.total_distance() — coso#198");
-
-    // Depot 0 costs 10000 to open and sits next to the clients; depot 1 is free
-    // and 100 away, so the 200 units of extra travel are the cheaper choice.
-    RoutingModel model;
-    model.add_depot(0.0, 0.0, {.fixed_cost = 10000});
-    model.add_depot(100.0, 0.0, {.fixed_cost = 0});
-    model.add_vehicle_type(2, {.capacity = {100}});
-    model.add_client(10.0, 0.0, {.demand = {1}});
-    model.add_client(20.0, 0.0, {.demand = {1}});
-
-    Result r = model.solve(budget());
-
-    REQUIRE(r.feasible());
-    CHECK(r.opened_depots() == std::vector<int>{1});
-}
-
-TEST_CASE("RoutingModel: a depot capacity below total demand opens a second depot",
-          "[routing][model]") {
-    SKIP(
-        "DepotParams::capacity has no consumer at all: RoutingModel::solve() copies only "
-        "d.params into ProblemData::Builder::add_depot, which keeps p.tw and nothing else "
-        "(src/routing/problem_data.cpp:14-16), and every route starts at node 0 regardless "
-        "(src/routing/route.cpp:14) — coso#196, engine half owned by coso#126");
-
-    // Three clients of demand 4, 12 units in all, against a depot 0 that may
-    // dispatch 8.  The remainder has to leave from depot 1.
-    RoutingModel model;
-    model.add_depot(0.0, 0.0, {.capacity = {8}});
-    model.add_depot(100.0, 0.0, {.capacity = {100}});
-    model.add_vehicle_type(3, {.capacity = {100}});
-    model.add_client(10.0, 0.0, {.demand = {4}});
-    model.add_client(20.0, 0.0, {.demand = {4}});
-    model.add_client(30.0, 0.0, {.demand = {4}});
-
-    Result r = model.solve(budget());
-
-    REQUIRE(r.feasible());
-    CHECK(r.opened_depots().size() == 2);
 }

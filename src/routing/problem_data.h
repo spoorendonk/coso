@@ -6,7 +6,6 @@
 #include <cassert>
 #include <climits>
 #include <span>
-#include <string>
 #include <vector>
 
 namespace coso {
@@ -33,14 +32,9 @@ public:
         std::vector<int> demand;  ///< N load dimensions
         std::vector<int> pickup;  ///< backhaul pickup quantities
         TimeWindow tw = {0, INT_MAX};
-        std::vector<TimeWindow> extra_tw;  ///< additional time windows
         int service = 0;
-        int release_time = 0;
         int prize = 0;
         bool required = true;
-        int group = -1;
-        std::vector<std::string> skills;
-        int client_type = -1;  ///< type id for incompatibility (-1 = none)
     };
 
     struct DepotData {
@@ -53,15 +47,6 @@ public:
         std::vector<int> capacity;
         int max_duration = 0;  ///< 0 = unlimited
         int max_distance = 0;  ///< 0 = unlimited
-        int min_tasks = 0;     ///< 0 = no minimum
-        int max_tasks = 0;     ///< 0 = unlimited
-        int max_overtime = 0;
-        int unit_overtime_cost = 0;
-        int reload_depot = -1;
-        int max_reloads = 0;
-        CostParams cost;
-        int profile = 0;
-        std::vector<std::string> skills;
     };
 
     /// A pickup-delivery request: both on same route, pickup before delivery.
@@ -96,9 +81,6 @@ public:
         /// Set explicit duration for profile/from/to.
         void set_duration(int profile, int from, int to, int dur);
 
-        /// Set explicit cost-matrix entry for profile/from/to.
-        void set_cost(int profile, int from, int to, int cost);
-
         /// Build the immutable ProblemData.
         /// @param granular_k  Number of nearest neighbours per client
         ///                    for granular neighbourhood (0 = skip).
@@ -111,7 +93,7 @@ public:
         std::vector<Request> requests_;
 
         // Explicit matrices: profile -> flat row-major matrix.
-        // Lazily sized when set_distance/set_duration/set_cost is called.
+        // Lazily sized when set_distance/set_duration is called.
         struct MatrixEntry {
             int profile;
             int from;
@@ -120,7 +102,6 @@ public:
         };
         std::vector<MatrixEntry> dist_entries_;
         std::vector<MatrixEntry> dur_entries_;
-        std::vector<MatrixEntry> cost_entries_;
 
         /// Maximum profile index seen.
         int max_profile_ = 0;
@@ -196,21 +177,6 @@ public:
     /// Duration for the default profile (0).
     [[nodiscard]] int dur(int from, int to) const { return dur(0, from, to); }
 
-    /// Cost-matrix entry from node i to node j under the given profile.
-    /// Falls back to distance if no explicit cost matrix was provided.
-    [[nodiscard]] int cost(int profile, int from, int to) const {
-        assert(profile >= 0 && profile < num_profiles_);
-        int n = num_nodes();
-        assert(from >= 0 && from < n && to >= 0 && to < n);
-        if (work_units_) {
-            work_units_->count(1);
-        }
-        return cost_matrices_[profile * n * n + from * n + to];
-    }
-
-    /// Cost for the default profile (0).
-    [[nodiscard]] int cost(int from, int to) const { return cost(0, from, to); }
-
     /// Granular neighbour list for client c (0-based among clients).
     /// Returns a span of node indices (in full node numbering) sorted by
     /// increasing distance.  May be empty if granular_k was 0.
@@ -258,7 +224,6 @@ private:
     // Flat row-major matrices: profile * n * n + from * n + to.
     std::vector<int> dist_matrices_;
     std::vector<int> dur_matrices_;
-    std::vector<int> cost_matrices_;
 
     // Flat neighbour lists: client c's neighbours at [c * granular_k_ .. (c+1)*granular_k_).
     std::vector<int> neighbours_;

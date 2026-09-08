@@ -33,7 +33,7 @@ Solution nearest_neighbour(ProblemData const& data, CostEvaluator const& eval) {
     for (int v = 0; v < sol.num_routes() && remaining > 0; ++v) {
         auto& route = sol.route(v);
         int vtype = route.vehicle_type();
-        int profile = data.vehicle_type(vtype).profile;
+        int profile = 0;
         int depot = 0;  // depot node index
 
         // Build route for this vehicle.
@@ -102,11 +102,7 @@ Solution clarke_wright(ProblemData const& data, CostEvaluator const& eval) {
     }
 
     // Use profile 0 for savings computation (default).
-    // For heterogeneous fleets we use the first vehicle type's profile.
     int profile = 0;
-    if (data.num_vehicle_types() > 0) {
-        profile = data.vehicle_type(0).profile;
-    }
 
     // Step 1: Each client starts in its own "route" (a list of clients).
     // route_of[c] = which route index client c is in.

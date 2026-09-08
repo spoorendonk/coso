@@ -358,7 +358,7 @@ TEST_CASE("Route: dur_prefix and dur_suffix are consistent", "[route][duration]"
 
     // The full route time warp should match whether we compute it from
     // prefix or by merging prefix + suffix.
-    int profile = data.vehicle_type(0).profile;
+    int profile = 0;
     auto const& prefix_full = route.dur_prefix(2);
     auto depot_end = DurationResource::init_depot(data, 0);
     auto full = DurationResource::merge(prefix_full, depot_end, data, profile);
