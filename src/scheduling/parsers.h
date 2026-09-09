@@ -23,7 +23,7 @@ namespace coso {
 // ---------------------------------------------------------------------------
 //  Flexible Job Shop (FJSP) standard format
 // ---------------------------------------------------------------------------
-//  First line:  num_jobs  num_machines  [avg_ops_per_job]
+//  First line:  num_jobs  num_machines  [avg_machines_per_operation]
 //  Then per job: one line starting with num_operations, followed by
 //  per operation: num_eligible_machines, then (machine, duration) pairs.
 //  Machine indices are 1-based in the file.
