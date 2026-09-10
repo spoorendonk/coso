@@ -508,8 +508,18 @@ TEST_CASE("An OR-Library wt instance is declarable end to end", "[scheduling][ro
 //
 //  A discarded field never reaches a ScheduleData, so field-by-field equality
 //  cannot see it and prose cannot fail.  Each section parses two literals that
-//  differ only in the discarded field and asserts they compile identically —
-//  an assertion that starts failing the day the field becomes representable.
+//  differ only in the discarded field and asserts they compile identically.
+//
+//  What that does and does not guarantee.  It fails immediately if the parser
+//  starts *validating* the field — rejecting a wrong value it used to ignore.
+//  It does not fail on its own the day the field becomes *representable*: a
+//  new field means a new ScheduleData accessor, and check_same_schedule_data
+//  is a hand-written list that would not compare it.  So whoever makes one of
+//  these representable has to extend that list in the same commit, and this
+//  comment is the notice that they must.  The rostering twin in
+//  tests/rostering/rostering_model_test.cpp closes the same hole with
+//  structured bindings; ScheduleData's members are private, so the same trick
+//  is not available here.
 
 TEST_CASE("Discarded scheduling format fields stay discarded", "[scheduling][roundtrip][pinning]") {
     SECTION("parse_fjsp drops the header's third value (avg machines per operation)") {
