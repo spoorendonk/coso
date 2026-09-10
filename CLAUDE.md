@@ -126,6 +126,13 @@ making the schema a function of engine capability, which is the coupling this ph
 Engine capability is still evidence about an engine and never a verdict on the schema; benchmark
 evidence is what decides the schema now.
 
+**Variant verdicts are read, not reconstructed.** Every core-engine issue carries a
+`## Problem Catalog` naming its variants — #118/#132 routing, #133 rostering, #143 lot sizing,
+#150 scheduling, #161 network, #167 packing — and #150 and #118 also carry attribute tables
+around it. Read the whole umbrella issue before ruling on a variant. Inventing labels from the
+README instead has now produced a wrong verdict twice (#202 ruling 1, withdrawn; #203's first
+A-table, corrected in place).
+
 **Reading an instance is not scoring it.** Three archetypes can read their benchmarks and cannot yet
 be scored against published values, because the objective is not declarable: routing cannot state
 Solomon's lexicographic (vehicles, then distance) or OP/TOP's budget-constrained maximisation (#228),
