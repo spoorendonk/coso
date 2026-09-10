@@ -79,7 +79,8 @@ public:
     /// Hard constraint violation cost.
     [[nodiscard]] int hard_constraint_cost(std::vector<std::vector<int>> const& schedule) const {
         return consecutive_violation_cost(schedule) + forbidden_sequence_cost(schedule) +
-               unavailability_cost(schedule);
+               unavailability_cost(schedule) + weekend_violation_cost(schedule) +
+               working_time_violation_cost(schedule);
     }
 
     /// Consecutive shift violations.
@@ -101,6 +102,83 @@ public:
                 if (run > max_consec) {
                     cost += weights_.hard_violation;
                 }
+            }
+        }
+        return cost;
+    }
+
+    /// Weekend violations: distinct weekends worked beyond Employee::max_weekends.
+    ///
+    /// Weekend `w` is the day pair (7w+5, 7w+6) -- see
+    /// RosteringData::is_weekend_day for the convention and why day 0 is a
+    /// Monday.  An employee works weekend `w` if assigned any shift on either
+    /// of its days; the count is of distinct weekends, not of weekend days.  A
+    /// weekend whose Saturday falls outside the horizon does not exist.
+    [[nodiscard]] int weekend_violation_cost(std::vector<std::vector<int>> const& schedule) const {
+        int cost = 0;
+        int const ne = data_.num_employees();
+        int const H = data_.horizon;
+
+        for (int e = 0; e < ne; ++e) {
+            int const max_weekends = data_.employees[e].max_weekends;
+            if (max_weekends >= H) {
+                continue;  // Can never bind: fewer than H weekends exist.
+            }
+            int worked = 0;
+            for (int d = 5; d < H; d += 7) {
+                if (schedule[e][d] >= 0 || (d + 1 < H && schedule[e][d + 1] >= 0)) {
+                    ++worked;
+                }
+            }
+            if (worked > max_weekends) {
+                cost += (worked - max_weekends) * weights_.hard_violation;
+            }
+        }
+        return cost;
+    }
+
+    /// Horizon-scoped min/max working-time violations.
+    ///
+    /// An employee's total is the sum of ShiftType::duration_minutes over the
+    /// days they are assigned.  This is that field's only reader anywhere in
+    /// the engine, which is the substance of #233.
+    ///
+    /// The penalty is flat per employee per violated bound rather than scaled
+    /// by the shortfall in minutes: hard_violation is 10000 and an SB-NRP
+    /// shortfall runs to thousands of minutes per employee across dozens of
+    /// employees, so `shortfall * hard_violation` overflows `int` (Instance8
+    /// alone reaches 2.4e9).
+    ///
+    /// The cost of that choice, recorded rather than fixed: this is the only
+    /// term in the file with no gradient. Every other one scales -- per
+    /// over-limit day, per excess weekend, per missing head -- so local search
+    /// can climb them, while an employee 8000 minutes short and one 1 minute
+    /// short are priced identically here and no single move improves either.
+    /// A bounded scaling (hard_violation + shortfall, or per whole shift
+    /// short) would give it one. See coso#235.
+    [[nodiscard]] int working_time_violation_cost(
+        std::vector<std::vector<int>> const& schedule) const {
+        int cost = 0;
+        int const ne = data_.num_employees();
+        int const H = data_.horizon;
+
+        for (int e = 0; e < ne; ++e) {
+            auto const& emp = data_.employees[e];
+            if (emp.min_total_minutes <= 0 && emp.max_total_minutes == INT_MAX) {
+                continue;  // Undeclared on both ends.
+            }
+            int total = 0;
+            for (int d = 0; d < H; ++d) {
+                int s = schedule[e][d];
+                if (s >= 0) {
+                    total += data_.shift_types[s].duration_minutes;
+                }
+            }
+            if (total < emp.min_total_minutes) {
+                cost += weights_.hard_violation;
+            }
+            if (total > emp.max_total_minutes) {
+                cost += weights_.hard_violation;
             }
         }
         return cost;
@@ -164,6 +242,12 @@ public:
     }
 
     // -- Delta evaluation ----------------------------------------------------
+    //
+    //  Every delta below is a difference of two full evaluate() calls, and
+    //  RosteringSolution / the move operators reach the evaluator only through
+    //  them.  So a cost term added to evaluate() is priced identically in the
+    //  move evaluation and in the reported cost, by construction -- there is no
+    //  separate incremental path that could disagree.
 
     /// Cost delta for assigning shift_type to employee on day (was -1).
     [[nodiscard]] int delta_assign(std::vector<std::vector<int>> const& schedule, int employee,

@@ -21,8 +21,8 @@ RosteringData make_small_instance() {
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day", .duration_hours = 8},
-        {.name = "Night", .duration_hours = 8},
+        {.name = "Day", .duration_minutes = 480},
+        {.name = "Night", .duration_minutes = 480},
     };
 
     // 3 employees with default constraints.
@@ -311,4 +311,122 @@ TEST_CASE("RosteringSolution: skill-based demand", "[rostering]") {
 
     // demand should decrease when Carol is assigned.
     REQUIRE(demand_with_carol < demand_with_alice);
+}
+
+// ---------------------------------------------------------------------------
+//  Test: max weekends (#203 v1 EXTEND item 2)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("RosteringSolution: max weekends", "[rostering]") {
+    auto data = make_small_instance();
+    // Two full weeks, so days 5/6 and 12/13 are two distinct weekends.
+    data.horizon = 14;
+
+    RosteringCostEvaluator evaluator(data);
+    int const hard = evaluator.weights().hard_violation;
+
+    SECTION("undeclared, the bound is inert") {
+        RosteringSolution sol(data, evaluator);
+        sol.assign(0, 5, 0);
+        sol.assign(0, 12, 0);
+        CHECK(evaluator.weekend_violation_cost(sol.schedule()) == 0);
+    }
+
+    SECTION("a second weekend worked costs one hard violation") {
+        data.employees[0].max_weekends = 1;
+        RosteringCostEvaluator tight(data);
+        RosteringSolution sol(data, tight);
+
+        int const hard_before = sol.hard_constraint_cost();
+        REQUIRE(hard_before == 0);
+
+        // Saturday of weekend 0, then Saturday of weekend 1.
+        sol.assign(0, 5, 0);
+        CHECK(tight.weekend_violation_cost(sol.schedule()) == 0);
+        sol.assign(0, 12, 0);
+
+        CHECK(tight.weekend_violation_cost(sol.schedule()) == hard);
+        // Folded into the hard total, so it reaches evaluate() and is_feasible().
+        CHECK(sol.hard_constraint_cost() == hard_before + hard);
+        CHECK_FALSE(sol.is_feasible());
+        // The cached incremental cost prices it identically to a full evaluate().
+        CHECK(sol.cost() == tight.evaluate(sol.schedule()));
+    }
+
+    SECTION("both days of one weekend are one weekend, not two") {
+        data.employees[0].max_weekends = 1;
+        RosteringCostEvaluator tight(data);
+        RosteringSolution sol(data, tight);
+
+        sol.assign(0, 5, 0);
+        sol.assign(0, 6, 0);
+        CHECK(tight.weekend_violation_cost(sol.schedule()) == 0);
+        CHECK(tight.evaluate(sol.schedule()) == sol.cost());
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  Test: horizon-scoped working time (#203 v1 EXTEND item 3)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("RosteringSolution: horizon working-time bounds", "[rostering]") {
+    auto data = make_small_instance();
+
+    SECTION("undeclared, both bounds are inert") {
+        RosteringCostEvaluator evaluator(data);
+        RosteringSolution sol(data, evaluator);
+        sol.assign(0, 0, 0);
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == 0);
+    }
+
+    SECTION("below the minimum, then inside the band, then above the maximum") {
+        // Two to three Day shifts of 480 minutes each.
+        data.employees[0].min_total_minutes = 960;
+        data.employees[0].max_total_minutes = 1440;
+
+        RosteringCostEvaluator evaluator(data);
+        int const hard = evaluator.weights().hard_violation;
+        RosteringSolution sol(data, evaluator);
+
+        // Nothing assigned: 0 < 960.
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == hard);
+        CHECK_FALSE(sol.is_feasible());
+
+        sol.assign(0, 0, 0);
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == hard);
+
+        sol.assign(0, 1, 0);  // 960 minutes: inside the band.
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == 0);
+        CHECK(sol.cost() == evaluator.evaluate(sol.schedule()));
+
+        sol.assign(0, 2, 0);  // 1440: still inside, at the bound.
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == 0);
+
+        sol.assign(0, 3, 0);  // 1920 > 1440.
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == hard);
+        CHECK(sol.hard_constraint_cost() >= hard);
+        CHECK_FALSE(sol.is_feasible());
+        CHECK(sol.cost() == evaluator.evaluate(sol.schedule()));
+    }
+
+    SECTION("the shift's declared duration is what is summed") {
+        // The bound is unchanged; only the Night shift's length differs, so a
+        // different total can only come from duration_minutes being read.
+        // This is the reader #233 says the field did not have.
+        data.employees[0].min_total_minutes = 960;
+        data.shift_types[1].duration_minutes = 240;
+
+        RosteringCostEvaluator evaluator(data);
+        int const hard = evaluator.weights().hard_violation;
+
+        RosteringSolution night(data, evaluator);
+        night.assign(0, 0, 1);
+        night.assign(0, 1, 1);  // 2 x 240 = 480 < 960.
+        CHECK(evaluator.working_time_violation_cost(night.schedule()) == hard);
+
+        RosteringSolution day(data, evaluator);
+        day.assign(0, 0, 0);
+        day.assign(0, 1, 0);  // 2 x 480 = 960.
+        CHECK(evaluator.working_time_violation_cost(day.schedule()) == 0);
+    }
 }

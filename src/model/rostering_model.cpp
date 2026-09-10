@@ -101,7 +101,7 @@ Result RosteringModel::solve(TimeLimit tl) {
     for (auto const& st : shift_types_) {
         data.shift_types.push_back({
             .name = st.name,
-            .duration_hours = st.duration_hours,
+            .duration_minutes = st.duration_minutes,
         });
     }
 
@@ -112,6 +112,9 @@ Result RosteringModel::solve(TimeLimit tl) {
             .name = e.name,
             .skills = e.skills,
             .max_consecutive_days = e.max_consecutive_days,
+            .max_weekends = e.max_weekends,
+            .min_total_minutes = e.min_total_minutes,
+            .max_total_minutes = e.max_total_minutes,
         });
     }
 

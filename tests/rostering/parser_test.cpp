@@ -11,7 +11,8 @@ using namespace coso;
 TEST_CASE("parse_nrp - small instance", "[rostering][parser]") {
     // A small NRP instance with:
     //   - 7-day horizon
-    //   - 2 shift types: D (day, 8h) and N (night, 8h), N cannot follow N
+    //   - 2 shift types: D (day, 480 min) and N (night, 480 min), N cannot
+    //     follow N
     //   - 3 employees
     //   - Days off, shift requests, and cover requirements
     std::string content = R"(
@@ -19,13 +20,13 @@ SECTION_HORIZON
 7
 
 SECTION_SHIFTS
-D,8
-N,8,N
+D,480
+N,480,N
 
 SECTION_STAFF
-Alice,MaxShifts=5,MaxTotalMinutes=2400,MaxConsecutiveShifts=5,MinConsecutiveShifts=2,MinConsecutiveDaysOff=2,MaxWeekends=1
-Bob,MaxShifts=5,MaxTotalMinutes=2400,MaxConsecutiveShifts=4,MinConsecutiveShifts=1,MinConsecutiveDaysOff=2,MaxWeekends=1
-Carol,MaxShifts=4,MaxTotalMinutes=1920,MaxConsecutiveShifts=3,MinConsecutiveShifts=1,MinConsecutiveDaysOff=2,MaxWeekends=1
+Alice,MaxShifts=5,MaxTotalMinutes=2400,MinTotalMinutes=960,MaxConsecutiveShifts=5,MinConsecutiveShifts=2,MinConsecutiveDaysOff=2,MaxWeekends=1
+Bob,MaxShifts=5,MaxTotalMinutes=2400,MinTotalMinutes=480,MaxConsecutiveShifts=4,MinConsecutiveShifts=1,MinConsecutiveDaysOff=2,MaxWeekends=1
+Carol,MaxShifts=4,MaxTotalMinutes=1920,MaxConsecutiveShifts=3,MinConsecutiveShifts=1,MinConsecutiveDaysOff=2,MaxWeekends=2
 
 SECTION_DAYS_OFF
 Alice,0,6
@@ -63,9 +64,9 @@ SECTION_COVER
     // Shift types.
     REQUIRE(data.num_shift_types() == 2);
     CHECK(data.shift_types[0].name == "D");
-    CHECK(data.shift_types[0].duration_hours == 8);
+    CHECK(data.shift_types[0].duration_minutes == 480);
     CHECK(data.shift_types[1].name == "N");
-    CHECK(data.shift_types[1].duration_hours == 8);
+    CHECK(data.shift_types[1].duration_minutes == 480);
 
     // Employees.
     REQUIRE(data.num_employees() == 3);
@@ -77,6 +78,19 @@ SECTION_COVER
     CHECK(data.employees[0].max_consecutive_days == 5);
     CHECK(data.employees[1].max_consecutive_days == 4);
     CHECK(data.employees[2].max_consecutive_days == 3);
+
+    // MaxWeekends and the horizon-scoped working-time bounds, in the named
+    // key=value dialect (#203 v1 EXTEND items 2 and 3).  Carol declares no
+    // MinTotalMinutes, so hers stays at the inert default of 0.
+    CHECK(data.employees[0].max_weekends == 1);
+    CHECK(data.employees[1].max_weekends == 1);
+    CHECK(data.employees[2].max_weekends == 2);
+    CHECK(data.employees[0].max_total_minutes == 2400);
+    CHECK(data.employees[1].max_total_minutes == 2400);
+    CHECK(data.employees[2].max_total_minutes == 1920);
+    CHECK(data.employees[0].min_total_minutes == 960);
+    CHECK(data.employees[1].min_total_minutes == 480);
+    CHECK(data.employees[2].min_total_minutes == 0);
 
     // Days off: Alice off on days 0, 6; Bob off on day 5.
     CHECK(data.is_unavailable(0, 0));        // Alice, day 0
@@ -139,7 +153,7 @@ SECTION_HORIZON
 1
 
 SECTION_SHIFTS
-D,8
+D,480
 
 SECTION_STAFF
 E0,MaxShifts=1,MaxTotalMinutes=480,MaxConsecutiveShifts=1,MinConsecutiveShifts=1,MinConsecutiveDaysOff=1,MaxWeekends=0

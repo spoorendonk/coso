@@ -4,7 +4,7 @@
 
 int main() {
     coso::RosteringModel model;
-    int day_shift = model.add_shift_type({.name = "Day", .duration_hours = 8});
+    int day_shift = model.add_shift_type({.name = "Day", .duration_minutes = 480});
     model.add_employee({.name = "Alice"});
     model.add_employee({.name = "Bob"});
     model.set_horizon(3);

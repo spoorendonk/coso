@@ -59,8 +59,8 @@ auto result = coso::solve("X-n101-k25.vrp", coso::TimeLimit(60));
 | Model | Problems |
 |---|---|
 | `RoutingModel` | CVRP, multi-dimensional CVRP, VRP with simultaneous pickup and delivery, TSP |
-| `ScheduleModel` | JSP, FJSP, RCPSP, flow shop, open shop |
-| `RosteringModel` | Nurse rostering, employee scheduling, multi-activity scheduling |
+| `ScheduleModel` | JSP, FJSP, single-machine weighted tardiness |
+| `RosteringModel` | Nurse rostering (NRP class) |
 | `PackingModel` | Bin packing, vector bin packing, bin packing with conflicts |
 | `NetworkModel` | Min-cost flow (single commodity) |
 | `LotSizingModel` | CLSP (capacitated lot sizing) |
@@ -93,8 +93,8 @@ benchmark run backs it. That work is [#177](../../issues/177) and the per-model 
 | **Packing** | Functional — FFD construction with move/swap local search. |
 | **Lot sizing** | Single-level CLSP only. Constructions (lot-for-lot, Silver-Meal, part-period balancing) plus a shift/merge/split descent — there is no fix-and-optimize anywhere in the tree. An instance whose only feasible plans build ahead of a capacity spike comes back infeasible ([#211](../../issues/211)). Multi-level lot sizing is no longer declarable — [#205](../../issues/205) cut `add_bom`. |
 | **Network** | Target scope is **multi-commodity flow and network design** ([#184](../../issues/184)) — neither is implemented. What exists is a single-commodity min-cost flow solver, which is not a COSO target: that problem is solved. |
-| **Scheduling** | **Construction-only** (SGS / SPT dispatch / NEH). `ScheduleModel::solve()` validates every candidate and returns feasible-but-unoptimised schedules. There is no working local search: the disjunctive-graph operators are not wired into `solve()` and carry the unsound cycle guard of [#185](../../issues/185). |
-| **Rostering** | Construction + VND. Not validated. |
+| **Scheduling** | **Nothing with two or more jobs solves at all**: `solve()` calls `construct_neh()`, which aborts the process ([#188](../../issues/188)), and an out-of-range declared machine can abort a single-job instance too ([#234](../../issues/234)). Construction-only otherwise (SGS / SPT dispatch) — the disjunctive-graph operators are not wired into `solve()` and carry the unsound cycle guard of [#185](../../issues/185). The schema is the shop archetype [#202](../../issues/202) kept on benchmark evidence, and it round-trips both surviving parsers field for field. |
+| **Rostering** | Construction + VND. What is declared is enforced: [#203](../../issues/203) added `MaxWeekends` and horizon-scoped working-time bounds as hard constraints, and both reach `is_feasible()`. **Not scoreable** — every published NRP instance prices cover under- and over-staffing with weights the schema cannot declare ([#229](../../issues/229)), so a run solves a strict relaxation and the BKS grading is skipped rather than asserted. The constructions respect neither new bound, and the working-time penalty is flat ([#235](../../issues/235)). |
 
 ## Tests and coverage
 

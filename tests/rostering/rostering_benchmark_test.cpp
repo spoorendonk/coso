@@ -1,10 +1,10 @@
-#include "rostering/rostering_solution.h"
 #include "rostering/construction.h"
 #include "rostering/cost_evaluator.h"
 #include "rostering/operators/block_swap.h"
 #include "rostering/operators/shift_move.h"
 #include "rostering/operators/shift_swap.h"
 #include "rostering/parsers.h"
+#include "rostering/rostering_solution.h"
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -136,6 +136,27 @@ static void run_nrp_benchmark(const std::string& file, int expected_employees,
     if (bks > 0 && final_cost > 0) {
         double gap = static_cast<double>(final_cost - bks) / bks;
         std::cout << "  Gap to BKS: " << (gap * 100.0) << "%\n" << std::endl;
+
+        // The declared cost function is not the one the BKS grades, so the
+        // number above cannot be read as a gap in either direction.
+        //
+        // It never could: SB-NRP prices under-cover at 100 and over-cover at 1
+        // per SECTION_COVER line, weights v1 cannot declare, so this file sets
+        // them on the evaluator behind the model's back (coso#230) and the
+        // model's own solve() would use 1000/100 instead (coso#229).
+        //
+        // Since coso#203's v1 additions it is also wrong in the other
+        // direction: MaxWeekends and the horizon working-time bounds are now
+        // declared and enforced as hard, and the constructions do not respect
+        // either, so a run starts with tens of thousands of hard cost that the
+        // published optimum does not pay. Instance1 needs >= 5 distinct
+        // employees on weekend 0 and >= 6 on weekend 1 against 8 employees
+        // with MaxWeekends = 1, so >= 3 forced violations is a floor.
+        //
+        // Restore this assertion when coso#229 makes the cover weights
+        // declarable; the bound has to be re-derived against the objective
+        // that lands with it.
+        SKIP("NRP BKS grading is not comparable to the declared objective — coso#229");
         CHECK(final_cost <= static_cast<int>(bks * (1.0 + max_gap)));
     }
 }

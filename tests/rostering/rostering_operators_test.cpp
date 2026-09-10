@@ -21,8 +21,8 @@ RosteringData make_instance() {
 
     // Shift types: Day (08-16, 8h) and Night (22-06, 8h).
     data.shift_types = {
-        {.name = "Day", .duration_hours = 8},
-        {.name = "Night", .duration_hours = 8},
+        {.name = "Day", .duration_minutes = 480},
+        {.name = "Night", .duration_minutes = 480},
     };
 
     // 3 employees.

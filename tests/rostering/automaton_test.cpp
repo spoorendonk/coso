@@ -20,9 +20,9 @@ RosteringData make_instance() {
     RosteringData data;
 
     data.shift_types = {
-        {.name = "Day", .duration_hours = 8},
-        {.name = "Night", .duration_hours = 8},
-        {.name = "Evening", .duration_hours = 6},
+        {.name = "Day", .duration_minutes = 480},
+        {.name = "Night", .duration_minutes = 480},
+        {.name = "Evening", .duration_minutes = 360},
     };
 
     data.employees = {

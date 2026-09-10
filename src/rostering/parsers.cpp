@@ -59,11 +59,14 @@ std::vector<std::string> split(const std::string& s, char delim) {
 //   14
 //
 //   SECTION_SHIFTS
-//   D,Early,480,0,0   (ID, name, length_minutes, ...)
-//   N,Night,480,0,1
+//   D,480,           (ShiftID, length in minutes, forbidden successors)
+//   N,480,D|N        ("D|N" = neither D nor N may follow N)
 //
 //   SECTION_STAFF
-//   Employee0,MaxShifts=...
+//   A,D=14,4320,3390,5,2,2,1
+//     (ID, MaxShifts per type, MaxTotalMinutes, MinTotalMinutes,
+//      MaxConsecutiveShifts, MinConsecutiveShifts, MinConsecutiveDaysOff,
+//      MaxWeekends) -- or the key=value dialect, Employee0,MaxShifts=...
 //
 //   SECTION_DAYS_OFF
 //   Employee0,0,1
@@ -152,13 +155,8 @@ RosteringData parse_nrp(const std::string& content) {
                 RosteringData::ShiftType shift;
                 std::string id = tokens[0];
 
-                // Duration field: if value <= 24, treat as hours; otherwise as minutes.
-                int duration_val = std::stoi(tokens[1]);
-                if (duration_val <= 24) {
-                    shift.duration_hours = duration_val;
-                } else {
-                    shift.duration_hours = (duration_val + 59) / 60;  // ceil to hours
-                }
+                // Duration field is "Length in mins" -- no unit guessing.
+                shift.duration_minutes = std::stoi(tokens[1]);
                 shift.name = id;
 
                 int shift_idx = static_cast<int>(data.shift_types.size());
@@ -200,7 +198,12 @@ RosteringData parse_nrp(const std::string& content) {
                     //             [3]=MinTotalMinutes, [4]=MaxConsecutiveShifts,
                     //             [5]=MinConsecutiveShifts, [6]=MinConsecutiveDaysOff,
                     //             [7]=MaxWeekends
+                    emp.max_total_minutes = std::stoi(tokens[2]);
+                    emp.min_total_minutes = std::stoi(tokens[3]);
                     emp.max_consecutive_days = std::stoi(tokens[4]);
+                    if (tokens.size() >= 8) {
+                        emp.max_weekends = std::stoi(tokens[7]);
+                    }
                 } else {
                     // Named key=value format.
                     for (size_t i = 1; i < tokens.size(); ++i) {
@@ -213,6 +216,12 @@ RosteringData parse_nrp(const std::string& content) {
 
                         if (key == "MaxConsecutiveShifts") {
                             emp.max_consecutive_days = std::stoi(val);
+                        } else if (key == "MaxTotalMinutes") {
+                            emp.max_total_minutes = std::stoi(val);
+                        } else if (key == "MinTotalMinutes") {
+                            emp.min_total_minutes = std::stoi(val);
+                        } else if (key == "MaxWeekends") {
+                            emp.max_weekends = std::stoi(val);
                         }
                     }
                 }

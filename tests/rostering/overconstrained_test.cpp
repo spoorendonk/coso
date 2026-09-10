@@ -14,8 +14,8 @@ static RosteringData make_basic_data() {
     RosteringData data;
     data.horizon = 5;
 
-    data.shift_types.push_back({.name = "Day", .duration_hours = 8});
-    data.shift_types.push_back({.name = "Night", .duration_hours = 8});
+    data.shift_types.push_back({.name = "Day", .duration_minutes = 480});
+    data.shift_types.push_back({.name = "Night", .duration_minutes = 480});
 
     data.employees.push_back({.name = "Alice"});
     data.employees.push_back({.name = "Bob"});
@@ -36,7 +36,7 @@ static RosteringData make_overconstrained_data() {
     RosteringData data;
     data.horizon = 3;
 
-    data.shift_types.push_back({.name = "Day", .duration_hours = 8});
+    data.shift_types.push_back({.name = "Day", .duration_minutes = 480});
 
     data.employees.push_back({.name = "Alice"});
     data.employees.push_back({.name = "Bob"});

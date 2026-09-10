@@ -13,7 +13,10 @@ namespace coso {
 /// Parameters for a shift type.
 struct ShiftTypeParams {
     std::string name;
-    int duration_hours = 0;
+    /// Shift length in **minutes**, as every verified benchmark format carries
+    /// it: schedulingbenchmarks.org NRP's "Length in mins" (480 for an 8h
+    /// shift) and the .ros <Duration> element. See the v1 scope ruling on #203.
+    int duration_minutes = 0;
 };
 
 /// Parameters for an employee.
@@ -21,6 +24,33 @@ struct EmployeeParams {
     std::string name;
     std::vector<std::string> skills;
     int max_consecutive_days = 5;
+
+    /// Maximum number of distinct weekends the employee may work over the
+    /// horizon. Default INT_MAX = unlimited.
+    ///
+    /// Weekend convention: day index `d` falls in a weekend iff `d % 7` is 5
+    /// or 6, i.e. the horizon starts on a Monday, which is what SB-NRP
+    /// assumes. Weekend `w` is the day pair (7w+5, 7w+6); an employee "works"
+    /// that weekend if assigned any shift on either day, and the count is of
+    /// distinct weekends worked, not of weekend days.
+    ///
+    /// SB-NRP STAFF column 8 (`MaxWeekends`); INRC-II `maxWorkingWeekends`.
+    int max_weekends = INT_MAX;
+
+    /// Minimum total working time over the **whole horizon**, in minutes.
+    /// Default 0 = no lower bound. SB-NRP `MinTotalMinutes` (> 0 in all 24
+    /// instances); INRC-II `minAssign`; NSPLib case files.
+    int min_total_minutes = 0;
+
+    /// Maximum total working time over the **whole horizon**, in minutes.
+    /// Default INT_MAX = unlimited. SB-NRP `MaxTotalMinutes`; INRC-II
+    /// `maxAssign`; NSPLib case files.
+    ///
+    /// An employee's total is the sum of `ShiftTypeParams::duration_minutes`
+    /// over the days they are assigned -- this pair of bounds is what gives
+    /// the declared shift duration its first reader, which is the substance
+    /// of #233.
+    int max_total_minutes = INT_MAX;
 };
 
 /// Demand parameters for a shift on a given day.

@@ -358,7 +358,7 @@ TEST_CASE("RosteringModel can be default-constructed", "[rostering]") {
 
 TEST_CASE("RosteringModel add_shift_type and add_employee", "[rostering]") {
     coso::RosteringModel m;
-    int s = m.add_shift_type({.name = "Morning", .duration_hours = 8});
+    int s = m.add_shift_type({.name = "Morning", .duration_minutes = 480});
     REQUIRE(s >= 0);
     int e = m.add_employee({.name = "Alice", .skills = {"ICU"}});
     REQUIRE(e >= 0);
@@ -807,13 +807,13 @@ TEST_CASE("RosteringModel reads back every declaration", "[rostering][introspect
     }
 
     SECTION("shift types, employees and the horizon round-trip") {
-        int night = m.add_shift_type({.name = "night", .duration_hours = 8});
-        int early = m.add_shift_type({.name = "early", .duration_hours = 7});
+        int night = m.add_shift_type({.name = "night", .duration_minutes = 480});
+        int early = m.add_shift_type({.name = "early", .duration_minutes = 420});
         REQUIRE(m.num_shift_types() == 2);
         REQUIRE(m.shift_type(night).name == "night");
-        REQUIRE(m.shift_type(night).duration_hours == 8);
+        REQUIRE(m.shift_type(night).duration_minutes == 480);
         REQUIRE(m.shift_type(early).name == "early");
-        REQUIRE(m.shift_type(early).duration_hours == 7);
+        REQUIRE(m.shift_type(early).duration_minutes == 420);
 
         int ana =
             m.add_employee({.name = "ana", .skills = {"icu", "triage"}, .max_consecutive_days = 3});

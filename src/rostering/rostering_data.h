@@ -19,7 +19,7 @@ struct RosteringData {
 
     struct ShiftType {
         std::string name;
-        int duration_hours = 0;
+        int duration_minutes = 0;  ///< Shift length in minutes (SB-NRP "Length in mins").
     };
 
     std::vector<ShiftType> shift_types;
@@ -34,6 +34,9 @@ struct RosteringData {
         std::string name;
         std::vector<std::string> skills;
         int max_consecutive_days = 5;
+        int max_weekends = INT_MAX;       ///< Distinct weekends workable; INT_MAX = unlimited.
+        int min_total_minutes = 0;        ///< Lower bound on worked minutes over the horizon.
+        int max_total_minutes = INT_MAX;  ///< Upper bound; INT_MAX = unlimited.
     };
 
     std::vector<Employee> employees;
@@ -43,6 +46,17 @@ struct RosteringData {
     // -- Horizon -------------------------------------------------------------
 
     int horizon = 0;  ///< Planning horizon in days.
+
+    /// Weekend convention for Employee::max_weekends.
+    ///
+    /// Day 0 is a Monday -- the horizon start every verified benchmark format
+    /// assumes -- so days 5 and 6 of each 7-day block are the weekend. Weekend
+    /// index `w` is therefore the day pair (7w+5, 7w+6), and an employee works
+    /// that weekend if assigned any shift on either of its days. See the v1
+    /// scope ruling on #203.
+    [[nodiscard]] static constexpr bool is_weekend_day(int day) noexcept {
+        return day % 7 == 5 || day % 7 == 6;
+    }
 
     // -- Demand --------------------------------------------------------------
 
