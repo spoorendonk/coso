@@ -13,8 +13,11 @@ namespace coso {
 /// Parameters for a vehicle type.
 struct VehicleTypeParams {
     std::vector<int> capacity;  ///< N load dimensions
-    int max_duration = 0;       ///< 0 = unlimited
-    int max_distance = 0;       ///< 0 = unlimited
+    /// 0 = unlimited.  Accepted and dropped: never penalised, and a route over
+    /// it comes back feasible (#194).
+    int max_duration = 0;
+    /// 0 = unlimited.  Accepted and dropped, as max_duration (#194).
+    int max_distance = 0;
 };
 
 /// Parameters for a client location.
@@ -23,7 +26,9 @@ struct ClientParams {
     std::vector<int> pickup;  ///< backhaul pickup quantities
     TimeWindow tw = {0, INT_MAX};
     int service = 0;  ///< service duration
-    int prize = 0;    ///< for optional clients (Team Orienteering)
+    int prize = 0;    ///< credited in Result::cost for each served client
+    /// Accepted and dropped: the native engine serves every client, so false
+    /// never leaves one unserved (#196).
     bool required = true;
 };
 
@@ -38,8 +43,9 @@ struct DepotParams {
 /// vehicle capacity, minimising distance minus the prizes of served clients,
 /// which is what Result::cost reports; Result::distance is the bare distance.
 /// The schema is the 13 slots the v1 scope ruling on #200 kept on benchmark
-/// evidence; time windows and service times are still declarable but
-/// unhonoured (#194).
+/// evidence.  Accepted and dropped by the native engine: time windows, service
+/// times, max_distance and max_duration (#194), and ClientParams::required,
+/// add_request and every depot after the first (#196).
 class RoutingModel {
 public:
     // -- Stored entry types --------------------------------------------------
@@ -74,7 +80,9 @@ public:
         int value;
     };
 
-    /// Add a depot at the given coordinates.
+    /// Add a depot at the given coordinates.  Only the first depot is used:
+    /// every route starts and ends at depot 0, so a second depot is accepted
+    /// and dropped (#196).
     int add_depot(double x, double y, DepotParams p = {});
 
     /// Add a vehicle type with the given count and parameters.
@@ -89,7 +97,9 @@ public:
     /// Add a delivery location (for pickup-delivery problems).
     int add_delivery(double x, double y, ClientParams p = {});
 
-    /// Link a pickup-delivery pair: both on the same route, pickup before delivery.
+    /// Link a pickup-delivery pair: both on the same route, pickup before
+    /// delivery.  Accepted and dropped: the native engine routes the two
+    /// clients independently, so neither condition is enforced (#196).
     void add_request(int pickup, int delivery);
 
     /// Convenience alias for add_request.

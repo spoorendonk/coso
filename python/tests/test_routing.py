@@ -2,7 +2,6 @@
 
 import coso
 
-
 # =========================================================================
 #  Shared types
 # =========================================================================
@@ -434,3 +433,17 @@ def test_result_reports_start_depots_and_opened_set():
     assert len(r.route_start_depots) == len(r.routes)
     assert all(0 <= d < m.num_depots() for d in r.route_start_depots)
     assert r.opened_depots == sorted(set(r.route_start_depots))
+
+
+def test_dropped_declarations_say_so() -> None:
+    # Declarations the native engine accepts and drops name their issue (#196).
+    for doc, issue in [
+        (coso.RoutingModel.add_request.__doc__, "coso#196"),
+        (coso.RoutingModel.add_pickup_delivery.__doc__, "coso#196"),
+        (coso.RoutingModel.add_depot.__doc__, "coso#196"),
+        (coso.ClientParams.required.__doc__, "coso#196"),
+        (coso.ClientParams.tw.__doc__, "coso#194"),
+        (coso.VehicleTypeParams.max_distance.__doc__, "coso#194"),
+        (coso.VehicleTypeParams.max_duration.__doc__, "coso#194"),
+    ]:
+        assert doc is not None and issue in doc

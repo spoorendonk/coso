@@ -84,8 +84,12 @@ NB_MODULE(_coso, m) {
     nb::class_<coso::VehicleTypeParams>(m, "VehicleTypeParams")
         .def(nb::init<>())
         .def_rw("capacity", &coso::VehicleTypeParams::capacity)
-        .def_rw("max_duration", &coso::VehicleTypeParams::max_duration)
-        .def_rw("max_distance", &coso::VehicleTypeParams::max_distance);
+        .def_rw("max_duration", &coso::VehicleTypeParams::max_duration,
+                "0 = unlimited. Accepted and dropped by the native engine: never penalised, "
+                "and a route over it comes back feasible (coso#194).")
+        .def_rw("max_distance", &coso::VehicleTypeParams::max_distance,
+                "0 = unlimited. Accepted and dropped by the native engine: never penalised, "
+                "and a route over it comes back feasible (coso#194).");
 
     // -- ClientParams ---------------------------------------------------------
 
@@ -93,10 +97,16 @@ NB_MODULE(_coso, m) {
         .def(nb::init<>())
         .def_rw("demand", &coso::ClientParams::demand)
         .def_rw("pickup", &coso::ClientParams::pickup)
-        .def_rw("tw", &coso::ClientParams::tw)
-        .def_rw("service", &coso::ClientParams::service)
-        .def_rw("prize", &coso::ClientParams::prize)
-        .def_rw("required", &coso::ClientParams::required);
+        .def_rw("tw", &coso::ClientParams::tw,
+                "Time window. Penalised but not enforced by the native engine: a violating "
+                "solution comes back feasible (coso#194).")
+        .def_rw("service", &coso::ClientParams::service,
+                "Service duration. Read only through the time windows (coso#194).")
+        .def_rw("prize", &coso::ClientParams::prize,
+                "Credited in Result.cost for each served client.")
+        .def_rw("required", &coso::ClientParams::required,
+                "Accepted and dropped by the native engine: every client is served, so "
+                "False never leaves one unserved (coso#196).");
 
     // -- DepotParams ----------------------------------------------------------
 
@@ -135,7 +145,10 @@ NB_MODULE(_coso, m) {
 
         // add_depot
         .def("add_depot", &coso::RoutingModel::add_depot, "x"_a, "y"_a,
-             "params"_a = coso::DepotParams{})
+             "params"_a = coso::DepotParams{},
+             "Add a depot. Only the first is used by the native engine: every route "
+             "starts and ends at depot 0, so a second depot is accepted and dropped "
+             "(coso#196).")
 
         // add_vehicle_type
         .def("add_vehicle_type", &coso::RoutingModel::add_vehicle_type, "count"_a,
@@ -150,9 +163,12 @@ NB_MODULE(_coso, m) {
              "params"_a = coso::ClientParams{})
         .def("add_delivery", &coso::RoutingModel::add_delivery, "x"_a, "y"_a,
              "params"_a = coso::ClientParams{})
-        .def("add_request", &coso::RoutingModel::add_request, "pickup"_a, "delivery"_a)
+        .def("add_request", &coso::RoutingModel::add_request, "pickup"_a, "delivery"_a,
+             "Link a pickup-delivery pair. Accepted and dropped by the native engine: "
+             "the two clients are routed independently, so neither same-route nor "
+             "pickup-before-delivery is enforced (coso#196).")
         .def("add_pickup_delivery", &coso::RoutingModel::add_pickup_delivery, "pickup"_a,
-             "delivery"_a)
+             "delivery"_a, "Alias for add_request; accepted and dropped (coso#196).")
 
         // Distance / duration matrices
         .def("set_distance", &coso::RoutingModel::set_distance, "from_node"_a, "to_node"_a,
