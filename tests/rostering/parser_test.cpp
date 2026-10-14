@@ -204,6 +204,15 @@ TEST_CASE("parse_nrp - a STAFF line in neither dialect is rejected", "[rostering
         CHECK_THROWS_AS(parse_nrp(with_staff("A,D=7,4320,3390,5,2,2,1,9")), std::runtime_error);
     }
 
+    SECTION("a key=value field in the MaxShifts column") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxTotalMinutes=10,4320,3390,5,2,2,1")),
+                        std::runtime_error);
+    }
+
+    SECTION("a MaxShifts cap for an undeclared shift") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,X=7,4320,3390,5,2,2,1")), std::runtime_error);
+    }
+
     SECTION("a positional field that is not an integer") {
         CHECK_THROWS_AS(parse_nrp(with_staff("A,D=7,4320x,3390,5,2,2,1")), std::runtime_error);
     }

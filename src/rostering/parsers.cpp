@@ -202,6 +202,8 @@ RosteringData parse_nrp(const std::string& content) {
                 // Two dialects, told apart by shape rather than guessed at
                 // (#236); a line that is neither is rejected.
                 //
+                // An ID-only line declares an employee with no bounds.
+                //
                 // Positional (schedulingbenchmarks.org), exactly eight fields:
                 //   ID, MaxShifts (e.g. D=14|N=4), MaxTotalMinutes, MinTotalMinutes,
                 //   MaxConsecutiveShifts, MinConsecutiveShifts,
@@ -235,8 +237,18 @@ RosteringData parse_nrp(const std::string& content) {
 
                 if (positional) {
                     if (fields.size() != 8) {
-                        throw std::runtime_error(bad + " (positional dialect has 8 fields, got " +
-                                                 std::to_string(fields.size()) + ")");
+                        throw std::runtime_error(
+                            bad + " (expected 8 positional fields or only Key=Value fields, got " +
+                            std::to_string(fields.size()) + " fields)");
+                    }
+                    // MaxShifts, deferred, but checked so a key=value field
+                    // cannot pass for it: ShiftID=N|ShiftID=N|...
+                    for (auto const& cap : split_fields(fields[1], '|')) {
+                        auto eq = cap.find('=');
+                        if (eq == std::string::npos || !shift_id_map.contains(cap.substr(0, eq))) {
+                            throw std::runtime_error(bad + " (MaxShifts is ShiftID=N|...)");
+                        }
+                        parse_int(cap.substr(eq + 1), bad);
                     }
                     emp.max_total_minutes = parse_int(fields[2], bad);
                     emp.min_total_minutes = parse_int(fields[3], bad);

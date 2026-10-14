@@ -353,7 +353,7 @@ void check_same_rostering_data(RosteringData const& a, RosteringData const& b) {
 
 TEST_CASE("A parsed SB-NRP instance is declarable field for field", "[rostering][roundtrip]") {
     // A schedulingbenchmarks.org NRP instance written to the format documented
-    // at src/rostering/parsers.h and src/rostering/parsers.cpp:52-80.  It is
+    // at src/rostering/parsers.h and above parse_nrp in parsers.cpp.  It is
     // deliberately not shared with tests/rostering/parser_test.cpp: a header
     // would couple the parser's own coverage to this audit's, and either
     // file's literal must be able to fail on its own.
@@ -470,8 +470,7 @@ SECTION_COVER
 
     // The sign convention, which is the one thing a reader must not have to
     // infer: parse_nrp keeps a SECTION_SHIFT_ON_REQUESTS weight as written
-    // (src/rostering/parsers.cpp:277) and **negates** a
-    // SECTION_SHIFT_OFF_REQUESTS one (:303), because
+    // and **negates** a SECTION_SHIFT_OFF_REQUESTS one, because
     // RosteringCostEvaluator::preference_cost does `cost -= weight`.  A
     // benchmark penalty is therefore a negative weight on the model side too.
     REQUIRE(parsed.preferences.size() == 4);
@@ -586,7 +585,7 @@ TEST_CASE("Discarded SB-NRP fields stay discarded", "[rostering][roundtrip][pinn
     };
 
     SECTION("SECTION_COVER under- and over-cover weights") {
-        // src/rostering/parsers.cpp:308-329 reads tokens[0..2] -- day, shift,
+        // parse_nrp's COVER case reads tokens[0..2] -- day, shift,
         // requirement -- and never touches tokens[3] (UnderWeight) or
         // tokens[4] (OverWeight).  RosteringData::Demand has nowhere to put
         // them and RosteringModel cannot declare them.
@@ -665,7 +664,7 @@ TEST_CASE("Discarded SB-NRP fields stay discarded", "[rostering][roundtrip][pinn
     }
 
     SECTION("'#' comment lines, where an SB-NRP file names itself") {
-        // parsers.cpp:116-118 drops them.  The SB-NRP distribution carries the
+        // parse_nrp drops them.  The SB-NRP distribution carries the
         // instance name and its section-column legends in exactly those lines,
         // and neither RosteringData nor RosteringModel has an instance name to
         // hold any of it.
