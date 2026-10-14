@@ -5,6 +5,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <span>
 
 namespace coso {
 
@@ -15,14 +16,17 @@ namespace coso {
 ///      clients.
 ///   2. **Penalties**: constraint violations weighted by penalty parameters:
 ///      - capacity violation * load_penalty
-///      - (future: time warp * tw_penalty, distance excess * dist_penalty)
+///      - time warp * tw_penalty
+///      - (future: distance excess * dist_penalty)
 ///
 /// Penalized cost = objective + penalties.  During search, infeasible solutions
 /// are allowed but penalized.  Penalty weights are adjusted by a penalty
 /// manager (separate component) targeting a configurable feasibility ratio.
 ///
-/// Supports fast delta evaluation: compute cost change from a single insert
-/// or remove without recomputing the full solution cost.
+/// Supports fast delta evaluation: compute cost change from a single insert,
+/// remove or segment splice without recomputing the full solution cost.  Every
+/// delta goes through eval_splice_cost, which prices exactly what route_cost
+/// prices, so a move's delta is the change in route_cost it causes (#221).
 class CostEvaluator {
 public:
     /// Construct a CostEvaluator with the given penalty weights.
@@ -108,6 +112,11 @@ public:
     /// @param pos     Position to remove (0..route.size()-1).
     /// @return Delta cost (negative = cheaper).
     [[nodiscard]] int64_t eval_remove_cost(Route const& route, int pos) const;
+
+    /// Cost change from replacing the clients at [first, last) with seq.
+    /// Equal to route_cost of the spliced route minus route_cost(route).
+    [[nodiscard]] int64_t eval_splice_cost(Route const& route, int first, int last,
+                                           std::span<int const> seq) const;
 
 private:
     int load_penalty_;

@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <vector>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
@@ -886,5 +888,66 @@ TEST_CASE("Exchange33: preserves all clients", "[exchange][exchange33]") {
     if (op.find_best_move(sol, eval, data)) {
         op.apply(sol);
         check_all_clients(sol, data.num_clients());
+    }
+}
+
+// ===========================================================================
+//  Deltas on time-windowed routes match route_cost (#221)
+// ===========================================================================
+
+/// Tight time windows and a small capacity: every move changes time warp,
+/// load excess and distance at once.
+static ProblemData make_tw_instance() {
+    ProblemData::Builder b;
+    b.add_depot({0.0, 0.0});
+    b.add_vehicle_type(3, {.capacity = {8}});
+
+    b.add_client({10.0, 0.0}, {.demand = {3}, .tw = {0, 15}, .service = 5, .prize = 7});
+    b.add_client({20.0, 0.0}, {.demand = {4}, .tw = {10, 30}, .service = 5});
+    b.add_client({30.0, 0.0}, {.demand = {2}, .tw = {20, 40}, .service = 5, .prize = 4});
+    b.add_client({0.0, 10.0}, {.demand = {2}, .tw = {0, 12}, .service = 5});
+    b.add_client({0.0, 20.0}, {.demand = {3}, .tw = {50, 60}, .service = 5, .prize = 9});
+    b.add_client({15.0, 15.0}, {.demand = {1}, .tw = {5, 25}, .service = 5});
+
+    return b.build(0);
+}
+
+template <typename Op>
+static void check_tw_deltas() {
+    auto data = make_tw_instance();
+    CostEvaluator eval(7, 3);
+    std::vector<std::vector<std::vector<int>>> const starts = {
+        {{0, 1, 2}, {3, 4, 5}}, {{2, 1, 0}, {5, 4, 3}},   {{4, 0, 3}, {1, 5, 2}},
+        {{3, 0, 1, 2}, {5, 4}}, {{0, 5}, {1, 4}, {2, 3}},
+    };
+
+    int moves = 0;
+    for (auto const& routes : starts) {
+        auto sol = make_solution(data, routes);
+        Op op;
+        if (!op.find_best_move(sol, eval, data)) {
+            continue;
+        }
+        int64_t before = sol.cost(eval);
+        op.apply(sol);
+        CHECK(op.best_delta() == sol.cost(eval) - before);
+        ++moves;
+    }
+    CHECK(moves > 0);
+}
+
+TEST_CASE("Exchange operators: deltas on time-windowed routes match route_cost",
+          "[exchange][time_windows]") {
+    SECTION("Exchange10") {
+        check_tw_deltas<Exchange10>();
+    }
+    SECTION("Exchange11") {
+        check_tw_deltas<Exchange11>();
+    }
+    SECTION("Exchange20") {
+        check_tw_deltas<Exchange20>();
+    }
+    SECTION("SwapTails") {
+        check_tw_deltas<SwapTails>();
     }
 }

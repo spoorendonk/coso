@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <vector>
@@ -157,11 +158,9 @@ void assert_cost_delta(int64_t predicted, int64_t actual, std::string_view conte
         if (!context.empty()) {
             oss << " [" << context << "]";
         }
-        // In debug builds this will abort; the message is for diagnostics.
+        std::cerr << oss.str() << '\n';
+        // In debug builds this aborts; in NDEBUG builds only the message is left.
         assert(false && "score delta mismatch");
-        // Fallback for NDEBUG builds where assert is compiled out:
-        // unreachable in debug, but silences "unused variable" warnings.
-        (void)oss;
     }
 }
 

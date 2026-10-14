@@ -2,6 +2,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
+#include <vector>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
@@ -249,4 +252,87 @@ TEST_CASE("CostEvaluator: insert + remove delta sums to zero", "[cost_evaluator]
 
     // Net delta should be zero.
     CHECK(insert_delta + remove_delta == 0);
+}
+
+// ===========================================================================
+//  Splice deltas price exactly what route_cost prices (#221)
+// ===========================================================================
+
+/// Tight time windows, service times, prizes and a small capacity, so a
+/// splice moves every term route_cost charges.
+static ProblemData make_tw_instance() {
+    ProblemData::Builder b;
+    b.add_depot({0.0, 0.0});
+    b.add_vehicle_type(2, {.capacity = {8}});
+
+    b.add_client({10.0, 0.0}, {.demand = {3}, .tw = {0, 15}, .service = 5, .prize = 7});
+    b.add_client({20.0, 0.0}, {.demand = {4}, .tw = {10, 30}, .service = 5});
+    b.add_client({30.0, 0.0}, {.demand = {2}, .tw = {20, 40}, .service = 5, .prize = 4});
+    b.add_client({0.0, 10.0}, {.demand = {2}, .tw = {0, 12}, .service = 5});
+    b.add_client({0.0, 20.0}, {.demand = {3}, .tw = {50, 60}, .service = 5, .prize = 9});
+    b.add_client({15.0, 15.0}, {.demand = {1}, .tw = {5, 25}, .service = 5});
+
+    return b.build(0);
+}
+
+TEST_CASE("CostEvaluator: eval_splice_cost equals the change in route_cost",
+          "[cost_evaluator][splice]") {
+    auto data = make_tw_instance();
+    std::vector<int> const base = {0, 1, 2, 3};
+    std::vector<std::vector<int>> const seqs = {{}, {4}, {5}, {4, 5}, {5, 4}};
+
+    CostEvaluator plain(7, 3);
+    CostEvaluator piecewise(7, 3);
+    piecewise.set_distance_cost_function(PiecewiseLinearFunction({{0, 0}, {50, 50}, {51, 53}}));
+    piecewise.set_duration_cost_function(PiecewiseLinearFunction({{0, 0}, {60, 0}, {61, 2}}));
+
+    Route route(data, 0);
+    route.set_clients(base);
+    int n = route.size();
+
+    for (auto const* eval : {&plain, &piecewise}) {
+        for (int first = 0; first <= n; ++first) {
+            for (int last = first; last <= std::min(n, first + 2); ++last) {
+                for (auto const& seq : seqs) {
+                    std::vector<int> after(base.begin(), base.begin() + first);
+                    after.insert(after.end(), seq.begin(), seq.end());
+                    after.insert(after.end(), base.begin() + last, base.end());
+                    Route spliced(data, 0);
+                    spliced.set_clients(after);
+
+                    INFO("first=" << first << " last=" << last << " |seq|=" << seq.size()
+                                  << " piecewise=" << (eval == &piecewise));
+                    CHECK(eval->eval_splice_cost(route, first, last, seq) ==
+                          eval->route_cost(spliced) - eval->route_cost(route));
+                }
+            }
+        }
+
+        // Removing every client prices the route back to zero.
+        Route whole(data, 0);
+        whole.set_clients(base);
+        CHECK(eval->eval_splice_cost(whole, 0, n, {}) == -eval->route_cost(whole));
+    }
+}
+
+TEST_CASE("CostEvaluator: insert and remove deltas price time warp and duration cost",
+          "[cost_evaluator][splice]") {
+    auto data = make_tw_instance();
+    CostEvaluator eval(7, 3);
+    eval.set_duration_cost_function(PiecewiseLinearFunction({{0, 0}, {60, 0}, {61, 2}}));
+
+    Route route(data, 0);
+    route.set_clients({0, 1, 2});
+
+    for (int pos = 0; pos <= route.size(); ++pos) {
+        Route after = route;
+        after.insert(pos, 4);
+        CHECK(eval.eval_insert_cost(route, pos, 4) ==
+              eval.route_cost(after) - eval.route_cost(route));
+    }
+    for (int pos = 0; pos < route.size(); ++pos) {
+        Route after = route;
+        after.remove(pos);
+        CHECK(eval.eval_remove_cost(route, pos) == eval.route_cost(after) - eval.route_cost(route));
+    }
 }

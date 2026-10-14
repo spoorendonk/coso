@@ -1,6 +1,8 @@
 #include "routing/operators/exchange.h"
 
+#include <array>
 #include <cassert>
+#include <span>
 #include <vector>
 
 namespace coso {
@@ -33,107 +35,6 @@ inline std::vector<ClientLocation> build_client_locations(Solution const& sol) {
         }
     }
     return loc;
-}
-
-// ---- O(1) evaluation helpers for segments and replacements ----
-
-/// Distance delta for removing two consecutive clients at pos, pos+1.
-inline int eval_remove_pair_dist(Route const& route, ProblemData const& data, int pos) {
-    int profile = 0;
-    int nd = data.num_depots();
-    int prev = (pos == 0) ? 0 : nd + route.client(pos - 1);
-    int u = nd + route.client(pos);
-    int v = nd + route.client(pos + 1);
-    int next = (pos + 1 == route.size() - 1) ? 0 : nd + route.client(pos + 2);
-    return data.dist(profile, prev, next) - data.dist(profile, prev, u) - data.dist(profile, u, v) -
-           data.dist(profile, v, next);
-}
-
-/// Load excess after removing two consecutive clients at pos, pos+1.
-inline int eval_remove_pair_load(Route const& route, ProblemData const& data, int pos) {
-    auto const& left = route.load_prefix(pos - 1);
-    auto const& right = route.load_suffix(pos + 2);
-    auto merged = LoadResource::merge(left, right);
-    return LoadResource::excess(merged, data.vehicle_type(route.vehicle_type()));
-}
-
-/// Penalized cost delta for removing pair at pos.
-inline int64_t eval_remove_pair_cost(Route const& route, CostEvaluator const& eval,
-                                     ProblemData const& data, int pos) {
-    int64_t delta = eval_remove_pair_dist(route, data, pos);
-    delta += data.client(route.client(pos)).prize;
-    delta += data.client(route.client(pos + 1)).prize;
-    int new_excess = eval_remove_pair_load(route, data, pos);
-    delta += static_cast<int64_t>(new_excess - route.load_excess()) * eval.load_penalty();
-    return delta;
-}
-
-/// Distance delta for inserting clients c1, c2 consecutively at pos.
-inline int eval_insert_pair_dist(Route const& route, ProblemData const& data, int pos, int c1,
-                                 int c2) {
-    int profile = 0;
-    int nd = data.num_depots();
-    int prev = (pos == 0) ? 0 : nd + route.client(pos - 1);
-    int next = (pos == route.size()) ? 0 : nd + route.client(pos);
-    int u = nd + c1;
-    int v = nd + c2;
-    return data.dist(profile, prev, u) + data.dist(profile, u, v) + data.dist(profile, v, next) -
-           data.dist(profile, prev, next);
-}
-
-/// Load excess after inserting c1, c2 consecutively at pos.
-inline int eval_insert_pair_load(Route const& route, ProblemData const& data, int pos, int c1,
-                                 int c2) {
-    auto s1 = LoadResource::init(data, c1);
-    auto s2 = LoadResource::init(data, c2);
-    auto pair = LoadResource::merge(s1, s2);
-    auto const& left = route.load_prefix(pos - 1);
-    auto const& right = route.load_suffix(pos);
-    auto merged = LoadResource::merge(LoadResource::merge(left, pair), right);
-    return LoadResource::excess(merged, data.vehicle_type(route.vehicle_type()));
-}
-
-/// Penalized cost delta for inserting pair at pos.
-inline int64_t eval_insert_pair_cost(Route const& route, CostEvaluator const& eval,
-                                     ProblemData const& data, int pos, int c1, int c2) {
-    int64_t delta = eval_insert_pair_dist(route, data, pos, c1, c2);
-    delta -= data.client(c1).prize;
-    delta -= data.client(c2).prize;
-    int new_excess = eval_insert_pair_load(route, data, pos, c1, c2);
-    delta += static_cast<int64_t>(new_excess - route.load_excess()) * eval.load_penalty();
-    return delta;
-}
-
-/// Distance delta for replacing client at pos with new_client.
-inline int eval_replace_dist(Route const& route, ProblemData const& data, int pos, int new_client) {
-    int profile = 0;
-    int nd = data.num_depots();
-    int old_n = nd + route.client(pos);
-    int new_n = nd + new_client;
-    int prev = (pos == 0) ? 0 : nd + route.client(pos - 1);
-    int next = (pos == route.size() - 1) ? 0 : nd + route.client(pos + 1);
-    return data.dist(profile, prev, new_n) + data.dist(profile, new_n, next) -
-           data.dist(profile, prev, old_n) - data.dist(profile, old_n, next);
-}
-
-/// Load excess after replacing client at pos with new_client.
-inline int eval_replace_load(Route const& route, ProblemData const& data, int pos, int new_client) {
-    auto const& left = route.load_prefix(pos - 1);
-    auto ns = LoadResource::init(data, new_client);
-    auto const& right = route.load_suffix(pos + 1);
-    auto merged = LoadResource::merge(LoadResource::merge(left, ns), right);
-    return LoadResource::excess(merged, data.vehicle_type(route.vehicle_type()));
-}
-
-/// Penalized cost delta for replacing client at pos with new_client.
-inline int64_t eval_replace_cost(Route const& route, CostEvaluator const& eval,
-                                 ProblemData const& data, int pos, int new_client) {
-    int64_t delta = eval_replace_dist(route, data, pos, new_client);
-    delta += data.client(route.client(pos)).prize;
-    delta -= data.client(new_client).prize;
-    int new_excess = eval_replace_load(route, data, pos, new_client);
-    delta += static_cast<int64_t>(new_excess - route.load_excess()) * eval.load_penalty();
-    return delta;
 }
 
 /// Evaluate intra-route relocate: remove client at from_pos, insert at
@@ -318,8 +219,8 @@ bool Exchange11::find_best_move(Solution const& sol, CostEvaluator const& eval,
                     delta = eval.route_cost(temp) - eval.route_cost(route_a);
                 } else {
                     // Inter-route: independent replacements.
-                    delta = eval_replace_cost(route_a, eval, data, pa, v) +
-                            eval_replace_cost(route_b, eval, data, pb, u);
+                    delta = eval.eval_splice_cost(route_a, pa, pa + 1, std::span(&v, 1)) +
+                            eval.eval_splice_cost(route_b, pb, pb + 1, std::span(&u, 1));
                 }
 
                 if (delta < best_delta_) {
@@ -425,7 +326,8 @@ bool Exchange20::find_best_move(Solution const& sol, CostEvaluator const& eval,
         for (int pa = 0; pa + 1 < route_a.size(); ++pa) {
             int c1 = route_a.client(pa);
             int c2 = route_a.client(pa + 1);
-            int64_t remove_delta = eval_remove_pair_cost(route_a, eval, data, pa);
+            std::array<int, 2> const pair{c1, c2};
+            int64_t remove_delta = eval.eval_splice_cost(route_a, pa, pa + 2, {});
 
             auto try_route = [&](int rb) {
                 if (rb == ra) {
@@ -433,7 +335,7 @@ bool Exchange20::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 }
                 auto const& route_b = sol.route(rb);
                 for (int pb = 0; pb <= route_b.size(); ++pb) {
-                    int64_t insert_delta = eval_insert_pair_cost(route_b, eval, data, pb, c1, c2);
+                    int64_t insert_delta = eval.eval_splice_cost(route_b, pb, pb, pair);
                     int64_t delta = remove_delta + insert_delta;
                     if (delta < best_delta_) {
                         best_delta_ = delta;

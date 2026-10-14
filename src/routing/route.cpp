@@ -187,6 +187,46 @@ int Route::eval_remove_dist_excess(int pos) const {
     return DistanceResource::excess(full, data_->vehicle_type(vehicle_type_));
 }
 
+Route::SpliceTotals Route::eval_splice(int first, int last, std::span<int const> seq) const {
+    assert(0 <= first && first <= last && last <= size());
+
+    SpliceTotals totals;
+    totals.size = size() - (last - first) + static_cast<int>(seq.size());
+    if (totals.size == 0) {
+        return totals;  // an empty route carries no cost, as update_() records
+    }
+
+    int profile = 0;
+    auto const& vt = data_->vehicle_type(vehicle_type_);
+
+    auto load = load_prefix(first - 1);
+    auto dist = dist_prefix(first - 1);
+    auto dur = dur_prefix(first - 1);
+    for (int client : seq) {
+        load = LoadResource::merge(load, LoadResource::init(*data_, client));
+        dist =
+            DistanceResource::merge(dist, DistanceResource::init(*data_, client), *data_, profile);
+        dur = DurationResource::merge(dur, DurationResource::init(*data_, client, node_(client)),
+                                      *data_, profile);
+    }
+    load = LoadResource::merge(load, load_suffix(last));
+    dist = DistanceResource::merge(dist, dist_suffix(last), *data_, profile);
+
+    // The TW merge is not associative, so the tail is scanned client by client.
+    for (int i = last; i < size(); ++i) {
+        auto ci = DurationResource::init(*data_, clients_[i], node_(clients_[i]));
+        dur = DurationResource::merge(dur, ci, *data_, profile);
+    }
+    dur =
+        DurationResource::merge(dur, DurationResource::init_depot(*data_, depot_), *data_, profile);
+
+    totals.distance = dist.distance;
+    totals.duration = dist.duration;
+    totals.load_excess = LoadResource::excess(load, vt);
+    totals.time_warp = DurationResource::time_warp(dur);
+    return totals;
+}
+
 // ---------------------------------------------------------------------------
 //  Internal: update prefix/suffix arrays
 // ---------------------------------------------------------------------------

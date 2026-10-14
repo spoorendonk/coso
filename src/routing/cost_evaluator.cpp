@@ -98,61 +98,37 @@ int64_t CostEvaluator::route_cost(Route const& route) const {
 // ---------------------------------------------------------------------------
 
 int64_t CostEvaluator::eval_insert_cost(Route const& route, int pos, int client) const {
-    int64_t delta = 0;
-
-    // Distance cost delta (piecewise or plain).
-    if (distance_cost_func_) {
-        int old_dist = route.distance();
-        int new_dist = old_dist + route.eval_insert_distance(pos, client);
-        delta += distance_cost_func_->delta(old_dist, new_dist);
-    } else {
-        delta += route.eval_insert_distance(pos, client);
-    }
-
-    // Duration cost delta: absent without a piecewise duration function, and
-    // Route exposes no duration delta for an insert, so with one it is
-    // captured only when route_objective recomputes the whole route.
-
-    // Prize credit for the inserted client.
-    delta -= route.data().client(client).prize;
-
-    // Load penalty delta.
-    int new_excess = route.eval_insert_load(pos, client);
-    int old_excess = route.load_excess();
-    delta += static_cast<int64_t>(new_excess - old_excess) * load_penalty_;
-
-    // Time warp penalty delta.
-    int new_tw = route.eval_insert_time_warp(pos, client);
-    int old_tw = route.time_warp();
-    delta += static_cast<int64_t>(new_tw - old_tw) * tw_penalty_;
-
-    return delta;
+    return eval_splice_cost(route, pos, pos, std::span<int const>(&client, 1));
 }
 
 int64_t CostEvaluator::eval_remove_cost(Route const& route, int pos) const {
-    int64_t delta = 0;
+    return eval_splice_cost(route, pos, pos + 1, {});
+}
 
-    // Distance cost delta (piecewise or plain).
-    if (distance_cost_func_) {
-        int old_dist = route.distance();
-        int new_dist = old_dist + route.eval_remove_distance(pos);
-        delta += distance_cost_func_->delta(old_dist, new_dist);
-    } else {
-        delta += route.eval_remove_distance(pos);
+int64_t CostEvaluator::eval_splice_cost(Route const& route, int first, int last,
+                                        std::span<int const> seq) const {
+    auto after = route.eval_splice(first, last, seq);
+
+    // Distance and duration terms, which route_objective charges only on a
+    // non-empty route.
+    int64_t delta = 0;
+    if (after.size > 0) {
+        delta += distance_cost_(after.distance) + duration_cost_(after.duration);
+    }
+    if (!route.empty()) {
+        delta -= distance_cost_(route.distance()) + duration_cost_(route.duration());
     }
 
-    // Prize: removing a client loses its prize credit (cost increases).
-    delta += route.data().client(route.client(pos)).prize;
+    // Prize credits: lost for the clients taken out, gained for those put in.
+    for (int i = first; i < last; ++i) {
+        delta += route.data().client(route.client(i)).prize;
+    }
+    for (int client : seq) {
+        delta -= route.data().client(client).prize;
+    }
 
-    // Load penalty delta.
-    int new_excess = route.eval_remove_load(pos);
-    int old_excess = route.load_excess();
-    delta += static_cast<int64_t>(new_excess - old_excess) * load_penalty_;
-
-    // Time warp penalty delta.
-    int new_tw = route.eval_remove_time_warp(pos);
-    int old_tw = route.time_warp();
-    delta += static_cast<int64_t>(new_tw - old_tw) * tw_penalty_;
+    delta += static_cast<int64_t>(after.load_excess - route.load_excess()) * load_penalty_;
+    delta += static_cast<int64_t>(after.time_warp - route.time_warp()) * tw_penalty_;
 
     return delta;
 }

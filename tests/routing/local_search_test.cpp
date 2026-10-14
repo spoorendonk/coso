@@ -346,3 +346,31 @@ TEST_CASE("LocalSearch: nullptr stop criterion runs to completion", "[localsearc
     CHECK(ls.last_num_iters() >= 1);
     check_all_clients_assigned(sol, data);
 }
+
+TEST_CASE("LocalSearch: on time-windowed routes every accepted move lowers route_cost",
+          "[local_search][time_windows]") {
+    // Debug builds also assert inside run() that each applied move changed the
+    // penalised cost by exactly the delta it was accepted on (#221).
+    ProblemData::Builder b;
+    b.add_depot({0.0, 0.0});
+    b.add_vehicle_type(3, {.capacity = {8}});
+    b.add_client({10.0, 0.0}, {.demand = {3}, .tw = {0, 15}, .service = 5, .prize = 7});
+    b.add_client({20.0, 0.0}, {.demand = {4}, .tw = {10, 30}, .service = 5});
+    b.add_client({30.0, 0.0}, {.demand = {2}, .tw = {20, 40}, .service = 5, .prize = 4});
+    b.add_client({0.0, 10.0}, {.demand = {2}, .tw = {0, 12}, .service = 5});
+    b.add_client({0.0, 20.0}, {.demand = {3}, .tw = {50, 60}, .service = 5, .prize = 9});
+    b.add_client({15.0, 15.0}, {.demand = {1}, .tw = {5, 25}, .service = 5});
+    auto data = b.build(0);
+
+    CostEvaluator eval(7, 3);
+    Solution sol(data);
+    sol.set_route_clients(0, {4, 0, 3});
+    sol.set_route_clients(1, {1, 5, 2});
+    int64_t before = sol.cost(eval);
+
+    LocalSearch ls(data);
+    ls.run(sol, eval);
+
+    CHECK(ls.last_num_moves() > 0);
+    CHECK(sol.cost(eval) < before);
+}

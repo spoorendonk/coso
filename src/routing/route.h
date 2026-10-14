@@ -189,6 +189,21 @@ public:
     /// Does NOT modify the route. O(1) using prefix/suffix arrays.
     [[nodiscard]] int eval_remove_time_warp(int pos) const;
 
+    /// The cached totals a route would have after a splice.
+    struct SpliceTotals {
+        int size = 0;
+        int distance = 0;
+        int duration = 0;
+        int load_excess = 0;
+        int time_warp = 0;
+    };
+
+    /// Evaluate replacing the clients at positions [first, last) with seq.
+    /// Covers insert (first == last), remove (empty seq) and replace.
+    /// Does NOT modify the route.  O(|seq|) for load, distance and duration;
+    /// time warp scans forward from last, as eval_insert_time_warp does.
+    [[nodiscard]] SpliceTotals eval_splice(int first, int last, std::span<int const> seq) const;
+
 private:
     ProblemData const* data_;
     int vehicle_type_;
