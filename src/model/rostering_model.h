@@ -59,6 +59,13 @@ struct EmployeeParams {
 };
 
 /// Demand parameters for a shift on a given day.
+///
+/// Cover is a **soft** constraint. `min_employees` / `max_employees` are not
+/// enforced: `Result::feasible()` ignores cover, and `Result::cost` charges a
+/// fixed 1000 per missing employee and 100 per excess one. Neither weight can be
+/// declared, so a benchmark whose cover lines carry their own weights (every
+/// SB-NRP instance: under=100, over=1) solves a differently weighted problem
+/// (#229, #230).
 struct DemandParams {
     int min_employees = 0;
     int max_employees = INT_MAX;
@@ -124,6 +131,10 @@ public:
     // -- Solve ---------------------------------------------------------------
 
     /// Solve the rostering problem within the given time limit.
+    ///
+    /// `Result::feasible()` reports the hard constraints only; cover shortfall
+    /// and excess are priced into `Result::cost` at fixed weights (see
+    /// `DemandParams`, #229).
     Result solve(TimeLimit tl);
 
     // -- Accessors -----------------------------------------------------------
