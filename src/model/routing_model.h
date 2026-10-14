@@ -53,7 +53,9 @@ enum class RoutingObjective {
     /// distance.
     MinVehiclesThenDistance,
     /// Maximise the prize collected from served clients, subject to each
-    /// vehicle's max_distance or max_duration as a budget (OPLib, Chao TOP).
+    /// vehicle's max_distance or max_duration as a budget (OPLib, Chao TOP);
+    /// both budgets are themselves accepted and dropped by the native engine,
+    /// so a returned route can break one and still read feasible (#194).
     /// Clients that may be skipped declare required = false.  Scored by
     /// Result::prize(); Result::cost() is its negation.
     MaxPrize,
@@ -63,14 +65,13 @@ enum class RoutingObjective {
 ///
 /// What the native engine enforces is CVRP: demand against an N-dimensional
 /// vehicle capacity, minimising distance minus the prizes of served clients,
-/// which is what Result::cost reports; Result::distance is the bare distance.
-/// The schema is the 13 slots the v1 scope ruling on #200 kept on benchmark
-/// evidence.  Penalised but not enforced by the native engine: client and
-/// depot time windows, which service times feed (#194).  Accepted and
-/// dropped: max_distance and max_duration (#194), ClientParams::required,
-/// add_request and every depot after the first (#196), and any objective but
-/// MinDistance (#238) -- the search minimises distance minus prizes whatever
-/// is declared, while Result is still computed under the declared objective.
+/// which is what Result::cost reports under the default MinDistance; Result::distance is the bare
+/// distance. The schema is the 13 slots the v1 scope ruling on #200 kept on benchmark evidence.
+/// Penalised but not enforced by the native engine: client and depot time windows, which service
+/// times feed (#194).  Accepted and dropped: max_distance and max_duration (#194),
+/// ClientParams::required, add_request and every depot after the first (#196), and any objective
+/// but MinDistance (#238) -- the search minimises distance minus prizes whatever is declared, while
+/// Result is still computed under the declared objective.
 class RoutingModel {
 public:
     // -- Stored entry types --------------------------------------------------

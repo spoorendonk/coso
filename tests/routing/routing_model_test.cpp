@@ -378,7 +378,9 @@ TEST_CASE("RoutingModel: MinVehiclesThenDistance trades distance for a route", "
 }
 
 TEST_CASE("RoutingModel: MaxPrize leaves out what the budget cannot reach", "[routing][model]") {
-    SKIP("the native search serves every client and drops max_distance — coso#238, coso#194");
+    SKIP(
+        "the native search serves every client (required = false is dropped) and drops "
+        "max_distance — coso#238, coso#196, coso#194");
 
     // A 20-unit budget reaches the near client (out and back 20) but not both.
     RoutingModel model;

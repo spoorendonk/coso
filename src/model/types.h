@@ -27,7 +27,7 @@ struct TimeLimit {
 ///
 /// Engine-specific data is stored in typed vectors and accessed through
 /// convenience methods.  Only the relevant engine populates its section:
-///   - routing:    routes(), unserved()
+///   - routing:    routes(), unserved(), distance(), prize(), num_routes()
 ///   - scheduling: makespan(), schedule()
 ///   - rostering:  roster(), day(), understaffed()
 ///   - packing:    bins(), num_bins(), unassigned()

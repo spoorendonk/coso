@@ -20,29 +20,6 @@ class TestCoord:
         assert c.x == 42.0
         assert c.y == -7.0
 
-    def test_result_carries_what_each_objective_scores(self) -> None:
-        # The same 40-distance, 200-prize, one-route tour under each objective.
-        m = coso.RoutingModel()
-        assert m.objective() == coso.RoutingObjective.MinDistance
-        m.add_depot(0.0, 0.0)
-        vp = coso.VehicleTypeParams()
-        vp.capacity = [100]
-        m.add_vehicle_type(1, vp)
-        for x in (10.0, 20.0):
-            cp = coso.ClientParams()
-            cp.demand = [1]
-            cp.prize = 100
-            m.add_client(x, 0.0, cp)
-
-        m.set_objective(coso.RoutingObjective.MinVehiclesThenDistance)
-        assert m.objective() == coso.RoutingObjective.MinVehiclesThenDistance
-        r = m.solve(coso.TimeLimit(1.0))
-        assert (r.num_routes, r.distance, r.cost) == (1, 40.0, 40.0)
-
-        m.set_objective(coso.RoutingObjective.MaxPrize)
-        r = m.solve(coso.TimeLimit(1.0))
-        assert (r.prize, r.cost) == (200.0, -200.0)
-
     def test_repr(self):
         c = coso.Coord(1.0, 2.0)
         r = repr(c)
@@ -114,6 +91,29 @@ class TestResult:
         assert isinstance(r.routes, list)
         assert isinstance(r.unserved, list)
         assert isinstance(r.distance, (int, float))
+
+    def test_result_carries_what_each_objective_scores(self) -> None:
+        # The same 40-distance, 200-prize, one-route tour under each objective.
+        m = coso.RoutingModel()
+        assert m.objective() == coso.RoutingObjective.MinDistance
+        m.add_depot(0.0, 0.0)
+        vp = coso.VehicleTypeParams()
+        vp.capacity = [100]
+        m.add_vehicle_type(1, vp)
+        for x in (10.0, 20.0):
+            cp = coso.ClientParams()
+            cp.demand = [1]
+            cp.prize = 100
+            m.add_client(x, 0.0, cp)
+
+        m.set_objective(coso.RoutingObjective.MinVehiclesThenDistance)
+        assert m.objective() == coso.RoutingObjective.MinVehiclesThenDistance
+        r = m.solve(coso.TimeLimit(1.0))
+        assert (r.num_routes, r.distance, r.cost) == (1, 40.0, 40.0)
+
+        m.set_objective(coso.RoutingObjective.MaxPrize)
+        r = m.solve(coso.TimeLimit(1.0))
+        assert (r.prize, r.cost) == (200.0, -200.0)
 
     def test_cost_is_declared_objective(self) -> None:
         # One 40-unit tour serving two clients with prize 100 each: the

@@ -151,7 +151,8 @@ NB_MODULE(_coso, m) {
                "Result.distance) lexicographically.  Result.cost is the distance.")
         .value("MaxPrize", coso::RoutingObjective::MaxPrize,
                "Maximise collected prize subject to max_distance / max_duration; scored "
-               "by Result.prize.  Result.cost is its negation.");
+               "by Result.prize.  Result.cost is its negation.  Both budgets are accepted "
+               "and dropped by the native engine (coso#194).");
 
     // -- RoutingModel ---------------------------------------------------------
 
