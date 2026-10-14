@@ -245,14 +245,18 @@ Result RosteringModel::solve(TimeLimit tl) {
         }
     }
 
-    // Cover cells left below their minimum.
+    // Cover cells left below their minimum, counted as the cost evaluator
+    // counts them: only employees holding the demand's required skill.
     int const ns = data.num_shift_types();
     for (int s = 0; s < ns; ++s) {
         for (int d = 0; d < data.horizon; ++d) {
             auto dem = data.get_demand(s, d);
             int count = 0;
             for (auto const& a : result.roster_[d]) {
-                if (a.shift == s) {
+                auto const& skills = data.employees[a.employee].skills;
+                if (a.shift == s &&
+                    (dem.required_skill.empty() ||
+                     std::ranges::find(skills, dem.required_skill) != skills.end())) {
                     ++count;
                 }
             }

@@ -30,7 +30,7 @@ struct TimeLimit {
 ///   - routing:    routes(), unserved()
 ///   - scheduling: makespan(), schedule()
 ///   - rostering:  roster(), day(), understaffed()
-///   - packing:    bins(), num_bins()
+///   - packing:    bins(), num_bins(), unassigned()
 ///   - network:    arc_flows()
 ///   - lotsizing:  production(), inventory()
 struct Result {
@@ -94,6 +94,7 @@ struct Result {
     };
     /// Indexed by day: roster_[day] is that day's roster entries.
     std::vector<std::vector<RosterEntry>> roster_;
+    /// Packing: the items placed in no bin.
     std::vector<int> unassigned_;
 
     /// A (shift type, day) cover cell staffed below its min_employees.

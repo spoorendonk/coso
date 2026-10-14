@@ -140,6 +140,25 @@ TEST_CASE("RosteringModel: feasible baseline instance", "[rostering]") {
     REQUIRE(result.understaffed().empty());
 }
 
+TEST_CASE("RosteringModel: understaffed counts only the required skill", "[rostering]") {
+    // Two seniors are needed and only Bob is one; Alice could not close the
+    // gap even on the shift, as cost() prices it.  Today's construction never
+    // rosters her onto a skill-gated cell, so this pins the result rather than
+    // separating a skill-blind count from the right one.
+    RosteringModel model;
+    model.add_shift_type({.name = "Day"});
+    model.add_employee({.name = "Alice", .skills = {"nurse"}});
+    model.add_employee({.name = "Bob", .skills = {"senior"}});
+    model.set_horizon(1);
+    model.add_demand(0, 0, {.min_employees = 2, .required_skill = "senior"});
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    REQUIRE(result.understaffed().size() == 1);
+    CHECK(result.understaffed()[0].shift == 0);
+    CHECK(result.understaffed()[0].day == 0);
+}
+
 TEST_CASE("RosteringModel: understaffed names the shift and the day", "[rostering]") {
     // Two employees cannot cover a minimum of three.  The shortfall used to be
     // a packed (shift << 32 | day) key narrowed to int, which kept only the day.

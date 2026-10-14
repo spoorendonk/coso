@@ -281,8 +281,9 @@ should stay that way — a list people scroll past is worth no more than no chec
 at all. Getting there needed two things beyond tuning: the vendored dependencies
 are fetched `SYSTEM` so their headers are not analysed, and the 35 checks the
 codebase does not currently satisfy are switched off in `.clang-tidy` and
-tracked in #190 with counts and a re-enable order. The other 170 stay on (the four bugprone ones came back in #192). When a
-new finding appears, fix it or add the check to #190 — do not let the list grow.
+tracked in #190 with counts and a re-enable order. The other 170 stay on (the
+four bugprone ones came back in #192). When a new finding appears, fix it or
+add the check to #190 — do not let the list grow.
 
 There are no Claude Code hooks. Two rules they used to enforce are now
 conventions, and still expected:
