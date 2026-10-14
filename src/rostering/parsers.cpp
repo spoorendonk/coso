@@ -1,6 +1,7 @@
 #include "rostering/parsers.h"
 
 #include <algorithm>
+#include <format>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
@@ -266,7 +267,8 @@ RosteringData parse_nrp(const std::string& content) {
                         auto key = fields[i].substr(0, eq);
                         auto val = fields[i].substr(eq + 1);
                         if (std::ranges::find(seen, key) != seen.end()) {
-                            throw std::runtime_error(bad + " (duplicate key " + key + ")");
+                            throw std::runtime_error(
+                                std::format("{} (duplicate key {})", bad, key));
                         }
                         seen.push_back(key);
 
@@ -282,7 +284,7 @@ RosteringData parse_nrp(const std::string& content) {
                                    key == "MinConsecutiveDaysOff") {
                             parse_int(val, bad);  // deferred
                         } else {
-                            throw std::runtime_error(bad + " (unknown key " + key + ")");
+                            throw std::runtime_error(std::format("{} (unknown key {})", bad, key));
                         }
                     }
                 }
