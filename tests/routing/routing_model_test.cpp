@@ -322,6 +322,79 @@ TEST_CASE("RoutingModel: Result::cost is the value of the declared objective", "
     CHECK(r.distance() == 40.0);
 }
 
+TEST_CASE("RoutingModel: Result carries what each declared objective is scored by",
+          "[routing][model]") {
+    // The same one-tour instance as above: 40 distance, 200 prize, one route.
+    RoutingModel model;
+    model.add_depot(0.0, 0.0);
+    model.add_vehicle_type(2, {.capacity = {100}});
+    model.add_client(10.0, 0.0, {.demand = {1}, .prize = 100});
+    model.add_client(20.0, 0.0, {.demand = {1}, .prize = 100});
+
+    SECTION("MinDistance: cost is distance minus prize") {
+        Result r = model.solve(budget());
+        CHECK(r.cost() == -160.0);
+        CHECK(r.prize() == 200.0);
+    }
+
+    SECTION("MinVehiclesThenDistance: scored by (num_routes, distance), cost is distance") {
+        model.set_objective(RoutingObjective::MinVehiclesThenDistance);
+        Result r = model.solve(budget());
+        REQUIRE(r.feasible());
+        CHECK(r.num_routes() == 1);
+        CHECK(r.distance() == 40.0);
+        CHECK(r.cost() == 40.0);
+    }
+
+    SECTION("MaxPrize: scored by prize, cost is its negation") {
+        model.set_objective(RoutingObjective::MaxPrize);
+        Result r = model.solve(budget());
+        REQUIRE(r.feasible());
+        CHECK(r.prize() == 200.0);
+        CHECK(r.cost() == -200.0);
+        CHECK(r.distance() == 40.0);
+    }
+}
+
+TEST_CASE("RoutingModel: MinVehiclesThenDistance trades distance for a route", "[routing][model]") {
+    SKIP("the native search minimises distance whatever objective is declared — coso#238");
+
+    // Two clients either side of the depot with a 100-unit arc between them:
+    // two out-and-backs cost 40, one tour through both 120.  Minimising
+    // distance uses both vehicles; minimising vehicles first must use one.
+    RoutingModel model;
+    model.add_depot(0.0, 0.0);
+    model.add_vehicle_type(2, {.capacity = {100}});
+    model.add_client(10.0, 0.0, {.demand = {1}});
+    model.add_client(-10.0, 0.0, {.demand = {1}});
+    model.set_distance(1, 2, 100);
+    model.set_distance(2, 1, 100);
+    model.set_objective(RoutingObjective::MinVehiclesThenDistance);
+
+    Result r = model.solve(budget());
+
+    REQUIRE(r.feasible());
+    CHECK(r.num_routes() == 1);
+}
+
+TEST_CASE("RoutingModel: MaxPrize leaves out what the budget cannot reach", "[routing][model]") {
+    SKIP("the native search serves every client and drops max_distance — coso#238, coso#194");
+
+    // A 20-unit budget reaches the near client (out and back 20) but not both.
+    RoutingModel model;
+    model.add_depot(0.0, 0.0);
+    model.add_vehicle_type(1, {.capacity = {100}, .max_distance = 20});
+    model.add_client(10.0, 0.0, {.demand = {1}, .prize = 5, .required = false});
+    model.add_client(30.0, 0.0, {.demand = {1}, .prize = 50, .required = false});
+    model.set_objective(RoutingObjective::MaxPrize);
+
+    Result r = model.solve(budget());
+
+    REQUIRE(r.feasible());
+    CHECK(r.prize() == 5.0);
+    CHECK(r.unserved() == std::vector<int>{1});
+}
+
 TEST_CASE("RoutingModel: TSPTW solves as one time-feasible tour", "[routing][model]") {
     SKIP(
         "TSPTW is TSP plus enforced time windows, and Solution::feasible() checks load only, "

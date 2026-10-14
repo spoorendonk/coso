@@ -147,7 +147,6 @@ Result RoutingModel::solve(TimeLimit tl) {
 
     Result result;
     result.feasible_ = best.feasible();
-    result.cost_ = static_cast<double>(best.objective(eval));
     result.distance_ = static_cast<double>(best.total_distance());
 
     // Extract non-empty routes.
@@ -164,6 +163,25 @@ Result RoutingModel::solve(TimeLimit tl) {
         }
         result.routes_.push_back(std::move(client_ids));
         result.route_start_depots_.push_back(route.depot());
+    }
+
+    // Client ids are model client indices, so the prize is read from the
+    // declaration rather than from the engine's cost terms.
+    for (auto const& route : result.routes_) {
+        for (int c : route) {
+            result.prize_ += clients_[c].params.prize;
+        }
+    }
+    switch (objective_) {
+        case RoutingObjective::MinDistance:
+            result.cost_ = result.distance_ - result.prize_;
+            break;
+        case RoutingObjective::MinVehiclesThenDistance:
+            result.cost_ = result.distance_;
+            break;
+        case RoutingObjective::MaxPrize:
+            result.cost_ = -result.prize_;
+            break;
     }
 
     // The opened depots are the distinct start depots of the routes above.

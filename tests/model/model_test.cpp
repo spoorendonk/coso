@@ -584,6 +584,14 @@ TEST_CASE("RoutingModel reads back every declaration", "[routing][introspection]
         REQUIRE(v0.params.max_distance == 900);
     }
 
+    SECTION("objective round-trips, MinDistance by default") {
+        REQUIRE(m.objective() == coso::RoutingObjective::MinDistance);
+        m.set_objective(coso::RoutingObjective::MaxPrize);
+        REQUIRE(m.objective() == coso::RoutingObjective::MaxPrize);
+        m.set_objective(coso::RoutingObjective::MinVehiclesThenDistance);
+        REQUIRE(m.objective() == coso::RoutingObjective::MinVehiclesThenDistance);
+    }
+
     SECTION("add_pickup and add_delivery store plain clients; only the pairing survives") {
         // Trap: add_pickup / add_delivery are literal aliases for add_client.
         // The role is not stored, so the stored entries are indistinguishable

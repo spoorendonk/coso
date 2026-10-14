@@ -61,6 +61,8 @@ NB_MODULE(_coso, m) {
         .def_prop_ro("routes", &coso::Result::routes)
         .def_prop_ro("unserved", &coso::Result::unserved)
         .def_prop_ro("distance", &coso::Result::distance)
+        .def_prop_ro("prize", &coso::Result::prize)
+        .def_prop_ro("num_routes", &coso::Result::num_routes)
         .def_prop_ro("route_start_depots", &coso::Result::route_start_depots)
         .def_prop_ro("opened_depots", &coso::Result::opened_depots)
         .def_prop_ro("arc_flows", &coso::Result::arc_flows)
@@ -98,7 +100,8 @@ NB_MODULE(_coso, m) {
         .def_rw("service", &coso::ClientParams::service,
                 "Service duration. Read only through the time windows (coso#194).")
         .def_rw("prize", &coso::ClientParams::prize,
-                "Credited in Result.cost for each served client.")
+                "Summed into Result.prize when the client is served; RoutingObjective "
+                "says how that enters Result.cost.")
         .def_rw("required", &coso::ClientParams::required,
                 "Accepted and dropped by the native engine, which ignores it both ways: "
                 "construction tries to serve every client, and the final capacity repair "
@@ -138,6 +141,18 @@ NB_MODULE(_coso, m) {
         .def_ro("to_node", &coso::RoutingModel::MatEntry::to)
         .def_ro("value", &coso::RoutingModel::MatEntry::value);
 
+    // -- RoutingObjective -----------------------------------------------------
+
+    nb::enum_<coso::RoutingObjective>(m, "RoutingObjective")
+        .value("MinDistance", coso::RoutingObjective::MinDistance,
+               "Minimise distance minus the prizes of served clients; scored by Result.cost.")
+        .value("MinVehiclesThenDistance", coso::RoutingObjective::MinVehiclesThenDistance,
+               "Minimise routes, then distance; scored by (Result.num_routes, "
+               "Result.distance) lexicographically.  Result.cost is the distance.")
+        .value("MaxPrize", coso::RoutingObjective::MaxPrize,
+               "Maximise collected prize subject to max_distance / max_duration; scored "
+               "by Result.prize.  Result.cost is its negation.");
+
     // -- RoutingModel ---------------------------------------------------------
 
     nb::class_<coso::RoutingModel>(m, "RoutingModel")
@@ -174,6 +189,13 @@ NB_MODULE(_coso, m) {
         .def("set_distance", &coso::RoutingModel::set_distance, "from_node"_a, "to_node"_a,
              "dist"_a)
         .def("set_duration", &coso::RoutingModel::set_duration, "from_node"_a, "to_node"_a, "dur"_a)
+
+        // Objective
+        .def("set_objective", &coso::RoutingModel::set_objective, "objective"_a,
+             "Set the objective (default MinDistance).  The native engine honours "
+             "MinDistance only: the search minimises distance minus prizes whatever is "
+             "declared, while Result is computed under the declared objective (coso#238).")
+        .def("objective", &coso::RoutingModel::objective)
 
         // Solve
         .def("solve", &coso::RoutingModel::solve, "time_limit"_a)

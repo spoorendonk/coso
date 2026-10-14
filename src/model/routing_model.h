@@ -26,7 +26,7 @@ struct ClientParams {
     std::vector<int> pickup;  ///< backhaul pickup quantities
     TimeWindow tw = {0, INT_MAX};
     int service = 0;  ///< service duration
-    int prize = 0;    ///< credited in Result::cost for each served client
+    int prize = 0;    ///< summed into Result::prize when served; see RoutingObjective
     /// Accepted and dropped: the native engine's served set ignores it both
     /// ways.  Construction tries to serve every client, false or not, and the
     /// final capacity repair strips clients from an overloaded route without
@@ -41,6 +41,24 @@ struct DepotParams {
     TimeWindow tw = {0, INT_MAX};
 };
 
+/// What a routing model optimises.  Result::cost() is lower-is-better under
+/// each; the comment on each value says which Result fields score it.
+enum class RoutingObjective {
+    /// Minimise distance minus the prizes of served clients (CVRPLIB,
+    /// Cordeau, Li & Lim).  Scored by Result::cost().
+    MinDistance,
+    /// Minimise the number of routes, then distance (Solomon, Gehring &
+    /// Homberger).  Scored by the pair (Result::num_routes(),
+    /// Result::distance()), compared lexicographically; Result::cost() is the
+    /// distance.
+    MinVehiclesThenDistance,
+    /// Maximise the prize collected from served clients, subject to each
+    /// vehicle's max_distance or max_duration as a budget (OPLib, Chao TOP).
+    /// Clients that may be skipped declare required = false.  Scored by
+    /// Result::prize(); Result::cost() is its negation.
+    MaxPrize,
+};
+
 /// Routing model: declare depots, vehicles, clients, distances, then solve.
 ///
 /// What the native engine enforces is CVRP: demand against an N-dimensional
@@ -49,8 +67,10 @@ struct DepotParams {
 /// The schema is the 13 slots the v1 scope ruling on #200 kept on benchmark
 /// evidence.  Penalised but not enforced by the native engine: client and
 /// depot time windows, which service times feed (#194).  Accepted and
-/// dropped: max_distance and max_duration (#194), and ClientParams::required,
-/// add_request and every depot after the first (#196).
+/// dropped: max_distance and max_duration (#194), ClientParams::required,
+/// add_request and every depot after the first (#196), and any objective but
+/// MinDistance (#238) -- the search minimises distance minus prizes whatever
+/// is declared, while Result is still computed under the declared objective.
 class RoutingModel {
 public:
     // -- Stored entry types --------------------------------------------------
@@ -118,6 +138,12 @@ public:
     /// Set the travel duration between two nodes.
     void set_duration(int from, int to, int dur);
 
+    // -- Objective -----------------------------------------------------------
+
+    /// Set the objective (default: MinDistance).  The native engine honours
+    /// MinDistance only; the others are accepted and dropped (#238).
+    void set_objective(RoutingObjective obj) { objective_ = obj; }
+
     // -- Solve ---------------------------------------------------------------
 
     /// Solve the routing problem within the given time limit.
@@ -151,6 +177,8 @@ public:
         return vehicle_types_[v];
     }
 
+    [[nodiscard]] RoutingObjective objective() const noexcept { return objective_; }
+
     /// Pickup-delivery pairs, in the order add_request() recorded them.
     [[nodiscard]] auto const& requests() const noexcept { return requests_; }
 
@@ -171,6 +199,8 @@ private:
     // -- Explicit matrix entries ---------------------------------------------
     std::vector<MatEntry> dist_entries_;
     std::vector<MatEntry> dur_entries_;
+
+    RoutingObjective objective_ = RoutingObjective::MinDistance;
 };
 
 /// Convenience: solve a CVRPLIB / VRPLIB instance file directly.
