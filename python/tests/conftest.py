@@ -2,17 +2,27 @@
 
 import pytest
 
-# The bindings are off in the default build, so on a plain checkout there is no
-# coso extension module and every test here fails to import. Collect nothing
-# instead, which exits 5 ("no tests ran") — the code both git hooks treat as a
-# pass. A bare `import coso` exits 4 and reads as a test failure, blocking every
-# commit that touches a .py file; pytest.importorskip in a conftest exits 1.
+# On a checkout without the bindings there is no coso extension module and
+# every test here fails to import. Collect nothing instead, which exits 5 ("no
+# tests ran") — the code both git hooks treat as a pass. A bare `import coso`
+# exits 4 and reads as a test failure, blocking every commit that touches a .py
+# file; pytest.importorskip in a conftest exits 1.
+#
+# Only a missing `coso` or `coso._coso` is "not built". Any other ImportError —
+# a name `coso/__init__.py` re-exports that the extension lacks, because
+# `pip install -e` snapshotted an older `_coso` into site-packages (#227) — is a
+# stale or broken build, and skipping it would pass the gate over zero tests in
+# exactly the window after a bindings change. That one fails collection.
 #
 # The reason is printed rather than left silent, so a skipped suite is never
 # mistaken for a passing one.
+_NOT_BUILT = {"coso", "coso._coso"}
+
 try:
     import coso
-except ImportError:  # pragma: no cover - depends on how the tree was built
+except ModuleNotFoundError as exc:  # pragma: no cover - depends on the build
+    if exc.name not in _NOT_BUILT:
+        raise
     coso = None
     collect_ignore_glob = ["*.py"]
 
@@ -21,6 +31,11 @@ except ImportError:  # pragma: no cover - depends on how the tree was built
             "coso: Python bindings not built — skipping the Python suite. "
             "Configure with -DCOSO_BUILD_PYTHON=ON to run it."
         )
+except ImportError as exc:  # pragma: no cover - depends on the build
+    raise RuntimeError(
+        f"coso bindings are present but stale or broken: {exc}. "
+        "Re-run `.venv/bin/pip install -e '.[dev]'`."
+    ) from exc
 
 
 @pytest.fixture

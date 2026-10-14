@@ -95,7 +95,11 @@ pytest python/tests -q
 pytest python/tests/test_routing.py::test_name -q
 ```
 Without the bindings the suite skips itself and says why, rather than failing
-collection — see `python/tests/conftest.py`.
+collection — see `python/tests/conftest.py`. Only a missing `coso` or
+`coso._coso` counts as "not built". Bindings that import but are stale fail
+collection instead: `pip install -e` snapshots `_coso` into site-packages, so
+after a change to `python/bindings.cpp` re-run it, or the suite stops at
+"stale or broken" (#227).
 
 The Python bindings build by default wherever the Python development headers are
 present, so `python/bindings.cpp` is compiled and linted with everything else.
