@@ -16,6 +16,12 @@ struct ShiftTypeParams {
     /// Shift length in **minutes**, as every verified benchmark format carries
     /// it: schedulingbenchmarks.org NRP's "Length in mins" (480 for an 8h
     /// shift) and the .ros <Duration> element. See the v1 scope ruling on #203.
+    ///
+    /// Read **only** by the working-time bounds,
+    /// `EmployeeParams::min_total_minutes` / `max_total_minutes`. Declared on
+    /// a model where no employee declares either bound, it has no effect on
+    /// the solution (#233). Every verified format that carries a duration
+    /// also carries those bounds.
     int duration_minutes = 0;
 };
 
@@ -47,9 +53,8 @@ struct EmployeeParams {
     /// `maxAssign`; NSPLib case files.
     ///
     /// An employee's total is the sum of `ShiftTypeParams::duration_minutes`
-    /// over the days they are assigned -- this pair of bounds is what gives
-    /// the declared shift duration its first reader, which is the substance
-    /// of #233.
+    /// over the days they are assigned -- this pair of bounds is the declared
+    /// shift duration's only reader (#233).
     int max_total_minutes = INT_MAX;
 };
 

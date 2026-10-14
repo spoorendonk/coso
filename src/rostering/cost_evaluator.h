@@ -141,7 +141,8 @@ public:
     ///
     /// An employee's total is the sum of ShiftType::duration_minutes over the
     /// days they are assigned.  This is that field's only reader anywhere in
-    /// the engine, which is the substance of #233.
+    /// the engine, so without a declared bound the duration is inert -- the
+    /// contract ShiftTypeParams documents (#233).
     ///
     /// The penalty is flat per employee per violated bound rather than scaled
     /// by the shortfall in minutes: hard_violation is 10000 and an SB-NRP

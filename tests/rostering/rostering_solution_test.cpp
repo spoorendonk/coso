@@ -430,3 +430,32 @@ TEST_CASE("RosteringSolution: horizon working-time bounds", "[rostering]") {
         CHECK(evaluator.working_time_violation_cost(day.schedule()) == 0);
     }
 }
+
+TEST_CASE("RosteringSolution: a shift duration is read only through a working-time bound",
+          "[rostering]") {
+    // The documented contract of ShiftTypeParams::duration_minutes (#233):
+    // its only reader is the horizon-scoped working-time bound pair, so with
+    // neither bound declared two durations price every schedule identically.
+    auto data = make_small_instance();
+    auto priced = [](RosteringData const& d) {
+        RosteringCostEvaluator evaluator(d);
+        RosteringSolution sol(d, evaluator);
+        sol.assign(0, 0, 0);
+        sol.assign(0, 1, 0);
+        return evaluator.evaluate(sol.schedule());
+    };
+    auto with_duration = [&](int minutes) {
+        auto d = data;
+        d.shift_types[0].duration_minutes = minutes;
+        return d;
+    };
+
+    SECTION("undeclared bounds, the duration is inert") {
+        CHECK(priced(with_duration(480)) == priced(with_duration(720)));
+    }
+
+    SECTION("a declared bound reads it") {
+        data.employees[0].max_total_minutes = 1000;  // two 480s fit, two 720s do not
+        CHECK(priced(with_duration(480)) != priced(with_duration(720)));
+    }
+}
