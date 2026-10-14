@@ -382,9 +382,6 @@ RosteringData parse_nrp(const std::string& content) {
                     std::ranges::any_of(tokens, [](auto const& t) { return t.empty(); })) {
                     throw std::runtime_error(bad);
                 }
-                for (size_t i = 3; i < tokens.size(); ++i) {
-                    parse_int(tokens[i], bad);  // the weights, which #229 has nowhere to put
-                }
 
                 auto shift_it = shift_id_map.find(tokens[1]);
                 if (shift_it == shift_id_map.end()) {
@@ -398,6 +395,15 @@ RosteringData parse_nrp(const std::string& content) {
 
                 RosteringData::Demand dem;
                 dem.min_employees = required;
+                if (tokens.size() > 3) {
+                    dem.under_weight = parse_int(tokens[3], bad);
+                }
+                if (tokens.size() > 4) {
+                    // SB-NRP's requirement is a target: over-cover is charged
+                    // above the same number under-cover is charged below.
+                    dem.max_employees = required;
+                    dem.over_weight = parse_int(tokens[4], bad);
+                }
                 if (!data.demand.emplace(RosteringData::demand_key(shift_type, day), dem).second) {
                     throw std::runtime_error("NRP parse error: duplicate COVER line: " + trimmed);
                 }

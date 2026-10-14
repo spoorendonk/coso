@@ -128,6 +128,9 @@ Result RosteringModel::solve(TimeLimit tl) {
             .min_employees = d.params.min_employees,
             .max_employees = d.params.max_employees,
             .required_skill = d.params.required_skill,
+            .under_weight = d.params.under_weight,
+            .over_weight = d.params.over_weight,
+            .hard = d.params.hard,
         };
     }
 

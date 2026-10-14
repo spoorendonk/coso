@@ -177,6 +177,52 @@ TEST_CASE("RosteringModel: understaffed names the shift and the day", "[rosterin
     CHECK(result.understaffed()[0].day == 1);
 }
 
+TEST_CASE("RosteringModel: cover is priced at its declared weights", "[rostering]") {
+    // One employee against a minimum of three: working costs 2 short, idling
+    // 3 short, so the roster has her on and cost() is 2 x under_weight.
+    RosteringModel model;
+    model.add_shift_type({.name = "Day"});
+    model.add_employee({.name = "Alice"});
+    model.set_horizon(1);
+    model.add_demand(0, 0, {.min_employees = 3, .under_weight = 7, .over_weight = 1});
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    CHECK(result.feasible());
+    CHECK(result.cost() == 14.0);
+    REQUIRE(result.understaffed().size() == 1);
+}
+
+TEST_CASE("RosteringModel: hard cover makes a shortfall infeasible", "[rostering]") {
+    // The same shortfall as above, declared hard as NSPLib's coverage is.
+    RosteringModel model;
+    model.add_shift_type({.name = "Day"});
+    model.add_employee({.name = "Alice"});
+    model.set_horizon(1);
+    model.add_demand(0, 0, {.min_employees = 3, .hard = true});
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    CHECK_FALSE(result.feasible());
+    REQUIRE(result.understaffed().size() == 1);
+}
+
+TEST_CASE("RosteringModel: a positive preference weight is a reward", "[rostering]") {
+    // Cover asks for exactly one, so working is free on cover; the +5
+    // preference then takes 5 off cost() (add_preference's sign convention).
+    RosteringModel model;
+    model.add_shift_type({.name = "Day"});
+    model.add_employee({.name = "Alice"});
+    model.set_horizon(1);
+    model.add_demand(0, 0, {.min_employees = 1, .max_employees = 1});
+    model.add_preference(0, 0, 0, 5);
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    CHECK(result.feasible());
+    CHECK(result.cost() == -5.0);
+}
+
 TEST_CASE("RosteringModel: empty model returns infeasible", "[rostering]") {
     RosteringModel model;
     auto result = model.solve(TimeLimit(0.1));
@@ -269,6 +315,9 @@ RosteringData compile_declared(RosteringModel const& m) {
             .min_employees = d.params.min_employees,
             .max_employees = d.params.max_employees,
             .required_skill = d.params.required_skill,
+            .under_weight = d.params.under_weight,
+            .over_weight = d.params.over_weight,
+            .hard = d.params.hard,
         };
     }
 
@@ -342,21 +391,27 @@ void check_same_rostering_data(RosteringData const& a, RosteringData const& b) {
         INFO("demand key " << key << " of a");
         auto it = b_demand.find(key);
         REQUIRE(it != b_demand.end());
-        auto const& [a_min, a_max, a_skill] = dem;
-        auto const& [b_min, b_max, b_skill] = it->second;
+        auto const& [a_min, a_max, a_skill, a_under, a_over, a_hard] = dem;
+        auto const& [b_min, b_max, b_skill, b_under, b_over, b_hard] = it->second;
         CHECK(a_min == b_min);
         CHECK(a_max == b_max);
         CHECK(a_skill == b_skill);
+        CHECK(a_under == b_under);
+        CHECK(a_over == b_over);
+        CHECK(a_hard == b_hard);
     }
     for (auto const& [key, dem] : b_demand) {
         INFO("demand key " << key << " of b");
         auto it = a_demand.find(key);
         REQUIRE(it != a_demand.end());
-        auto const& [b_min, b_max, b_skill] = dem;
-        auto const& [a_min, a_max, a_skill] = it->second;
+        auto const& [b_min, b_max, b_skill, b_under, b_over, b_hard] = dem;
+        auto const& [a_min, a_max, a_skill, a_under, a_over, a_hard] = it->second;
         CHECK(a_min == b_min);
         CHECK(a_max == b_max);
         CHECK(a_skill == b_skill);
+        CHECK(a_under == b_under);
+        CHECK(a_over == b_over);
+        CHECK(a_hard == b_hard);
     }
 
     REQUIRE(a_forbidden.size() == b_forbidden.size());
@@ -536,8 +591,13 @@ SECTION_COVER
     CHECK(parsed.get_demand(0, 5).min_employees == 2);   // Saturday
     CHECK(parsed.get_demand(0, 13).min_employees == 2);  // second Sunday
     CHECK(parsed.get_demand(1, 0).min_employees == 1);
-    // SECTION_COVER carries no maximum and no skill, so both stay inert.
-    CHECK(parsed.get_demand(0, 0).max_employees == INT_MAX);
+    // The requirement is a target: over-cover is charged above the same
+    // number.  The SB weights, under=100 and over=1, are kept as written, and
+    // SB cover is soft.  There is no skill.
+    CHECK(parsed.get_demand(0, 0).max_employees == 3);
+    CHECK(parsed.get_demand(0, 0).under_weight == 100);
+    CHECK(parsed.get_demand(0, 0).over_weight == 1);
+    CHECK_FALSE(parsed.get_demand(0, 0).hard);
     CHECK(parsed.get_demand(0, 0).required_skill.empty());
 
     // -- Step 2 -------------------------------------------------------------
@@ -585,8 +645,13 @@ SECTION_COVER
     shift_off(bea, 13, day, 1);
 
     for (int d = 0; d < 14; ++d) {
-        model.add_demand(day, d, {.min_employees = RosteringData::is_weekend_day(d) ? 2 : 3});
-        model.add_demand(night, d, {.min_employees = 1});
+        int const req = RosteringData::is_weekend_day(d) ? 2 : 3;
+        model.add_demand(
+            day, d,
+            {.min_employees = req, .max_employees = req, .under_weight = 100, .over_weight = 1});
+        model.add_demand(
+            night, d,
+            {.min_employees = 1, .max_employees = 1, .under_weight = 100, .over_weight = 1});
     }
 
     // -- Step 3 -------------------------------------------------------------
@@ -612,6 +677,29 @@ SECTION_COVER
 //  section below starts failing, as it should.  Without that, a pin would keep
 //  passing for a field the comparison had never been taught to look at.
 
+TEST_CASE("SB-NRP cover weights are kept as written", "[rostering][roundtrip]") {
+    // Formerly a pin that they were discarded (#229).  Two lines differing
+    // only in their weights must now compile differently.
+    auto with_cover = [](std::string const& cover) {
+        return parse_nrp(
+            "SECTION_HORIZON\n7\n\nSECTION_SHIFTS\nD,480\n\n"
+            "SECTION_STAFF\nA,D=7,3360,1440,5,2,2,1\n\nSECTION_COVER\n" +
+            cover + "\n");
+    };
+    auto sb = with_cover("0,D,2,100,1").get_demand(0, 0);
+    auto inverted = with_cover("0,D,2,1,1000").get_demand(0, 0);
+    auto omitted = with_cover("0,D,2").get_demand(0, 0);
+
+    CHECK(sb.under_weight == 100);
+    CHECK(sb.over_weight == 1);
+    CHECK(sb.max_employees == 2);
+    CHECK(inverted.under_weight == 1);
+    CHECK(inverted.over_weight == 1000);
+    // Without weights the line is a bare minimum at the default weights.
+    CHECK(omitted.under_weight == RosteringData::Demand{}.under_weight);
+    CHECK(omitted.max_employees == INT_MAX);
+}
+
 TEST_CASE("Discarded SB-NRP fields stay discarded", "[rostering][roundtrip][pinning]") {
     // The pinning base: one week, two shift types, one employee in the
     // positional dialect, one cover line.  Every variant below is this literal
@@ -622,29 +710,6 @@ TEST_CASE("Discarded SB-NRP fields stay discarded", "[rostering][roundtrip][pinn
                "SECTION_STAFF\n" +
                staff + "\n\nSECTION_COVER\n" + cover + "\n";
     };
-
-    SECTION("SECTION_COVER under- and over-cover weights") {
-        // parse_nrp's COVER case reads tokens[0..2] -- day, shift,
-        // requirement -- and never touches tokens[3] (UnderWeight) or
-        // tokens[4] (OverWeight).  RosteringData::Demand has nowhere to put
-        // them and RosteringModel cannot declare them.
-        //
-        // This is the #203 ruling's decisive finding and it belongs to
-        // **#229**: all 26824 cover lines across SB-NRP 1-24 carry
-        // under=100, over=1, while RosteringModel::solve() hardcodes
-        // understaffing=1000 / overstaffing=100.  Until #229, a v1 run solves
-        // a differently-weighted problem and cannot be scored against any
-        // published value.
-        std::string const staff = "A,D=7|N=7,3360,1440,5,2,2,1";
-        RosteringData sb_weights = parse_nrp(positional(staff, "0,D,2,100,1"));
-        RosteringData inverted = parse_nrp(positional(staff, "0,D,2,1,1000"));
-        // The weights are not even required: the parser accepts a three-token
-        // cover line, so their absence is indistinguishable from any value.
-        RosteringData omitted = parse_nrp(positional(staff, "0,D,2"));
-
-        check_same_rostering_data(sb_weights, inverted);
-        check_same_rostering_data(sb_weights, omitted);
-    }
 
     SECTION("STAFF MaxShifts per shift type") {
         // Positional column 1, "D=7|N=7": a per-employee cap on how many

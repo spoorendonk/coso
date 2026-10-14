@@ -64,6 +64,9 @@ struct RosteringData {
         int min_employees = 0;
         int max_employees = INT_MAX;
         std::string required_skill;
+        int under_weight = 1000;  ///< Per employee short of min_employees, when soft.
+        int over_weight = 100;    ///< Per employee over max_employees, when soft.
+        bool hard = false;        ///< Cover is a hard constraint; the weights are unused.
     };
 
     /// Demand indexed by (shift_type, day).
@@ -93,7 +96,7 @@ struct RosteringData {
         int employee;
         int day;
         int shift_type;
-        int weight;  ///< Positive = preferred, negative = penalised.
+        int weight;  ///< Positive = reward (cost -= weight when worked), negative = penalty.
     };
 
     std::vector<Preference> preferences;

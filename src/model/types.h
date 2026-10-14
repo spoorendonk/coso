@@ -108,8 +108,8 @@ struct Result {
         int shift = -1;
         int day = -1;
     };
-    /// Cover cells left short.  Cover is soft, so these do not make the
-    /// result infeasible; they are priced into cost().
+    /// Cover cells left short.  A soft cell's shortfall is priced into
+    /// cost(); a hard cell's also makes the result infeasible.
     std::vector<CoverShortfall> understaffed_;
 
     [[nodiscard]] auto const& roster() const noexcept { return roster_; }

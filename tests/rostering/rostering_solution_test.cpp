@@ -108,7 +108,7 @@ TEST_CASE("RosteringSolution: demand violations", "[rostering]") {
     // Empty schedule: 7 days * (1 understaffed day + 1 understaffed night)
     // = 14 understaffing violations.
     int empty_demand = sol.demand_cost();
-    REQUIRE(empty_demand == 14 * evaluator.weights().understaffing);
+    REQUIRE(empty_demand == 14 * RosteringData::Demand{}.under_weight);
 
     // Assign all day shifts to Alice and night shifts to Bob.
     for (int d = 0; d < 7; ++d) {

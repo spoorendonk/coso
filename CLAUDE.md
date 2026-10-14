@@ -44,8 +44,9 @@ reference implementation — useful for proving a declaration is well-formed and
 not the thing being built.
 
 **The engine is broken in places, and that is intentional.** Scheduling aborts on real input
-(#188), routing returns time-window violations as feasible (#194), rostering hardcodes
-the staffing weights its own benchmarks set (#230) and accepts a shift duration nothing reads (#233).
+(#188), routing returns time-window violations as feasible (#194) and searches for minimum
+distance whatever objective is declared (#238), and rostering's constructions ignore its hard
+working-time bounds (#239) and it accepts a shift duration nothing reads (#233).
 These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
 over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a
 reason an audit or a spec decision cannot proceed. File it, cite it, and carry on.
@@ -159,11 +160,11 @@ around it. Read the whole umbrella issue before ruling on a variant. Inventing l
 README instead has now produced a wrong verdict twice (#202 ruling 1, withdrawn; #203's first
 A-table, corrected in place).
 
-**Reading an instance is not scoring it.** Three archetypes can read their benchmarks and cannot yet
-be scored against published values, because the objective is not declarable: routing cannot state
-Solomon's lexicographic (vehicles, then distance) or OP/TOP's budget-constrained maximisation (#228),
-and rostering cannot state the weighted soft constraints every nurse-rostering format carries (#229).
-A run that is not comparable to a published number is not evidence.
+**Reading an instance is not scoring it.** Routing and rostering can now *declare* the objective their
+benchmarks score — `RoutingModel::set_objective` for Solomon's lexicographic (vehicles, then distance)
+and OP/TOP's budget-constrained maximisation (#228), per-demand cover weights and a hard flag on
+`DemandParams` for nurse rostering (#229) — but the engine does not yet optimise or respect all of it
+(#238, #239). A run that is not comparable to a published number is not evidence.
 
 ### Layered Design
 

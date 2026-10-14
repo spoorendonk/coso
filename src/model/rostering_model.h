@@ -60,16 +60,20 @@ struct EmployeeParams {
 
 /// Demand parameters for a shift on a given day.
 ///
-/// Cover is a **soft** constraint. `min_employees` / `max_employees` are not
-/// enforced: `Result::feasible()` ignores cover, and `Result::cost` charges a
-/// fixed 1000 per missing employee and 100 per excess one. Neither weight can be
-/// declared, so a benchmark whose cover lines carry their own weights (every
-/// SB-NRP instance: under=100, over=1) solves a differently weighted problem
-/// (#229, #230).
+/// Cover is soft by default: shortfall below `min_employees` costs
+/// `under_weight` per missing employee and excess over `max_employees` costs
+/// `over_weight` per extra one, both in `Result::cost`, and neither makes the
+/// result infeasible.  SB-NRP's SECTION_COVER carries these weights per line
+/// (under=100, over=1 in every published instance).  With `hard = true` both
+/// bounds are hard constraints, as NSPLib's coverage matrix is: a violation
+/// makes `Result::feasible()` false and the weights are unused.
 struct DemandParams {
     int min_employees = 0;
     int max_employees = INT_MAX;
     std::string required_skill;  ///< empty = no skill requirement
+    int under_weight = 1000;     ///< per employee short of min_employees, when soft
+    int over_weight = 100;       ///< per employee over max_employees, when soft
+    bool hard = false;
 };
 
 /// Rostering model: declare employees, shift types, coverage demand, constraints, then solve.
@@ -123,6 +127,14 @@ public:
     // -- Preferences (soft) --------------------------------------------------
 
     /// Add a preference weight for an employee on a specific day/shift.
+    ///
+    /// Sign convention: a positive weight is a reward and a negative one a
+    /// penalty -- `Result::cost` changes by `-weight` when the employee works
+    /// that shift on that day, and by nothing otherwise.  So a benchmark's cost
+    /// of an assignment (an NSPLib preference, an SB-NRP shift-off request of
+    /// weight w) is declared as `-w`.  A cost of *not* working a shift (an
+    /// SB-NRP shift-on request of weight w) is declared as `+w`, and the
+    /// benchmark's value is then `Result::cost` plus the sum of those w.
     void add_preference(int employee, int day, int shift_type, int weight);
 
     /// Mark an employee as unavailable on a specific day.
@@ -132,9 +144,9 @@ public:
 
     /// Solve the rostering problem within the given time limit.
     ///
-    /// `Result::feasible()` reports the hard constraints only; cover shortfall
-    /// and excess are priced into `Result::cost` at fixed weights (see
-    /// `DemandParams`, #229).
+    /// `Result::feasible()` reports the hard constraints, hard cover included;
+    /// soft cover shortfall and excess are priced into `Result::cost` at each
+    /// demand's declared weights (see `DemandParams`).
     Result solve(TimeLimit tl);
 
     // -- Accessors -----------------------------------------------------------

@@ -97,12 +97,9 @@ static void run_nrp_benchmark(const std::string& file, int expected_employees,
     CHECK(data.horizon == expected_horizon_days);
     REQUIRE(data.num_shift_types() > 0);
 
-    // NRP COVER lines encode under/over staffing penalties.
-    // The benchmark instances in tests/data/nrp use under=100, over=1.
-    coso::RosteringCostEvaluator::Weights weights;
-    weights.understaffing = 100;
-    weights.overstaffing = 1;
-    coso::RosteringCostEvaluator evaluator(data, weights);
+    // The cover weights come from each COVER line (under=100, over=1 in
+    // every published instance), carried by the parsed demand.
+    coso::RosteringCostEvaluator evaluator(data);
 
     // Construct initial solution using FFD.
     auto sol = coso::construct_ffd(data, evaluator);
@@ -137,26 +134,13 @@ static void run_nrp_benchmark(const std::string& file, int expected_employees,
         double gap = static_cast<double>(final_cost - bks) / bks;
         std::cout << "  Gap to BKS: " << (gap * 100.0) << "%\n" << std::endl;
 
-        // The declared cost function is not the one the BKS grades, so the
-        // number above cannot be read as a gap in either direction.
-        //
-        // It never could: SB-NRP prices under-cover at 100 and over-cover at 1
-        // per SECTION_COVER line, weights v1 cannot declare, so this file sets
-        // them on the evaluator behind the model's back (coso#230) and the
-        // model's own solve() would use 1000/100 instead (coso#229).
-        //
-        // Since coso#203's v1 additions it is also wrong in the other
-        // direction: MaxWeekends and the horizon working-time bounds are now
-        // declared and enforced as hard, and the constructions do not respect
-        // either, so a run starts with tens of thousands of hard cost that the
-        // published optimum does not pay. Instance1 needs >= 5 distinct
-        // employees on weekend 0 and >= 6 on weekend 1 against 8 employees
-        // with MaxWeekends = 1, so >= 3 forced violations is a floor.
-        //
-        // Restore this assertion when coso#229 makes the cover weights
-        // declarable; the bound has to be re-derived against the objective
-        // that lands with it.
-        SKIP("NRP BKS grading is not comparable to the declared objective — coso#229");
+        // Not yet a gap in either direction.  The cover weights are now the
+        // instance's own (coso#229), but the constructions ignore the hard
+        // MaxWeekends and working-time bounds, so a run starts with hard cost
+        // the published optimum does not pay, and SB shift-on requests are
+        // +w rewards, so the benchmark value is cost plus the sum of their
+        // weights.  Re-deriving the bound needs a benchmark run.
+        SKIP("NRP BKS grading needs a re-derived bound — coso#239");
         CHECK(final_cost <= static_cast<int>(bks * (1.0 + max_gap)));
     }
 }

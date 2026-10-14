@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <climits>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 namespace coso {
@@ -18,8 +19,8 @@ class RosteringCostEvaluator {
 public:
     /// Penalty weights applied to different violation types.
     struct Weights {
-        int understaffing = 1000;    ///< Per missing employee.
-        int overstaffing = 100;      ///< Per excess employee.
+        // Cover is priced per demand (RosteringData::Demand::under_weight /
+        // over_weight), not here, so the declaration is the only place to set it.
         int hard_violation = 10000;  ///< Per hard constraint violation.
         int unavailability = 10000;  ///< Per unavailability violation.
         int preference = 1;          ///< Multiplied by preference weight.
@@ -45,31 +46,33 @@ public:
 
     // -- Component costs -----------------------------------------------------
 
-    /// Demand violation cost (under/over-staffing).
+    /// Soft cover cost: each soft demand's shortfall and excess at its own
+    /// under_weight / over_weight.  Hard demands are priced in
+    /// hard_cover_cost() instead.
     [[nodiscard]] int demand_cost(std::vector<std::vector<int>> const& schedule) const {
         int cost = 0;
-        int const ne = data_.num_employees();
-        int const ns = data_.num_shift_types();
-        int const H = data_.horizon;
-
-        for (int s = 0; s < ns; ++s) {
-            for (int d = 0; d < H; ++d) {
+        for (int s = 0; s < data_.num_shift_types(); ++s) {
+            for (int d = 0; d < data_.horizon; ++d) {
                 auto dem = data_.get_demand(s, d);
-                // Count employees assigned to shift s on day d,
-                // respecting skill requirements.
-                int count = 0;
-                for (int e = 0; e < ne; ++e) {
-                    if (schedule[e][d] == s) {
-                        if (dem.required_skill.empty() || has_skill(e, dem.required_skill)) {
-                            ++count;
-                        }
-                    }
+                if (!dem.hard) {
+                    auto [under, over] = cover_violation(schedule, s, d, dem);
+                    cost += under * dem.under_weight + over * dem.over_weight;
                 }
-                if (count < dem.min_employees) {
-                    cost += (dem.min_employees - count) * weights_.understaffing;
-                }
-                if (dem.max_employees < INT_MAX && count > dem.max_employees) {
-                    cost += (count - dem.max_employees) * weights_.overstaffing;
+            }
+        }
+        return cost;
+    }
+
+    /// Hard cover cost: each hard demand's shortfall and excess, per
+    /// employee, at hard_violation.
+    [[nodiscard]] int hard_cover_cost(std::vector<std::vector<int>> const& schedule) const {
+        int cost = 0;
+        for (int s = 0; s < data_.num_shift_types(); ++s) {
+            for (int d = 0; d < data_.horizon; ++d) {
+                auto dem = data_.get_demand(s, d);
+                if (dem.hard) {
+                    auto [under, over] = cover_violation(schedule, s, d, dem);
+                    cost += (under + over) * weights_.hard_violation;
                 }
             }
         }
@@ -80,7 +83,7 @@ public:
     [[nodiscard]] int hard_constraint_cost(std::vector<std::vector<int>> const& schedule) const {
         return consecutive_violation_cost(schedule) + forbidden_sequence_cost(schedule) +
                unavailability_cost(schedule) + weekend_violation_cost(schedule) +
-               working_time_violation_cost(schedule);
+               working_time_violation_cost(schedule) + hard_cover_cost(schedule);
     }
 
     /// Consecutive shift violations.
@@ -287,6 +290,23 @@ public:
     [[nodiscard]] Weights const& weights() const noexcept { return weights_; }
 
 private:
+    /// Employees short of min_employees and over max_employees on (s, d),
+    /// counting only those holding the demand's required skill.
+    [[nodiscard]] std::pair<int, int> cover_violation(std::vector<std::vector<int>> const& schedule,
+                                                      int s, int d,
+                                                      RosteringData::Demand const& dem) const {
+        int count = 0;
+        for (int e = 0; e < data_.num_employees(); ++e) {
+            if (schedule[e][d] == s &&
+                (dem.required_skill.empty() || has_skill(e, dem.required_skill))) {
+                ++count;
+            }
+        }
+        int under = std::max(0, dem.min_employees - count);
+        int over = dem.max_employees < INT_MAX ? std::max(0, count - dem.max_employees) : 0;
+        return {under, over};
+    }
+
     [[nodiscard]] bool has_skill(int employee, std::string const& skill) const {
         auto const& skills = data_.employees[employee].skills;
         return std::find(skills.begin(), skills.end(), skill) != skills.end();
