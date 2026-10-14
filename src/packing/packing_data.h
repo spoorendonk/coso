@@ -33,7 +33,7 @@ public:
         data.bin_capacities_ = model.bin_capacity();
 
         // Copy item sizes into flat array.
-        data.item_sizes_.resize(data.num_items_ * data.num_dims_);
+        data.item_sizes_.resize(static_cast<size_t>(data.num_items_) * data.num_dims_);
         for (int i = 0; i < data.num_items_; ++i) {
             auto const& it = model.item(i);
             for (int d = 0; d < data.num_dims_; ++d) {

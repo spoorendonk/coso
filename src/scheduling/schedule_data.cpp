@@ -123,7 +123,7 @@ ScheduleData ScheduleData::Builder::build() const {
 
     // Processing time matrix (operation x machine).
     // INT_MAX means the operation cannot run on that machine.
-    data.processing_times_.assign(num_operations * num_machines, INT_MAX);
+    data.processing_times_.assign(static_cast<size_t>(num_operations) * num_machines, INT_MAX);
     for (int o = 0; o < num_operations; ++o) {
         auto const& op = data.operations_[o];
         if (op.fixed_machine >= 0) {

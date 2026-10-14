@@ -149,7 +149,7 @@ ProblemData ProblemData::Builder::build(int granular_k) const {
     pd.granular_k_ = k;
 
     if (k > 0 && pd.num_clients_ > 0) {
-        pd.neighbours_.resize(pd.num_clients_ * k);
+        pd.neighbours_.resize(static_cast<size_t>(pd.num_clients_) * k);
 
         // Reusable buffer for sorting candidates (avoids per-client allocation).
         std::vector<int> sorted_nodes;

@@ -29,7 +29,7 @@ struct TimeLimit {
 /// convenience methods.  Only the relevant engine populates its section:
 ///   - routing:    routes(), unserved()
 ///   - scheduling: makespan(), schedule()
-///   - rostering:  roster(), day()
+///   - rostering:  roster(), day(), understaffed()
 ///   - packing:    bins(), num_bins()
 ///   - network:    arc_flows()
 ///   - lotsizing:  production(), inventory()
@@ -96,8 +96,18 @@ struct Result {
     std::vector<std::vector<RosterEntry>> roster_;
     std::vector<int> unassigned_;
 
+    /// A (shift type, day) cover cell staffed below its min_employees.
+    struct CoverShortfall {
+        int shift = -1;
+        int day = -1;
+    };
+    /// Cover cells left short.  Cover is soft, so these do not make the
+    /// result infeasible; they are priced into cost().
+    std::vector<CoverShortfall> understaffed_;
+
     [[nodiscard]] auto const& roster() const noexcept { return roster_; }
     [[nodiscard]] auto const& unassigned() const noexcept { return unassigned_; }
+    [[nodiscard]] auto const& understaffed() const noexcept { return understaffed_; }
     /// Convenience: the roster for a given day.
     [[nodiscard]] auto const& day(int d) const { return roster_.at(d); }
 

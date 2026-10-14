@@ -67,7 +67,8 @@ static ProblemData make_clustered_cvrp() {
     for (auto& [cx, cy] : centers) {
         for (int i = 0; i < 10; ++i) {
             double x = cx + (i % 5) * 2.0 - 4.0;
-            double y = cy + (i / 5) * 2.0 - 2.0;
+            int const row = i / 5;  // row of a 5-wide grid
+            double y = cy + row * 2.0 - 2.0;
             b.add_client({x, y}, {.demand = {2}});
         }
     }

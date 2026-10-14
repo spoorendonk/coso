@@ -245,7 +245,7 @@ Result RosteringModel::solve(TimeLimit tl) {
         }
     }
 
-    // Track unmet minimum demand entries as encoded keys (shift,day).
+    // Cover cells left below their minimum.
     int const ns = data.num_shift_types();
     for (int s = 0; s < ns; ++s) {
         for (int d = 0; d < data.horizon; ++d) {
@@ -257,7 +257,7 @@ Result RosteringModel::solve(TimeLimit tl) {
                 }
             }
             if (count < dem.min_employees) {
-                result.unassigned_.push_back(RosteringData::demand_key(s, d));
+                result.understaffed_.push_back({.shift = s, .day = d});
             }
         }
     }

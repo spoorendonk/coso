@@ -124,7 +124,10 @@ TEST_CASE("Daemon: current_solution returns a valid solution after running", "[s
     daemon.stop();
 
     auto sol = daemon.current_solution();
-    REQUIRE(sol.has_value());
+    if (!sol.has_value()) {
+        FAIL("the daemon returned no solution");
+        return;
+    }
     CHECK(sol->num_unassigned() == 0);
 }
 
@@ -152,7 +155,10 @@ TEST_CASE("Daemon: current_solution available during execution", "[search][daemo
 
     daemon.stop();
 
-    REQUIRE(sol.has_value());
+    if (!sol.has_value()) {
+        FAIL("the daemon returned no solution");
+        return;
+    }
     CHECK(sol->num_unassigned() == 0);
 }
 
@@ -176,10 +182,14 @@ TEST_CASE("Daemon: update changes the problem data", "[search][daemon]") {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    REQUIRE(daemon.current_solution().has_value());
+    auto initial = daemon.current_solution();
+    if (!initial.has_value()) {
+        FAIL("the daemon returned no initial solution");
+        return;
+    }
 
     // The original instance has 6 clients.
-    CHECK(daemon.current_solution()->num_unassigned() == 0);
+    CHECK(initial->num_unassigned() == 0);
 
     // Apply an update that adds a 7th client.
     daemon.update([](ProblemData const& /*old_data*/) { return make_modified_instance(); });
@@ -197,7 +207,10 @@ TEST_CASE("Daemon: update changes the problem data", "[search][daemon]") {
     daemon.stop();
 
     // After update, the problem has 7 clients.
-    REQUIRE(sol.has_value());
+    if (!sol.has_value()) {
+        FAIL("the daemon returned no solution");
+        return;
+    }
 
     // Count total assigned + unassigned -- should be 7.
     int total = sol->num_unassigned();

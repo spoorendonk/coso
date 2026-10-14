@@ -22,7 +22,7 @@ DFA build_max_consecutive_dfa(int shift_type, int max_consec, int num_shift_type
     dfa.num_states = num_states;
     dfa.start_state = 0;
     dfa.alphabet_size = alpha;
-    dfa.transitions.assign(num_states * alpha, -1);
+    dfa.transitions.assign(static_cast<size_t>(num_states) * alpha, -1);
 
     // Accepting states: 0 through max_consec.
     for (int s = 0; s <= max_consec; ++s) {
@@ -71,7 +71,7 @@ DFA build_forbidden_pattern_dfa(std::vector<int> const& pattern, int num_shift_t
     dfa.num_states = num_states;
     dfa.start_state = 0;
     dfa.alphabet_size = alpha;
-    dfa.transitions.assign(num_states * alpha, -1);
+    dfa.transitions.assign(static_cast<size_t>(num_states) * alpha, -1);
 
     // All states except sink are accepting.
     for (int s = 0; s < len; ++s) {

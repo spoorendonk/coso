@@ -78,7 +78,7 @@ NetworkData NetworkData::Builder::build() const {
     }
 
     // Copy resource usage into flat array.
-    data.resource_usage_.assign(na * nr, 0);
+    data.resource_usage_.assign(static_cast<size_t>(na) * nr, 0);
     for (int a = 0; a < static_cast<int>(resource_usage_.size()); ++a) {
         for (int r = 0; r < static_cast<int>(resource_usage_[a].size()); ++r) {
             data.resource_usage_[a * nr + r] = resource_usage_[a][r];

@@ -14,6 +14,6 @@ int main() {
 
     coso::Result result = model.solve(coso::TimeLimit(1.0, 0.05));
     std::cout << "rostering feasible=" << result.feasible() << " days=" << result.roster().size()
-              << " unassigned=" << result.unassigned().size() << "\n";
+              << " understaffed=" << result.understaffed().size() << "\n";
     return result.feasible() ? 0 : 1;
 }

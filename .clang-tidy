@@ -30,12 +30,10 @@ Checks: >
   -readability-make-member-function-const,
   -bugprone-argument-comment,
   -modernize-use-emplace,
-  -bugprone-implicit-widening-of-multiplication-result,
   -modernize-use-scoped-lock,
   -performance-enum-size,
   -readability-use-anyofallof,
   -readability-uppercase-literal-suffix,
-  -bugprone-unchecked-optional-access,
   -readability-use-std-min-max,
   -performance-inefficient-vector-operation,
   -readability-container-contains,
@@ -52,9 +50,7 @@ Checks: >
   -modernize-use-auto,
   -modernize-pass-by-value,
   -modernize-loop-convert,
-  -modernize-concat-nested-namespaces,
-  -bugprone-narrowing-conversions,
-  -bugprone-integer-division
+  -modernize-concat-nested-namespaces
 
 CheckOptions:
   - key: readability-function-cognitive-complexity.Threshold

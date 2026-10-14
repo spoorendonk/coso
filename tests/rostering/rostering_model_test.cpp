@@ -72,7 +72,9 @@ TEST_CASE("RosteringModel: demand constraints are stored", "[rostering]") {
     // and returns a result.
     auto result = model.solve(TimeLimit(0.1));
     // Day 0 is intentionally over-constrained (needs 2, only 1 employee).
-    REQUIRE_FALSE(result.unassigned().empty());
+    REQUIRE(result.understaffed().size() == 1);
+    CHECK(result.understaffed()[0].shift == 0);
+    CHECK(result.understaffed()[0].day == 0);
 }
 
 TEST_CASE("RosteringModel: hard constraints", "[rostering]") {
@@ -135,7 +137,25 @@ TEST_CASE("RosteringModel: feasible baseline instance", "[rostering]") {
 
     REQUIRE(result.feasible());
     REQUIRE(result.roster().size() == 4);
-    REQUIRE(result.unassigned().empty());
+    REQUIRE(result.understaffed().empty());
+}
+
+TEST_CASE("RosteringModel: understaffed names the shift and the day", "[rostering]") {
+    // Two employees cannot cover a minimum of three.  The shortfall used to be
+    // a packed (shift << 32 | day) key narrowed to int, which kept only the day.
+    RosteringModel model;
+    model.add_shift_type({.name = "Day"});
+    int night = model.add_shift_type({.name = "Night"});
+    model.add_employee({.name = "Alice"});
+    model.add_employee({.name = "Bob"});
+    model.set_horizon(2);
+    model.add_demand(night, 1, {.min_employees = 3});
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    REQUIRE(result.understaffed().size() == 1);
+    CHECK(result.understaffed()[0].shift == night);
+    CHECK(result.understaffed()[0].day == 1);
 }
 
 TEST_CASE("RosteringModel: empty model returns infeasible", "[rostering]") {

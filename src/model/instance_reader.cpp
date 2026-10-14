@@ -103,7 +103,7 @@ std::vector<int> read_ints(std::istream& in, int count) {
 
 void parse_edge_weight_section(std::istream& in, VrpInstance& inst) {
     int n = inst.dimension;
-    inst.distance_matrix.assign(n * n, 0);
+    inst.distance_matrix.assign(static_cast<size_t>(n) * n, 0);
 
     if (!inst.edge_weight_format.has_value()) {
         throw std::runtime_error("EDGE_WEIGHT_SECTION requires EDGE_WEIGHT_FORMAT");

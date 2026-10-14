@@ -12,7 +12,7 @@ PackingSolution::PackingSolution(PackingData const& data)
     num_bins_ = data.num_items();
 
     bin_items_.resize(num_bins_);
-    bin_load_.resize(num_bins_ * data.num_dims(), 0);
+    bin_load_.resize(static_cast<size_t>(num_bins_) * data.num_dims(), 0);
 
     // All items start unassigned.
     item_bin_.assign(data.num_items(), -1);
