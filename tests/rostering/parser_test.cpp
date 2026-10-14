@@ -2,6 +2,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <stdexcept>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
@@ -171,4 +173,68 @@ SECTION_COVER
 
     auto dem = data.get_demand(0, 0);
     CHECK(dem.min_employees == 1);
+}
+
+TEST_CASE("parse_nrp - a STAFF line in neither dialect is rejected", "[rostering][parser]") {
+    // #236: the dialect used to be guessed from the token count, so these
+    // lines parsed as a different employee instead of failing.
+    auto with_staff = [](std::string const& staff) {
+        return "SECTION_HORIZON\n7\n\nSECTION_SHIFTS\nD,480\n\nSECTION_STAFF\n" + staff +
+               "\n\nSECTION_COVER\n0,D,1,100,1\n";
+    };
+
+    SECTION("the full positional line still parses") {
+        auto data = parse_nrp(with_staff("A,D=7,4320,3390,5,2,2,1"));
+        REQUIRE(data.num_employees() == 1);
+        CHECK(data.employees[0].max_total_minutes == 4320);
+        CHECK(data.employees[0].min_total_minutes == 3390);
+        CHECK(data.employees[0].max_consecutive_days == 5);
+        CHECK(data.employees[0].max_weekends == 1);
+    }
+
+    SECTION("an empty positional field no longer shifts the columns left") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,,4320,3390,5,2,2,1")), std::runtime_error);
+    }
+
+    SECTION("a short positional line no longer becomes an unconstrained employee") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("B,D=7,4320,3390")), std::runtime_error);
+    }
+
+    SECTION("a positional line with extra fields") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,D=7,4320,3390,5,2,2,1,9")), std::runtime_error);
+    }
+
+    SECTION("a positional field that is not an integer") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,D=7,4320x,3390,5,2,2,1")), std::runtime_error);
+    }
+
+    SECTION("a key=value line with a bare value") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxTotalMinutes=4320,3390")), std::runtime_error);
+    }
+
+    SECTION("an unknown key, which would otherwise drop a misspelled bound") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxTotalMinute=4320")), std::runtime_error);
+    }
+
+    SECTION("a repeated key") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxWeekends=1,MaxWeekends=2")), std::runtime_error);
+    }
+
+    SECTION("an empty key=value field") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxWeekends=1,,MaxTotalMinutes=10")),
+                        std::runtime_error);
+    }
+
+    SECTION("a repeated employee") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxWeekends=1\nA,MaxWeekends=2")),
+                        std::runtime_error);
+    }
+}
+
+TEST_CASE("parse_nrp - a repeated COVER line is rejected", "[rostering][parser]") {
+    // #236: the second line for the same (day, shift) used to win silently.
+    std::string const content =
+        "SECTION_HORIZON\n7\n\nSECTION_SHIFTS\nD,480\n\nSECTION_STAFF\nA,MaxWeekends=1\n\n"
+        "SECTION_COVER\n0,D,1,100,1\n0,D,3,100,1\n";
+    CHECK_THROWS_AS(parse_nrp(content), std::runtime_error);
 }

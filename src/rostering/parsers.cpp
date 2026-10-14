@@ -46,6 +46,33 @@ std::vector<std::string> split(const std::string& s, char delim) {
     return tokens;
 }
 
+/// Split a string by a delimiter character, keeping empty fields, so a caller
+/// can tell "A,,4320" from "A,4320".
+std::vector<std::string> split_fields(const std::string& s, char delim) {
+    std::vector<std::string> fields;
+    std::istringstream iss(s);
+    std::string field;
+    while (std::getline(iss, field, delim)) {
+        fields.push_back(trim(field));
+    }
+    return fields;
+}
+
+/// Parse a whole field as an int, throwing `what` if any of it is not one.
+int parse_int(const std::string& field, const std::string& what) {
+    std::size_t used = 0;
+    int value = 0;
+    try {
+        value = std::stoi(field, &used);
+    } catch (const std::logic_error&) {
+        throw std::runtime_error(what);
+    }
+    if (used != field.size()) {
+        throw std::runtime_error(what);
+    }
+    return value;
+}
+
 }  // anonymous namespace
 
 // ---------------------------------------------------------------------------
@@ -172,60 +199,86 @@ RosteringData parse_nrp(const std::string& content) {
             }
 
             case Section::Staff: {
-                // Two formats are supported:
+                // Two dialects, told apart by shape rather than guessed at
+                // (#236); a line that is neither is rejected.
                 //
-                // Named format (key=value):
-                //   EmployeeID,MaxShifts=X,MaxTotalMinutes=Y,...
+                // Positional (schedulingbenchmarks.org), exactly eight fields:
+                //   ID, MaxShifts (e.g. D=14|N=4), MaxTotalMinutes, MinTotalMinutes,
+                //   MaxConsecutiveShifts, MinConsecutiveShifts,
+                //   MinConsecutiveDaysOff, MaxWeekends
+                // recognised by no '=' from the third field on.
                 //
-                // Positional format (schedulingbenchmarks.org):
-                //   EmployeeID,MaxShifts(e.g. D=14),MaxTotalMinutes,MinTotalMinutes,
-                //   MaxConsecutiveShifts,MinConsecutiveShifts,MinConsecutiveDaysOff,
-                //   MaxWeekends
-                auto tokens = split(trimmed, ',');
-                if (tokens.empty()) {
-                    throw std::runtime_error("NRP parse error: bad STAFF line: " + trimmed);
+                // Named: ID followed only by Key=Value fields, any subset of
+                // the seven keys above, each at most once.
+                //
+                // MaxShifts, MinConsecutiveShifts and MinConsecutiveDaysOff
+                // are read in both dialects and not represented: the #203
+                // ruling defers them.
+                auto const bad = "NRP parse error: bad STAFF line: " + trimmed;
+                auto fields = split_fields(trimmed, ',');
+                if (fields.empty() || fields[0].empty()) {
+                    throw std::runtime_error(bad);
+                }
+                for (auto const& f : fields) {
+                    if (f.empty()) {
+                        throw std::runtime_error(bad + " (empty field)");
+                    }
                 }
 
                 RosteringData::Employee emp;
-                emp.name = tokens[0];
+                emp.name = fields[0];
 
-                // Detect positional format: field 2 (index 2) is a plain integer
-                // (MaxTotalMinutes) without '=' prefix.
-                bool positional = (tokens.size() >= 5 && tokens[2].find('=') == std::string::npos);
+                bool const positional =
+                    fields.size() >= 3 &&
+                    std::none_of(fields.begin() + 2, fields.end(),
+                                 [](std::string const& f) { return f.contains('='); });
 
                 if (positional) {
-                    // Positional: [0]=ID, [1]=MaxShifts, [2]=MaxTotalMinutes,
-                    //             [3]=MinTotalMinutes, [4]=MaxConsecutiveShifts,
-                    //             [5]=MinConsecutiveShifts, [6]=MinConsecutiveDaysOff,
-                    //             [7]=MaxWeekends
-                    emp.max_total_minutes = std::stoi(tokens[2]);
-                    emp.min_total_minutes = std::stoi(tokens[3]);
-                    emp.max_consecutive_days = std::stoi(tokens[4]);
-                    if (tokens.size() >= 8) {
-                        emp.max_weekends = std::stoi(tokens[7]);
+                    if (fields.size() != 8) {
+                        throw std::runtime_error(bad + " (positional dialect has 8 fields, got " +
+                                                 std::to_string(fields.size()) + ")");
                     }
+                    emp.max_total_minutes = parse_int(fields[2], bad);
+                    emp.min_total_minutes = parse_int(fields[3], bad);
+                    emp.max_consecutive_days = parse_int(fields[4], bad);
+                    parse_int(fields[5], bad);  // MinConsecutiveShifts, deferred
+                    parse_int(fields[6], bad);  // MinConsecutiveDaysOff, deferred
+                    emp.max_weekends = parse_int(fields[7], bad);
                 } else {
-                    // Named key=value format.
-                    for (size_t i = 1; i < tokens.size(); ++i) {
-                        auto eq = tokens[i].find('=');
+                    std::vector<std::string> seen;
+                    for (size_t i = 1; i < fields.size(); ++i) {
+                        auto eq = fields[i].find('=');
                         if (eq == std::string::npos) {
-                            continue;
+                            throw std::runtime_error(bad + " (mixes positional and key=value)");
                         }
-                        auto key = tokens[i].substr(0, eq);
-                        auto val = tokens[i].substr(eq + 1);
+                        auto key = fields[i].substr(0, eq);
+                        auto val = fields[i].substr(eq + 1);
+                        if (std::ranges::find(seen, key) != seen.end()) {
+                            throw std::runtime_error(bad + " (duplicate key " + key + ")");
+                        }
+                        seen.push_back(key);
 
                         if (key == "MaxConsecutiveShifts") {
-                            emp.max_consecutive_days = std::stoi(val);
+                            emp.max_consecutive_days = parse_int(val, bad);
                         } else if (key == "MaxTotalMinutes") {
-                            emp.max_total_minutes = std::stoi(val);
+                            emp.max_total_minutes = parse_int(val, bad);
                         } else if (key == "MinTotalMinutes") {
-                            emp.min_total_minutes = std::stoi(val);
+                            emp.min_total_minutes = parse_int(val, bad);
                         } else if (key == "MaxWeekends") {
-                            emp.max_weekends = std::stoi(val);
+                            emp.max_weekends = parse_int(val, bad);
+                        } else if (key == "MinConsecutiveShifts" ||
+                                   key == "MinConsecutiveDaysOff") {
+                            parse_int(val, bad);  // deferred
+                        } else if (key != "MaxShifts") {
+                            throw std::runtime_error(bad + " (unknown key " + key + ")");
                         }
                     }
                 }
 
+                if (employee_id_map.contains(emp.name)) {
+                    throw std::runtime_error("NRP parse error: duplicate employee in STAFF: " +
+                                             emp.name);
+                }
                 int emp_idx = static_cast<int>(data.employees.size());
                 employee_id_map[emp.name] = emp_idx;
                 data.employees.push_back(std::move(emp));
@@ -324,7 +377,9 @@ RosteringData parse_nrp(const std::string& content) {
 
                 RosteringData::Demand dem;
                 dem.min_employees = required;
-                data.demand[RosteringData::demand_key(shift_type, day)] = dem;
+                if (!data.demand.emplace(RosteringData::demand_key(shift_type, day), dem).second) {
+                    throw std::runtime_error("NRP parse error: duplicate COVER line: " + trimmed);
+                }
                 break;
             }
 

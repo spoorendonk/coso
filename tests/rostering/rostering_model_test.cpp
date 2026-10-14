@@ -610,11 +610,9 @@ TEST_CASE("Discarded SB-NRP fields stay discarded", "[rostering][roundtrip][pinn
 
     SECTION("STAFF MaxShifts per shift type") {
         // Positional column 1, "D=7|N=7": a per-employee cap on how many
-        // shifts of each type may be assigned.  parsers.cpp:196-206 skips
-        // tokens[1] entirely, and the key=value branch (:209-226) matches only
-        // MaxConsecutiveShifts, MaxTotalMinutes, MinTotalMinutes and
-        // MaxWeekends, so "MaxShifts=" falls through both dialects.  Deferred
-        // by the #203 ruling ("per-employee per-shift-type assignment caps").
+        // shifts of each type may be assigned.  parse_nrp accepts it in both
+        // dialects (#236) and stores it nowhere.  Deferred by the #203 ruling
+        // ("per-employee per-shift-type assignment caps").
         std::string const cover = "0,D,2,100,1";
         check_same_rostering_data(parse_nrp(positional("A,D=7|N=7,3360,1440,5,2,2,1", cover)),
                                   parse_nrp(positional("A,D=1,3360,1440,5,2,2,1", cover)));
@@ -631,8 +629,8 @@ TEST_CASE("Discarded SB-NRP fields stay discarded", "[rostering][roundtrip][pinn
 
     SECTION("STAFF MinConsecutiveShifts") {
         // Positional column 5.  parsers.cpp reads column 4
-        // (MaxConsecutiveShifts) and column 7 (MaxWeekends) and steps over
-        // this one; the key=value branch has no case for it either.  The #203
+        // (MaxConsecutiveShifts) and column 7 (MaxWeekends) and checks but
+        // discards this one, as does the key=value branch.  The #203
         // ruling defers it explicitly ("min consecutive working shifts").
         std::string const cover = "0,D,2,100,1";
         check_same_rostering_data(parse_nrp(positional("A,D=7|N=7,3360,1440,5,2,2,1", cover)),
