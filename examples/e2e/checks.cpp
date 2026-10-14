@@ -28,6 +28,20 @@ bool requested(std::set<std::string> const& checks, std::string const& name) {
 
 }  // namespace
 
+char const* to_string(Determinism d) {
+    switch (d) {
+        case Determinism::NotRequested:
+            return "not_requested";
+        case Determinism::Deterministic:
+            return "deterministic";
+        case Determinism::Nondeterministic:
+            return "nondeterministic";
+        case Determinism::Inconclusive:
+            return "inconclusive";
+    }
+    return "unknown";
+}
+
 Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
                            std::uint64_t work_budget_ticks, SolveFn const& solve_once) {
     Evaluation eval{.result = solve_once(), .checks = {}};
@@ -51,15 +65,20 @@ Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
 
     if (requested(requested_checks, "deterministic_work")) {
         coso::Result const rerun = solve_once();
+        bool const counts_match = (eval.result.work_ticks() == rerun.work_ticks()) &&
+                                  (eval.result.work_units() == rerun.work_units());
         bool const budget_bound = eval.result.work_ticks() >= work_budget_ticks &&
                                   rerun.work_ticks() >= work_budget_ticks;
-        if (!budget_bound) {
+        if (!counts_match) {
+            eval.checks.deterministic_work = Determinism::Nondeterministic;
+        } else if (!budget_bound) {
+            eval.checks.deterministic_work = Determinism::Inconclusive;
             eval.checks.errors.emplace_back("deterministic_work_budget_not_reached");
+        } else {
+            eval.checks.deterministic_work = Determinism::Deterministic;
         }
-        eval.checks.deterministic_work = budget_bound &&
-                                         (eval.result.work_ticks() == rerun.work_ticks()) &&
-                                         (eval.result.work_units() == rerun.work_units());
-        eval.checks.pass = eval.checks.pass && eval.checks.deterministic_work;
+        eval.checks.pass =
+            eval.checks.pass && eval.checks.deterministic_work == Determinism::Deterministic;
     }
 
     return eval;

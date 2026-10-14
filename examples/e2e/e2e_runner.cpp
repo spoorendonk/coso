@@ -209,8 +209,8 @@ int main(int argc, char** argv) {
                   << "    \"feasible\": " << bool_json(eval.checks.feasible) << ",\n"
                   << "    \"nonnegative_cost\": " << bool_json(eval.checks.nonnegative_cost)
                   << ",\n"
-                  << "    \"deterministic_work\": " << bool_json(eval.checks.deterministic_work)
-                  << "\n"
+                  << "    \"deterministic_work\": \""
+                  << coso::e2e::to_string(eval.checks.deterministic_work) << "\"\n"
                   << "  },\n"
                   << "  \"errors\": [";
         for (std::size_t i = 0; i < eval.checks.errors.size(); ++i) {

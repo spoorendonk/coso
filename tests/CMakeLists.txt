@@ -1033,8 +1033,9 @@ set_tests_properties(
 
 # The network toy solve exits its algorithm after a handful of ticks, far short of
 # its budget, so two matching counts would say nothing about budgeting (#219). The
-# check must fail on that rather than pass. The runner names the unreached budget
-# only when the check failed on it, so the regex pins the failure to that cause.
+# check must fail on that rather than pass, and report it as inconclusive rather
+# than as evidence against determinism (#218). The PASS regex pins that verdict,
+# and the FAIL regex keeps an inconclusive check from ever passing the scenario.
 add_test(
     NAME e2e_rejects_vacuous_determinism
     COMMAND $<TARGET_FILE:e2e_runner>
@@ -1045,6 +1046,7 @@ set_tests_properties(
     PROPERTIES
     LABELS "e2e-smoke"
     TIMEOUT 60
-    PASS_REGULAR_EXPRESSION "deterministic_work_budget_not_reached"
+    PASS_REGULAR_EXPRESSION "\"deterministic_work\": \"inconclusive\""
+    FAIL_REGULAR_EXPRESSION "\"pass\": true"
 )
 

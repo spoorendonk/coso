@@ -10,11 +10,23 @@
 
 namespace coso::e2e {
 
+/// What two solves of one scenario say about work counting (#218). Inconclusive
+/// means the counts matched but a solve ended before its budget, so they would
+/// have matched under any budget; it fails the check like Nondeterministic does.
+enum class Determinism : std::uint8_t {
+    NotRequested,
+    Deterministic,
+    Nondeterministic,
+    Inconclusive,
+};
+
+char const* to_string(Determinism d);
+
 struct CheckReport {
     bool pass = true;
     bool feasible = true;
     bool nonnegative_cost = true;
-    bool deterministic_work = true;
+    Determinism deterministic_work = Determinism::NotRequested;
     std::vector<std::string> errors;
 };
 
