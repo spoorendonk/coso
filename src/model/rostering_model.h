@@ -66,7 +66,8 @@ struct EmployeeParams {
 /// result infeasible.  SB-NRP's SECTION_COVER carries these weights per line
 /// (under=100, over=1 in every published instance).  With `hard = true` both
 /// bounds are hard constraints, as NSPLib's coverage matrix is: a violation
-/// makes `Result::feasible()` false and the weights are unused.
+/// makes `Result::feasible()` false and the weights are unused.  Both weights
+/// must be non-negative; add_demand rejects a negative one.
 struct DemandParams {
     int min_employees = 0;
     int max_employees = INT_MAX;
@@ -116,7 +117,8 @@ public:
 
     // -- Demand --------------------------------------------------------------
 
-    /// Add a demand for a specific shift type on a specific day.
+    /// Add a demand for a specific shift type on a specific day.  Throws
+    /// std::invalid_argument on a negative under_weight or over_weight.
     void add_demand(int shift_type, int day, DemandParams p);
 
     // -- Constraints (hard) --------------------------------------------------

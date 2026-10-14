@@ -7,6 +7,7 @@
 
 #include <climits>
 #include <cstddef>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -205,6 +206,16 @@ TEST_CASE("RosteringModel: hard cover makes a shortfall infeasible", "[rostering
 
     CHECK_FALSE(result.feasible());
     REQUIRE(result.understaffed().size() == 1);
+}
+
+TEST_CASE("RosteringModel: a negative cover weight is rejected", "[rostering]") {
+    RosteringModel model;
+    model.add_shift_type({.name = "Day"});
+    CHECK_THROWS_AS(model.add_demand(0, 0, {.min_employees = 1, .under_weight = -1}),
+                    std::invalid_argument);
+    CHECK_THROWS_AS(model.add_demand(0, 0, {.max_employees = 1, .over_weight = -1}),
+                    std::invalid_argument);
+    CHECK(model.demands().empty());
 }
 
 TEST_CASE("RosteringModel: a positive preference weight is a reward", "[rostering]") {

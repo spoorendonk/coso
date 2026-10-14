@@ -46,6 +46,11 @@ void RosteringModel::set_horizon(int days) {
 // ---------------------------------------------------------------------------
 
 void RosteringModel::add_demand(int shift_type, int day, DemandParams p) {
+    if (p.under_weight < 0 || p.over_weight < 0) {
+        throw std::invalid_argument(
+            "RosteringModel::add_demand: cover weights must be non-negative; a negative weight "
+            "would reward the shortfall or excess it prices");
+    }
     demands_.push_back({shift_type, day, std::move(p)});
 }
 

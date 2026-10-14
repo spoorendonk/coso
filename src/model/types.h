@@ -109,7 +109,9 @@ struct Result {
         int day = -1;
     };
     /// Cover cells left short.  A soft cell's shortfall is priced into
-    /// cost(); a hard cell's also makes the result infeasible.
+    /// cost(); a hard cell's also makes the result infeasible.  Excess over
+    /// max_employees is not listed: a soft cell's shows in cost() only, a
+    /// hard cell's in feasible() and cost().
     std::vector<CoverShortfall> understaffed_;
 
     [[nodiscard]] auto const& roster() const noexcept { return roster_; }
