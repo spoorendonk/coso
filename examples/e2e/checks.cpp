@@ -71,6 +71,7 @@ Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
                                   rerun.work_ticks() >= work_budget_ticks;
         if (!counts_match) {
             eval.checks.deterministic_work = Determinism::Nondeterministic;
+            eval.checks.errors.emplace_back("deterministic_work_counts_differ");
         } else if (!budget_bound) {
             eval.checks.deterministic_work = Determinism::Inconclusive;
             eval.checks.errors.emplace_back("deterministic_work_budget_not_reached");
