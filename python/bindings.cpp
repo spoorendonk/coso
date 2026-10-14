@@ -105,10 +105,11 @@ NB_MODULE(_coso, m) {
         .def_rw("prize", &coso::ClientParams::prize,
                 "Credited in Result.cost for each served client.")
         .def_rw("required", &coso::ClientParams::required,
-                "Accepted and dropped by the native engine, which ignores it both ways: a "
-                "client with False is served whenever a route can carry it, and a client "
-                "with True is left in Result.unserved when none can, with the solution "
-                "still reported feasible (coso#196).");
+                "Accepted and dropped by the native engine, which ignores it both ways: "
+                "construction tries to serve every client, and the final capacity repair "
+                "strips clients from an overloaded route without trying other routes, so a "
+                "client with True can be left in Result.unserved at no cost, with the "
+                "solution still reported feasible (coso#196).");
 
     // -- DepotParams ----------------------------------------------------------
 

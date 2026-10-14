@@ -28,9 +28,11 @@ struct ClientParams {
     int service = 0;  ///< service duration
     int prize = 0;    ///< credited in Result::cost for each served client
     /// Accepted and dropped: the native engine's served set ignores it both
-    /// ways.  A client with false is served whenever a route can carry it, and
-    /// a client with true is dropped into Result::unserved when none can, with
-    /// the solution still reported feasible (#196).
+    /// ways.  Construction tries to serve every client, false or not, and the
+    /// final capacity repair strips clients from an overloaded route without
+    /// trying other routes, so a client with true can be left in
+    /// Result::unserved at no cost, with the solution still reported feasible
+    /// (#196).
     bool required = true;
 };
 
