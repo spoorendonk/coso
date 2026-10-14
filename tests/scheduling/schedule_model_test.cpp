@@ -340,7 +340,7 @@ TEST_CASE("ScheduleModel: invalid job index throws", "[scheduling]") {
 
 TEST_CASE("A parsed Taillard JSP instance is declarable field for field",
           "[scheduling][roundtrip]") {
-    // The literal of tests/scheduling/parser_test.cpp:15, copied rather than
+    // The literal of tests/scheduling/parser_test.cpp:16, copied rather than
     // shared: a header would couple the parser's own coverage to this audit's,
     // and either file's literal must be able to fail on its own.
     std::string const content = R"(
@@ -393,20 +393,16 @@ TEST_CASE("A parsed Taillard JSP instance is declarable field for field",
 // ---------------------------------------------------------------------------
 
 TEST_CASE("A parsed FJSP instance is declarable field for field", "[scheduling][roundtrip]") {
-    // The literal of tests/scheduling/parser_test.cpp:75, copied for the same
+    // The literal of tests/scheduling/parser_test.cpp:76, copied for the same
     // reason as above.  Operation 0 is the flexible one the FJSP format exists
     // for: two eligible machines with *different* durations (3 and 5).
     //
-    // The literal is written 1-based because that is what parse_fjsp reads
-    // today — it does `machine - 1` at src/scheduling/parsers.cpp:161,174.  The
-    // only verified FJSP set (SchedulingLab/fjsp-instances) is 0-based, so the
-    // same file taken from that set compiles to machine -1; that is coso#232,
-    // and it is deliberately not fixed here.  When it is, this case fails and
-    // says so.
+    // The literal is 0-based, the convention of the only verified FJSP set
+    // (SchedulingLab/fjsp-instances) and parse_fjsp's default since #232.
     std::string const content = R"(
 2 3
-2  2 1 3 3 5  1 2 4
-1  3 1 2 2 4 3 1
+2  2 0 3 2 5  1 1 4
+1  3 0 2 1 4 2 1
 )";
 
     // Step 1 — the parser reads the literal as written.
@@ -423,9 +419,8 @@ TEST_CASE("A parsed FJSP instance is declarable field for field", "[scheduling][
     CHECK(parsed.precedences().size() == 1);
     CHECK(parsed.objective() == ScheduleObjective::Makespan);
 
-    // Step 2 — the same instance declared through ScheduleModel.  The machine
-    // indices here are 0-based, i.e. post-conversion: the model API has no
-    // 1-based dialect, and that asymmetry is exactly what #232 is about.
+    // Step 2 — the same instance declared through ScheduleModel, whose machine
+    // indices are 0-based like the file's.
     ScheduleModel model;
     for (int m = 0; m < 3; ++m) {
         model.add_machine();
@@ -532,18 +527,18 @@ TEST_CASE("Discarded scheduling format fields stay discarded", "[scheduling][rou
         // from the job lines anyway.
         std::string const without_avg = R"(
 2 3
-2  2 1 3 3 5  1 2 4
-1  3 1 2 2 4 3 1
+2  2 0 3 2 5  1 1 4
+1  3 0 2 1 4 2 1
 )";
         std::string const with_avg = R"(
 2 3 2
-2  2 1 3 3 5  1 2 4
-1  3 1 2 2 4 3 1
+2  2 0 3 2 5  1 1 4
+1  3 0 2 1 4 2 1
 )";
         std::string const with_wrong_avg = R"(
 2 3 99
-2  2 1 3 3 5  1 2 4
-1  3 1 2 2 4 3 1
+2  2 0 3 2 5  1 1 4
+1  3 0 2 1 4 2 1
 )";
 
         check_same_schedule_data(parse_fjsp(without_avg), parse_fjsp(with_avg));

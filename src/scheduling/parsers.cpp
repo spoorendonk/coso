@@ -103,7 +103,7 @@ ScheduleData read_taillard_jsp(const std::string& path) {
 //  Flexible Job Shop (FJSP)
 // ---------------------------------------------------------------------------
 
-ScheduleData parse_fjsp(const std::string& content) {
+ScheduleData parse_fjsp(const std::string& content, FjspIndexing indexing) {
     std::istringstream in(content);
 
     // First data line: num_jobs  num_machines  [avg_ops_per_job]
@@ -120,6 +120,19 @@ ScheduleData parse_fjsp(const std::string& content) {
         }
         // Optional third value (avg_ops_per_job) is ignored.
     }
+
+    int const base = indexing == FjspIndexing::OneBased ? 1 : 0;
+    auto to_machine = [&](int machine, int j, int o) {
+        int const m = machine - base;
+        if (m < 0 || m >= num_machines) {
+            throw std::runtime_error(
+                "FJSP parse error: job " + std::to_string(j) + ", op " + std::to_string(o) +
+                ": machine " + std::to_string(machine) + " is outside " + std::to_string(base) +
+                ".." + std::to_string(num_machines - 1 + base) + " (" + std::to_string(base) +
+                "-based indexing; is the file using the other one?)");
+        }
+        return m;
+    };
 
     ScheduleData::Builder builder;
 
@@ -158,7 +171,7 @@ ScheduleData parse_fjsp(const std::string& content) {
                     throw std::runtime_error("FJSP parse error: job " + std::to_string(j) +
                                              ", op " + std::to_string(o));
                 }
-                params.machine = machine - 1;  // 1-based -> 0-based
+                params.machine = to_machine(machine, j, o);
                 params.duration = duration;
             } else {
                 // Multiple eligible machines.
@@ -171,7 +184,7 @@ ScheduleData parse_fjsp(const std::string& content) {
                                                  ", op " + std::to_string(o) + ", eligible " +
                                                  std::to_string(e));
                     }
-                    params.eligible_machines.push_back(machine - 1);
+                    params.eligible_machines.push_back(to_machine(machine, j, o));
                     params.durations_per_machine.push_back(duration);
                 }
             }
@@ -184,8 +197,8 @@ ScheduleData parse_fjsp(const std::string& content) {
     return builder.build();
 }
 
-ScheduleData read_fjsp(const std::string& path) {
-    return parse_fjsp(read_file(path));
+ScheduleData read_fjsp(const std::string& path, FjspIndexing indexing) {
+    return parse_fjsp(read_file(path), indexing);
 }
 
 }  // namespace coso

@@ -1,6 +1,7 @@
 #include "scheduling/parsers.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 using namespace coso;
 
@@ -66,16 +67,16 @@ TEST_CASE("parse_taillard_jsp - error on empty input", "[scheduling][parser]") {
 // ---------------------------------------------------------------------------
 
 TEST_CASE("parse_fjsp - small FJSP instance", "[scheduling][parser]") {
-    // 2 jobs, 3 machines.
+    // 2 jobs, 3 machines, 0-based as in SchedulingLab/fjsp-instances (#232).
     // Job 0: 2 operations
-    //   Op 0: 2 eligible machines: (m1, d=3) (m3, d=5)  -> 0-based: (0,3) (2,5)
-    //   Op 1: 1 eligible machine:  (m2, d=4)             -> 0-based: fixed m=1, d=4
+    //   Op 0: 2 eligible machines: (m0, d=3) (m2, d=5)
+    //   Op 1: 1 eligible machine:  (m1, d=4)  -> fixed m=1, d=4
     // Job 1: 1 operation
-    //   Op 0: 3 eligible machines: (m1,d=2) (m2,d=4) (m3,d=1)
+    //   Op 0: 3 eligible machines: (m0,d=2) (m1,d=4) (m2,d=1)
     std::string content = R"(
 2 3
-2  2 1 3 3 5  1 2 4
-1  3 1 2 2 4 3 1
+2  2 0 3 2 5  1 1 4
+1  3 0 2 1 4 2 1
 )";
 
     auto data = parse_fjsp(content);
@@ -129,4 +130,46 @@ TEST_CASE("parse_fjsp - small FJSP instance", "[scheduling][parser]") {
 
 TEST_CASE("parse_fjsp - error on empty input", "[scheduling][parser]") {
     CHECK_THROWS_AS(parse_fjsp(""), std::runtime_error);
+}
+
+TEST_CASE("parse_fjsp - the caller states the machine indexing", "[scheduling][parser]") {
+    // The same instance in both live conventions (#232): SchedulingLab's
+    // 0-based files and the original 1-based Brandimarte/Hurink ones.
+    std::string const zero_based = R"(
+2 3
+2  2 0 3 2 5  1 1 4
+1  3 0 2 1 4 2 1
+)";
+    std::string const one_based = R"(
+2 3
+2  2 1 3 3 5  1 2 4
+1  3 1 2 2 4 3 1
+)";
+
+    SECTION("0-based is the default") {
+        auto data = parse_fjsp(zero_based);
+        CHECK(data.operation(0).eligible_machines == std::vector<int>{0, 2});
+        CHECK(data.operation(1).fixed_machine == 1);
+    }
+
+    SECTION("OneBased reads the 1-based file as the same instance") {
+        auto a = parse_fjsp(zero_based);
+        auto b = parse_fjsp(one_based, FjspIndexing::OneBased);
+        for (int o = 0; o < 3; ++o) {
+            CHECK(a.operation(o).fixed_machine == b.operation(o).fixed_machine);
+            CHECK(a.operation(o).eligible_machines == b.operation(o).eligible_machines);
+            CHECK(a.operation(o).durations_per_machine == b.operation(o).durations_per_machine);
+            CHECK(a.operation(o).duration == b.operation(o).duration);
+        }
+    }
+
+    SECTION("a machine out of range under the stated indexing is rejected") {
+        // Machine 3 does not exist among 0..2; machine 0 does not among 1..3.
+        CHECK_THROWS_WITH(parse_fjsp(one_based),
+                          Catch::Matchers::ContainsSubstring("machine 3 is outside 0..2"));
+        CHECK_THROWS_WITH(parse_fjsp(zero_based, FjspIndexing::OneBased),
+                          Catch::Matchers::ContainsSubstring("machine 0 is outside 1..3"));
+        // A fixed (single-eligible) operation is checked as well.
+        CHECK_THROWS_AS(parse_fjsp("1 2\n1  1 2 7\n"), std::runtime_error);
+    }
 }
