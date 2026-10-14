@@ -443,6 +443,7 @@ def test_dropped_declarations_say_so() -> None:
         (coso.RoutingModel.add_depot.__doc__, "coso#196"),
         (coso.ClientParams.required.__doc__, "coso#196"),
         (coso.ClientParams.tw.__doc__, "coso#194"),
+        (coso.DepotParams.tw.__doc__, "coso#194"),
         (coso.VehicleTypeParams.max_distance.__doc__, "coso#194"),
         (coso.VehicleTypeParams.max_duration.__doc__, "coso#194"),
     ]:

@@ -27,8 +27,10 @@ struct ClientParams {
     TimeWindow tw = {0, INT_MAX};
     int service = 0;  ///< service duration
     int prize = 0;    ///< credited in Result::cost for each served client
-    /// Accepted and dropped: the native engine serves every client, so false
-    /// never leaves one unserved (#196).
+    /// Accepted and dropped: the native engine's served set ignores it both
+    /// ways.  A client with false is served whenever a route can carry it, and
+    /// a client with true is dropped into Result::unserved when none can, with
+    /// the solution still reported feasible (#196).
     bool required = true;
 };
 
@@ -43,8 +45,9 @@ struct DepotParams {
 /// vehicle capacity, minimising distance minus the prizes of served clients,
 /// which is what Result::cost reports; Result::distance is the bare distance.
 /// The schema is the 13 slots the v1 scope ruling on #200 kept on benchmark
-/// evidence.  Accepted and dropped by the native engine: time windows, service
-/// times, max_distance and max_duration (#194), and ClientParams::required,
+/// evidence.  Penalised but not enforced by the native engine: client and
+/// depot time windows, which service times feed (#194).  Accepted and
+/// dropped: max_distance and max_duration (#194), and ClientParams::required,
 /// add_request and every depot after the first (#196).
 class RoutingModel {
 public:

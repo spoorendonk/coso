@@ -105,14 +105,18 @@ NB_MODULE(_coso, m) {
         .def_rw("prize", &coso::ClientParams::prize,
                 "Credited in Result.cost for each served client.")
         .def_rw("required", &coso::ClientParams::required,
-                "Accepted and dropped by the native engine: every client is served, so "
-                "False never leaves one unserved (coso#196).");
+                "Accepted and dropped by the native engine, which ignores it both ways: a "
+                "client with False is served whenever a route can carry it, and a client "
+                "with True is left in Result.unserved when none can, with the solution "
+                "still reported feasible (coso#196).");
 
     // -- DepotParams ----------------------------------------------------------
 
     nb::class_<coso::DepotParams>(m, "DepotParams")
         .def(nb::init<>())
-        .def_rw("tw", &coso::DepotParams::tw);
+        .def_rw("tw", &coso::DepotParams::tw,
+                "Time window. Penalised but not enforced by the native engine: a violating "
+                "solution comes back feasible (coso#194).");
 
     // -- RoutingModel stored entries ------------------------------------------
     //
