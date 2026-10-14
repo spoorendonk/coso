@@ -13,6 +13,11 @@ namespace coso {
 struct MachineParams {};
 
 /// Parameters for an operation within a job.
+///
+/// An operation names exactly one of: a fixed `machine` (with `duration`), or
+/// a non-empty `eligible_machines` with one `durations_per_machine` entry each.
+/// Every index must name a declared machine. Anything else is rejected when the
+/// model is compiled (#234); an operation needing no machine is not declarable.
 struct OperationParams {
     int machine = -1;                        ///< fixed machine (-1 = flexible / FJSP)
     std::vector<int> eligible_machines;      ///< for FJSP: machine alternatives

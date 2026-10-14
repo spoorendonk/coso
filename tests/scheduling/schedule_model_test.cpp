@@ -4,9 +4,12 @@
 #include "scheduling/schedule_data.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <cstddef>
+#include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 using namespace coso;
@@ -201,6 +204,64 @@ TEST_CASE("ScheduleData: JSP compilation", "[scheduling]") {
     CHECK(precs[0].after == 1);
     CHECK(precs[1].before == 2);
     CHECK(precs[1].after == 3);
+}
+
+// ---------------------------------------------------------------------------
+//  ScheduleData compilation — machine references are validated (#234)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("A machine reference the instance cannot honour is rejected", "[scheduling]") {
+    using Catch::Matchers::ContainsSubstring;
+    auto build_with = [](OperationParams p) {
+        ScheduleData::Builder builder;
+        builder.add_machine({});
+        builder.add_machine({});
+        builder.add_job({});
+        builder.add_operation(0, std::move(p));
+        return builder.build();
+    };
+
+    SECTION("a fixed machine out of range is not read as 'any machine'") {
+        CHECK_THROWS_WITH(build_with({.machine = 7, .duration = 5}),
+                          ContainsSubstring("machine 7 does not exist (machines are 0..1)"));
+        CHECK_THROWS_WITH(build_with({.machine = -2, .duration = 5}),
+                          ContainsSubstring("machine -2 does not exist"));
+    }
+
+    SECTION("an operation with no machine at all is rejected, not made universal") {
+        CHECK_THROWS_WITH(build_with({.duration = 5}), ContainsSubstring("declares no machine"));
+    }
+
+    SECTION("an out-of-range eligible machine is rejected, not dropped") {
+        CHECK_THROWS_WITH(
+            build_with({.eligible_machines = {0, 2}, .durations_per_machine = {3, 4}}),
+            ContainsSubstring("eligible machine 2 does not exist"));
+        CHECK_THROWS_WITH(build_with({.eligible_machines = {5}, .durations_per_machine = {3}}),
+                          ContainsSubstring("eligible machine 5 does not exist"));
+    }
+
+    SECTION("machine and eligible_machines together are ambiguous") {
+        CHECK_THROWS_WITH(
+            build_with({.machine = 0, .eligible_machines = {1}, .durations_per_machine = {3}}),
+            ContainsSubstring("both machine and eligible_machines"));
+    }
+
+    SECTION("durations_per_machine must give one duration per eligible machine") {
+        CHECK_THROWS_WITH(build_with({.eligible_machines = {0, 1}, .durations_per_machine = {3}}),
+                          ContainsSubstring("durations_per_machine has 1 entries for 2"));
+        CHECK_THROWS_WITH(build_with({.eligible_machines = {0, 1}, .duration = 3}),
+                          ContainsSubstring("durations_per_machine has 0 entries for 2"));
+    }
+
+    SECTION("ScheduleModel::solve throws instead of aborting on a single job") {
+        // Every eligible machine out of range used to leave the row INT_MAX
+        // and trip the processing_time assert in compute_makespan.
+        ScheduleModel model;
+        model.add_machine();
+        int const j = model.add_job();
+        model.add_operation(j, {.eligible_machines = {3}, .durations_per_machine = {4}});
+        CHECK_THROWS_AS(model.solve(TimeLimit(1.0)), std::invalid_argument);
+    }
 }
 
 // ---------------------------------------------------------------------------

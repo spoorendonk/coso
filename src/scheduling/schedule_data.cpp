@@ -2,6 +2,7 @@
 
 #include <climits>
 #include <stdexcept>
+#include <string>
 
 namespace coso {
 
@@ -74,6 +75,40 @@ ScheduleData ScheduleData::Builder::build() const {
         jd.operations = job_operations_[j];
     }
 
+    // Validate machine references before anything reads them (#234). A v1 shop
+    // operation occupies exactly one machine (#202), so it names either one
+    // fixed machine or a non-empty set of eligible ones, all in range.
+    // Machine-free operations are an RCPSP extension, not yet declarable.
+    for (int o = 0; o < num_operations; ++o) {
+        auto const& p = operations_[o].params;
+        auto where = [&] { return "ScheduleData::Builder::build: operation " + std::to_string(o); };
+        auto in_range = [&](int m) { return m >= 0 && m < num_machines; };
+        auto range = [&] { return " (machines are 0.." + std::to_string(num_machines - 1) + ")"; };
+        bool const fixed = p.machine != -1;
+        if (fixed && !p.eligible_machines.empty()) {
+            throw std::invalid_argument(where() + " declares both machine and eligible_machines");
+        }
+        if (!fixed && p.eligible_machines.empty()) {
+            throw std::invalid_argument(where() + " declares no machine");
+        }
+        if (fixed && !in_range(p.machine)) {
+            throw std::invalid_argument(where() + ": machine " + std::to_string(p.machine) +
+                                        " does not exist" + range());
+        }
+        for (int m : p.eligible_machines) {
+            if (!in_range(m)) {
+                throw std::invalid_argument(where() + ": eligible machine " + std::to_string(m) +
+                                            " does not exist" + range());
+            }
+        }
+        if (!fixed && p.durations_per_machine.size() != p.eligible_machines.size()) {
+            throw std::invalid_argument(
+                where() + ": durations_per_machine has " +
+                std::to_string(p.durations_per_machine.size()) + " entries for " +
+                std::to_string(p.eligible_machines.size()) + " eligible machines");
+        }
+    }
+
     // Operations.
     data.operations_.resize(num_operations);
     for (int o = 0; o < num_operations; ++o) {
@@ -91,25 +126,12 @@ ScheduleData ScheduleData::Builder::build() const {
     data.processing_times_.assign(num_operations * num_machines, INT_MAX);
     for (int o = 0; o < num_operations; ++o) {
         auto const& op = data.operations_[o];
-        if (op.fixed_machine >= 0 && op.fixed_machine < num_machines) {
-            // Fixed machine assignment.
+        if (op.fixed_machine >= 0) {
             data.processing_times_[o * num_machines + op.fixed_machine] = op.duration;
-        } else if (!op.eligible_machines.empty()) {
-            // FJSP: eligible machines with per-machine durations.
+        } else {
             for (int i = 0; i < static_cast<int>(op.eligible_machines.size()); ++i) {
-                int m = op.eligible_machines[i];
-                if (m >= 0 && m < num_machines) {
-                    int dur = (i < static_cast<int>(op.durations_per_machine.size()))
-                                  ? op.durations_per_machine[i]
-                                  : op.duration;
-                    data.processing_times_[o * num_machines + m] = dur;
-                }
-            }
-        } else if (num_machines > 0) {
-            // No machine specified — assume operation can run on any machine
-            // with its fixed duration.
-            for (int m = 0; m < num_machines; ++m) {
-                data.processing_times_[o * num_machines + m] = op.duration;
+                data.processing_times_[o * num_machines + op.eligible_machines[i]] =
+                    op.durations_per_machine[i];
             }
         }
     }
