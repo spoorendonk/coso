@@ -10,6 +10,6 @@ int main() {
 
     coso::Result result = model.solve(coso::TimeLimit(1.0, 0.05));
     std::cout << "network feasible=" << result.feasible() << " cost=" << result.cost()
-              << " commodities=" << result.flows().size() << "\n";
+              << " commodities=" << result.arc_flows().size() << "\n";
     return result.feasible() ? 0 : 1;
 }

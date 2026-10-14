@@ -40,7 +40,7 @@ TEST_CASE("Result default-constructs to infeasible with zero cost", "[types]") {
     REQUIRE(r.unassigned().empty());
     REQUIRE(r.bins().empty());
     REQUIRE(r.num_bins() == 0);
-    REQUIRE(r.flows().empty());
+    REQUIRE(r.arc_flows().empty());
 }
 
 TEST_CASE("TimeLimit stores seconds", "[types]") {
@@ -242,7 +242,7 @@ TEST_CASE("NetworkModel solve returns flow result", "[network]") {
     coso::Result r = m.solve(coso::TimeLimit(1.0));
     REQUIRE(r.feasible());
     REQUIRE(r.cost() == 10.0);
-    REQUIRE_FALSE(r.flows().empty());
+    REQUIRE(r.arc_flows() == std::vector<std::vector<double>>{{5.0}});
     REQUIRE(r.work_ticks() > 0);
     REQUIRE(r.work_units() > 0.0);
 }

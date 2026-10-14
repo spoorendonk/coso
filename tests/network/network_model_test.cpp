@@ -10,31 +10,39 @@ TEST_CASE("NetworkModel solves a simple minimum-cost flow", "[network][model]") 
     int m = model.add_node(0, "middle");
     int t = model.add_node(-5, "sink");
 
-    model.add_arc(s, m, 1, 5);
-    model.add_arc(m, t, 1, 5);
-    model.add_arc(s, t, 5, 5);
+    int sm = model.add_arc(s, m, 1, 5);
+    int mt = model.add_arc(m, t, 1, 5);
+    int st = model.add_arc(s, t, 5, 5);
 
     Result result = model.solve(TimeLimit(1.0));
 
     REQUIRE(result.feasible());
     // Optimal route is s->m->t with 5 units: cost 10.
     REQUIRE(result.cost() == 10.0);
-    REQUIRE(result.flows().size() == 1);
-    REQUIRE_FALSE(result.flows()[0].empty());
+    // The arc flows are the solution itself, indexed as the arcs were declared.
+    REQUIRE(result.arc_flows().size() == 1);
+    auto const& flow = result.arc_flows()[0];
+    REQUIRE(flow.size() == 3);
+    REQUIRE(flow[sm] == 5.0);
+    REQUIRE(flow[mt] == 5.0);
+    REQUIRE(flow[st] == 0.0);
 }
 
 TEST_CASE("NetworkModel respects arc upper capacity", "[network][model]") {
     NetworkModel model;
     int s = model.add_node(4, "source");
     int t = model.add_node(-4, "sink");
-    model.add_arc(s, t, 1, 2);  // cheap, capped at 2
-    model.add_arc(s, t, 5, 4);  // expensive, wide open
+    int cheap = model.add_arc(s, t, 1, 2);  // cheap, capped at 2
+    int wide = model.add_arc(s, t, 5, 4);   // expensive, wide open
 
     Result result = model.solve(TimeLimit(1.0));
 
     REQUIRE(result.feasible());
     // The cap forces 2 units onto the expensive arc: 2 * 1 + 2 * 5.
     REQUIRE(result.cost() == 12.0);
+    // Parallel arcs: only per-arc flows can say which one carries what.
+    REQUIRE(result.arc_flows()[0][cheap] == 2.0);
+    REQUIRE(result.arc_flows()[0][wide] == 2.0);
 }
 
 TEST_CASE("NetworkModel invalid arc indices throw", "[network][model]") {

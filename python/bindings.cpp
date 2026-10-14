@@ -51,11 +51,6 @@ NB_MODULE(_coso, m) {
 
     // -- Result ---------------------------------------------------------------
 
-    nb::class_<coso::Result::PathFlow>(m, "PathFlow")
-        .def(nb::init<>())
-        .def_rw("path", &coso::Result::PathFlow::path)
-        .def_rw("flow", &coso::Result::PathFlow::flow);
-
     nb::class_<coso::Result>(m, "Result")
         .def_prop_ro("feasible", &coso::Result::feasible)
         .def_prop_ro("cost", &coso::Result::cost)
@@ -68,7 +63,7 @@ NB_MODULE(_coso, m) {
         .def_prop_ro("distance", &coso::Result::distance)
         .def_prop_ro("route_start_depots", &coso::Result::route_start_depots)
         .def_prop_ro("opened_depots", &coso::Result::opened_depots)
-        .def_prop_ro("flows", &coso::Result::flows)
+        .def_prop_ro("arc_flows", &coso::Result::arc_flows)
         .def_prop_ro("production", &coso::Result::production)
         .def_prop_ro("inventory", &coso::Result::inventory)
         .def("__repr__", [](const coso::Result& r) {

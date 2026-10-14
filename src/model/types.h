@@ -31,7 +31,7 @@ struct TimeLimit {
 ///   - scheduling: makespan(), schedule()
 ///   - rostering:  roster(), day()
 ///   - packing:    bins(), num_bins()
-///   - network:    flows()
+///   - network:    arc_flows()
 ///   - lotsizing:  production(), inventory()
 struct Result {
     bool feasible_ = false;
@@ -111,15 +111,14 @@ struct Result {
 
     // -- Network / Flow --------------------------------------------------
 
-    /// Per-commodity: list of (path, flow) pairs.
-    struct PathFlow {
-        std::vector<int> path;
-        double flow = 0.0;
-    };
-    /// flows_[commodity] = vector of PathFlow.
-    std::vector<std::vector<PathFlow>> flows_;
+    /// arc_flows_[commodity][arc] = flow on that arc, indexed as the arcs were
+    /// declared.  This is the exact solution: it can be checked against every
+    /// supply and capacity the model declared.  No path view is returned — a
+    /// node sequence cannot tell parallel arcs apart, and decomposing flow
+    /// into paths belongs with #176's accessors (#206).
+    std::vector<std::vector<double>> arc_flows_;
 
-    [[nodiscard]] auto const& flows() const noexcept { return flows_; }
+    [[nodiscard]] auto const& arc_flows() const noexcept { return arc_flows_; }
 
     // -- Lot sizing / production -----------------------------------------
 

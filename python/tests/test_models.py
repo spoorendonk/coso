@@ -11,7 +11,7 @@ def test_result_exposes_new_sections():
 
     r = m.solve(coso.TimeLimit(1.0))
 
-    assert isinstance(r.flows, list)
+    assert isinstance(r.arc_flows, list)
     assert isinstance(r.production, list)
     assert isinstance(r.inventory, list)
 
@@ -30,9 +30,7 @@ def test_network_model_solve_and_flows():
 
     assert r.feasible
     assert r.cost == 10.0
-    assert len(r.flows) == 1
-    assert len(r.flows[0]) >= 1
-    assert r.flows[0][0].flow > 0
+    assert r.arc_flows == [[5.0, 5.0, 0.0]]
 
 
 def test_network_model_deterministic_work_units():
