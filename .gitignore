@@ -30,5 +30,4 @@ dist/
 tests/data/*.vrp
 tests/data/*.txt
 tests/data/taillard/
-tests/data/psplib/
 tests/data/nrp/

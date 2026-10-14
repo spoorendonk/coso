@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Download benchmark instances for testing (routing + scheduling).
+# Download benchmark instances for testing (routing, scheduling, rostering).
 #
 # Usage:  ./tests/data/download_benchmarks.sh
 #
@@ -73,6 +73,15 @@
 #                                                  no VRPB evidence anywhere as
 #                                                  a result.
 #    comopt.ifi.uni-heidelberg.de/.../TSPLIB95     No response.
+#
+#  Not fetched, on purpose:
+#
+#    PSPLIB (RCPSP)  #202 defers RCPSP out of v1 and nothing reads .sm files any
+#                    more. The old om-db.wi.tum.de/psplib/files/ URLs are 404; the
+#                    site serves download_dataset.php?set=j30&mode=sm&format=zip
+#                    and download_solution.php?set=j30&mode=sm&type=opt instead,
+#                    verified 2026-10 (#231). Wire it when RCPSP is its own
+#                    archetype.
 
 set -euo pipefail
 
@@ -113,33 +122,40 @@ SOLOMON_INSTANCES=(
 	"RC102.txt"
 )
 
-download() {
+# A failed download is recorded, not fatal, so one dead host does not stop the
+# rest -- but the script exits non-zero and names every file it did not get. A
+# script that reports success while downloading nothing is worse than one that
+# fails (#231).
+FAILED=()
+
+download_to_dir() {
 	local url="$1"
-	local file="$2"
-	local dest="${SCRIPT_DIR}/${file}"
+	local dest="$2"
 
 	if [[ -f "$dest" ]]; then
-		echo "  [skip] ${file} (already exists)"
+		echo "  [skip] $(basename "$dest") (already exists)"
 		return 0
 	fi
 
-	echo "  [download] ${file} ..."
+	echo "  [download] $(basename "$dest") ..."
+	local ok=0
 	if command -v curl &>/dev/null; then
-		curl -fsSL -o "$dest" "${url}/${file}" 2>/dev/null || {
-			echo "  [warn] failed to download ${file}"
-			rm -f "$dest"
-			return 0
-		}
+		curl -fsSL -o "$dest" "$url" 2>/dev/null && ok=1
 	elif command -v wget &>/dev/null; then
-		wget -q -O "$dest" "${url}/${file}" 2>/dev/null || {
-			echo "  [warn] failed to download ${file}"
-			rm -f "$dest"
-			return 0
-		}
+		wget -q -O "$dest" "$url" 2>/dev/null && ok=1
 	else
 		echo "ERROR: neither curl nor wget found" >&2
 		exit 1
 	fi
+	if [[ $ok -eq 0 ]]; then
+		echo "  [FAIL] $(basename "$dest") <- ${url}" >&2
+		rm -f "$dest"
+		FAILED+=("$url")
+	fi
+}
+
+download() {
+	download_to_dir "${1}/${2}" "${SCRIPT_DIR}/${2}"
 }
 
 echo "Downloading CVRPLIB benchmark instances to ${SCRIPT_DIR}/ ..."
@@ -156,8 +172,8 @@ done
 #  Taillard JSP instances (ta01-ta10, 15x15)
 # ---------------------------------------------------------------------------
 #
-#  Source: http://jobshop.jjvh.nl/  (Taillard format)
-#  Mirror: https://raw.githubusercontent.com/tamy0612/JSPLIB/main/instances
+#  Taillard's own hosts and jobshop.jjvh.nl are dead (see Provenance above);
+#  the instances survive via the JSPLIB mirror, in Taillard format.
 
 TAILLARD_BASE_URL="https://raw.githubusercontent.com/tamy0612/JSPLIB/master/instances"
 TAILLARD_DIR="${SCRIPT_DIR}/taillard"
@@ -176,61 +192,9 @@ TAILLARD_INSTANCES=(
 	"ta10"
 )
 
-download_to_dir() {
-	local url="$1"
-	local dest="$2"
-
-	if [[ -f "$dest" ]]; then
-		echo "  [skip] $(basename "$dest") (already exists)"
-		return 0
-	fi
-
-	echo "  [download] $(basename "$dest") ..."
-	if command -v curl &>/dev/null; then
-		curl -fsSL -o "$dest" "$url" 2>/dev/null || {
-			echo "  [warn] failed to download $(basename "$dest")"
-			rm -f "$dest"
-			return 0
-		}
-	elif command -v wget &>/dev/null; then
-		wget -q -O "$dest" "$url" 2>/dev/null || {
-			echo "  [warn] failed to download $(basename "$dest")"
-			rm -f "$dest"
-			return 0
-		}
-	else
-		echo "ERROR: neither curl nor wget found" >&2
-		exit 1
-	fi
-}
-
 echo "Downloading Taillard JSP instances to ${TAILLARD_DIR}/ ..."
 for inst in "${TAILLARD_INSTANCES[@]}"; do
 	download_to_dir "${TAILLARD_BASE_URL}/${inst}" "${TAILLARD_DIR}/${inst}.txt"
-done
-
-# ---------------------------------------------------------------------------
-#  PSPLIB j30 instances (j301_1 - j301_5)
-# ---------------------------------------------------------------------------
-#
-#  Source: https://www.om-db.wi.tum.de/psplib/  (Patterson .sm format)
-#  These are small 30-activity RCPSP instances with 4 renewable resources.
-
-PSPLIB_BASE_URL="https://www.om-db.wi.tum.de/psplib/files"
-PSPLIB_DIR="${SCRIPT_DIR}/psplib"
-mkdir -p "$PSPLIB_DIR"
-
-PSPLIB_INSTANCES=(
-	"j301_1.sm"
-	"j301_2.sm"
-	"j301_3.sm"
-	"j301_4.sm"
-	"j301_5.sm"
-)
-
-echo "Downloading PSPLIB j30 instances to ${PSPLIB_DIR}/ ..."
-for inst in "${PSPLIB_INSTANCES[@]}"; do
-	download_to_dir "${PSPLIB_BASE_URL}/${inst}" "${PSPLIB_DIR}/${inst}"
 done
 
 # ---------------------------------------------------------------------------
@@ -260,4 +224,9 @@ for inst in "${NRP_INSTANCES[@]}"; do
 	download_to_dir "${NRP_BASE_URL}/${inst}" "${NRP_DIR}/${inst}"
 done
 
+if [[ ${#FAILED[@]} -gt 0 ]]; then
+	echo "FAILED: ${#FAILED[@]} download(s) did not complete:" >&2
+	printf '  %s\n' "${FAILED[@]}" >&2
+	exit 1
+fi
 echo "Done."
