@@ -1,3 +1,25 @@
+<!-- wcp: CLAUDE.md base=c649feea9014 type=cpp-python -->
+<!-- wcp-declined: 996da8f2cf7d Communication Style -->
+<!-- wcp-declined: 0c56c7b46579 Code Navigation -->
+<!-- wcp-declined: aa64ca55c171 Development Workflow -->
+<!-- wcp-declined: b95d9e68df99 Git Workflow -->
+<!-- wcp-declined: 2b4541d688e6 Commit Messages -->
+<!-- wcp-declined: a6e5ec6d33d8 CLAUDE.md Discipline -->
+<!-- wcp-declined: 6e3ad83d1cb5 Complexity -->
+<!-- wcp-declined: 1a2483f6e234 Plan Adherence -->
+<!-- wcp-declined: e1a2b49b4c80 Reference Correctness -->
+<!-- wcp-declined: 027569c8a6fc Common Mistakes -->
+<!-- wcp-declined: a3f26c0f7cdd C++ -->
+<!-- wcp-declined: 448be1202c3e CMake -->
+<!-- wcp-declined: e9feadcddcb5 Testing (GoogleTest) -->
+<!-- wcp-declined: a87ec66c5246 Python -->
+<!-- wcp-declined: cc3df5ee540d Testing (pytest) -->
+<!-- wcp-declined: 004504610dd6 Dependencies -->
+<!-- wcp-declined: 69dc0f786da4 nanobind Bindings -->
+<!-- wcp-declined: c4fc130d1235 Ownership and Lifetime -->
+<!-- wcp-declined: cf8d0fc1773f Type Conversions -->
+<!-- wcp-declined: 7e7de94f1273 Testing Bindings -->
+<!-- wcp-declined: 9070a09f6181 LSP -->
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -199,15 +221,17 @@ verified benchmark run backs them (#177).
 
 ## Gates
 
-Three git hooks live in `.githooks/`, tracked in the repo. `cmake -B build` points
-`core.hooksPath` at that directory, so **configuring the build is what turns the
-gates on** — a fresh clone has them inert until then.
+Three git hooks live in `.githooks/`, tracked in the repo. `cmake -B build` (or
+`wcp init`) points `core.hooksPath` at that directory, so **configuring the build
+is what turns the gates on** — a fresh clone has them inert until then.
+`commit-msg` and `pre-push` are wcp's (see **## Hooks Are Files In This
+Repository**); `pre-commit` is COSO's own.
 
 | Hook | Runs | On failure |
 |---|---|---|
-| `commit-msg` | Conventional Commits format, subject ≤ 72 chars | blocks |
+| `commit-msg` | Conventional Commits format, subject ≤ 72 chars; `fixup!`/`squash!` subjects are refused too | blocks |
 | `pre-commit` | Formats and auto-fixes staged files, re-stages, builds, then runs the tests for the languages that changed | blocks on build or test failure |
-| `pre-push` | Build + full suite, then clang-tidy, shellcheck, ruff complexity, mypy | blocks on build/test failure; lint findings warn only |
+| `pre-push` | No merge commits on `main`, the review receipt (**## Self-Review**), then the `clean`, `build` and `test` fences in a fresh worktree at the pushed commit | blocks |
 
 Both hooks count `CMakeLists.txt` as code, not as the prose its extension
 suggests. `pre-commit` triggers the C++ build and tests on it even when no
@@ -217,32 +241,35 @@ push ungated.
 
 `pre-push` takes its build and test commands from the fenced blocks in
 **## Build & Test** above, so that section is executable configuration, not just
-documentation. Renaming a fence or moving the heading makes the hook block and
-say which fence it could not find — including on a docs-only push, since
-CLAUDE.md is itself the file that can break them. The `sed` range that reads it
-ends at the next `## ` heading, so **## Build & Test** must stay followed by
-another level-2 heading.
+documentation, read from the CLAUDE.md of the commit being pushed. A missing
+`test` fence blocks the push; a missing `build` fence turns the local CI off
+without a word, because that is how a project opts out of it. A push touching
+CLAUDE.md always runs the local CI, since it is the file that can break them.
+The `sed` range that reads it ends at the next `## ` heading, so
+**## Build & Test** must stay followed by another level-2 heading.
 
-The `clean` fence is opt-in: `COSO_PREPUSH_CLEAN=1 git push` discards `build/`
-and rebuilds from scratch. By default `pre-push` builds incrementally, which
-gates the same code without spending minutes per push or deleting the directory
-`pre-commit` builds in.
+`pre-push` builds in a new worktree outside the checkout
+(`${XDG_CACHE_HOME:-~/.cache}/local-ci`), so every push configures and builds
+from scratch and never touches the `build/` that `pre-commit` builds in.
+`git config hooks.localCiCpus 0-1` pins it to fewer CPUs (a `-j$(nproc)` in the
+fences follows), and `git config hooks.localCi off` turns it off in one clone.
 
 `pre-commit` will not re-stage a file that already had unstaged changes — `git
 add` takes the whole file, so re-adding one would commit hunks you deliberately
 kept back. Such files are formatted, left unstaged, and named in the output.
 
-Tools resolve from `.venv/bin` first, then `PATH` (`.githooks/resolve-tools.sh`).
-A tool that is missing everywhere is reported, never skipped in silence.
+`pre-commit` resolves tools from `.venv/bin` first, then `PATH`
+(`.githooks/resolve-tools.sh`). A tool that is missing everywhere is reported,
+never skipped in silence.
 
 **clang 18 or newer**, so the distro's own package works: Ubuntu 24.04 ships
 clang 18, 26.04 ships 21. Everything that can *block* is version-stable, and was
 measured rather than assumed — clang-format 18.1.8 through 23.1.0 all leave the
 tree byte-identical, and clang-tidy 18 reports nothing for the four checks
-`pre-commit` auto-fixes or for the naming rules. `pre-push`'s clang-tidy list is
-advisory and currently empty; because the check families are wildcards, a newer
-clang-tidy knows more checks and may add to it, which means a longer or shorter
-advisory list, never a different verdict.
+`pre-commit` auto-fixes or for the naming rules. No hook runs the full
+clang-tidy check list any more: wcp's `pre-push` lints only through ctest tests
+named `clang_tidy:<path>`, which COSO does not register. Run it by hand
+(`run-clang-tidy -p build`) before a push that touches C++.
 
 clang-tidy runs clean today, at 0 findings over all 147 translation units, and
 should stay that way — a list people scroll past is worth no more than no check
@@ -276,10 +303,145 @@ what. Types: `feat`, `fix`, `refactor`, `test`, `docs`, `style`, `perf`, `chore`
 
 `/review` runs a multi-agent review of the diff against `main`. It is available
 only where `.claude/` exists, which is gitignored — so a fresh clone or worktree
-does not have it, and nothing gates on it having run.
+does not have it. Any reviewer will do (`/code-review` is built in); what
+`pre-push` checks is the review receipt, see **## Self-Review**.
 
 When Claude gets something wrong, fix this file in the same commit. That is the
 feedback loop.
+
+## Hooks Are Files In This Repository
+
+The git hooks live in `.githooks/` as ordinary shell scripts, committed like any other file. `wcp init` copies them there and points `core.hooksPath` at them; wcp installs no Claude Code hooks at all. The gate is those files and nothing else, so a clone without wcp installed is still gated — including the review receipt, which is a line of plain git the Self-Review section documents rather than anything wcp runs.
+
+- **They are yours to read, and yours to edit.** Each hook carries a `# wcp:` line recording the digest of the bytes wcp wrote. That is what lets `wcp doctor` tell an edit you made from a version wcp has moved past: an untouched hook is refreshed silently, an edited one is left alone, and one that moved on both sides is reported rather than overwritten. Edit them when the project needs something different — and say so upstream if the default was wrong for everyone.
+- **A clone is not gated until someone runs `wcp init` in it.** git clones neither a hooks directory nor local config, so the files arriving with the clone is not the same as git running them. `wcp doctor` reports an unset `core.hooksPath` as an error for exactly this reason.
+- **They call no wcp.** A hook that shelled out to a missing tool would exit 127, which git reads as a refusal — so a machine without wcp could not commit, and could not commit the fix either. What the hooks do call is the project's own toolchain, and there they fail open and say so on stderr.
+- **Never use `git push --no-verify` or `git commit --no-verify`** unless explicitly asked. A failing hook is a signal — fix the root cause, or change the hook deliberately and commit that.
+
+## This Document Carries A Provenance Line
+
+The comment at the top of this file is wcp's record of the bytes it wrote, in the same scheme the hooks use. `wcp doctor` reads it to tell an edit you made from a version wcp has moved past, and it is where this project's type is recorded — there is no `.wcp/` directory and no config file beside it.
+
+**The prose is yours.** wcp writes this document once and never rewrites it unasked; edit it freely. When wcp adds or changes a section you have not edited, `wcp doctor` names it and `wcp init --interactive` offers it, one section at a time; answering `n` declines that version for good. Leave the top line in place, and the tooling stays able to tell your changes from its own.
+
+## Running wcp
+
+wcp is a command-line tool installed once per machine, outside any repository. The hooks never call it, so a machine without it is still gated.
+
+```sh
+uv tool install git+https://github.com/spoorendonk/wcp   # once per machine; @vX.Y.Z for a release
+uv tool upgrade wcp                                       # to update an install without a tag
+uv tool install --force git+https://github.com/spoorendonk/wcp@vX.Y.Z   # to move a tagged one
+wcp --help                                                # the commands; `wcp <command> --help` for each one
+```
+
+- **Run `wcp doctor`** after pulling, after updating wcp, and before editing the hooks or this file. It changes nothing, and every finding names the command that fixes it. It exits 1 only when the gate does not work, e.g. `core.hooksPath` is unset, which is how every fresh clone starts until someone runs `wcp init` in it.
+- **Files wcp wrote carry a `wcp:` provenance line**: `# wcp:` in each hook, and the comment at the top of this file. Edit the files when the project needs to, but leave that line in place. It is how `wcp doctor` tells your edits apart from a newer wcp version.
+- **If `wcp` is not on PATH**, say so rather than installing it unasked. Installing it is a machine-wide change.
+
+## Issue Tracking
+
+GitHub Issues is the tracker. Use the `gh` CLI.
+
+- **Default to HTTPS** for GitHub remotes (`https://github.com/...`), not SSH.
+- **Read an issue** with `gh issue view <num> --json title,body,labels,state,comments`. Plain `gh issue view <num>` is deprecated for programmatic use.
+- Don't propose deferring work via a new gh issue unless it is substantial. Small follow-ups should be either fixed inline or left alone — don't open an issue just because you noticed something.
+
+### Labelling Work In Progress
+
+Label every issue you work on with `session:<name>`, where `<name>` is your session's name; if the session has none, ask for one. Every session acts as the same GitHub user, so the assignee cannot tell sessions apart. The label can, and the issue's timeline records when it was added and removed.
+
+With wcp installed, use it: `claim` refuses an issue that is closed, an epic or held by another session (naming it), and when another session claims it at the same moment either fails (taking its label off) or warns. Add `--as <name>` unless the session is registered in a wcp group.
+
+```sh
+wcp claim <num>      # when you start; `wcp claim --list` shows what you hold here
+wcp release <num>    # when you stop, hand over, or close it; never another session's label
+```
+
+On a machine without wcp, the same by hand:
+
+```sh
+gh label create "session:<name>" --color 5319E7 --force   # once per repo; --force makes it safe to repeat
+gh issue edit <num> --add-label "session:<name>"          # when you start
+gh issue edit <num> --remove-label "session:<name>"       # when you stop, hand over, or close it
+```
+
+- **Add it when you start**, including on issues already underway when you adopt this.
+- **Remove it when you stop, hand over, or close the issue.** A label left on an issue nobody is working on reads as a claim.
+- **If your session is renamed**, relabel the issues you hold.
+- **To see what a session holds:** `gh issue list --label "session:<name>"`, or across repositories `gh search issues --owner <owner> --label "session:<name>" --state open`.
+
+### Writing Issues
+
+Issues get picked up later in fresh sessions, often by a different agent with no access to the author's machine. Write them to be picked up cold:
+
+- **Self-contained.** Body must carry all needed context: problem, motivation, acceptance criteria, repro steps. Don't assume the reader has the current conversation.
+- **No local references.** No local file paths, local repo paths, or machine-specific locations (`/home/user/...`, `~/code/foo/bar.py`, "see my other checkout"). Dead links in a fresh session.
+- **Prefer stable external links.** GitHub permalinks, paper URLs, RFCs, official docs.
+- **Be vague about local code context.** Describe the concept rather than the path; hint that the agent can search under `..`, `../..`, or `~/code/`.
+
+## Working Through Issues
+
+A session's goal is often a list of issues (`wcp goal`). Work through them in the order given, one at a time:
+
+1. **Issue check.** Read the issue and what it links. If it is clear and implementable, say so in one line and go on; this should be fast. If not, write a plan as a comment on the issue (plans go on issues, never in git) and work from it. If a later issue's plan changes an earlier one, re-plan then.
+2. **Implement.**
+3. **Gate and commit.** Run the project's gate (`## Build & Test`) and commit: a review reads commits, never uncommitted changes (`## Self-Review`).
+4. **Review by one cold reviewer**: a fresh teammate or subagent running `/code-review` on the commits not yet pushed, never several reviewers in parallel. On findings, fix, gate, commit, and review again with a fresh reviewer. **At most two rounds**; the fix after the second is confirmed, not reviewed again (`## Self-Review`). Anything real left after that, or found out of scope, becomes its own issue. The bar for filing is a concrete failure scenario or a missing acceptance criterion; nits are fixed within the round or dropped.
+5. **Record, push, close.** Record the review on a clean tree, push it with the commit (`## Self-Review`), and close the issue.
+
+Without agent teams, implement in the session itself and review with a fresh subagent; the caps and the bar are the same.
+
+**A hygiene goal** (`/goal Hygiene round …`, set by `wcp hygiene`) is a task, not a list of issues: work it from its note. Its findings are edits to existing issues or new issues labelled `tech-debt`; nothing is fixed inside the round, one cold reviewer checks the findings (at most two rounds), and the task ends with the summary comment its note specifies, whose first line is the marker wcp looks for.
+
+## Self-Review
+
+**Code you produced gets reviewed before it lands on main.** Run `/code-review`
+on your own changes and act on what it finds; the review is not a formality you
+report having done. The pre-push hook is the backstop, not the review.
+
+**Then record the review, and push it with the commit**, or `pre-push` will
+refuse the push:
+
+```sh
+git update-ref "refs/reviews/$(git rev-parse HEAD)" HEAD
+git push --atomic origin HEAD "refs/reviews/$(git rev-parse HEAD)"
+```
+
+The receipt is a ref named by the reviewed commit, `refs/reviews/<sha>`, and it
+travels with the push, so a CI step can check every commit that reaches the
+trunk — including one pushed with `--no-verify`, or from a clone whose hooks
+never ran. wcp's README has the step to paste into the project's CI.
+`--atomic` lands the branch and its receipt together or not at all.
+
+Plain git, on purpose. No wcp, no harness, nothing installed — so a reviewer on
+any machine can write it, and a clone that has never heard of wcp is still able
+to record a review and push. Every worktree of a clone sees the same receipts,
+and each names one commit, so a review counts for that commit wherever it is
+checked out and for nothing else.
+
+**What it means, and what it does not.** It records that a review happened at
+this commit — not what was reviewed. It carries exactly the trust of whoever ran
+it, and it is a line anybody can write by hand; what it buys is that nobody can
+push work no one has looked at *without noticing they are doing it*.
+
+A later commit has no receipt, and the next push is refused again. That is
+deliberate: a new commit is work nobody reviewed, including the commit that
+fixes what the review found.
+
+**The fix after the last round.** Reviews stop after two rounds, so the commit
+that fixes the second round's findings gets no third review. That round's
+reviewer reads the fix commit alone (`git show <sha>`) against its own
+findings, and the receipt is recorded for the fix once it confirms they are
+addressed. It looks for nothing new. What it does not confirm is taken out of
+the fix, which makes a new commit: the same reviewer confirms that one before
+its receipt is recorded, and what was taken out becomes its own issue.
+
+**Record it only when the tree is clean.** With nothing new committed, a review
+falls back to reading uncommitted changes — so a record written then names a
+commit that does not contain what was read, and the push it clears is of work
+nobody reviewed. Commit first, then review, then record. Untracked scratch files
+do not matter; staged and unstaged changes to tracked files do.
 
 ## Code Standards
 
