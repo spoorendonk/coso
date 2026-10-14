@@ -44,7 +44,7 @@ reference implementation — useful for proving a declaration is well-formed and
 not the thing being built.
 
 **The engine is broken in places, and that is intentional.** Scheduling aborts on real input
-(#188), routing reports total distance whatever objective was declared (#198), rostering hardcodes
+(#188), routing returns time-window violations as feasible (#194), rostering hardcodes
 the staffing weights its own benchmarks set (#230) and accepts a shift duration nothing reads (#233).
 These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
 over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a

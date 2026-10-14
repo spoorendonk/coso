@@ -65,6 +65,7 @@ NB_MODULE(_coso, m) {
         .def_prop_ro("work_units", &coso::Result::work_units)
         .def_prop_ro("routes", &coso::Result::routes)
         .def_prop_ro("unserved", &coso::Result::unserved)
+        .def_prop_ro("distance", &coso::Result::distance)
         .def_prop_ro("route_start_depots", &coso::Result::route_start_depots)
         .def_prop_ro("opened_depots", &coso::Result::opened_depots)
         .def_prop_ro("flows", &coso::Result::flows)

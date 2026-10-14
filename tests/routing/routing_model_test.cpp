@@ -304,16 +304,9 @@ TEST_CASE("RoutingModel: an unprofitable optional client is left unserved", "[ro
 // ---------------------------------------------------------------------------
 
 TEST_CASE("RoutingModel: Result::cost is the value of the declared objective", "[routing][model]") {
-    SKIP(
-        "CostEvaluator::route_objective subtracts every served client's prize "
-        "(src/routing/cost_evaluator.cpp:71-75) while RoutingModel::solve() sets "
-        "result.cost_ = best.total_distance() (src/model/routing_model.cpp:158), so the "
-        "search minimises distance - prizes and the caller is told distance. A declared "
-        "prize never reaches Result::cost() — coso#198");
-
     // Both clients are on one 40-unit out-and-back tour and each carries a
-    // prize of 100, so the objective the portfolio actually minimises is
-    // 40 - 200 = -160 while Result::cost() reports the bare 40.
+    // prize of 100, so the objective the portfolio minimises is 40 - 200 = -160.
+    // Result::cost() reports that, and Result::distance() the bare 40 (#198).
     RoutingModel model;
     model.add_depot(0.0, 0.0);
     model.add_vehicle_type(1, {.capacity = {100}});
@@ -326,6 +319,7 @@ TEST_CASE("RoutingModel: Result::cost is the value of the declared objective", "
     REQUIRE(r.routes().size() == 1);
     REQUIRE(r.routes()[0].size() == 2);
     CHECK(r.cost() == -160.0);
+    CHECK(r.distance() == 40.0);
 }
 
 TEST_CASE("RoutingModel: TSPTW solves as one time-feasible tour", "[routing][model]") {

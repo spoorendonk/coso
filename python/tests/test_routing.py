@@ -91,6 +91,27 @@ class TestResult:
         assert isinstance(r.work_units, (int, float))
         assert isinstance(r.routes, list)
         assert isinstance(r.unserved, list)
+        assert isinstance(r.distance, (int, float))
+
+    def test_cost_is_declared_objective(self) -> None:
+        # One 40-unit tour serving two clients with prize 100 each: the
+        # objective is 40 - 200, and distance stays the bare 40 (#198).
+        m = coso.RoutingModel()
+        m.add_depot(0.0, 0.0)
+        vp = coso.VehicleTypeParams()
+        vp.capacity = [100]
+        m.add_vehicle_type(1, vp)
+        for x in (10.0, 20.0):
+            cp = coso.ClientParams()
+            cp.demand = [1]
+            cp.prize = 100
+            m.add_client(x, 0.0, cp)
+
+        r = m.solve(coso.TimeLimit(1.0))
+
+        assert r.feasible
+        assert r.cost == -160.0
+        assert r.distance == 40.0
 
     def test_repr(self):
         m = coso.RoutingModel()

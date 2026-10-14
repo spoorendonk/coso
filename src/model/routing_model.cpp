@@ -147,7 +147,8 @@ Result RoutingModel::solve(TimeLimit tl) {
 
     Result result;
     result.feasible_ = best.feasible();
-    result.cost_ = static_cast<double>(best.total_distance());
+    result.cost_ = static_cast<double>(best.objective(eval));
+    result.distance_ = static_cast<double>(best.total_distance());
 
     // Extract non-empty routes.
     for (int v = 0; v < best.num_routes(); ++v) {

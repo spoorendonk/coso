@@ -35,10 +35,11 @@ struct DepotParams {
 /// Routing model: declare depots, vehicles, clients, distances, then solve.
 ///
 /// What the native engine enforces is CVRP: demand against an N-dimensional
-/// vehicle capacity, minimising distance.  The schema is the 13 slots the v1
-/// scope ruling on #200 kept on benchmark evidence; time windows and service
-/// times are still declarable but unhonoured (#194), and Result::cost is not
-/// the declared objective (#198).
+/// vehicle capacity, minimising distance minus the prizes of served clients,
+/// which is what Result::cost reports; Result::distance is the bare distance.
+/// The schema is the 13 slots the v1 scope ruling on #200 kept on benchmark
+/// evidence; time windows and service times are still declarable but
+/// unhonoured (#194).
 class RoutingModel {
 public:
     // -- Stored entry types --------------------------------------------------

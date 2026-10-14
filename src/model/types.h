@@ -54,6 +54,9 @@ struct Result {
     std::vector<std::vector<int>> routes_;
     /// Clients that could not be served (optional / infeasible).
     std::vector<int> unserved_;
+    /// Total distance travelled by the returned routes.  cost() is the
+    /// declared objective, which also credits the prizes of served clients.
+    double distance_ = 0.0;
     /// Start depot of each route: one entry per entry of routes_, in the same
     /// order, holding a depot index in 0..num_depots-1.
     std::vector<int> route_start_depots_;
@@ -64,6 +67,7 @@ struct Result {
 
     [[nodiscard]] auto const& routes() const noexcept { return routes_; }
     [[nodiscard]] auto const& unserved() const noexcept { return unserved_; }
+    [[nodiscard]] double distance() const noexcept { return distance_; }
     [[nodiscard]] auto const& route_start_depots() const noexcept { return route_start_depots_; }
     [[nodiscard]] auto const& opened_depots() const noexcept { return opened_depots_; }
 
