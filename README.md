@@ -99,9 +99,12 @@ benchmark run backs it. That work is [#177](../../issues/177) and the per-model 
 ## Tests and coverage
 
 `ctest -L e2e-smoke` runs six end-to-end scenarios — **one per model type**, each a small toy
-instance — plus three that assert the runner rejects a scenario whose determinism check is not
-bounded by work ([#209](../../issues/209)). It is a smoke gate: it proves the model → engine →
-`Result` path runs and is deterministic. It is not variant coverage and not a benchmark.
+instance — plus four that assert the runner rejects a determinism check that cannot mean
+anything: three not bounded by work ([#209](../../issues/209)), one whose solve never reaches
+its budget ([#219](../../issues/219)). It is a smoke gate: it proves the model → engine →
+`Result` path runs. Only the routing scenario asserts `deterministic_work`, because only its
+solve runs long enough for a work budget to stop it; the other five exit their algorithms in
+a few dozen ticks. It is not variant coverage and not a benchmark.
 Per-variant instances arrive with the per-model milestones (M1–M6 in [#173](../../issues/173)).
 
 Benchmark executables (`benchmark_test`, `vrptw_benchmark_test`, `scheduling_benchmark_test`,

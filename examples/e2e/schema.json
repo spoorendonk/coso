@@ -43,7 +43,8 @@
         "work_units": {
           "type": "number",
           "minimum": 0,
-          "default": 0
+          "default": 0,
+          "description": "Deterministic work budget; 0 disables it. With deterministic_work it must be > 0 and small enough that both solves reach it, or the check fails with deterministic_work_budget_not_reached (#219)."
         }
       },
       "additionalProperties": false

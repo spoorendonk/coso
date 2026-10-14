@@ -1031,3 +1031,20 @@ set_tests_properties(
     FAIL_REGULAR_EXPRESSION "scenario_id"
 )
 
+# The network toy solve exits its algorithm after a handful of ticks, far short of
+# its budget, so two matching counts would say nothing about budgeting (#219). The
+# check must fail on that rather than pass. The runner names the unreached budget
+# only when the check failed on it, so the regex pins the failure to that cause.
+add_test(
+    NAME e2e_rejects_vacuous_determinism
+    COMMAND $<TARGET_FILE:e2e_runner>
+            ${CMAKE_CURRENT_SOURCE_DIR}/e2e/fixtures/vacuous_determinism.json
+)
+set_tests_properties(
+    e2e_rejects_vacuous_determinism
+    PROPERTIES
+    LABELS "e2e-smoke"
+    TIMEOUT 60
+    PASS_REGULAR_EXPRESSION "deterministic_work_budget_not_reached"
+)
+

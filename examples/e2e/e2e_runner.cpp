@@ -1,4 +1,5 @@
 #include "checks.h"
+#include "common/work_units.h"
 #include "model/lotsizing_model.h"
 #include "model/network_model.h"
 #include "model/packing_model.h"
@@ -190,7 +191,8 @@ int main(int argc, char** argv) {
     try {
         Scenario scenario = parse_scenario(argv[1]);
         coso::e2e::Evaluation const eval = coso::e2e::evaluate_checks(
-            scenario.checks, [&scenario]() { return solve_once(scenario); });
+            scenario.checks, coso::WorkUnits::ticks_from_units(scenario.work_units),
+            [&scenario]() { return solve_once(scenario); });
 
         std::cout << "{\n"
                   << "  \"scenario_id\": \"" << scenario.id << "\",\n"

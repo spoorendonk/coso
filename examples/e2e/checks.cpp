@@ -1,6 +1,7 @@
 #include "checks.h"
 
 #include <array>
+#include <cstdint>
 #include <set>
 #include <string>
 
@@ -28,7 +29,7 @@ bool requested(std::set<std::string> const& checks, std::string const& name) {
 }  // namespace
 
 Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
-                           SolveFn const& solve_once) {
+                           std::uint64_t work_budget_ticks, SolveFn const& solve_once) {
     Evaluation eval{.result = solve_once(), .checks = {}};
 
     for (std::string const& check_name : requested_checks) {
@@ -50,7 +51,13 @@ Evaluation evaluate_checks(std::set<std::string> const& requested_checks,
 
     if (requested(requested_checks, "deterministic_work")) {
         coso::Result const rerun = solve_once();
-        eval.checks.deterministic_work = (eval.result.work_ticks() == rerun.work_ticks()) &&
+        bool const budget_bound = eval.result.work_ticks() >= work_budget_ticks &&
+                                  rerun.work_ticks() >= work_budget_ticks;
+        if (!budget_bound) {
+            eval.checks.errors.emplace_back("deterministic_work_budget_not_reached");
+        }
+        eval.checks.deterministic_work = budget_bound &&
+                                         (eval.result.work_ticks() == rerun.work_ticks()) &&
                                          (eval.result.work_units() == rerun.work_units());
         eval.checks.pass = eval.checks.pass && eval.checks.deterministic_work;
     }
