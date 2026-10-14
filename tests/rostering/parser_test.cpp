@@ -217,12 +217,16 @@ TEST_CASE("parse_nrp - a STAFF line in neither dialect is rejected", "[rostering
         CHECK_THROWS_AS(parse_nrp(with_staff("A,D=7,4320x,3390,5,2,2,1")), std::runtime_error);
     }
 
-    SECTION("a key=value line with a bare value") {
+    SECTION("a key=value line with a bare value in the positional columns") {
         CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxTotalMinutes=4320,3390")), std::runtime_error);
     }
 
     SECTION("an unknown key, which would otherwise drop a misspelled bound") {
         CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxTotalMinute=4320")), std::runtime_error);
+    }
+
+    SECTION("a named MaxShifts that is not an integer") {
+        CHECK_THROWS_AS(parse_nrp(with_staff("A,MaxShifts=junk")), std::runtime_error);
     }
 
     SECTION("a repeated key") {
@@ -246,4 +250,19 @@ TEST_CASE("parse_nrp - a repeated COVER line is rejected", "[rostering][parser]"
         "SECTION_HORIZON\n7\n\nSECTION_SHIFTS\nD,480\n\nSECTION_STAFF\nA,MaxWeekends=1\n\n"
         "SECTION_COVER\n0,D,1,100,1\n0,D,3,100,1\n";
     CHECK_THROWS_AS(parse_nrp(content), std::runtime_error);
+}
+
+TEST_CASE("parse_nrp - a COVER line with an empty or non-integer field is rejected",
+          "[rostering][parser]") {
+    // #236's empty-field column shift, in COVER: "0,D,,2,1" used to read the
+    // UnderWeight column as the requirement.
+    auto with_cover = [](std::string const& cover) {
+        return "SECTION_HORIZON\n7\n\nSECTION_SHIFTS\nD,480\n\nSECTION_STAFF\nA\n\n"
+               "SECTION_COVER\n" +
+               cover + "\n";
+    };
+    CHECK(parse_nrp(with_cover("0,D,2,100,1")).get_demand(0, 0).min_employees == 2);
+    CHECK_THROWS_AS(parse_nrp(with_cover("0,D,,2,1")), std::runtime_error);
+    CHECK_THROWS_AS(parse_nrp(with_cover("0,D,2x,100,1")), std::runtime_error);
+    CHECK_THROWS_AS(parse_nrp(with_cover("0,D,2,100,1,7")), std::runtime_error);
 }

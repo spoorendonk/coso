@@ -278,10 +278,10 @@ RosteringData parse_nrp(const std::string& content) {
                             emp.min_total_minutes = parse_int(val, bad);
                         } else if (key == "MaxWeekends") {
                             emp.max_weekends = parse_int(val, bad);
-                        } else if (key == "MinConsecutiveShifts" ||
+                        } else if (key == "MaxShifts" || key == "MinConsecutiveShifts" ||
                                    key == "MinConsecutiveDaysOff") {
                             parse_int(val, bad);  // deferred
-                        } else if (key != "MaxShifts") {
+                        } else {
                             throw std::runtime_error(bad + " (unknown key " + key + ")");
                         }
                     }
@@ -371,10 +371,17 @@ RosteringData parse_nrp(const std::string& content) {
             }
 
             case Section::Cover: {
-                // Format: Day,ShiftID,Requirement,UnderWeight,OverWeight
-                auto tokens = split(trimmed, ',');
-                if (tokens.size() < 3) {
-                    throw std::runtime_error("NRP parse error: bad COVER line: " + trimmed);
+                // Format: Day,ShiftID,Requirement[,UnderWeight,OverWeight]
+                // Empty fields are kept and rejected, so a missing column
+                // cannot shift the next one into its place (#236).
+                auto const bad = "NRP parse error: bad COVER line: " + trimmed;
+                auto tokens = split_fields(trimmed, ',');
+                if (tokens.size() < 3 || tokens.size() > 5 ||
+                    std::ranges::any_of(tokens, [](auto const& t) { return t.empty(); })) {
+                    throw std::runtime_error(bad);
+                }
+                for (size_t i = 3; i < tokens.size(); ++i) {
+                    parse_int(tokens[i], bad);  // the weights, which #229 has nowhere to put
                 }
 
                 auto shift_it = shift_id_map.find(tokens[1]);
@@ -383,9 +390,9 @@ RosteringData parse_nrp(const std::string& content) {
                                              tokens[1]);
                 }
 
-                int day = std::stoi(tokens[0]);
+                int day = parse_int(tokens[0], bad);
                 int shift_type = shift_it->second;
-                int required = std::stoi(tokens[2]);
+                int required = parse_int(tokens[2], bad);
 
                 RosteringData::Demand dem;
                 dem.min_employees = required;
