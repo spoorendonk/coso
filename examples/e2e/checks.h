@@ -12,7 +12,7 @@ namespace coso::e2e {
 
 /// What two solves of one scenario say about work counting (#218). Inconclusive
 /// means the counts matched but a solve ended before its budget, so they would
-/// have matched under any budget; it fails the check like Nondeterministic does.
+/// have matched under any larger budget; it fails the check like Nondeterministic does.
 enum class Determinism : std::uint8_t {
     NotRequested,
     Deterministic,
