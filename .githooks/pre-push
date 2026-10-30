@@ -220,9 +220,8 @@ refuse_review() {
 #
 # A trunk update must carry its commit's receipt in the same push, so the
 # remote holds the record of the review beside the commit. This check is the
-# gate: no CI is assumed to check the receipt again. A project that wants a
-# `--no-verify` push, or one from a clone without these hooks, caught too adds
-# the optional CI step in wcp's README, which reads the receipt off the remote.
+# gate: no CI checks the receipt again (CLAUDE.md, ## Gates), so a
+# `--no-verify` push, or one from a clone without these hooks, is not caught.
 #
 # git leaves a ref the remote already holds off stdin: a receipt pushed with a
 # feature branch, which then lands on the trunk by fast-forward, or a commit
