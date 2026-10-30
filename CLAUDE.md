@@ -79,7 +79,7 @@ ctest --test-dir build --output-on-failure -j$(nproc)
 `pre-push` runs the blocks above, so they must not depend on anything that is
 not a build dependency. `test` is therefore C++ only: pytest is not required to
 build COSO, and a fence ending in `pytest` exits 127 wherever it is absent,
-which blocks every push. CI gates on `ctest` alone for the same reason. The
+which blocks every push. The local CI gates on `ctest` alone for that reason. The
 Python suite still runs — `pre-commit` runs it, guarded, whenever a `.py` file
 is staged, and you can run it directly.
 
@@ -232,6 +232,11 @@ Three git hooks live in `.githooks/`, tracked in the repo. `cmake -B build` (or
 is what turns the gates on** — a fresh clone has them inert until then.
 `commit-msg` and `pre-push` are wcp's (see **## Hooks Are Files In This
 Repository**); `pre-commit` is COSO's own.
+
+**The local CI is the gate.** A change lands on a review plus a green `pre-push`;
+there are no GitHub Actions workflows, and landing never waits on one. A workflow
+added later runs only on `workflow_dispatch` or a schedule at most weekly, never
+on push or pull request.
 
 | Hook | Runs | On failure |
 |---|---|---|
