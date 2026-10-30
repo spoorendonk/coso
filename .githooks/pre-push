@@ -218,9 +218,11 @@ refuse_review() {
 
 # ---------------------------------------------------- the receipt travels (#40)
 #
-# A trunk update must carry its commit's receipt in the same push, or CI, the
-# one place a `--no-verify` push or a clone without these hooks is seen, fails
-# it. So the honest path is refused here, where it is cheap to put right.
+# A trunk update must carry its commit's receipt in the same push, so the
+# remote holds the record of the review beside the commit. This check is the
+# gate: no CI is assumed to check the receipt again. A project that wants a
+# `--no-verify` push, or one from a clone without these hooks, caught too adds
+# the optional CI step in wcp's README, which reads the receipt off the remote.
 #
 # git leaves a ref the remote already holds off stdin: a receipt pushed with a
 # feature branch, which then lands on the trunk by fast-forward, or a commit
@@ -256,8 +258,9 @@ RECEIPTS_IN_PUSH
 		*) source=$local_sha ;;
 		esac
 		err "=== Review receipt ==="
-		err "This push updates $remote_ref to $(printf '%.12s' "$local_sha") without its review receipt, which CI checks for,"
+		err "This push updates $remote_ref to $(printf '%.12s' "$local_sha") without its review receipt,"
 		err "and the remote does not hold it either (or could not be asked)."
+		err "A trunk commit's receipt goes to the remote with it, as the record that it was reviewed."
 		err "Push them together:"
 		err "      git push --atomic $remote_name $source:$remote_ref $RECEIPTS/$local_sha"
 		exit 1
