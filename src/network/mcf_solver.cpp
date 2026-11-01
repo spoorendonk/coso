@@ -10,6 +10,36 @@
 
 namespace coso {
 
+namespace {
+
+/// True when the uncapacitated arcs (upper_cap INT_MAX) alone contain a
+/// negative-cost cycle: flow can then grow around it without bound.
+/// Bellman-Ford with every node at distance 0, as from a virtual source.
+bool has_uncapacitated_negative_cycle(NetworkData const& data) {
+    int const nn = data.num_nodes();
+    int const na = data.num_arcs();
+    std::vector<long long> dist(nn, 0);
+    for (int round = 0; round < nn; ++round) {
+        bool relaxed = false;
+        for (int a = 0; a < na; ++a) {
+            auto const& arc = data.arc(a);
+            if (arc.upper_cap != INT_MAX) {
+                continue;
+            }
+            if (dist[arc.tail] + arc.cost < dist[arc.head]) {
+                dist[arc.head] = dist[arc.tail] + arc.cost;
+                relaxed = true;
+            }
+        }
+        if (!relaxed) {
+            return false;
+        }
+    }
+    return true;
+}
+
+}  // namespace
+
 McfSolver::PathResult McfSolver::find_augmenting_path(NetworkData const& data,
                                                       NetworkSolution const& sol) {
     int const nn = data.num_nodes();
@@ -137,17 +167,20 @@ NetworkSolution McfSolver::solve(NetworkData const& data) {
     // along shortest paths keeps it so.  Cancel every negative cycle of the
     // zero flow first; this leaves each node's excess unchanged (#253).  A
     // cycle with no finite capacity on it can carry unbounded flow, so the
-    // cost has no minimum.  No iteration cap: each cancellation lowers the
-    // cost by at least 1, and it is bounded below once no such cycle exists.
+    // cost has no minimum.  That is checked on the arcs themselves, before
+    // any cancellation: once flow is on an uncapacitated arc its residual is
+    // finite, and the cycle would no longer look unbounded.  With no such
+    // cycle the cost is bounded below, and each cancellation lowers it by at
+    // least 1, so the loop needs no iteration cap.
+    if (has_uncapacitated_negative_cycle(data)) {
+        throw std::invalid_argument(
+            "McfSolver::solve: a negative-cost cycle has no finite capacity, so the cost "
+            "is unbounded below");
+    }
     while (true) {
         auto move = CycleCancel::find_negative_cycle(data, sol);
         if (move.amount <= 0) {
             break;
-        }
-        if (move.amount == INT_MAX) {
-            throw std::invalid_argument(
-                "McfSolver::solve: a negative-cost cycle has no finite capacity, so the cost "
-                "is unbounded below");
         }
         CycleCancel::apply(data, sol, move);
     }

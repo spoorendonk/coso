@@ -311,6 +311,20 @@ TEST_CASE("MCF solver handles negative-cost cycles", "[network]") {
         auto data = b.build();
         REQUIRE_THROWS_AS(McfSolver::solve(data), std::invalid_argument);
     }
+    SECTION("an unbounded cycle is rejected even after a bounded one shares its arc") {
+        // Cancelling u->v->u first puts flow on u->v, so u->v->w->u no longer
+        // shows an INT_MAX bottleneck; it is still uncapacitated.
+        NetworkData::Builder b;
+        b.add_node(0, "u");
+        b.add_node(0, "v");
+        b.add_node(0, "w");
+        b.add_arc(0, 1, -2);    // u->v, uncapacitated
+        b.add_arc(1, 0, 0, 5);  // v->u, capacity 5
+        b.add_arc(1, 2, 0);     // v->w, uncapacitated
+        b.add_arc(2, 0, 0);     // w->u, uncapacitated
+        auto data = b.build();
+        REQUIRE_THROWS_AS(McfSolver::solve(data), std::invalid_argument);
+    }
     SECTION("a negative cycle bounded by one capacitated arc is saturated to it") {
         NetworkData::Builder b;
         b.add_node(0, "u");
