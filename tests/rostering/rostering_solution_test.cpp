@@ -148,6 +148,60 @@ TEST_CASE("RosteringSolution: overstaffing penalty", "[rostering]") {
 }
 
 // ---------------------------------------------------------------------------
+//  Test: declared over-cover weight and hard excess (#245)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+// Three employees, one shift, one day, at most one on duty.  The weights are
+// asymmetric, as SB-NRP's are, so pricing excess at under_weight shows.
+RosteringData make_excess_instance(bool hard) {
+    RosteringData data;
+    data.shift_types = {{.name = "Day", .duration_minutes = 480}};
+    data.employees = {{.name = "Alice"}, {.name = "Bob"}, {.name = "Carol"}};
+    data.horizon = 1;
+    data.demand[RosteringData::demand_key(0, 0)] = {
+        .min_employees = 0, .max_employees = 1, .under_weight = 50, .over_weight = 3, .hard = hard};
+    return data;
+}
+
+}  // anonymous namespace
+
+TEST_CASE("RosteringSolution: soft excess costs over_weight per extra employee", "[rostering]") {
+    auto data = make_excess_instance(false);
+    RosteringCostEvaluator evaluator(data);
+    RosteringSolution sol(data, evaluator);
+
+    CHECK(sol.assign(0, 0, 0) == 0);  // at the maximum: no excess
+    CHECK(sol.assign(1, 0, 0) == 3);  // one over
+    CHECK(sol.assign(2, 0, 0) == 3);  // two over
+
+    CHECK(sol.demand_cost() == 2 * 3);
+    CHECK(evaluator.demand_cost(sol.schedule()) == 2 * 3);
+    CHECK(evaluator.hard_cover_cost(sol.schedule()) == 0);
+    CHECK(sol.is_feasible());
+}
+
+TEST_CASE("RosteringSolution: hard excess is infeasible", "[rostering]") {
+    auto data = make_excess_instance(true);
+    RosteringCostEvaluator evaluator(data);
+    RosteringSolution sol(data, evaluator);
+
+    sol.assign(0, 0, 0);
+    CHECK(sol.is_feasible());
+
+    sol.assign(1, 0, 0);
+    CHECK_FALSE(sol.is_feasible());
+    CHECK_FALSE(evaluator.is_feasible(sol.schedule()));
+    CHECK(evaluator.hard_cover_cost(sol.schedule()) ==
+          RosteringCostEvaluator::Weights{}.hard_violation);
+    CHECK(sol.demand_cost() == 0);  // hard cover is not priced as soft
+
+    sol.unassign(1, 0);
+    CHECK(sol.is_feasible());
+}
+
+// ---------------------------------------------------------------------------
 //  Test: consecutive shift constraint
 // ---------------------------------------------------------------------------
 

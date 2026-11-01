@@ -194,6 +194,21 @@ TEST_CASE("RosteringModel: cover is priced at its declared weights", "[rostering
     REQUIRE(result.understaffed().size() == 1);
 }
 
+TEST_CASE("RosteringModel: over-cover is priced at its declared over_weight", "[rostering]") {
+    // #245: Alice's working-time minimum forces her onto a shift whose maximum
+    // is zero, so the roster carries one excess at over_weight, not under_weight.
+    RosteringModel model;
+    model.add_shift_type({.name = "Day", .duration_minutes = 480});
+    model.add_employee({.name = "Alice", .min_total_minutes = 480});
+    model.set_horizon(1);
+    model.add_demand(0, 0, {.max_employees = 0, .under_weight = 50, .over_weight = 3});
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    CHECK(result.feasible());
+    CHECK(result.cost() == 3.0);
+}
+
 TEST_CASE("RosteringModel: max_consecutive_days defaults to unbounded", "[rostering]") {
     // #244: the default used to be an undocumented hard cap of 5.
     CHECK(EmployeeParams{}.max_consecutive_days == INT_MAX);
