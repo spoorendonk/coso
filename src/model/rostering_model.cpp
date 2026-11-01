@@ -15,6 +15,7 @@
 #include <chrono>
 #include <format>
 #include <stdexcept>
+#include <unordered_set>
 
 namespace coso {
 
@@ -90,7 +91,7 @@ void RosteringModel::add_unavailability(int employee, int day) {
 //  solve()
 // ---------------------------------------------------------------------------
 
-void RosteringModel::check_indices_() const {
+void RosteringModel::check_declaration_() const {
     auto check = [](char const* adder, char const* what, int value, int bound) {
         if (value < 0 || value >= bound) {
             throw std::invalid_argument(std::format(
@@ -112,10 +113,25 @@ void RosteringModel::check_indices_() const {
         check("add_unavailability", "employee", u.employee, n_employees);
         check("add_unavailability", "day", u.day, horizon_);
     }
+    for (auto const& [first, second] : forbidden_sequences_) {
+        check("add_forbidden_sequence", "shift type", first, n_shifts);
+        check("add_forbidden_sequence", "shift type", second, n_shifts);
+    }
+
+    std::unordered_set<int64_t> cells;
+    for (auto const& d : demands_) {
+        if (!cells.insert(RosteringData::demand_key(d.shift_type, d.day)).second) {
+            throw std::invalid_argument(std::format(
+                "RosteringModel::solve: shift type {} on day {} carries more than one demand (one "
+                "per required skill); the native engine holds one demand per (shift type, day) "
+                "and cannot honour them all (#255)",
+                d.shift_type, d.day));
+        }
+    }
 }
 
 Result RosteringModel::solve(TimeLimit tl) {
-    check_indices_();
+    check_declaration_();
 
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
@@ -166,25 +182,15 @@ Result RosteringModel::solve(TimeLimit tl) {
 
     // Demand entries (specific day).
     for (auto const& d : demands_) {
-        auto key = RosteringData::demand_key(d.shift_type, d.day);
-        bool const inserted = data.demand
-                                  .emplace(key,
-                                           RosteringData::Demand{
-                                               .min_employees = d.params.min_employees,
-                                               .max_employees = d.params.max_employees,
-                                               .required_skill = d.params.required_skill,
-                                               .under_weight = d.params.under_weight,
-                                               .over_weight = d.params.over_weight,
-                                               .hard = d.params.hard,
-                                           })
-                                  .second;
-        if (!inserted) {
-            throw std::invalid_argument(std::format(
-                "RosteringModel::solve: shift type {} on day {} carries more than one demand (one "
-                "per required skill); the native engine holds one demand per (shift type, day) "
-                "and cannot honour them all (#255)",
-                d.shift_type, d.day));
-        }
+        // check_declaration_() has made each (shift type, day) unique.
+        data.demand[RosteringData::demand_key(d.shift_type, d.day)] = {
+            .min_employees = d.params.min_employees,
+            .max_employees = d.params.max_employees,
+            .required_skill = d.params.required_skill,
+            .under_weight = d.params.under_weight,
+            .over_weight = d.params.over_weight,
+            .hard = d.params.hard,
+        };
     }
 
     // Hard constraints.

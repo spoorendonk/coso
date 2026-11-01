@@ -154,9 +154,11 @@ public:
 
     /// Solve the rostering problem within the given time limit.
     ///
-    /// Throws std::invalid_argument when a demand, preference or
-    /// unavailability names a day outside [0, horizon), or a shift type or
-    /// employee that was never added.  The check runs here, not in the adders,
+    /// Throws std::invalid_argument when a demand, preference,
+    /// unavailability or forbidden sequence names a day outside
+    /// [0, horizon), or a shift type or employee that was never added, and
+    /// when a (shift type, day) carries more than one demand (#255) --
+    /// whatever the time limit.  The check runs here, not in the adders,
     /// so the order of declaration does not matter.
     ///
     /// `Result::feasible()` reports the hard constraints, hard cover included;
@@ -192,7 +194,7 @@ public:
     [[nodiscard]] auto const& demands() const noexcept { return demands_; }
 
     /// Forbidden (first, second) shift-type pairs, as add_forbidden_sequence()
-    /// recorded them: no dedup, no range check.
+    /// recorded them: no dedup; ranges are checked by solve(), not here.
     [[nodiscard]] auto const& forbidden_sequences() const noexcept { return forbidden_sequences_; }
 
     /// Preferences in declaration order: no dedup; ranges are checked by
@@ -205,8 +207,10 @@ public:
 
 private:
     /// Throws std::invalid_argument on an out-of-range day, shift type or
-    /// employee in a declared demand, preference or unavailability.
-    void check_indices_() const;
+    /// employee in a declared demand, preference, unavailability or forbidden
+    /// sequence, and on a (shift type, day) carrying more than one demand
+    /// (#255).  Runs before anything else in solve().
+    void check_declaration_() const;
 
     // -- Shift types & employees ---------------------------------------------
     std::vector<ShiftTypeParams> shift_types_;

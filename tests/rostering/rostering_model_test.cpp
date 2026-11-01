@@ -252,6 +252,25 @@ TEST_CASE("RosteringModel: two skill demands on one cell are declared, not dropp
 
     // When #255 lands, assert instead that both shortfalls are priced.
     CHECK_THROWS_AS(model.solve(TimeLimit(0.1)), std::invalid_argument);
+    // Also when the work budget is spent before compiling.
+    CHECK_THROWS_AS(model.solve(TimeLimit(0.0, 1e-6)), std::invalid_argument);
+}
+
+TEST_CASE("RosteringModel: an out-of-range forbidden sequence is rejected by solve",
+          "[rostering]") {
+    // A shift id that is not a shift type never matches, so the constraint
+    // was dropped without a word.
+    auto model_with = [](int first, int second) {
+        RosteringModel model;
+        model.add_shift_type({.name = "Day"});
+        model.add_employee({.name = "Alice"});
+        model.set_horizon(7);
+        model.add_forbidden_sequence(first, second);
+        return model;
+    };
+    CHECK_NOTHROW(model_with(0, 0).solve(TimeLimit(0.1)));
+    CHECK_THROWS_AS(model_with(1, 0).solve(TimeLimit(0.1)), std::invalid_argument);
+    CHECK_THROWS_AS(model_with(0, -1).solve(TimeLimit(0.1)), std::invalid_argument);
 }
 
 TEST_CASE("RosteringModel: an out-of-range demand is rejected by solve", "[rostering]") {
@@ -418,6 +437,8 @@ RosteringData compile_declared(RosteringModel const& m) {
     data.horizon = m.horizon();
 
     for (auto const& d : m.demands()) {
+        // solve() rejects a cell with more than one demand (#255); so does this.
+        REQUIRE_FALSE(data.demand.contains(RosteringData::demand_key(d.shift_type, d.day)));
         data.demand[RosteringData::demand_key(d.shift_type, d.day)] = {
             .min_employees = d.params.min_employees,
             .max_employees = d.params.max_employees,
