@@ -126,14 +126,14 @@ SECTION_COVER
     CHECK(data.preferences[2].weight == -4);     // off-request -> negative
 
     // Cover requirements: day 0, shift D -> 2 required.
-    auto d0_d = data.get_demand(0, 0);  // shift D (idx 0), day 0
+    auto d0_d = data.get_demands(0, 0)[0];  // shift D (idx 0), day 0
     CHECK(d0_d.min_employees == 2);
 
-    auto d0_n = data.get_demand(1, 0);  // shift N (idx 1), day 0
+    auto d0_n = data.get_demands(1, 0)[0];  // shift N (idx 1), day 0
     CHECK(d0_n.min_employees == 1);
 
     // Weekend days (5, 6) have lower cover.
-    auto d5_d = data.get_demand(0, 5);
+    auto d5_d = data.get_demands(0, 5)[0];
     CHECK(d5_d.min_employees == 1);
 
     // Forbidden sequences: N cannot follow N.
@@ -173,7 +173,7 @@ SECTION_COVER
     REQUIRE(data.num_employees() == 1);
     CHECK(data.employees[0].name == "E0");
 
-    auto dem = data.get_demand(0, 0);
+    auto dem = data.get_demands(0, 0)[0];
     CHECK(dem.min_employees == 1);
 }
 
@@ -276,7 +276,7 @@ TEST_CASE("parse_nrp - a COVER line with an empty or non-integer field is reject
                "SECTION_COVER\n" +
                cover + "\n";
     };
-    CHECK(parse_nrp(with_cover("0,D,2,100,1")).get_demand(0, 0).min_employees == 2);
+    CHECK(parse_nrp(with_cover("0,D,2,100,1")).get_demands(0, 0)[0].min_employees == 2);
     CHECK_THROWS_AS(parse_nrp(with_cover("0,D,,2,1")), std::runtime_error);
     CHECK_THROWS_AS(parse_nrp(with_cover("0,D,2x,100,1")), std::runtime_error);
     CHECK_THROWS_AS(parse_nrp(with_cover("0,D,2,100,1,7")), std::runtime_error);

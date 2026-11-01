@@ -3,6 +3,7 @@
 #include "common/work_units.h"
 #include "rostering/construction.h"
 #include "rostering/cost_evaluator.h"
+#include "rostering/cover.h"
 #include "rostering/operators/block_swap.h"
 #include "rostering/operators/pillar_move.h"
 #include "rostering/operators/shift_move.h"
@@ -15,7 +16,6 @@
 #include <chrono>
 #include <format>
 #include <stdexcept>
-#include <unordered_set>
 
 namespace coso {
 
@@ -117,17 +117,6 @@ void RosteringModel::check_declaration_() const {
         check("add_forbidden_sequence", "shift type", first, n_shifts);
         check("add_forbidden_sequence", "shift type", second, n_shifts);
     }
-
-    std::unordered_set<int64_t> cells;
-    for (auto const& d : demands_) {
-        if (!cells.insert(RosteringData::demand_key(d.shift_type, d.day)).second) {
-            throw std::invalid_argument(std::format(
-                "RosteringModel::solve: shift type {} on day {} carries more than one demand (one "
-                "per required skill); the native engine holds one demand per (shift type, day) "
-                "and cannot honour them all (#255)",
-                d.shift_type, d.day));
-        }
-    }
 }
 
 Result RosteringModel::solve(TimeLimit tl) {
@@ -182,15 +171,16 @@ Result RosteringModel::solve(TimeLimit tl) {
 
     // Demand entries (specific day).
     for (auto const& d : demands_) {
-        // check_declaration_() has made each (shift type, day) unique.
-        data.demand[RosteringData::demand_key(d.shift_type, d.day)] = {
-            .min_employees = d.params.min_employees,
-            .max_employees = d.params.max_employees,
-            .required_skill = d.params.required_skill,
-            .under_weight = d.params.under_weight,
-            .over_weight = d.params.over_weight,
-            .hard = d.params.hard,
-        };
+        // add_demand() has made each (shift type, day, required skill) unique.
+        data.add_demand(d.shift_type, d.day,
+                        {
+                            .min_employees = d.params.min_employees,
+                            .max_employees = d.params.max_employees,
+                            .required_skill = d.params.required_skill,
+                            .under_weight = d.params.under_weight,
+                            .over_weight = d.params.over_weight,
+                            .hard = d.params.hard,
+                        });
     }
 
     // Hard constraints.
@@ -307,23 +297,23 @@ Result RosteringModel::solve(TimeLimit tl) {
         }
     }
 
-    // Cover cells left below their minimum, counted as the cost evaluator
-    // counts them: only employees holding the demand's required skill.
+    // Cover demands left below their minimum, with the cell's workers
+    // credited to its demands as the cost evaluator credits them
+    // (rostering/cover.h): one skill demand per worker.
     int const ns = data.num_shift_types();
     for (int s = 0; s < ns; ++s) {
         for (int d = 0; d < data.horizon; ++d) {
-            auto dem = data.get_demand(s, d);
-            int count = 0;
-            for (auto const& a : result.roster_[d]) {
-                auto const& skills = data.employees[a.employee].skills;
-                if (a.shift == s &&
-                    (dem.required_skill.empty() ||
-                     std::ranges::find(skills, dem.required_skill) != skills.end())) {
-                    ++count;
-                }
+            auto const demands = data.get_demands(s, d);
+            if (demands.empty()) {
+                continue;
             }
-            if (count < dem.min_employees) {
-                result.understaffed_.push_back({.shift = s, .day = d});
+            auto const counts = credit_cover(data, demands, cell_workers(best.schedule(), s, d),
+                                             evaluator.weights().hard_violation);
+            for (size_t j = 0; j < demands.size(); ++j) {
+                if (counts[j] < demands[j].min_employees) {
+                    result.understaffed_.push_back(
+                        {.shift = s, .day = d, .skill = demands[j].required_skill});
+                }
             }
         }
     }

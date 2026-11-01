@@ -1,6 +1,7 @@
 #include "rostering/replanning.h"
 
 #include "rostering/construction.h"
+#include "rostering/cover.h"
 #include "rostering/operators/block_swap.h"
 #include "rostering/operators/shift_move.h"
 #include "rostering/operators/shift_swap.h"
@@ -35,15 +36,6 @@ LockedCells::LockedCells(ReplanConfig const& config, RosteringSolution const& so
 
 namespace {
 
-/// Check whether employee has a given skill (empty skill = always true).
-bool employee_has_skill(RosteringData const& data, int e, std::string const& skill) {
-    if (skill.empty()) {
-        return true;
-    }
-    auto const& skills = data.employees[e].skills;
-    return std::find(skills.begin(), skills.end(), skill) != skills.end();
-}
-
 /// Greedy construction for unlocked cells only.
 ///
 /// Iterates day by day, shift by shift, and assigns employees greedily to
@@ -59,54 +51,53 @@ void construct_unlocked(RosteringSolution& sol, RosteringData const& data,
 
     for (int d = 0; d < H; ++d) {
         for (int s = 0; s < ns; ++s) {
-            auto dem = data.get_demand(s, d);
-            if (dem.min_employees <= 0) {
-                continue;
-            }
-
-            // Count currently assigned employees (including locked ones).
-            int assigned = 0;
-            for (int e = 0; e < ne; ++e) {
-                if (sol.get(e, d) == s && employee_has_skill(data, e, dem.required_skill)) {
-                    ++assigned;
+            auto const cell = data.get_demands(s, d);
+            for (size_t j = 0; j < cell.size(); ++j) {
+                auto const& dem = cell[j];
+                if (dem.min_employees <= 0) {
+                    continue;
                 }
-            }
 
-            // Sort candidates by load (fewest assigned days first).
-            std::vector<int> candidates(ne);
-            std::iota(candidates.begin(), candidates.end(), 0);
-            std::sort(candidates.begin(), candidates.end(), [&](int a, int b) {
-                int load_a = 0, load_b = 0;
-                for (int dd = 0; dd < H; ++dd) {
-                    if (sol.get(a, dd) >= 0) {
-                        ++load_a;
-                    }
-                    if (sol.get(b, dd) >= 0) {
-                        ++load_b;
-                    }
-                }
-                return load_a < load_b;
-            });
+                // Count the cell's workers credited to this demand (locked ones
+                // included).
+                int assigned = credited_count(data, sol.schedule(), s, d, j);
 
-            while (assigned < dem.min_employees) {
-                bool found = false;
-                for (int e : candidates) {
-                    if (locked.is_locked(e, d)) {
-                        continue;  // Cannot assign to locked cells.
+                // Sort candidates by load (fewest assigned days first).
+                std::vector<int> candidates(ne);
+                std::iota(candidates.begin(), candidates.end(), 0);
+                std::sort(candidates.begin(), candidates.end(), [&](int a, int b) {
+                    int load_a = 0, load_b = 0;
+                    for (int dd = 0; dd < H; ++dd) {
+                        if (sol.get(a, dd) >= 0) {
+                            ++load_a;
+                        }
+                        if (sol.get(b, dd) >= 0) {
+                            ++load_b;
+                        }
                     }
-                    if (!employee_has_skill(data, e, dem.required_skill)) {
-                        continue;
+                    return load_a < load_b;
+                });
+
+                while (assigned < dem.min_employees) {
+                    bool found = false;
+                    for (int e : candidates) {
+                        if (locked.is_locked(e, d)) {
+                            continue;  // Cannot assign to locked cells.
+                        }
+                        if (!qualifies(data, e, dem)) {
+                            continue;
+                        }
+                        if (!is_feasible_assignment(data, sol.schedule(), e, d, s)) {
+                            continue;
+                        }
+                        sol.assign(e, d, s);
+                        assigned = credited_count(data, sol.schedule(), s, d, j);
+                        found = true;
+                        break;
                     }
-                    if (!is_feasible_assignment(data, sol.schedule(), e, d, s)) {
-                        continue;
+                    if (!found) {
+                        break;
                     }
-                    sol.assign(e, d, s);
-                    ++assigned;
-                    found = true;
-                    break;
-                }
-                if (!found) {
-                    break;
                 }
             }
         }

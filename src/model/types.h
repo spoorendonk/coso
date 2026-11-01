@@ -103,12 +103,16 @@ struct Result {
     /// Packing: the items placed in no bin.
     std::vector<int> unassigned_;
 
-    /// A (shift type, day) cover cell staffed below its min_employees.
+    /// A cover demand staffed below its min_employees: the demand on
+    /// (shift, day) for `skill`, empty for one with no required skill.  Each
+    /// worker counts toward one skill demand on a cell (#255), so a cell
+    /// with several demands may list several entries.
     struct CoverShortfall {
         int shift = -1;
         int day = -1;
+        std::string skill;
     };
-    /// Cover cells left short.  A soft cell's shortfall is priced into
+    /// Cover demands left short.  A soft cell's shortfall is priced into
     /// cost(); a hard cell's also makes the result infeasible.  Excess over
     /// max_employees is not listed: a soft cell's shows in cost() only, a
     /// hard cell's in feasible() and cost().

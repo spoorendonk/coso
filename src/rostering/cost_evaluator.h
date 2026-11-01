@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rostering/cover.h"
 #include "rostering/rostering_data.h"
 
 #include <algorithm>
@@ -48,35 +49,16 @@ public:
 
     /// Soft cover cost: each soft demand's shortfall and excess at its own
     /// under_weight / over_weight.  Hard demands are priced in
-    /// hard_cover_cost() instead.
+    /// hard_cover_cost() instead.  Workers are credited to a cell's demands
+    /// as rostering/cover.h describes.
     [[nodiscard]] int demand_cost(std::vector<std::vector<int>> const& schedule) const {
-        int cost = 0;
-        for (int s = 0; s < data_.num_shift_types(); ++s) {
-            for (int d = 0; d < data_.horizon; ++d) {
-                auto dem = data_.get_demand(s, d);
-                if (!dem.hard) {
-                    auto [under, over] = cover_violation(schedule, s, d, dem);
-                    cost += under * dem.under_weight + over * dem.over_weight;
-                }
-            }
-        }
-        return cost;
+        return cover_cost(schedule).first;
     }
 
     /// Hard cover cost: each hard demand's shortfall and excess, per
     /// employee, at hard_violation.
     [[nodiscard]] int hard_cover_cost(std::vector<std::vector<int>> const& schedule) const {
-        int cost = 0;
-        for (int s = 0; s < data_.num_shift_types(); ++s) {
-            for (int d = 0; d < data_.horizon; ++d) {
-                auto dem = data_.get_demand(s, d);
-                if (dem.hard) {
-                    auto [under, over] = cover_violation(schedule, s, d, dem);
-                    cost += (under + over) * weights_.hard_violation;
-                }
-            }
-        }
-        return cost;
+        return cover_cost(schedule).second;
     }
 
     /// Hard constraint violation cost.
@@ -290,26 +272,26 @@ public:
     [[nodiscard]] Weights const& weights() const noexcept { return weights_; }
 
 private:
-    /// Employees short of min_employees and over max_employees on (s, d),
-    /// counting only those holding the demand's required skill.
-    [[nodiscard]] std::pair<int, int> cover_violation(std::vector<std::vector<int>> const& schedule,
-                                                      int s, int d,
-                                                      RosteringData::Demand const& dem) const {
-        int count = 0;
-        for (int e = 0; e < data_.num_employees(); ++e) {
-            if (schedule[e][d] == s &&
-                (dem.required_skill.empty() || has_skill(e, dem.required_skill))) {
-                ++count;
+    /// (soft, hard) cover cost over every cell, one crediting per cell
+    /// minimising the two together.
+    [[nodiscard]] std::pair<int, int> cover_cost(
+        std::vector<std::vector<int>> const& schedule) const {
+        int soft = 0;
+        int hard = 0;
+        for (auto const& entry : data_.demand) {
+            int64_t const key = entry.first;
+            int const s = static_cast<int>(key >> 32);
+            int const d = static_cast<int>(static_cast<uint32_t>(key));
+            if (s >= data_.num_shift_types() || d >= data_.horizon) {
+                continue;  // Indexes no schedule column; parsers and solve() reject it.
             }
+            auto const workers = cell_workers(schedule, s, d);
+            auto const [cell_soft, cell_hard] =
+                cell_cover_cost(data_, s, d, workers, weights_.hard_violation);
+            soft += cell_soft;
+            hard += cell_hard;
         }
-        int under = std::max(0, dem.min_employees - count);
-        int over = dem.max_employees < INT_MAX ? std::max(0, count - dem.max_employees) : 0;
-        return {under, over};
-    }
-
-    [[nodiscard]] bool has_skill(int employee, std::string const& skill) const {
-        auto const& skills = data_.employees[employee].skills;
-        return std::find(skills.begin(), skills.end(), skill) != skills.end();
+        return {soft, hard};
     }
 
     RosteringData const& data_;

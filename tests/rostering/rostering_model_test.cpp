@@ -264,28 +264,64 @@ TEST_CASE("RosteringModel: a repeated (shift, day, skill) demand is rejected", "
     CHECK(model.demands()[1].params.min_employees == 1);
 }
 
-TEST_CASE("RosteringModel: two skill demands on one cell are declared, not dropped",
-          "[rostering]") {
+TEST_CASE("RosteringModel: two skill demands on one cell are both priced", "[rostering]") {
     // INRC-II states cover per (shift, skill, day), so both demands are a
-    // valid declaration and round-trip.  The native engine holds one demand
-    // per (shift, day), so solve() rejects the cell rather than price only
-    // one of them (#255).
+    // valid declaration and round-trip, and solve() prices each (#255).
     RosteringModel model;
     int night = model.add_shift_type({.name = "N"});
     model.add_employee({.name = "Ann", .skills = {"HeadNurse"}});
     model.add_employee({.name = "Ben", .skills = {"Nurse"}});
     model.set_horizon(7);
-    model.add_demand(night, 3, {.min_employees = 2, .required_skill = "HeadNurse"});
-    model.add_demand(night, 3, {.min_employees = 1, .required_skill = "Nurse"});
+    model.add_demand(night, 3,
+                     {.min_employees = 2, .required_skill = "HeadNurse", .under_weight = 70});
+    model.add_demand(night, 3, {.min_employees = 1, .required_skill = "Nurse", .under_weight = 40});
 
     REQUIRE(model.demands().size() == 2);
     CHECK(model.demands()[0].params.required_skill == "HeadNurse");
     CHECK(model.demands()[1].params.required_skill == "Nurse");
 
-    // When #255 lands, assert instead that both shortfalls are priced.
-    CHECK_THROWS_AS(model.solve(TimeLimit(0.1)), std::invalid_argument);
-    // Also when the work budget is spent before compiling.
-    CHECK_THROWS_AS(model.solve(TimeLimit(0.0, 1e-6)), std::invalid_argument);
+    // Ann and Ben both work the cell: the Nurse demand is met and the
+    // HeadNurse one is one short, at its own weight.
+    auto result = model.solve(TimeLimit(0.1));
+    CHECK(result.feasible());
+    CHECK(result.cost() == 70.0);
+    REQUIRE(result.understaffed().size() == 1);
+    CHECK(result.understaffed()[0].shift == night);
+    CHECK(result.understaffed()[0].day == 3);
+    CHECK(result.understaffed()[0].skill == "HeadNurse");
+}
+
+TEST_CASE("RosteringModel: a worker counts toward one skill demand on a cell", "[rostering]") {
+    // INRC-II assigns a nurse to one (shift, skill) pair, so Cat, holding
+    // both skills, covers one of the two demands, not both (#255).  The
+    // engine credits her where the shortfall left behind is cheaper.
+    RosteringModel model;
+    int day = model.add_shift_type({.name = "D"});
+    model.add_employee({.name = "Cat", .skills = {"HeadNurse", "Nurse"}});
+    model.set_horizon(1);
+    model.add_demand(day, 0,
+                     {.min_employees = 1, .required_skill = "HeadNurse", .under_weight = 50});
+    model.add_demand(day, 0, {.min_employees = 1, .required_skill = "Nurse", .under_weight = 30});
+
+    auto result = model.solve(TimeLimit(0.1));
+    CHECK(result.cost() == 30.0);
+    REQUIRE(result.understaffed().size() == 1);
+    CHECK(result.understaffed()[0].skill == "Nurse");
+}
+
+TEST_CASE("RosteringModel: a skill-free demand counts every worker on the cell", "[rostering]") {
+    // A demand with no required skill is a headcount, alongside the cell's
+    // skill demands rather than competing with them for workers (#255).
+    RosteringModel model;
+    int day = model.add_shift_type({.name = "D"});
+    model.add_employee({.name = "Cat", .skills = {"Nurse"}});
+    model.set_horizon(1);
+    model.add_demand(day, 0, {.min_employees = 1});
+    model.add_demand(day, 0, {.min_employees = 1, .required_skill = "Nurse"});
+
+    auto result = model.solve(TimeLimit(0.1));
+    CHECK(result.cost() == 0.0);
+    CHECK(result.understaffed().empty());
 }
 
 TEST_CASE("RosteringModel: an out-of-range forbidden sequence is rejected by solve",
@@ -469,16 +505,16 @@ RosteringData compile_declared(RosteringModel const& m) {
     data.horizon = m.horizon();
 
     for (auto const& d : m.demands()) {
-        // solve() rejects a cell with more than one demand (#255); so does this.
-        REQUIRE_FALSE(data.demand.contains(RosteringData::demand_key(d.shift_type, d.day)));
-        data.demand[RosteringData::demand_key(d.shift_type, d.day)] = {
-            .min_employees = d.params.min_employees,
-            .max_employees = d.params.max_employees,
-            .required_skill = d.params.required_skill,
-            .under_weight = d.params.under_weight,
-            .over_weight = d.params.over_weight,
-            .hard = d.params.hard,
-        };
+        // add_demand() has made each (shift type, day, required skill) unique.
+        REQUIRE(data.add_demand(d.shift_type, d.day,
+                                {
+                                    .min_employees = d.params.min_employees,
+                                    .max_employees = d.params.max_employees,
+                                    .required_skill = d.params.required_skill,
+                                    .under_weight = d.params.under_weight,
+                                    .over_weight = d.params.over_weight,
+                                    .hard = d.params.hard,
+                                }));
     }
 
     data.forbidden_sequences.reserve(m.forbidden_sequences().size());
@@ -545,33 +581,33 @@ void check_same_rostering_data(RosteringData const& a, RosteringData const& b) {
         CHECK(a_max_min == b_max_min);
     }
 
-    // Demand, both directions.
+    // Demand, both directions; a cell's demands compare in order.
+    auto check_same_cell = [](auto const& a_cell, auto const& b_cell) {
+        REQUIRE(a_cell.size() == b_cell.size());
+        for (size_t j = 0; j < a_cell.size(); ++j) {
+            INFO("demand " << j << " of the cell");
+            auto const& [a_min, a_max, a_skill, a_under, a_over, a_hard] = a_cell[j];
+            auto const& [b_min, b_max, b_skill, b_under, b_over, b_hard] = b_cell[j];
+            CHECK(a_min == b_min);
+            CHECK(a_max == b_max);
+            CHECK(a_skill == b_skill);
+            CHECK(a_under == b_under);
+            CHECK(a_over == b_over);
+            CHECK(a_hard == b_hard);
+        }
+    };
     REQUIRE(a_demand.size() == b_demand.size());
-    for (auto const& [key, dem] : a_demand) {
+    for (auto const& [key, cell] : a_demand) {
         INFO("demand key " << key << " of a");
         auto it = b_demand.find(key);
         REQUIRE(it != b_demand.end());
-        auto const& [a_min, a_max, a_skill, a_under, a_over, a_hard] = dem;
-        auto const& [b_min, b_max, b_skill, b_under, b_over, b_hard] = it->second;
-        CHECK(a_min == b_min);
-        CHECK(a_max == b_max);
-        CHECK(a_skill == b_skill);
-        CHECK(a_under == b_under);
-        CHECK(a_over == b_over);
-        CHECK(a_hard == b_hard);
+        check_same_cell(cell, it->second);
     }
-    for (auto const& [key, dem] : b_demand) {
+    for (auto const& [key, cell] : b_demand) {
         INFO("demand key " << key << " of b");
         auto it = a_demand.find(key);
         REQUIRE(it != a_demand.end());
-        auto const& [b_min, b_max, b_skill, b_under, b_over, b_hard] = dem;
-        auto const& [a_min, a_max, a_skill, a_under, a_over, a_hard] = it->second;
-        CHECK(a_min == b_min);
-        CHECK(a_max == b_max);
-        CHECK(a_skill == b_skill);
-        CHECK(a_under == b_under);
-        CHECK(a_over == b_over);
-        CHECK(a_hard == b_hard);
+        check_same_cell(it->second, cell);
     }
 
     REQUIRE(a_forbidden.size() == b_forbidden.size());
@@ -747,18 +783,18 @@ SECTION_COVER
 
     // Cover: 2 shift types x 14 days, weekday D = 3, weekend D = 2, N = 1.
     REQUIRE(parsed.demand.size() == 28);
-    CHECK(parsed.get_demand(0, 0).min_employees == 3);
-    CHECK(parsed.get_demand(0, 5).min_employees == 2);   // Saturday
-    CHECK(parsed.get_demand(0, 13).min_employees == 2);  // second Sunday
-    CHECK(parsed.get_demand(1, 0).min_employees == 1);
+    CHECK(parsed.get_demands(0, 0)[0].min_employees == 3);
+    CHECK(parsed.get_demands(0, 5)[0].min_employees == 2);   // Saturday
+    CHECK(parsed.get_demands(0, 13)[0].min_employees == 2);  // second Sunday
+    CHECK(parsed.get_demands(1, 0)[0].min_employees == 1);
     // The requirement is a target: over-cover is charged above the same
     // number.  The SB weights, under=100 and over=1, are kept as written, and
     // SB cover is soft.  There is no skill.
-    CHECK(parsed.get_demand(0, 0).max_employees == 3);
-    CHECK(parsed.get_demand(0, 0).under_weight == 100);
-    CHECK(parsed.get_demand(0, 0).over_weight == 1);
-    CHECK_FALSE(parsed.get_demand(0, 0).hard);
-    CHECK(parsed.get_demand(0, 0).required_skill.empty());
+    CHECK(parsed.get_demands(0, 0)[0].max_employees == 3);
+    CHECK(parsed.get_demands(0, 0)[0].under_weight == 100);
+    CHECK(parsed.get_demands(0, 0)[0].over_weight == 1);
+    CHECK_FALSE(parsed.get_demands(0, 0)[0].hard);
+    CHECK(parsed.get_demands(0, 0)[0].required_skill.empty());
 
     // -- Step 2 -------------------------------------------------------------
     // The same instance declared through RosteringModel.
@@ -846,9 +882,9 @@ TEST_CASE("SB-NRP cover weights are kept as written", "[rostering][roundtrip]") 
             "SECTION_STAFF\nA,D=7,3360,1440,5,2,2,1\n\nSECTION_COVER\n" +
             cover + "\n");
     };
-    auto sb = with_cover("0,D,2,100,1").get_demand(0, 0);
-    auto inverted = with_cover("0,D,2,1,1000").get_demand(0, 0);
-    auto omitted = with_cover("0,D,2").get_demand(0, 0);
+    auto sb = with_cover("0,D,2,100,1").get_demands(0, 0)[0];
+    auto inverted = with_cover("0,D,2,1,1000").get_demands(0, 0)[0];
+    auto omitted = with_cover("0,D,2").get_demands(0, 0)[0];
 
     CHECK(sb.under_weight == 100);
     CHECK(sb.over_weight == 1);

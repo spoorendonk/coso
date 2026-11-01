@@ -97,10 +97,10 @@ private:
     int under_penalty_;
     int over_penalty_;
 
-    /// Count employees with matching skills assigned to (shift, day).
-    [[nodiscard]] int count_assigned(RosteringData const& data,
-                                     std::vector<std::vector<int>> const& schedule, int shift_type,
-                                     int day) const;
+    /// Cover cost of (shift_type, day) worked by `workers`, crediting them
+    /// to the cell's demands as rostering/cover.h describes.
+    [[nodiscard]] int cell_cost(RosteringData const& data, int shift_type, int day,
+                                std::vector<int> const& workers) const;
 };
 
 /// Penalizes forbidden shift sequences.

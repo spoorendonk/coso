@@ -1,5 +1,7 @@
 #include "rostering/construction.h"
 
+#include "rostering/cover.h"
+
 #include <algorithm>
 #include <climits>
 #include <cstdint>
@@ -112,15 +114,6 @@ bool is_feasible_assignment(RosteringData const& data,
 
 namespace {
 
-/// Check whether employee has a given skill (empty skill = always true).
-bool employee_has_skill(RosteringData const& data, int e, std::string const& skill) {
-    if (skill.empty()) {
-        return true;
-    }
-    auto const& skills = data.employees[e].skills;
-    return std::find(skills.begin(), skills.end(), skill) != skills.end();
-}
-
 /// Bring every employee up to min_total_minutes, which the demand-driven
 /// passes never aim at.  Each step adds the feasible (day, shift) whose cover
 /// effect is cheapest: filling a shortfall first, then an assignment within
@@ -146,25 +139,17 @@ void top_up_min_minutes(RosteringData const& data, RosteringSolution& sol) {
                         !is_feasible_assignment(data, sol.schedule(), e, d, s)) {
                         continue;
                     }
-                    auto const dem = data.get_demand(s, d);
-                    int64_t score = 0;
-                    if (employee_has_skill(data, e, dem.required_skill)) {
-                        int count = 0;
-                        for (int x = 0; x < ne; ++x) {
-                            if (sol.get(x, d) == s &&
-                                employee_has_skill(data, x, dem.required_skill)) {
-                                ++count;
-                            }
-                        }
-                        if (count < dem.min_employees) {
-                            score = dem.hard ? INT_MIN : -dem.under_weight;
-                        } else if (dem.max_employees != INT_MAX && count >= dem.max_employees) {
-                            if (dem.hard) {
-                                continue;
-                            }
-                            score = dem.over_weight;
-                        }
+                    // The change in the cell's cover cost, with workers
+                    // credited as rostering/cover.h describes.
+                    auto workers = cell_workers(sol.schedule(), s, d);
+                    auto const [soft_before, hard_before] = cell_cover_cost(data, s, d, workers);
+                    workers.push_back(e);
+                    auto const [soft_after, hard_after] = cell_cover_cost(data, s, d, workers);
+                    if (hard_after > hard_before) {
+                        continue;  // Never a hard over-cover.
                     }
+                    int64_t const score = static_cast<int64_t>(soft_after - soft_before) +
+                                          static_cast<int64_t>(hard_after - hard_before);
                     if (best_d < 0 || score < best_score) {
                         best_d = d;
                         best_s = s;
@@ -190,12 +175,13 @@ RosteringSolution construct_ffd(RosteringData const& data,
                                 RosteringCostEvaluator const& evaluator) {
     RosteringSolution sol(data, evaluator);
 
-    // Build list of (shift_type, day, min_employees) demand entries.
+    // Build list of (shift_type, day, demand) entries, one per demand.
     struct DemandEntry {
         int shift_type;
         int day;
+        size_t index;  ///< Into data.get_demands(shift_type, day).
         int min_employees;
-        std::string required_skill;
+        RosteringData::Demand const* demand;
     };
 
     std::vector<DemandEntry> demands;
@@ -204,9 +190,11 @@ RosteringSolution construct_ffd(RosteringData const& data,
 
     for (int s = 0; s < ns; ++s) {
         for (int d = 0; d < H; ++d) {
-            auto dem = data.get_demand(s, d);
-            if (dem.min_employees > 0) {
-                demands.push_back({s, d, dem.min_employees, dem.required_skill});
+            auto const cell = data.get_demands(s, d);
+            for (size_t j = 0; j < cell.size(); ++j) {
+                if (cell[j].min_employees > 0) {
+                    demands.push_back({s, d, j, cell[j].min_employees, &cell[j]});
+                }
             }
         }
     }
@@ -218,14 +206,8 @@ RosteringSolution construct_ffd(RosteringData const& data,
 
     // For each demand entry, assign employees.
     for (auto const& dem : demands) {
-        // Count how many are already assigned to this (shift, day).
-        int assigned = 0;
-        for (int e = 0; e < data.num_employees(); ++e) {
-            if (sol.get(e, dem.day) == dem.shift_type &&
-                employee_has_skill(data, e, dem.required_skill)) {
-                ++assigned;
-            }
-        }
+        // Count how many of the cell's workers are credited to this demand.
+        int assigned = credited_count(data, sol.schedule(), dem.shift_type, dem.day, dem.index);
 
         // Sort employees by assignment cost delta (cheapest first).
         std::vector<int> candidates(data.num_employees());
@@ -250,14 +232,16 @@ RosteringSolution construct_ffd(RosteringData const& data,
         while (assigned < dem.min_employees) {
             bool found = false;
             for (int e : candidates) {
-                if (!employee_has_skill(data, e, dem.required_skill)) {
+                if (!qualifies(data, e, *dem.demand)) {
                     continue;
                 }
                 if (!is_feasible_assignment(data, sol.schedule(), e, dem.day, dem.shift_type)) {
                     continue;
                 }
                 sol.assign(e, dem.day, dem.shift_type);
-                ++assigned;
+                // Not always +1: the cell's crediting may move another
+                // worker off this demand to cover one of its others.
+                assigned = credited_count(data, sol.schedule(), dem.shift_type, dem.day, dem.index);
                 found = true;
                 break;
             }
@@ -286,53 +270,51 @@ RosteringSolution construct_greedy(RosteringData const& data,
     // Iterate day by day, shift by shift.
     for (int d = 0; d < H; ++d) {
         for (int s = 0; s < ns; ++s) {
-            auto dem = data.get_demand(s, d);
-            if (dem.min_employees <= 0) {
-                continue;
-            }
-
-            // Count currently assigned employees.
-            int assigned = 0;
-            for (int e = 0; e < ne; ++e) {
-                if (sol.get(e, d) == s && employee_has_skill(data, e, dem.required_skill)) {
-                    ++assigned;
+            auto const cell = data.get_demands(s, d);
+            for (size_t j = 0; j < cell.size(); ++j) {
+                auto const& dem = cell[j];
+                if (dem.min_employees <= 0) {
+                    continue;
                 }
-            }
 
-            // Sort employees by cost delta for this assignment.
-            std::vector<int> candidates(ne);
-            std::iota(candidates.begin(), candidates.end(), 0);
-            std::sort(candidates.begin(), candidates.end(), [&](int a, int b) {
-                // Sort by: fewest assigned days so far (load balance).
-                int load_a = 0, load_b = 0;
-                for (int dd = 0; dd < H; ++dd) {
-                    if (sol.get(a, dd) >= 0) {
-                        ++load_a;
-                    }
-                    if (sol.get(b, dd) >= 0) {
-                        ++load_b;
-                    }
-                }
-                return load_a < load_b;
-            });
+                // Count the cell's workers credited to this demand.
+                int assigned = credited_count(data, sol.schedule(), s, d, j);
 
-            // Assign greedily until demand is met.
-            while (assigned < dem.min_employees) {
-                bool found = false;
-                for (int e : candidates) {
-                    if (!employee_has_skill(data, e, dem.required_skill)) {
-                        continue;
+                // Sort employees by cost delta for this assignment.
+                std::vector<int> candidates(ne);
+                std::iota(candidates.begin(), candidates.end(), 0);
+                std::sort(candidates.begin(), candidates.end(), [&](int a, int b) {
+                    // Sort by: fewest assigned days so far (load balance).
+                    int load_a = 0, load_b = 0;
+                    for (int dd = 0; dd < H; ++dd) {
+                        if (sol.get(a, dd) >= 0) {
+                            ++load_a;
+                        }
+                        if (sol.get(b, dd) >= 0) {
+                            ++load_b;
+                        }
                     }
-                    if (!is_feasible_assignment(data, sol.schedule(), e, d, s)) {
-                        continue;
+                    return load_a < load_b;
+                });
+
+                // Assign greedily until demand is met.
+                while (assigned < dem.min_employees) {
+                    bool found = false;
+                    for (int e : candidates) {
+                        if (!qualifies(data, e, dem)) {
+                            continue;
+                        }
+                        if (!is_feasible_assignment(data, sol.schedule(), e, d, s)) {
+                            continue;
+                        }
+                        sol.assign(e, d, s);
+                        assigned = credited_count(data, sol.schedule(), s, d, j);
+                        found = true;
+                        break;
                     }
-                    sol.assign(e, d, s);
-                    ++assigned;
-                    found = true;
-                    break;
-                }
-                if (!found) {
-                    break;
+                    if (!found) {
+                        break;
+                    }
                 }
             }
         }

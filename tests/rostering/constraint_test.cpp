@@ -33,10 +33,8 @@ RosteringData make_instance() {
     data.horizon = 7;
 
     for (int d = 0; d < 7; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {
-            .min_employees = 1, .max_employees = 2, .required_skill = ""};
-        data.demand[RosteringData::demand_key(1, d)] = {
-            .min_employees = 1, .max_employees = 1, .required_skill = ""};
+        data.add_demand(0, d, {.min_employees = 1, .max_employees = 2, .required_skill = ""});
+        data.add_demand(1, d, {.min_employees = 1, .max_employees = 1, .required_skill = ""});
     }
 
     return data;

@@ -1,5 +1,7 @@
 #include "rostering/overconstrained.h"
 
+#include "rostering/cover.h"
+
 #include <algorithm>
 #include <climits>
 
@@ -12,31 +14,20 @@ namespace coso {
 int rostering_total_understaffing(RosteringData const& data,
                                   std::vector<std::vector<int>> const& schedule) {
     int total = 0;
-    int const ne = data.num_employees();
     int const ns = data.num_shift_types();
     int const H = data.horizon;
 
     for (int s = 0; s < ns; ++s) {
         for (int d = 0; d < H; ++d) {
-            auto dem = data.get_demand(s, d);
-            if (dem.min_employees <= 0) {
+            auto const demands = data.get_demands(s, d);
+            if (demands.empty()) {
                 continue;
             }
-
-            // Count employees assigned to shift s on day d.
-            int count = 0;
-            for (int e = 0; e < ne; ++e) {
-                if (schedule[e][d] == s) {
-                    if (dem.required_skill.empty() ||
-                        std::find(data.employees[e].skills.begin(), data.employees[e].skills.end(),
-                                  dem.required_skill) != data.employees[e].skills.end()) {
-                        ++count;
-                    }
-                }
-            }
-
-            if (count < dem.min_employees) {
-                total += dem.min_employees - count;
+            // Workers credited to the cell's demands as rostering/cover.h
+            // describes.
+            auto const counts = credit_cover(data, demands, cell_workers(schedule, s, d));
+            for (size_t j = 0; j < demands.size(); ++j) {
+                total += cover_units(demands[j], counts[j]).first;
             }
         }
     }

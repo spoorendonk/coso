@@ -129,8 +129,12 @@ public:
     /// std::invalid_argument on a negative under_weight or over_weight, and
     /// on a second demand for the same (shift_type, day, required_skill).
     ///
-    /// The native engine holds one demand per (shift_type, day), so solve()
-    /// rejects a cell carrying more than one (#255) rather than drop one.
+    /// A worker on a cell counts toward one skill demand they hold, as
+    /// INRC-II assigns a nurse to one (shift, skill) pair, and the native
+    /// engine picks that demand where it prices the cell's cover cheapest.
+    /// A worker who also holds a skill the cell does not demand may count
+    /// toward none; a demand with no required skill counts every worker
+    /// (#255).
     void add_demand(int shift_type, int day, DemandParams p);
 
     // -- Constraints (hard) --------------------------------------------------
@@ -160,8 +164,7 @@ public:
     ///
     /// Throws std::invalid_argument when a demand, preference,
     /// unavailability or forbidden sequence names a day outside
-    /// [0, horizon), or a shift type or employee that was never added, and
-    /// when a (shift type, day) carries more than one demand (#255) --
+    /// [0, horizon), or a shift type or employee that was never added --
     /// whatever the time limit.  The check runs here, not in the adders,
     /// so the order of declaration does not matter.
     ///
@@ -212,8 +215,7 @@ public:
 private:
     /// Throws std::invalid_argument on an out-of-range day, shift type or
     /// employee in a declared demand, preference, unavailability or forbidden
-    /// sequence, and on a (shift type, day) carrying more than one demand
-    /// (#255).  Runs before anything else in solve().
+    /// sequence.  Runs before anything else in solve().
     void check_declaration_() const;
 
     // -- Shift types & employees ---------------------------------------------

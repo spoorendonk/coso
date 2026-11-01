@@ -751,6 +751,19 @@ else()
 endif()
 
 # --------------------------------------------------------------------------- #
+#  Rostering cover crediting tests                                            #
+# --------------------------------------------------------------------------- #
+
+add_executable(rostering_cover_test rostering/cover_test.cpp)
+target_link_libraries(rostering_cover_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(rostering_cover_test)
+else()
+    add_test(NAME rostering_cover_test COMMAND rostering_cover_test)
+endif()
+
+# --------------------------------------------------------------------------- #
 #  Rostering benchmark tests (require downloaded NRP instances)               #
 # --------------------------------------------------------------------------- #
 

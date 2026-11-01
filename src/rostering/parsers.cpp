@@ -428,7 +428,7 @@ RosteringData parse_nrp(const std::string& content) {
                     dem.max_employees = required;
                     dem.over_weight = parse_int(tokens[4], bad);
                 }
-                if (!data.demand.emplace(RosteringData::demand_key(shift_type, day), dem).second) {
+                if (!data.add_demand(shift_type, day, dem)) {
                     throw std::runtime_error("NRP parse error: duplicate COVER line: " + trimmed);
                 }
                 break;

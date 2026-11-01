@@ -1,10 +1,12 @@
 #pragma once
 
 #include "rostering/constraints/constraint.h"
+#include "rostering/cover.h"
 #include "rostering/rostering_data.h"
 
 #include <algorithm>
 #include <climits>
+#include <span>
 #include <vector>
 
 namespace coso {
@@ -21,8 +23,9 @@ namespace coso {
 ///      successor shift is insufficient, that candidate shift is pruned.
 ///   3. Forbidden sequences: if assigning a shift on a day would complete a
 ///      forbidden sequence, that shift is pruned.
-///   4. Demand limits: if a shift/day pair is already at max demand, that shift
-///      is pruned for additional employees (unless they already hold it).
+///   4. Demand limits: if adding an employee to a shift/day pair would push one
+///      of its demands over max_employees, that shift is pruned for them
+///      (unless they already hold it).
 ///   5. Unavailability: if an employee is unavailable on a day, all shifts are
 ///      pruned for that cell.
 ///
@@ -200,33 +203,45 @@ private:
         int const ne = data_.num_employees();
         int const H = data_.horizon;
 
-        // Count current assignments per (shift, day).
-        // Only prune if we know the max is already met.
+        // Prune shift s for an unassigned employee on day d when adding them
+        // to the cell can only push a capped demand over its max: the
+        // cell's over-cover, with workers credited as rostering/cover.h
+        // describes, grows.  An employee no capped demand would be credited
+        // with stays open.
         for (int s = 0; s < num_shifts_; ++s) {
             for (int d = 0; d < H; ++d) {
-                auto dem = data_.get_demand(s, d);
-                if (dem.max_employees >= INT_MAX) {
+                auto const demands = data_.get_demands(s, d);
+                bool const capped = std::ranges::any_of(
+                    demands, [](auto const& dem) { return dem.max_employees < INT_MAX; });
+                if (!capped) {
                     continue;  // No cap.
                 }
 
-                int count = 0;
+                auto workers = cell_workers(schedule, s, d);
+                int const over_before = over_cover(demands, workers);
                 for (int e = 0; e < ne; ++e) {
-                    if (schedule[e][d] == s) {
-                        ++count;
+                    if (schedule[e][d] >= 0) {
+                        continue;
                     }
-                }
-
-                if (count >= dem.max_employees) {
-                    // At or over max: prune this shift for all unassigned
-                    // employees on this day.
-                    for (int e = 0; e < ne; ++e) {
-                        if (schedule[e][d] < 0) {
-                            domains_[e][d] &= ~(1u << s);
-                        }
+                    workers.push_back(e);
+                    if (over_cover(demands, workers) > over_before) {
+                        domains_[e][d] &= ~(1u << s);
                     }
+                    workers.pop_back();
                 }
             }
         }
+    }
+
+    /// Employees over max_employees, summed over a cell's demands.
+    [[nodiscard]] int over_cover(std::span<RosteringData::Demand const> demands,
+                                 std::vector<int> const& workers) const {
+        auto const counts = credit_cover(data_, demands, workers);
+        int over = 0;
+        for (size_t j = 0; j < demands.size(); ++j) {
+            over += cover_units(demands[j], counts[j]).second;
+        }
+        return over;
     }
 
     RosteringData const& data_;

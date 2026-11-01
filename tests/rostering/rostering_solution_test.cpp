@@ -36,10 +36,8 @@ RosteringData make_small_instance() {
 
     // Demand: 1 nurse per day shift, 1 per night shift, every day.
     for (int d = 0; d < 7; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {
-            .min_employees = 1, .max_employees = 2, .required_skill = ""};
-        data.demand[RosteringData::demand_key(1, d)] = {
-            .min_employees = 1, .max_employees = 1, .required_skill = ""};
+        data.add_demand(0, d, {.min_employees = 1, .max_employees = 2, .required_skill = ""});
+        data.add_demand(1, d, {.min_employees = 1, .max_employees = 1, .required_skill = ""});
     }
 
     return data;
@@ -160,8 +158,12 @@ RosteringData make_excess_instance(bool hard) {
     data.shift_types = {{.name = "Day", .duration_minutes = 480}};
     data.employees = {{.name = "Alice"}, {.name = "Bob"}, {.name = "Carol"}};
     data.horizon = 1;
-    data.demand[RosteringData::demand_key(0, 0)] = {
-        .min_employees = 0, .max_employees = 1, .under_weight = 50, .over_weight = 3, .hard = hard};
+    data.add_demand(0, 0,
+                    {.min_employees = 0,
+                     .max_employees = 1,
+                     .under_weight = 50,
+                     .over_weight = 3,
+                     .hard = hard});
     return data;
 }
 
@@ -348,8 +350,8 @@ TEST_CASE("RosteringSolution: recompute_cost matches incremental", "[rostering]"
 TEST_CASE("RosteringSolution: skill-based demand", "[rostering]") {
     auto data = make_small_instance();
     // Override day 0 day-shift demand to require "senior" skill.
-    data.demand[RosteringData::demand_key(0, 0)] = {
-        .min_employees = 1, .max_employees = 2, .required_skill = "senior"};
+    data.demand.erase(RosteringData::demand_key(0, 0));
+    data.add_demand(0, 0, {.min_employees = 1, .max_employees = 2, .required_skill = "senior"});
 
     RosteringCostEvaluator evaluator(data);
     RosteringSolution sol(data, evaluator);

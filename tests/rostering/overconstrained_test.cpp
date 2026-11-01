@@ -24,7 +24,7 @@ static RosteringData make_basic_data() {
     // Demand: 1 employee per shift per day.
     for (int s = 0; s < 2; ++s) {
         for (int d = 0; d < 5; ++d) {
-            data.demand[RosteringData::demand_key(s, d)] = {.min_employees = 1, .max_employees = 2};
+            data.add_demand(s, d, {.min_employees = 1, .max_employees = 2});
         }
     }
 
@@ -43,7 +43,7 @@ static RosteringData make_overconstrained_data() {
 
     // Demand: 2 employees per day shift, but only 2 employees total.
     for (int d = 0; d < 3; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {.min_employees = 2, .max_employees = 3};
+        data.add_demand(0, d, {.min_employees = 2, .max_employees = 3});
     }
 
     return data;

@@ -37,10 +37,8 @@ RosteringData make_small_instance() {
 
     // Demand: 1 nurse per day shift, 1 per night shift, every day.
     for (int d = 0; d < 7; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {
-            .min_employees = 1, .max_employees = 2, .required_skill = ""};
-        data.demand[RosteringData::demand_key(1, d)] = {
-            .min_employees = 1, .max_employees = 1, .required_skill = ""};
+        data.add_demand(0, d, {.min_employees = 1, .max_employees = 2, .required_skill = ""});
+        data.add_demand(1, d, {.min_employees = 1, .max_employees = 1, .required_skill = ""});
     }
 
     return data;
@@ -136,14 +134,15 @@ TEST_CASE("construct_ffd: respects forbidden sequences", "[rostering][constructi
 TEST_CASE("construct_ffd: skill-based demand", "[rostering][construction]") {
     auto data = make_small_instance();
     // Require "senior" skill for day shift on days 0-4 only (Carol can cover 5).
+    for (int d = 0; d < 7; ++d) {
+        data.demand.erase(RosteringData::demand_key(0, d));
+    }
     for (int d = 0; d < 5; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {
-            .min_employees = 1, .max_employees = 2, .required_skill = "senior"};
+        data.add_demand(0, d, {.min_employees = 1, .max_employees = 2, .required_skill = "senior"});
     }
     // Days 5-6: no skill requirement (any employee).
     for (int d = 5; d < 7; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {
-            .min_employees = 1, .max_employees = 2, .required_skill = ""};
+        data.add_demand(0, d, {.min_employees = 1, .max_employees = 2, .required_skill = ""});
     }
 
     RosteringCostEvaluator evaluator(data);
@@ -236,7 +235,7 @@ RosteringData make_single_employee(int horizon) {
     data.employees = {{.name = "Alice", .max_consecutive_days = horizon}};
     data.horizon = horizon;
     for (int d = 0; d < horizon; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {.min_employees = 1, .max_employees = 1};
+        data.add_demand(0, d, {.min_employees = 1, .max_employees = 1});
     }
     return data;
 }
@@ -288,7 +287,8 @@ TEST_CASE("constructions respect hard min_total_minutes", "[rostering][construct
     // bound demands 3 shifts.
     auto data = make_single_employee(7);
     for (int d = 1; d < 7; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {.min_employees = 0, .max_employees = 0};
+        data.demand.erase(RosteringData::demand_key(0, d));
+        data.add_demand(0, d, {.min_employees = 0, .max_employees = 0});
     }
     data.employees[0].min_total_minutes = 3 * 480;
     RosteringCostEvaluator evaluator(data);

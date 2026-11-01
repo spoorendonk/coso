@@ -40,10 +40,8 @@ RosteringData make_replan_instance() {
 
     // Demand: 1 nurse per day shift, 1 per night shift, every day.
     for (int d = 0; d < 14; ++d) {
-        data.demand[RosteringData::demand_key(0, d)] = {
-            .min_employees = 1, .max_employees = 2, .required_skill = ""};
-        data.demand[RosteringData::demand_key(1, d)] = {
-            .min_employees = 1, .max_employees = 1, .required_skill = ""};
+        data.add_demand(0, d, {.min_employees = 1, .max_employees = 2, .required_skill = ""});
+        data.add_demand(1, d, {.min_employees = 1, .max_employees = 1, .required_skill = ""});
     }
 
     return data;

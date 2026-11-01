@@ -1,7 +1,10 @@
 #include "rostering/constraints/constraint.h"
 
+#include "rostering/cover.h"
+
 #include <algorithm>
 #include <climits>
+#include <vector>
 
 namespace coso {
 
@@ -75,22 +78,27 @@ int MaxConsecutiveConstraint::evaluate_delta(RosteringData const& data,
 //  DemandConstraint                                                             //
 // --------------------------------------------------------------------------- //
 
-int DemandConstraint::count_assigned(RosteringData const& data,
-                                     std::vector<std::vector<int>> const& schedule, int shift_type,
-                                     int day) const {
-    auto dem = data.get_demand(shift_type, day);
-    int count = 0;
-    int const ne = data.num_employees();
-    for (int e = 0; e < ne; ++e) {
-        if (schedule[e][day] == shift_type) {
-            if (dem.required_skill.empty() ||
-                std::find(data.employees[e].skills.begin(), data.employees[e].skills.end(),
-                          dem.required_skill) != data.employees[e].skills.end()) {
-                ++count;
-            }
-        }
+int DemandConstraint::cell_cost(RosteringData const& data, int shift_type, int day,
+                                std::vector<int> const& workers) const {
+    auto const demands = data.get_demands(shift_type, day);
+    if (demands.empty()) {
+        return 0;
     }
-    return count;
+    // Workers are credited as rostering/cover.h describes, at this
+    // constraint's own penalties rather than the demands' declared weights.
+    auto const counts = credit_cover(data, demands, workers, [&](int j, int k) {
+        auto const& dem = demands[j];
+        if (k <= dem.min_employees) {
+            return -under_penalty_;
+        }
+        return k <= dem.max_employees ? 0 : over_penalty_;
+    });
+    int cost = 0;
+    for (size_t j = 0; j < demands.size(); ++j) {
+        auto [under, over] = cover_units(demands[j], counts[j]);
+        cost += under * under_penalty_ + over * over_penalty_;
+    }
+    return cost;
 }
 
 int DemandConstraint::evaluate(RosteringData const& data,
@@ -101,14 +109,7 @@ int DemandConstraint::evaluate(RosteringData const& data,
 
     for (int s = 0; s < ns; ++s) {
         for (int d = 0; d < H; ++d) {
-            auto dem = data.get_demand(s, d);
-            int count = count_assigned(data, schedule, s, d);
-            if (count < dem.min_employees) {
-                cost += (dem.min_employees - count) * under_penalty_;
-            }
-            if (dem.max_employees < INT_MAX && count > dem.max_employees) {
-                cost += (count - dem.max_employees) * over_penalty_;
-            }
+            cost += cell_cost(data, s, d, cell_workers(schedule, s, d));
         }
     }
     return cost;
@@ -117,42 +118,21 @@ int DemandConstraint::evaluate(RosteringData const& data,
 int DemandConstraint::evaluate_delta(RosteringData const& data,
                                      std::vector<std::vector<int>> const& schedule,
                                      RosteringMove const& move) const {
-    int d = move.day;
+    int const d = move.day;
     int delta = 0;
 
-    // Helper to compute demand cost for a single (shift, day) cell.
-    auto cell_cost = [&](int shift_type, int count) -> int {
-        auto dem = data.get_demand(shift_type, d);
-        int c = 0;
-        if (count < dem.min_employees) {
-            c += (dem.min_employees - count) * under_penalty_;
-        }
-        if (dem.max_employees < INT_MAX && count > dem.max_employees) {
-            c += (count - dem.max_employees) * over_penalty_;
-        }
-        return c;
-    };
-
-    // Check if the employee has the skill for the shift.
-    auto has_skill = [&](int emp, int shift_type) -> bool {
-        auto dem = data.get_demand(shift_type, d);
-        if (dem.required_skill.empty()) {
-            return true;
-        }
-        auto const& skills = data.employees[emp].skills;
-        return std::find(skills.begin(), skills.end(), dem.required_skill) != skills.end();
-    };
-
-    // The old shift loses one employee; the new shift gains one.
-    if (move.old_shift >= 0 && has_skill(move.employee, move.old_shift)) {
-        int count = count_assigned(data, schedule, move.old_shift, d);
-        delta -= cell_cost(move.old_shift, count);
-        delta += cell_cost(move.old_shift, count - 1);
+    // The old shift's cell loses the employee; the new shift's cell gains one.
+    if (move.old_shift >= 0) {
+        auto workers = cell_workers(schedule, move.old_shift, d);
+        delta -= cell_cost(data, move.old_shift, d, workers);
+        std::erase(workers, move.employee);
+        delta += cell_cost(data, move.old_shift, d, workers);
     }
-    if (move.new_shift >= 0 && has_skill(move.employee, move.new_shift)) {
-        int count = count_assigned(data, schedule, move.new_shift, d);
-        delta -= cell_cost(move.new_shift, count);
-        delta += cell_cost(move.new_shift, count + 1);
+    if (move.new_shift >= 0) {
+        auto workers = cell_workers(schedule, move.new_shift, d);
+        delta -= cell_cost(data, move.new_shift, d, workers);
+        workers.push_back(move.employee);
+        delta += cell_cost(data, move.new_shift, d, workers);
     }
 
     return delta;

@@ -2,10 +2,12 @@
 
 #include <climits>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace coso {
@@ -69,9 +71,11 @@ struct RosteringData {
         bool hard = false;        ///< Cover is a hard constraint; the weights are unused.
     };
 
-    /// Demand indexed by (shift_type, day).
-    /// Key: (shift_type_id, day_index).
-    std::unordered_map<int64_t, Demand> demand;
+    /// Demands indexed by (shift_type, day): one per required skill.
+    /// Key: (shift_type_id, day_index).  INRC-II states cover per (shift,
+    /// skill, day), so a cell may carry several demands; how the cell's
+    /// workers are credited to them is rostering/cover.h's business.
+    std::unordered_map<int64_t, std::vector<Demand>> demand;
 
     /// Helper to create a key for the demand map.
     static int64_t demand_key(int shift_type, int day) noexcept {
@@ -79,10 +83,23 @@ struct RosteringData {
                static_cast<int64_t>(static_cast<uint32_t>(day));
     }
 
-    /// Look up demand for a given shift type and day. Returns default if absent.
-    [[nodiscard]] Demand get_demand(int shift_type, int day) const {
+    /// Add a demand to (shift_type, day).  Returns false, adding nothing,
+    /// when the cell already has a demand for the same required_skill.
+    bool add_demand(int shift_type, int day, Demand dem) {
+        auto& cell = demand[demand_key(shift_type, day)];
+        for (auto const& other : cell) {
+            if (other.required_skill == dem.required_skill) {
+                return false;
+            }
+        }
+        cell.push_back(std::move(dem));
+        return true;
+    }
+
+    /// The demands on (shift_type, day), in the order added; empty if none.
+    [[nodiscard]] std::span<Demand const> get_demands(int shift_type, int day) const {
         auto it = demand.find(demand_key(shift_type, day));
-        return it != demand.end() ? it->second : Demand{};
+        return it != demand.end() ? std::span<Demand const>(it->second) : std::span<Demand const>();
     }
 
     // -- Hard constraints ----------------------------------------------------
