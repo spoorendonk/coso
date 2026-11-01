@@ -45,8 +45,9 @@ not the thing being built.
 
 **The engine is broken in places, and that is intentional.** Scheduling aborts on real input
 (#188), routing returns time-window violations as feasible (#194) and searches for minimum
-distance whatever objective is declared (#238), and rostering's constructions ignore its hard
-working-time bounds (#239) and it accepts a shift duration nothing reads (#233).
+distance whatever objective is declared (#238), and rostering accepts a shift duration nothing
+reads (#233). (Rostering's constructions now respect its hard weekend and working-time bounds,
+#246.)
 These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
 over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a
 reason an audit or a spec decision cannot proceed. File it, cite it, and carry on.

@@ -216,3 +216,104 @@ TEST_CASE("construct_ffd: cost is better than empty solution", "[rostering][cons
 
     REQUIRE(sol.cost() < empty.cost());
 }
+
+// ---------------------------------------------------------------------------
+//  Hard working-time and weekend bounds (#246)
+//
+//  Each instance has one employee and soft cover that rewards working more
+//  than the bound allows, so a construction that ignored the bound would
+//  build a cheaper-looking roster that violates it.
+// ---------------------------------------------------------------------------
+
+namespace {
+
+using Construction = RosteringSolution (*)(RosteringData const&, RosteringCostEvaluator const&);
+
+/// One employee, one 480-minute shift, soft cover of one on every day.
+RosteringData make_single_employee(int horizon) {
+    RosteringData data;
+    data.shift_types = {{.name = "Day", .duration_minutes = 480}};
+    data.employees = {{.name = "Alice", .max_consecutive_days = horizon}};
+    data.horizon = horizon;
+    for (int d = 0; d < horizon; ++d) {
+        data.demand[RosteringData::demand_key(0, d)] = {.min_employees = 1, .max_employees = 1};
+    }
+    return data;
+}
+
+int worked_minutes(RosteringData const& data, RosteringSolution const& sol, int e) {
+    int total = 0;
+    for (int d = 0; d < data.horizon; ++d) {
+        if (sol.get(e, d) >= 0) {
+            total += data.shift_types[sol.get(e, d)].duration_minutes;
+        }
+    }
+    return total;
+}
+
+}  // anonymous namespace
+
+TEST_CASE("constructions respect hard max_weekends", "[rostering][construction]") {
+    // Two weekends (days 5-6 and 12-13); cover wants both, the bound allows one.
+    auto data = make_single_employee(14);
+    data.employees[0].max_weekends = 1;
+    RosteringCostEvaluator evaluator(data);
+
+    for (Construction construct : {&construct_ffd, &construct_greedy}) {
+        auto sol = construct(data, evaluator);
+        bool const first = sol.get(0, 5) >= 0 || sol.get(0, 6) >= 0;
+        bool const second = sol.get(0, 12) >= 0 || sol.get(0, 13) >= 0;
+        CHECK(static_cast<int>(first) + static_cast<int>(second) <= 1);
+        CHECK(evaluator.weekend_violation_cost(sol.schedule()) == 0);
+        CHECK(sol.is_feasible());
+    }
+}
+
+TEST_CASE("constructions respect hard max_total_minutes", "[rostering][construction]") {
+    // Cover wants all 7 days; the bound allows 3 shifts.
+    auto data = make_single_employee(7);
+    data.employees[0].max_total_minutes = 3 * 480;
+    RosteringCostEvaluator evaluator(data);
+
+    for (Construction construct : {&construct_ffd, &construct_greedy}) {
+        auto sol = construct(data, evaluator);
+        CHECK(worked_minutes(data, sol, 0) == 3 * 480);
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == 0);
+        CHECK(sol.is_feasible());
+    }
+}
+
+TEST_CASE("constructions respect hard min_total_minutes", "[rostering][construction]") {
+    // Cover wants day 0 only and prices every other shift as over-cover; the
+    // bound demands 3 shifts.
+    auto data = make_single_employee(7);
+    for (int d = 1; d < 7; ++d) {
+        data.demand[RosteringData::demand_key(0, d)] = {.min_employees = 0, .max_employees = 0};
+    }
+    data.employees[0].min_total_minutes = 3 * 480;
+    RosteringCostEvaluator evaluator(data);
+
+    for (Construction construct : {&construct_ffd, &construct_greedy}) {
+        auto sol = construct(data, evaluator);
+        CHECK(sol.get(0, 0) == 0);
+        CHECK(worked_minutes(data, sol, 0) == 3 * 480);
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == 0);
+        CHECK(sol.is_feasible());
+    }
+}
+
+TEST_CASE("constructions report an unreachable min_total_minutes as infeasible",
+          "[rostering][construction]") {
+    // max_total_minutes caps the employee below the minimum, so no roster
+    // satisfies both; the construction must not pretend one does.
+    auto data = make_single_employee(7);
+    data.employees[0].min_total_minutes = 5 * 480;
+    data.employees[0].max_total_minutes = 4 * 480;
+    RosteringCostEvaluator evaluator(data);
+
+    for (Construction construct : {&construct_ffd, &construct_greedy}) {
+        auto sol = construct(data, evaluator);
+        CHECK(worked_minutes(data, sol, 0) <= 4 * 480);
+        CHECK_FALSE(sol.is_feasible());
+    }
+}
