@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <numeric>
 #include <vector>
@@ -121,85 +122,115 @@ struct TopUpCandidate {
     int64_t score;
 };
 
-/// Every (day, shift) from `from_day` on that a top-up may give employee e:
-/// feasible, open to it, adding minutes, and never a hard over-cover.  Each
-/// carries the change in its cell's cover cost, with workers credited as
-/// rostering/cover.h describes, so a shortfall fill scores lowest, then an
-/// assignment within max_employees, then a soft over-cover.  Sorted by score,
-/// then day, then shift.
-std::vector<TopUpCandidate> top_up_candidates(RosteringData const& data,
-                                              RosteringSolution const& sol, int e, int from_day,
-                                              CellFilter const& may_assign) {
-    std::vector<TopUpCandidate> out;
-    for (int d = from_day; d < data.horizon; ++d) {
-        if (may_assign && !may_assign(e, d)) {
-            continue;
-        }
-        for (int s = 0; s < data.num_shift_types(); ++s) {
-            // A shift adding no minutes cannot close the gap.
-            if (data.shift_types[s].duration_minutes <= 0 ||
-                !is_feasible_assignment(data, sol.schedule(), e, d, s)) {
+/// One employee's top-up, run on a plain copy of the schedule so the search
+/// pays no cost re-evaluation per node; what it settles on is applied to the
+/// solution once.
+struct TopUp {
+    RosteringData const& data;
+    std::vector<std::vector<int>>& sched;
+    int e;
+    std::vector<char> open;           ///< Day d was free, available and allowed.
+    std::vector<int64_t> open_after;  ///< open days in [d, horizon).
+    int64_t min_minutes;
+    int64_t cap;  ///< max_total_minutes: no top-up goes past it.
+    int max_duration;
+    int budget;
+
+    /// Every (day, shift) from `from_day` on that the top-up may give e:
+    /// open, feasible, adding minutes, never a hard over-cover.  Each carries
+    /// the change in its cell's cover cost, with workers credited as
+    /// rostering/cover.h describes, so a shortfall fill scores lowest, then an
+    /// assignment within max_employees, then a soft over-cover.
+    ///
+    /// With `one_per_duration`, a day keeps only its cheapest shift of each
+    /// length.  Without forbidden sequences, shifts of equal length on one day
+    /// leave the same later choices open (a hard over-cover depends only on
+    /// other employees' cells), so the rest only multiply the search tree.
+    std::vector<TopUpCandidate> candidates(int from_day, bool one_per_duration) const {
+        std::vector<TopUpCandidate> out;
+        for (int d = from_day; d < data.horizon; ++d) {
+            if (open[d] == 0) {
                 continue;
             }
-            auto workers = cell_workers(sol.schedule(), s, d);
-            auto const [soft_before, hard_before] = cell_cover_cost(data, s, d, workers);
-            workers.push_back(e);
-            auto const [soft_after, hard_after] = cell_cover_cost(data, s, d, workers);
-            if (hard_after > hard_before) {
-                continue;  // Never a hard over-cover.
+            std::size_t const day_begin = out.size();
+            for (int s = 0; s < data.num_shift_types(); ++s) {
+                // A shift adding no minutes cannot close the gap.
+                if (data.shift_types[s].duration_minutes <= 0 ||
+                    !is_feasible_assignment(data, sched, e, d, s)) {
+                    continue;
+                }
+                auto workers = cell_workers(sched, s, d);
+                auto const [soft_before, hard_before] = cell_cover_cost(data, s, d, workers);
+                workers.push_back(e);
+                auto const [soft_after, hard_after] = cell_cover_cost(data, s, d, workers);
+                if (hard_after > hard_before) {
+                    continue;  // Never a hard over-cover.
+                }
+                TopUpCandidate const c{d, s,
+                                       static_cast<int64_t>(soft_after - soft_before) +
+                                           static_cast<int64_t>(hard_after - hard_before)};
+                if (one_per_duration) {
+                    auto const same =
+                        std::find_if(out.begin() + static_cast<std::ptrdiff_t>(day_begin),
+                                     out.end(), [&](TopUpCandidate const& o) {
+                                         return data.shift_types[o.s].duration_minutes ==
+                                                data.shift_types[s].duration_minutes;
+                                     });
+                    if (same != out.end()) {
+                        if (c.score < same->score) {
+                            *same = c;
+                        }
+                        continue;
+                    }
+                }
+                out.push_back(c);
             }
-            out.push_back({d, s,
-                           static_cast<int64_t>(soft_after - soft_before) +
-                               static_cast<int64_t>(hard_after - hard_before)});
         }
+        return out;
     }
-    std::stable_sort(out.begin(), out.end(), [](TopUpCandidate const& a, TopUpCandidate const& b) {
-        return a.score < b.score;
-    });
-    return out;
-}
+
+    /// Depth-first search for extra shifts taking e from `worked` to the
+    /// minimum, added in day order from `from_day`.  Every hard bound
+    /// is_feasible_assignment checks only tightens as shifts are added, so a
+    /// set passes it in day order if it passes in any order, and day order
+    /// loses no solution.  The search only fills days from `from_day` on, so
+    /// open_after stays exact.  On success `found` holds the shifts and they
+    /// stay in `sched`; on failure `sched` is as it was.
+    bool search(int from_day, int64_t worked, std::vector<TopUpCandidate>& found) {
+        if (worked >= min_minutes) {
+            return true;
+        }
+        if (--budget < 0) {
+            return false;
+        }
+        // Prune: a longest shift on every remaining open day, capped by
+        // max_total_minutes, still falls short.
+        int64_t const reach = std::min(worked + open_after[from_day] * max_duration, cap);
+        if (reach < min_minutes) {
+            return false;
+        }
+        auto cands = candidates(from_day, data.forbidden_sequences.empty());
+        std::stable_sort(
+            cands.begin(), cands.end(),
+            [](TopUpCandidate const& a, TopUpCandidate const& b) { return a.score < b.score; });
+        for (auto const& c : cands) {
+            sched[e][c.d] = c.s;
+            found.push_back(c);
+            if (search(c.d + 1, worked + data.shift_types[c.s].duration_minutes, found)) {
+                return true;
+            }
+            found.pop_back();
+            sched[e][c.d] = -1;
+            if (budget < 0) {
+                return false;
+            }
+        }
+        return false;
+    }
+};
 
 /// Nodes the backtracking top-up may expand per employee before it gives up.
 constexpr int kTopUpNodeBudget = 20000;
-
-/// Depth-first search for a set of extra shifts that brings employee e from
-/// `worked` up to `min_minutes`, adding them in day order from `from_day`.
-/// Every hard bound is_feasible_assignment checks only tightens as shifts are
-/// added, so a set passes it in day order if it passes in any order, and
-/// day order loses no solution.  On success the shifts stay assigned; on
-/// failure every shift it added is undone.
-bool top_up_search(RosteringData const& data, RosteringSolution& sol, int e, int from_day,
-                   int64_t worked, int64_t min_minutes, int max_duration,
-                   CellFilter const& may_assign, int& budget) {
-    if (worked >= min_minutes) {
-        return true;
-    }
-    if (--budget < 0) {
-        return false;
-    }
-    // Prune: even a longest shift on every remaining open day falls short.
-    int64_t open_days = 0;
-    for (int d = from_day; d < data.horizon; ++d) {
-        if (sol.get(e, d) < 0 && !data.is_unavailable(e, d) && (!may_assign || may_assign(e, d))) {
-            ++open_days;
-        }
-    }
-    if (worked + open_days * max_duration < min_minutes) {
-        return false;
-    }
-    for (auto const& c : top_up_candidates(data, sol, e, from_day, may_assign)) {
-        sol.assign(e, c.d, c.s);
-        if (top_up_search(data, sol, e, c.d + 1, worked + data.shift_types[c.s].duration_minutes,
-                          min_minutes, max_duration, may_assign, budget)) {
-            return true;
-        }
-        sol.unassign(e, c.d);
-        if (budget < 0) {
-            return false;
-        }
-    }
-    return false;
-}
 
 }  // anonymous namespace
 
@@ -209,6 +240,7 @@ void top_up_min_minutes(RosteringData const& data, RosteringSolution& sol,
     for (auto const& st : data.shift_types) {
         max_duration = std::max(max_duration, st.duration_minutes);
     }
+    int const H = data.horizon;
 
     for (int e = 0; e < data.num_employees(); ++e) {
         int64_t const min_minutes = data.employees[e].min_total_minutes;
@@ -217,36 +249,55 @@ void top_up_min_minutes(RosteringData const& data, RosteringSolution& sol,
             continue;
         }
 
-        // Greedy first: each step adds the cheapest candidate.
-        std::vector<TopUpCandidate> added;
-        int64_t worked = start;
-        while (worked < min_minutes) {
-            auto const candidates = top_up_candidates(data, sol, e, 0, may_assign);
-            if (candidates.empty()) {
-                break;
-            }
-            auto const& c = candidates.front();
-            sol.assign(e, c.d, c.s);
-            added.push_back(c);
-            worked += data.shift_types[c.s].duration_minutes;
-        }
-        if (worked >= min_minutes) {
-            continue;
+        auto sched = sol.schedule();
+        TopUp t{.data = data,
+                .sched = sched,
+                .e = e,
+                .open = std::vector<char>(H, 0),
+                .open_after = std::vector<int64_t>(H + 1, 0),
+                .min_minutes = min_minutes,
+                .cap = data.employees[e].max_total_minutes,
+                .max_duration = max_duration,
+                .budget = kTopUpNodeBudget};
+        for (int d = H - 1; d >= 0; --d) {
+            t.open[d] = static_cast<char>(sched[e][d] < 0 && !data.is_unavailable(e, d) &&
+                                          (!may_assign || may_assign(e, d)));
+            t.open_after[d] = t.open_after[d + 1] + t.open[d];
         }
 
-        // Greedy fell short, which does not mean the minimum is unreachable:
-        // undo it and search.
-        for (auto const& c : added) {
-            sol.unassign(e, c.d);
-        }
-        int budget = kTopUpNodeBudget;
-        if (!top_up_search(data, sol, e, 0, start, min_minutes, max_duration, may_assign, budget)) {
-            // None found within the budget (or none exists): restore greedy's
-            // partial top-up, which the search left undone.  The employee
-            // stays short and the evaluator reports the roster infeasible.
-            for (auto const& c : added) {
-                sol.assign(e, c.d, c.s);
+        // Greedy first: each step adds the cheapest candidate, earliest day
+        // and lowest shift on ties.
+        std::vector<TopUpCandidate> greedy;
+        int64_t worked = start;
+        while (worked < min_minutes) {
+            auto const cands = t.candidates(0, false);
+            auto const best = std::min_element(
+                cands.begin(), cands.end(),
+                [](TopUpCandidate const& a, TopUpCandidate const& b) { return a.score < b.score; });
+            if (best == cands.end()) {
+                break;
             }
+            sched[e][best->d] = best->s;
+            greedy.push_back(*best);
+            worked += data.shift_types[best->s].duration_minutes;
+        }
+
+        // Greedy falling short does not mean the minimum is unreachable:
+        // undo it and search, unless max_total_minutes rules the minimum out.
+        std::vector<TopUpCandidate> found;
+        if (worked < min_minutes && min_minutes <= t.cap) {
+            for (auto const& c : greedy) {
+                sched[e][c.d] = -1;
+            }
+            if (!t.search(0, start, found)) {
+                found.clear();
+            }
+        }
+        // Without a search result keep greedy's (possibly partial) top-up:
+        // the employee stays short and the evaluator reports the roster
+        // infeasible.
+        for (auto const& c : found.empty() ? greedy : found) {
+            sol.assign(e, c.d, c.s);
         }
     }
 }
