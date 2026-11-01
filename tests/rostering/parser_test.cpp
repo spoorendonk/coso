@@ -3,6 +3,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <climits>
 #include <stdexcept>
 
 using namespace coso;
@@ -191,6 +192,19 @@ TEST_CASE("parse_nrp - a STAFF line in neither dialect is rejected", "[rostering
         CHECK(data.employees[0].min_total_minutes == 3390);
         CHECK(data.employees[0].max_consecutive_days == 5);
         CHECK(data.employees[0].max_weekends == 1);
+    }
+
+    SECTION("an ID-only line leaves the consecutive-day cap unbounded") {
+        // #244: it used to inherit an undeclared hard cap of 5.
+        auto data = parse_nrp(with_staff("A"));
+        REQUIRE(data.num_employees() == 1);
+        CHECK(data.employees[0].max_consecutive_days == INT_MAX);
+    }
+
+    SECTION("a named line without MaxConsecutiveShifts leaves the cap unbounded") {
+        auto data = parse_nrp(with_staff("A,MaxTotalMinutes=4320"));
+        REQUIRE(data.num_employees() == 1);
+        CHECK(data.employees[0].max_consecutive_days == INT_MAX);
     }
 
     SECTION("an empty positional field no longer shifts the columns left") {

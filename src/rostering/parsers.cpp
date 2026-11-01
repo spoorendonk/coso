@@ -212,7 +212,9 @@ RosteringData parse_nrp(const std::string& content) {
                 // Two dialects, told apart by shape rather than guessed at
                 // (#236); a line that is neither is rejected.
                 //
-                // An ID-only line declares an employee with no bounds.
+                // An ID-only line declares an employee with no bounds, and a
+                // key left out of a named line leaves that bound unbounded --
+                // MaxConsecutiveShifts included (#244).
                 //
                 // Positional (schedulingbenchmarks.org), exactly eight fields:
                 //   ID, MaxShifts (e.g. D=14|N=4), MaxTotalMinutes, MinTotalMinutes,

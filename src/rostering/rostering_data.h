@@ -33,10 +33,10 @@ struct RosteringData {
     struct Employee {
         std::string name;
         std::vector<std::string> skills;
-        int max_consecutive_days = 5;
-        int max_weekends = INT_MAX;       ///< Distinct weekends workable; INT_MAX = unlimited.
-        int min_total_minutes = 0;        ///< Lower bound on worked minutes over the horizon.
-        int max_total_minutes = INT_MAX;  ///< Upper bound; INT_MAX = unlimited.
+        int max_consecutive_days = INT_MAX;  ///< Longest working run; INT_MAX = unlimited.
+        int max_weekends = INT_MAX;          ///< Distinct weekends workable; INT_MAX = unlimited.
+        int min_total_minutes = 0;           ///< Lower bound on worked minutes over the horizon.
+        int max_total_minutes = INT_MAX;     ///< Upper bound; INT_MAX = unlimited.
     };
 
     std::vector<Employee> employees;

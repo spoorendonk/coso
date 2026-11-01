@@ -29,7 +29,11 @@ struct ShiftTypeParams {
 struct EmployeeParams {
     std::string name;
     std::vector<std::string> skills;
-    int max_consecutive_days = 5;
+
+    /// Maximum run of consecutive working days (any shift), a hard bound.
+    /// Default INT_MAX = unlimited, like every other bound here (#244).
+    /// SB-NRP STAFF column 5 (`MaxConsecutiveShifts`).
+    int max_consecutive_days = INT_MAX;
 
     /// Maximum number of distinct weekends the employee may work over the
     /// horizon. Default INT_MAX = unlimited.

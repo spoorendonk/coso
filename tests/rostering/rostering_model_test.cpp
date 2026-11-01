@@ -194,6 +194,23 @@ TEST_CASE("RosteringModel: cover is priced at its declared weights", "[rostering
     REQUIRE(result.understaffed().size() == 1);
 }
 
+TEST_CASE("RosteringModel: max_consecutive_days defaults to unbounded", "[rostering]") {
+    // #244: the default used to be an undocumented hard cap of 5.
+    CHECK(EmployeeParams{}.max_consecutive_days == INT_MAX);
+    CHECK(RosteringData::Employee{}.max_consecutive_days == INT_MAX);
+
+    // The issue's failure scenario: a minimum that needs all seven days worked
+    // was infeasible under a cap the user never declared.
+    RosteringModel model;
+    model.add_shift_type({.name = "Day", .duration_minutes = 480});
+    model.add_employee({.name = "Alice", .min_total_minutes = 7 * 480});
+    model.set_horizon(7);
+
+    auto result = model.solve(TimeLimit(0.5));
+
+    CHECK(result.feasible());
+}
+
 TEST_CASE("RosteringModel: hard cover makes a shortfall infeasible", "[rostering]") {
     // The same shortfall as above, declared hard as NSPLib's coverage is.
     RosteringModel model;

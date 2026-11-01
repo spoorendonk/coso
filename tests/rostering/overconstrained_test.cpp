@@ -9,7 +9,7 @@ using namespace coso;
 // ---------------------------------------------------------------------------
 
 /// 3 employees, 2 shift types, 5-day horizon, demand of 1 per shift per day.
-/// max_consecutive_days defaults to 5 (no consecutive violation possible in 5 days).
+/// max_consecutive_days defaults to unlimited, so no consecutive violation is possible.
 static RosteringData make_basic_data() {
     RosteringData data;
     data.horizon = 5;
@@ -121,7 +121,7 @@ TEST_CASE("assignment overconstrained: no violations with valid schedule",
     RosteringCostEvaluator eval(data);
     auto sched = make_empty_schedule(data);
 
-    // 5-day horizon, max_consecutive = 5 -> working all 5 days is fine.
+    // max_consecutive is unlimited by default -> working all 5 days is fine.
     for (int d = 0; d < 5; ++d) {
         sched[0][d] = 0;  // Alice -> Day
         sched[1][d] = 1;  // Bob -> Night
