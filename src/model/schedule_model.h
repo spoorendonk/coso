@@ -125,6 +125,7 @@ private:
 };
 
 /// Convenience: solve a JSP instance file (Taillard format) directly.
+/// Throws std::runtime_error naming the path if the file cannot be read or parsed.
 Result solve_jsp(const std::string& instance_path, TimeLimit tl);
 
 }  // namespace coso

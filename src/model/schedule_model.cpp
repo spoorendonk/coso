@@ -176,23 +176,21 @@ Result ScheduleModel::solve(TimeLimit tl) {
 // ---------------------------------------------------------------------------
 
 Result solve_jsp(const std::string& instance_path, TimeLimit /*tl*/) {
-    try {
-        // Keep solve_jsp as a convenience wrapper around parsed data.
-        // For baseline behavior we use dispatch construction.
-        ScheduleData data = read_taillard_jsp(instance_path);
-        Result result = construct_dispatch(data, DispatchRule::SPT);
-        ScheduleSolution sol(data);
-        for (int op = 0; op < data.num_operations(); ++op) {
-            auto const& s = result.schedule_[op];
-            sol.assign(op, s.machine, s.start_time);
-        }
-        result.feasible_ = sol.feasible();
-        result.makespan_ = sol.makespan();
-        result.cost_ = static_cast<double>(sol.objective());
-        return result;
-    } catch (...) {
-        return {};
+    // A reader error propagates, naming the path: an empty Result would read as
+    // "no solution found" for a file that was never read (#259).
+    ScheduleData data = read_taillard_jsp(instance_path);
+    // Keep solve_jsp as a convenience wrapper around parsed data.
+    // For baseline behavior we use dispatch construction.
+    Result result = construct_dispatch(data, DispatchRule::SPT);
+    ScheduleSolution sol(data);
+    for (int op = 0; op < data.num_operations(); ++op) {
+        auto const& s = result.schedule_[op];
+        sol.assign(op, s.machine, s.start_time);
     }
+    result.feasible_ = sol.feasible();
+    result.makespan_ = sol.makespan();
+    result.cost_ = static_cast<double>(sol.objective());
+    return result;
 }
 
 }  // namespace coso

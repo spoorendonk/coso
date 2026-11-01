@@ -13,6 +13,7 @@
 #include <model/schedule_model.h>
 #include <stdexcept>
 #include <string>
+#include <unistd.h>
 #include <utility>
 #include <vector>
 
@@ -370,9 +371,26 @@ TEST_CASE("ScheduleModel solve returns a Result", "[scheduling]") {
     REQUIRE(r.work_units() > 0.0);
 }
 
-TEST_CASE("Free function solve_jsp links", "[scheduling]") {
-    coso::Result r = coso::solve_jsp("nonexistent.txt", coso::TimeLimit(1.0));
-    REQUIRE(r.cost() >= 0.0);
+TEST_CASE("Free function solve_jsp rejects a missing file", "[scheduling]") {
+    // An empty Result here would read as "no solution found" (#259).
+    REQUIRE_THROWS_AS(coso::solve_jsp("nonexistent.txt", coso::TimeLimit(1.0)), std::runtime_error);
+    REQUIRE_THROWS_WITH(coso::solve_jsp("nonexistent.txt", coso::TimeLimit(1.0)),
+                        Catch::Matchers::ContainsSubstring("nonexistent.txt"));
+}
+
+TEST_CASE("Free function solve_jsp rejects an invalid file", "[scheduling]") {
+    // Per-process name, so concurrent runs cannot delete each other's file.
+    auto path = std::filesystem::temp_directory_path() /
+                ("coso_issue259_bad_" + std::to_string(::getpid()) + ".jsp");
+    {
+        std::ofstream out(path);
+        out << "1 2\n0 3  5 2\n";  // machine 5 past the header's 2 machines
+    }
+    REQUIRE_THROWS_AS(coso::solve_jsp(path.string(), coso::TimeLimit(1.0)), std::runtime_error);
+    REQUIRE_THROWS_WITH(coso::solve_jsp(path.string(), coso::TimeLimit(1.0)),
+                        Catch::Matchers::ContainsSubstring(path.string()) &&
+                            Catch::Matchers::ContainsSubstring("machine 5 does not exist"));
+    std::filesystem::remove(path);
 }
 
 // --------------------------------------------------------------------------
