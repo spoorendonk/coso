@@ -38,6 +38,9 @@ std::vector<ClientLocation> build_client_locations(Solution const& sol) {
 /// The three cheapest insertion positions of one client in one route
 /// (Vidal 2022, §4).  `delta` is the full penalised insertion delta;
 /// `free` leaves out its load-penalty part, which SWAP* prices separately.
+/// The entries are ranked by `free`; `best_full` is the cheapest position by
+/// full delta, which differs from e[0] only when pickups make the load
+/// penalty depend on the position.  Relocations use `best_full`.
 struct Top3 {
     struct Entry {
         int pos = -1;
@@ -45,8 +48,12 @@ struct Top3 {
         int64_t free = kInf;
     };
     std::array<Entry, 3> e;
+    Entry best_full;
 
     void add(int pos, int64_t delta, int64_t free) {
+        if (delta < best_full.delta) {
+            best_full = {pos, delta, free};
+        }
         if (free >= e[2].free) {
             return;
         }
@@ -282,7 +289,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
             // --- Degenerate case 1: relocate u from A to its best place in B.
             //     The two routes change independently, so this delta is exact.
             for (int pa = 0; pa < route_a.size(); ++pa) {
-                auto const& best = top_u_in_b[pa].e[0];
+                auto const& best = top_u_in_b[pa].best_full;
                 int64_t delta = rem_a[pa] + best.delta;
                 if (delta < best_delta_) {
                     best_delta_ = delta;
@@ -300,7 +307,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
             // --- Degenerate case 2: relocate v from B to its best place in A.
             for (int pb = 0; pb < route_b.size(); ++pb) {
-                auto const& best = top_v_in_a[pb].e[0];
+                auto const& best = top_v_in_a[pb].best_full;
                 int64_t delta = rem_b[pb] + best.delta;
                 if (delta < best_delta_) {
                     best_delta_ = delta;

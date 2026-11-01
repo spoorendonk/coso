@@ -35,6 +35,10 @@ class StopCriterion;
 ///     not kept across calls with per-route invalidation.
 ///   - Costs are the full penalised costs (time warp included), not
 ///     distance alone.
+///   - With pickups the load penalty depends on where a client goes, so the
+///     swap estimate (which prices load at u's place) is only approximate
+///     and may miss an improving swap; the chosen move is still priced
+///     exactly.
 ///
 /// Also considers the degenerate cases:
 ///   - Remove u from A, insert at best position in B (relocate, v unused).
