@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <cmath>
 #include <model/instance_reader.h>
@@ -72,6 +73,23 @@ TEST_CASE("parse_vrp reads depot section", "[instance_reader]") {
     auto inst = coso::parse_vrp(SMALL_VRP);
     REQUIRE(inst.depot_ids.size() == 1);
     REQUIRE(inst.depot_ids[0] == 0);  // 1-based id "1" -> 0-based index 0
+}
+
+TEST_CASE("parse_vrp rejects a DEPOT_SECTION id outside 1..DIMENSION", "[instance_reader]") {
+    // #254: the id was stored unchecked, and solve() then indexed past the
+    // end of the node arrays.
+    using Catch::Matchers::ContainsSubstring;
+    auto with_depot = [](std::string const& id) {
+        auto content = SMALL_VRP;
+        content.replace(content.find("DEPOT_SECTION\n1\n"), 16, "DEPOT_SECTION\n" + id + "\n");
+        return content;
+    };
+    REQUIRE_NOTHROW(coso::parse_vrp(with_depot("5")));
+    REQUIRE_THROWS_WITH(coso::parse_vrp(with_depot("7")),
+                        ContainsSubstring("DEPOT_SECTION id 7 is outside 1..5"));
+    REQUIRE_THROWS_WITH(coso::parse_vrp(with_depot("0")),
+                        ContainsSubstring("DEPOT_SECTION id 0 is outside 1..5"));
+    REQUIRE_THROWS_AS(coso::parse_vrp(with_depot("6")), std::runtime_error);
 }
 
 TEST_CASE("EUC_2D distance computation", "[instance_reader]") {

@@ -402,6 +402,13 @@ VrpInstance parse_vrp(const std::string& content) {
     if (inst.dimension <= 0) {
         throw std::runtime_error("VRP parse error: DIMENSION not set or <= 0");
     }
+    // Checked after the loop, so DEPOT_SECTION may precede DIMENSION (#254).
+    for (int d : inst.depot_ids) {
+        if (d < 0 || d >= inst.dimension) {
+            throw std::runtime_error("VRP parse error: DEPOT_SECTION id " + std::to_string(d + 1) +
+                                     " is outside 1.." + std::to_string(inst.dimension));
+        }
+    }
     if (inst.edge_weight_type != EdgeWeightType::EXPLICIT && inst.coords.empty()) {
         throw std::runtime_error(
             "VRP parse error: non-EXPLICIT instance requires NODE_COORD_SECTION");
