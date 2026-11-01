@@ -107,6 +107,39 @@ ScheduleData ScheduleData::Builder::build() const {
                 std::to_string(p.durations_per_machine.size()) + " entries for " +
                 std::to_string(p.eligible_machines.size()) + " eligible machines");
         }
+        // Each shape reads one duration field; a value in the other would be
+        // dropped without a word (#247).
+        if (fixed && !p.durations_per_machine.empty()) {
+            throw std::invalid_argument(where() +
+                                        " declares durations_per_machine with a fixed machine; "
+                                        "use duration");
+        }
+        if (!fixed && p.duration != 0) {
+            throw std::invalid_argument(where() +
+                                        " declares duration with eligible_machines; "
+                                        "use durations_per_machine");
+        }
+        for (size_t i = 0; i < p.eligible_machines.size(); ++i) {
+            for (size_t k = 0; k < i; ++k) {
+                if (p.eligible_machines[k] == p.eligible_machines[i]) {
+                    throw std::invalid_argument(where() + ": eligible machine " +
+                                                std::to_string(p.eligible_machines[i]) +
+                                                " is listed twice");
+                }
+            }
+        }
+        // INT_MAX marks "cannot run here" in the processing-time matrix (#191).
+        auto check_duration = [&](int d) {
+            if (d < 0 || d == INT_MAX) {
+                throw std::invalid_argument(where() + ": duration " + std::to_string(d) +
+                                            " is out of range (0.." + std::to_string(INT_MAX - 1) +
+                                            ")");
+            }
+        };
+        check_duration(p.duration);
+        for (int d : p.durations_per_machine) {
+            check_duration(d);
+        }
     }
 
     // Operations.

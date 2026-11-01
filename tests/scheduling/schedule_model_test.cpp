@@ -253,6 +253,39 @@ TEST_CASE("A machine reference the instance cannot honour is rejected", "[schedu
                           ContainsSubstring("durations_per_machine has 0 entries for 2"));
     }
 
+    SECTION("durations_per_machine on a fixed machine is rejected, not dropped (#247)") {
+        CHECK_THROWS_WITH(build_with({.machine = 1, .durations_per_machine = {7}}),
+                          ContainsSubstring("durations_per_machine with a fixed machine"));
+    }
+
+    SECTION("duration with eligible_machines is rejected, not dropped (#247)") {
+        CHECK_THROWS_WITH(
+            build_with(
+                {.eligible_machines = {0, 1}, .durations_per_machine = {3, 4}, .duration = 5}),
+            ContainsSubstring("duration with eligible_machines"));
+    }
+
+    SECTION("an eligible machine listed twice is rejected, not overwritten (#247)") {
+        CHECK_THROWS_WITH(
+            build_with({.eligible_machines = {1, 0, 1}, .durations_per_machine = {3, 4, 5}}),
+            ContainsSubstring("eligible machine 1 is listed twice"));
+    }
+
+    SECTION("a negative or sentinel duration is rejected (#247)") {
+        CHECK_THROWS_WITH(build_with({.machine = 0, .duration = -1}),
+                          ContainsSubstring("duration -1 is out of range"));
+        CHECK_THROWS_WITH(build_with({.machine = 0, .duration = INT_MAX}),
+                          ContainsSubstring("is out of range"));
+        CHECK_THROWS_WITH(
+            build_with({.eligible_machines = {0, 1}, .durations_per_machine = {3, -2}}),
+            ContainsSubstring("duration -2 is out of range"));
+        CHECK_THROWS_WITH(
+            build_with({.eligible_machines = {0, 1}, .durations_per_machine = {INT_MAX, 3}}),
+            ContainsSubstring("is out of range"));
+        CHECK_NOTHROW(build_with({.machine = 0, .duration = 0}));
+        CHECK_NOTHROW(build_with({.machine = 0, .duration = INT_MAX - 1}));
+    }
+
     SECTION("ScheduleModel::solve throws instead of aborting on a single job") {
         // Every eligible machine out of range used to leave the row INT_MAX
         // and trip the processing_time assert in compute_makespan.
