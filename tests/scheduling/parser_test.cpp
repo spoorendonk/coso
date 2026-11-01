@@ -7,6 +7,7 @@
 #include <fstream>
 #include <stdexcept>
 #include <string>
+#include <unistd.h>
 
 using namespace coso;
 
@@ -206,8 +207,11 @@ TEST_CASE("Scheduling parsers report build() rejections as parse errors", "[sche
             std::ofstream(path) << content;
             return path;
         };
-        auto const jsp = write("coso_257_bad.jsp", bad_jsp);
-        auto const fjsp = write("coso_257_bad.fjs", bad_fjsp);
+        // Per-process names, so concurrent runs (pre-commit and pre-push,
+        // sibling checkouts) cannot delete each other's files.
+        auto const tag = std::to_string(::getpid());
+        auto const jsp = write("coso_257_bad_" + tag + ".jsp", bad_jsp);
+        auto const fjsp = write("coso_257_bad_" + tag + ".fjs", bad_fjsp);
         CHECK_THROWS_WITH(read_taillard_jsp(jsp),
                           ContainsSubstring(jsp) && ContainsSubstring("does not exist"));
         CHECK_THROWS_WITH(read_fjsp(fjsp),
