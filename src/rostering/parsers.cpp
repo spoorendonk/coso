@@ -119,9 +119,15 @@ RosteringData parse_nrp(const std::string& content) {
     std::unordered_map<std::string, int> shift_id_map;
     std::unordered_map<std::string, int> employee_id_map;
 
-    // Forbidden successor shift pairs (shift_id -> set of successor shift_ids).
-    // Stored as indices after all shifts are parsed.
-    std::vector<std::pair<std::string, std::vector<std::string>>> forbidden_after;
+    // Forbidden successor shift pairs (shift_id, successor shift_ids, line).
+    // Resolved to indices after the whole file is read, so a successor may
+    // name a shift declared further down.
+    struct ForbiddenAfter {
+        std::string shift_id;
+        std::vector<std::string> successors;
+        std::string line;
+    };
+    std::vector<ForbiddenAfter> forbidden_after;
 
     // Every day index read, with its line, for the horizon check after the loop.
     std::vector<std::pair<int, std::string>> days_read;
@@ -197,7 +203,7 @@ RosteringData parse_nrp(const std::string& content) {
                 // Forbidden successor shifts (field index 2 if present, pipe-separated).
                 if (tokens.size() >= 3 && !tokens[2].empty()) {
                     auto forbidden_ids = split(tokens[2], '|');
-                    forbidden_after.emplace_back(id, std::move(forbidden_ids));
+                    forbidden_after.push_back({id, std::move(forbidden_ids), trimmed});
                 }
                 break;
             }
@@ -304,7 +310,12 @@ RosteringData parse_nrp(const std::string& content) {
 
             case Section::DaysOff: {
                 // Format: EmployeeID,Day1,Day2,...
-                auto tokens = split(trimmed, ',');
+                // Empty fields are kept and rejected, as in COVER (#256).
+                auto const bad = "NRP parse error: bad DAYS_OFF line: " + trimmed;
+                auto tokens = split_fields(trimmed, ',');
+                if (std::ranges::any_of(tokens, [](auto const& t) { return t.empty(); })) {
+                    throw std::runtime_error(bad);
+                }
                 if (tokens.size() < 2) {
                     break;
                 }
@@ -317,7 +328,7 @@ RosteringData parse_nrp(const std::string& content) {
 
                 int emp = it->second;
                 for (size_t i = 1; i < tokens.size(); ++i) {
-                    int day = std::stoi(tokens[i]);
+                    int day = parse_int(tokens[i], bad);
                     days_read.emplace_back(day, trimmed);
                     data.unavailabilities.insert(RosteringData::unavail_key(emp, day));
                 }
@@ -326,10 +337,12 @@ RosteringData parse_nrp(const std::string& content) {
 
             case Section::ShiftOnRequests: {
                 // Format: EmployeeID,Day,ShiftID,Weight
-                auto tokens = split(trimmed, ',');
-                if (tokens.size() < 4) {
-                    throw std::runtime_error("NRP parse error: bad SHIFT_ON_REQUESTS line: " +
-                                             trimmed);
+                // Exactly four fields, none empty, as in COVER (#256).
+                auto const bad = "NRP parse error: bad SHIFT_ON_REQUESTS line: " + trimmed;
+                auto tokens = split_fields(trimmed, ',');
+                if (tokens.size() != 4 ||
+                    std::ranges::any_of(tokens, [](auto const& t) { return t.empty(); })) {
+                    throw std::runtime_error(bad);
                 }
 
                 auto emp_it = employee_id_map.find(tokens[0]);
@@ -343,20 +356,22 @@ RosteringData parse_nrp(const std::string& content) {
 
                 RosteringData::Preference pref;
                 pref.employee = emp_it->second;
-                pref.day = std::stoi(tokens[1]);
+                pref.day = parse_int(tokens[1], bad);
                 days_read.emplace_back(pref.day, trimmed);
                 pref.shift_type = shift_it->second;
-                pref.weight = std::stoi(tokens[3]);  // positive = preferred
+                pref.weight = parse_int(tokens[3], bad);  // positive = preferred
                 data.preferences.push_back(pref);
                 break;
             }
 
             case Section::ShiftOffRequests: {
                 // Format: EmployeeID,Day,ShiftID,Weight
-                auto tokens = split(trimmed, ',');
-                if (tokens.size() < 4) {
-                    throw std::runtime_error("NRP parse error: bad SHIFT_OFF_REQUESTS line: " +
-                                             trimmed);
+                // Exactly four fields, none empty, as in COVER (#256).
+                auto const bad = "NRP parse error: bad SHIFT_OFF_REQUESTS line: " + trimmed;
+                auto tokens = split_fields(trimmed, ',');
+                if (tokens.size() != 4 ||
+                    std::ranges::any_of(tokens, [](auto const& t) { return t.empty(); })) {
+                    throw std::runtime_error(bad);
                 }
 
                 auto emp_it = employee_id_map.find(tokens[0]);
@@ -370,10 +385,10 @@ RosteringData parse_nrp(const std::string& content) {
 
                 RosteringData::Preference pref;
                 pref.employee = emp_it->second;
-                pref.day = std::stoi(tokens[1]);
+                pref.day = parse_int(tokens[1], bad);
                 days_read.emplace_back(pref.day, trimmed);
                 pref.shift_type = shift_it->second;
-                pref.weight = -std::stoi(tokens[3]);  // negative = penalised
+                pref.weight = -parse_int(tokens[3], bad);  // negative = penalised
                 data.preferences.push_back(pref);
                 break;
             }
@@ -433,18 +448,16 @@ RosteringData parse_nrp(const std::string& content) {
     }
 
     // Build forbidden sequences from collected data.
-    for (auto& [shift_id, forbidden_ids] : forbidden_after) {
-        auto src_it = shift_id_map.find(shift_id);
-        if (src_it == shift_id_map.end()) {
-            continue;
-        }
-
-        for (auto& fid : forbidden_ids) {
+    // An unknown successor is an error, not a dropped sequence (#256).
+    for (auto const& f : forbidden_after) {
+        int const src = shift_id_map.at(f.shift_id);
+        for (auto const& fid : f.successors) {
             auto dst_it = shift_id_map.find(fid);
             if (dst_it == shift_id_map.end()) {
-                continue;
+                throw std::runtime_error(std::format(
+                    "NRP parse error: unknown forbidden successor shift {}: {}", fid, f.line));
             }
-            data.forbidden_sequences.push_back({src_it->second, dst_it->second});
+            data.forbidden_sequences.push_back({src, dst_it->second});
         }
     }
 

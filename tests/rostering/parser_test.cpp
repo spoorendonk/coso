@@ -1,6 +1,7 @@
 #include "rostering/parsers.h"
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <stdexcept>
 
@@ -296,5 +297,65 @@ TEST_CASE("parse_nrp - a day outside the horizon is rejected", "[rostering][pars
     }
     SECTION("COVER") {
         CHECK_THROWS_AS(parse_nrp(with("SECTION_COVER", "7,D,1,100,1")), std::runtime_error);
+    }
+}
+
+TEST_CASE("parse_nrp - an unknown forbidden successor shift is rejected", "[rostering][parser]") {
+    // #256: a successor naming no shift used to be dropped without a word.
+    auto with_shifts = [](std::string const& shifts) {
+        return "SECTION_HORIZON\n7\n\nSECTION_SHIFTS\n" + shifts +
+               "\n\nSECTION_STAFF\nA\n\nSECTION_COVER\n0,D,1,100,1\n";
+    };
+    SECTION("an unknown successor names the shift line") {
+        CHECK_THROWS_WITH(
+            parse_nrp(with_shifts("D,480\nN,480,X")),
+            Catch::Matchers::ContainsSubstring("unknown forbidden successor shift X") &&
+                Catch::Matchers::ContainsSubstring("N,480,X"));
+        CHECK_THROWS_AS(parse_nrp(with_shifts("D,480\nN,480,D|X")), std::runtime_error);
+    }
+    SECTION("a forward reference is still accepted") {
+        auto data = parse_nrp(with_shifts("N,480,D\nD,480"));
+        REQUIRE(data.forbidden_sequences.size() == 1);
+        CHECK(data.forbidden_sequences[0] == std::vector<int>{0, 1});
+    }
+}
+
+TEST_CASE("parse_nrp - a malformed request or day-off field is rejected", "[rostering][parser]") {
+    // #256: these sections used bare std::stoi and dropped empty fields, so
+    // "A,3x,D,1" read day 3 and "A,,3,D,1" shifted every column left.
+    auto with = [](std::string const& section, std::string const& line) {
+        return "SECTION_HORIZON\n7\n\nSECTION_SHIFTS\nD,480\n\nSECTION_STAFF\nA\n\n" + section +
+               "\n" + line + "\n";
+    };
+    SECTION("DAYS_OFF") {
+        CHECK_NOTHROW(parse_nrp(with("SECTION_DAYS_OFF", "A,0,6")));
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_DAYS_OFF", "A,x")), std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_DAYS_OFF", "A,3x")), std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_DAYS_OFF", "A,,3")), std::runtime_error);
+    }
+    SECTION("SHIFT_ON_REQUESTS") {
+        auto data = parse_nrp(with("SECTION_SHIFT_ON_REQUESTS", "A,3,D,2"));
+        REQUIRE(data.preferences.size() == 1);
+        CHECK(data.preferences[0].day == 3);
+        CHECK(data.preferences[0].weight == 2);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_ON_REQUESTS", "A,3x,D,1")),
+                        std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_ON_REQUESTS", "A,3,D,1x")),
+                        std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_ON_REQUESTS", "A,x,D,1")),
+                        std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_ON_REQUESTS", "A,,3,D,1")),
+                        std::runtime_error);
+    }
+    SECTION("SHIFT_OFF_REQUESTS") {
+        auto data = parse_nrp(with("SECTION_SHIFT_OFF_REQUESTS", "A,3,D,2"));
+        REQUIRE(data.preferences.size() == 1);
+        CHECK(data.preferences[0].weight == -2);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_OFF_REQUESTS", "A,3x,D,1")),
+                        std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_OFF_REQUESTS", "A,3,D,y")),
+                        std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_OFF_REQUESTS", "A,,3,D,1")),
+                        std::runtime_error);
     }
 }
