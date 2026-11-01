@@ -37,6 +37,27 @@ std::string read_file(const std::string& path) {
     return ss.str();
 }
 
+/// Compile a parsed instance, reporting a declaration build() rejects as a
+/// parse error of this format rather than as a bare invalid_argument (#257).
+ScheduleData build_parsed(ScheduleData::Builder const& builder, char const* format) {
+    try {
+        return builder.build();
+    } catch (std::invalid_argument const& e) {
+        throw std::runtime_error(std::string(format) + " parse error: " + e.what());
+    }
+}
+
+/// Run a parser on a file's contents, naming the file in any parse error.
+template <class Parse>
+ScheduleData parse_file(const std::string& path, Parse parse) {
+    std::string content = read_file(path);
+    try {
+        return parse(content);
+    } catch (std::runtime_error const& e) {
+        throw std::runtime_error(path + ": " + e.what());
+    }
+}
+
 }  // anonymous namespace
 
 // ---------------------------------------------------------------------------
@@ -92,11 +113,11 @@ ScheduleData parse_taillard_jsp(const std::string& content) {
     }
 
     builder.set_objective(ScheduleObjective::Makespan);
-    return builder.build();
+    return build_parsed(builder, "Taillard JSP");
 }
 
 ScheduleData read_taillard_jsp(const std::string& path) {
-    return parse_taillard_jsp(read_file(path));
+    return parse_file(path, [](std::string const& c) { return parse_taillard_jsp(c); });
 }
 
 // ---------------------------------------------------------------------------
@@ -194,11 +215,11 @@ ScheduleData parse_fjsp(const std::string& content, FjspIndexing indexing) {
     }
 
     builder.set_objective(ScheduleObjective::Makespan);
-    return builder.build();
+    return build_parsed(builder, "FJSP");
 }
 
 ScheduleData read_fjsp(const std::string& path, FjspIndexing indexing) {
-    return parse_fjsp(read_file(path), indexing);
+    return parse_file(path, [indexing](std::string const& c) { return parse_fjsp(c, indexing); });
 }
 
 }  // namespace coso

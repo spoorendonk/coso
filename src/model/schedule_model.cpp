@@ -63,14 +63,11 @@ Result ScheduleModel::solve(TimeLimit tl) {
     StopCriterion stop(tl.seconds);
     stop.set_work_limit(&work, WorkUnits::ticks_from_units(tl.work_units));
 
-    // Validate: need at least one machine and one job.
-    if (machines_.empty() || jobs_.empty()) {
-        return {};  // cannot solve without machines/jobs
-    }
-
     // -----------------------------------------------------------------------
     //  Build ScheduleData (compiled instance)
     // -----------------------------------------------------------------------
+    // Built before the empty-model return below, so that operations declared
+    // with no machines are validated, not skipped (#257).
 
     ScheduleData::Builder builder;
 
@@ -93,6 +90,12 @@ Result ScheduleModel::solve(TimeLimit tl) {
     work.count(1);
 
     ScheduleData data = builder.build();
+
+    // Nothing to schedule: an empty model has no operations left to check.
+    if (machines_.empty() || jobs_.empty()) {
+        return {};
+    }
+
     work.count(static_cast<uint64_t>(data.num_operations()) +
                static_cast<uint64_t>(data.num_machines()));
     if (stop.should_stop()) {

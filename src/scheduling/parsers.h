@@ -6,6 +6,10 @@
 
 namespace coso {
 
+// Every parser throws std::runtime_error on malformed input, including an
+// instance that parses but that ScheduleData::Builder::build() rejects; the
+// read_* functions prefix the message with the file path (#257).
+
 // ---------------------------------------------------------------------------
 //  Taillard JSP format
 // ---------------------------------------------------------------------------

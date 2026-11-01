@@ -295,6 +295,22 @@ TEST_CASE("A machine reference the instance cannot honour is rejected", "[schedu
         model.add_operation(j, {.eligible_machines = {3}, .durations_per_machine = {4}});
         CHECK_THROWS_AS(model.solve(TimeLimit(1.0)), std::invalid_argument);
     }
+
+    SECTION("ScheduleModel::solve validates operations even with no machines (#257)") {
+        // The empty-model early return used to come before build(), so the
+        // operation below was never checked.
+        ScheduleModel model;
+        int const j = model.add_job();
+        model.add_operation(j, {.machine = 3, .duration = 5});
+        CHECK_THROWS_WITH(model.solve(TimeLimit(1.0)),
+                          ContainsSubstring("machine 3 does not exist"));
+    }
+
+    SECTION("an empty model still returns an empty Result") {
+        ScheduleModel model;
+        model.add_job();
+        CHECK_FALSE(model.solve(TimeLimit(1.0)).feasible());
+    }
 }
 
 // ---------------------------------------------------------------------------

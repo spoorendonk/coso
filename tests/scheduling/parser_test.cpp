@@ -3,6 +3,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <filesystem>
+#include <fstream>
+#include <stdexcept>
+#include <string>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
@@ -171,5 +176,43 @@ TEST_CASE("parse_fjsp - the caller states the machine indexing", "[scheduling][p
                           Catch::Matchers::ContainsSubstring("machine 0 is outside 1..3"));
         // A fixed (single-eligible) operation is checked as well.
         CHECK_THROWS_AS(parse_fjsp("1 2\n1  1 2 7\n"), std::runtime_error);
+    }
+}
+
+// ---------------------------------------------------------------------------
+//  A declaration build() rejects is a parse error naming the file (#257)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Scheduling parsers report build() rejections as parse errors", "[scheduling][parser]") {
+    using Catch::Matchers::ContainsSubstring;
+    // Machine 5 does not exist in a 2-machine Taillard instance.
+    std::string const bad_jsp = "1 2\n0 3  5 2\n";
+    // Operation 0 lists machine 1 twice, 0-based.
+    std::string const bad_fjsp = "1 2\n1  2  1 3  1 4\n";
+
+    SECTION("from a string, as runtime_error") {
+        CHECK_THROWS_AS(parse_taillard_jsp(bad_jsp), std::runtime_error);
+        CHECK_THROWS_WITH(parse_taillard_jsp(bad_jsp),
+                          ContainsSubstring("Taillard JSP parse error") &&
+                              ContainsSubstring("machine 5 does not exist"));
+        CHECK_THROWS_WITH(parse_fjsp(bad_fjsp), ContainsSubstring("FJSP parse error") &&
+                                                    ContainsSubstring("listed twice"));
+    }
+
+    SECTION("from a file, naming the path") {
+        auto const dir = std::filesystem::temp_directory_path();
+        auto write = [&](std::string const& name, std::string const& content) {
+            auto path = (dir / name).string();
+            std::ofstream(path) << content;
+            return path;
+        };
+        auto const jsp = write("coso_257_bad.jsp", bad_jsp);
+        auto const fjsp = write("coso_257_bad.fjs", bad_fjsp);
+        CHECK_THROWS_WITH(read_taillard_jsp(jsp),
+                          ContainsSubstring(jsp) && ContainsSubstring("does not exist"));
+        CHECK_THROWS_WITH(read_fjsp(fjsp),
+                          ContainsSubstring(fjsp) && ContainsSubstring("listed twice"));
+        std::filesystem::remove(jsp);
+        std::filesystem::remove(fjsp);
     }
 }
