@@ -24,7 +24,7 @@ void GuidedLocalSearch::penalize(Solution const& sol) {
     int best_to = -1;
 
     for (auto [from, to] : sol_edges) {
-        int d = data_->dist(from, to);
+        Measure d = data_->dist(from, to);
         int p = penalties_[from * num_nodes_ + to];
         double utility = static_cast<double>(d) / (1.0 + p);
 
@@ -50,7 +50,7 @@ int64_t GuidedLocalSearch::augmented_cost(Solution const& sol) const {
     for (auto [from, to] : sol_edges) {
         int p = penalties_[from * num_nodes_ + to];
         if (p > 0) {
-            int d = data_->dist(from, to);
+            Measure d = data_->dist(from, to);
             total += static_cast<double>(d) * p;
         }
     }

@@ -68,7 +68,7 @@ void assert_route_consistency(Route const& route, ProblemData const& data) {
     // Recompute distance.
     int profile = 0;
     int depot = 0;
-    int expected_dist = 0;
+    Measure expected_dist = 0;
     if (n > 0) {
         int first_node = data.num_depots() + route.client(0);
         int last_node = data.num_depots() + route.client(n - 1);

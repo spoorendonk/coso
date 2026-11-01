@@ -47,11 +47,11 @@ void SolutionFinalizer::repair_infeasible_(Solution& sol) {
             // excess the most.
             int best_pos = -1;
             int best_excess_after = std::numeric_limits<int>::max();
-            int best_dist_delta = std::numeric_limits<int>::max();
+            Measure best_dist_delta = kMeasureMax;
 
             for (int p = 0; p < route.size(); ++p) {
                 int excess_after = route.eval_remove_load(p);
-                int dist_delta = route.eval_remove_distance(p);
+                Measure dist_delta = route.eval_remove_distance(p);
 
                 // Prefer removing clients that reduce excess the most.
                 // Break ties by distance delta (prefer larger distance

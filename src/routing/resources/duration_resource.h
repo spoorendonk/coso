@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <climits>
 
 namespace coso {
 
@@ -30,12 +29,12 @@ namespace coso {
 /// A feasible route has time_warp == 0.
 struct DurationResource {
     struct State {
-        int earliest = 0;      ///< Earliest departure from last node.
-        int latest = INT_MAX;  ///< Latest feasible arrival at first node.
-        int duration = 0;      ///< Travel + service (no wait) through subseq.
-        int time_warp = 0;     ///< Total TW violation in this subsequence.
-        int first_node = -1;   ///< Node index of first client (full numbering).
-        int last_node = -1;    ///< Node index of last client (full numbering).
+        Measure earliest = 0;          ///< Earliest departure from last node.
+        Measure latest = kMeasureMax;  ///< Latest feasible arrival at first node.
+        Measure duration = 0;          ///< Travel + service (no wait) through subseq.
+        Measure time_warp = 0;         ///< Total TW violation in this subsequence.
+        int first_node = -1;           ///< Node index of first client (full numbering).
+        int last_node = -1;            ///< Node index of last client (full numbering).
     };
 
     /// Initialize state for a single client node.
@@ -79,7 +78,7 @@ struct DurationResource {
     [[nodiscard]] static State init_empty() {
         State s;
         s.earliest = 0;
-        s.latest = INT_MAX;
+        s.latest = kMeasureMax;
         s.duration = 0;
         s.time_warp = 0;
         s.first_node = -1;
@@ -102,18 +101,18 @@ struct DurationResource {
     ///   L_merged = min(L_left, L_right - D_left - travel_time + W_left)
     ///   D_merged = D_left + travel_time + D_right
     ///   W_merged = W_left + W_right + delta_warp
-    [[nodiscard]] static State merge(State const& left, State const& right, int travel_time) {
+    [[nodiscard]] static State merge(State const& left, State const& right, Measure travel_time) {
         State result;
 
-        int arrival = left.earliest + travel_time;
+        Measure arrival = left.earliest + travel_time;
 
         // Time warp at the junction: arrive after right's latest feasible.
-        int warp = std::max(0, arrival - right.latest);
+        Measure warp = std::max<Measure>(0, arrival - right.latest);
 
         // The "effective TW start" of right's first node.
         // right.earliest - right.duration is the earliest arrival at right's
         // first node such that everything in right can proceed on time.
-        int right_tw_start = right.earliest - right.duration;
+        Measure right_tw_start = right.earliest - right.duration;
 
         // Earliest departure from the combined subsequence's last node.
         result.earliest = std::max(arrival, right_tw_start) + right.duration;
@@ -140,7 +139,7 @@ struct DurationResource {
     [[nodiscard]] static State merge(State const& left, State const& right, ProblemData const& data,
                                      int profile) {
         assert(left.last_node >= 0 && right.first_node >= 0);
-        int travel = data.dur(profile, left.last_node, right.first_node);
+        Measure travel = data.dur(profile, left.last_node, right.first_node);
         return merge(left, right, travel);
     }
 
@@ -148,8 +147,9 @@ struct DurationResource {
     ///
     /// Returns total time warp. Also adds max_duration violation if the
     /// vehicle type has a max_duration constraint.
-    [[nodiscard]] static int excess(State const& state, ProblemData::VehicleTypeData const& vt) {
-        int total = state.time_warp;
+    [[nodiscard]] static Measure excess(State const& state,
+                                        ProblemData::VehicleTypeData const& vt) {
+        Measure total = state.time_warp;
 
         if (vt.max_duration > 0 && state.earliest > vt.max_duration) {
             total += state.earliest - vt.max_duration;
@@ -159,7 +159,7 @@ struct DurationResource {
     }
 
     /// Convenience: just the time warp (no max_duration check).
-    [[nodiscard]] static int time_warp(State const& state) { return state.time_warp; }
+    [[nodiscard]] static Measure time_warp(State const& state) { return state.time_warp; }
 };
 
 }  // namespace coso

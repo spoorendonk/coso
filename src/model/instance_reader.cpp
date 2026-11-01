@@ -501,7 +501,8 @@ VrpInstance read_solomon(std::istream& input) {
         std::istringstream iss(trimmed);
         int id = 0;
         double x = 0, y = 0;
-        int demand = 0, ready = 0, due = 0, service = 0;
+        int demand = 0;
+        Measure ready = 0, due = 0, service = 0;
         if (!(iss >> id >> x >> y >> demand >> ready >> due >> service)) {
             continue;
         }
@@ -523,7 +524,8 @@ VrpInstance read_solomon(std::istream& input) {
         std::istringstream iss(trimmed);
         int id = 0;
         double x = 0, y = 0;
-        int demand = 0, ready = 0, due = 0, service = 0;
+        int demand = 0;
+        Measure ready = 0, due = 0, service = 0;
         if (!(iss >> id >> x >> y >> demand >> ready >> due >> service)) {
             break;
         }
@@ -580,7 +582,8 @@ VrpInstance read_lilim(std::istream& input) {
     struct RawNode {
         int id = 0;
         double x = 0, y = 0;
-        int demand = 0, earliest = 0, latest = 0, service = 0;
+        int demand = 0;
+        Measure earliest = 0, latest = 0, service = 0;
         int pickup_idx = 0, delivery_idx = 0;
     };
     std::vector<RawNode> nodes;

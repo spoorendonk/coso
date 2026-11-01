@@ -37,14 +37,14 @@ bool CostEvaluator::has_duration_cost_function() const noexcept {
 //  Private helpers: piecewise or plain cost computation
 // ---------------------------------------------------------------------------
 
-int64_t CostEvaluator::distance_cost_(int distance) const {
+int64_t CostEvaluator::distance_cost_(Measure distance) const {
     if (distance_cost_func_) {
         return distance_cost_func_->evaluate(distance);
     }
     return distance;
 }
 
-int64_t CostEvaluator::duration_cost_(int duration) const {
+int64_t CostEvaluator::duration_cost_(Measure duration) const {
     if (duration_cost_func_) {
         return duration_cost_func_->evaluate(duration);
     }

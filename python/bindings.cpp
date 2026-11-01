@@ -41,7 +41,7 @@ NB_MODULE(_coso, m) {
     // -- TimeWindow -----------------------------------------------------------
 
     nb::class_<coso::TimeWindow>(m, "TimeWindow")
-        .def(nb::init<int, int>(), "start"_a, "end"_a)
+        .def(nb::init<coso::Measure, coso::Measure>(), "start"_a, "end"_a)
         .def_rw("start", &coso::TimeWindow::start)
         .def_rw("end", &coso::TimeWindow::end)
         .def("__repr__", [](const coso::TimeWindow& tw) {

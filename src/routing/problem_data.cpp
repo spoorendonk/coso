@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <type_traits>
 #include <vector>
 
 namespace coso {
@@ -46,26 +47,32 @@ void ProblemData::Builder::add_request(int pickup, int delivery) {
     requests_.push_back({pickup, delivery});
 }
 
-void ProblemData::Builder::set_distance(int profile, int from, int to, int dist) {
+void ProblemData::Builder::set_distance(int profile, int from, int to, Measure dist) {
     ensure_profile_(profile);
     dist_entries_.push_back({profile, from, to, dist});
 }
 
-void ProblemData::Builder::set_duration(int profile, int from, int to, int dur) {
+void ProblemData::Builder::set_duration(int profile, int from, int to, Measure dur) {
     ensure_profile_(profile);
     dur_entries_.push_back({profile, from, to, dur});
 }
 
 // ---------------------------------------------------------------------------
-//  Euclidean distance helper (rounded to nearest int, as is standard in VRP)
+//  Euclidean distance helper: rounded to the nearest integer while Measure is
+//  integral, as is standard in VRP; exact once it is floating point (#249).
 // ---------------------------------------------------------------------------
 
 namespace {
 
-int euclidean(Coord a, Coord b) {
+Measure euclidean(Coord a, Coord b) {
     double dx = a.x - b.x;
     double dy = a.y - b.y;
-    return static_cast<int>(std::round(std::sqrt(dx * dx + dy * dy)));
+    double d = std::sqrt(dx * dx + dy * dy);
+    if constexpr (std::is_integral_v<Measure>) {
+        return static_cast<Measure>(std::round(d));
+    } else {
+        return static_cast<Measure>(d);
+    }
 }
 
 }  // anonymous namespace
@@ -123,7 +130,7 @@ ProblemData ProblemData::Builder::build(int granular_k) const {
             Coord ci = pd.node_coord(i);
             for (int j = 0; j < n; ++j) {
                 Coord cj = pd.node_coord(j);
-                int d = euclidean(ci, cj);
+                Measure d = euclidean(ci, cj);
                 int idx = p * n * n + i * n + j;
                 pd.dist_matrices_[idx] = d;
                 pd.dur_matrices_[idx] = d;  // duration = distance by default

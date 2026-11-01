@@ -24,8 +24,8 @@ int total_load_excess(Solution const& sol) {
     return total;
 }
 
-int total_time_warp(Solution const& sol) {
-    int total = 0;
+Measure total_time_warp(Solution const& sol) {
+    Measure total = 0;
     for (auto const& r : sol.routes()) {
         total += r.time_warp();
     }

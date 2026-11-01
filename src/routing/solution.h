@@ -86,7 +86,7 @@ public:
     [[nodiscard]] int64_t penalty(CostEvaluator const& eval) const;
 
     /// Total distance across all routes.
-    [[nodiscard]] int total_distance() const noexcept;
+    [[nodiscard]] Measure total_distance() const noexcept;
 
     /// Whether the solution is feasible (no constraint violations).
     [[nodiscard]] bool feasible() const noexcept;

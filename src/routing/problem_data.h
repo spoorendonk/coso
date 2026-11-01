@@ -4,7 +4,6 @@
 #include "model/routing_model.h"
 
 #include <cassert>
-#include <climits>
 #include <span>
 #include <vector>
 
@@ -31,22 +30,22 @@ public:
         Coord coord = {0.0, 0.0};
         std::vector<int> demand;  ///< N load dimensions
         std::vector<int> pickup;  ///< backhaul pickup quantities
-        TimeWindow tw = {0, INT_MAX};
-        int service = 0;
+        TimeWindow tw = {0, kMeasureMax};
+        Measure service = 0;
         int prize = 0;
         bool required = true;
     };
 
     struct DepotData {
         Coord coord = {0.0, 0.0};
-        TimeWindow tw = {0, INT_MAX};
+        TimeWindow tw = {0, kMeasureMax};
     };
 
     struct VehicleTypeData {
         int count = 0;
         std::vector<int> capacity;
-        int max_duration = 0;  ///< 0 = unlimited
-        int max_distance = 0;  ///< 0 = unlimited
+        Measure max_duration = 0;  ///< 0 = unlimited
+        Measure max_distance = 0;  ///< 0 = unlimited
     };
 
     /// A pickup-delivery request: both on same route, pickup before delivery.
@@ -76,10 +75,10 @@ public:
 
         /// Set explicit distance for profile/from/to.  If not called,
         /// Euclidean distances are computed from coordinates.
-        void set_distance(int profile, int from, int to, int dist);
+        void set_distance(int profile, int from, int to, Measure dist);
 
         /// Set explicit duration for profile/from/to.
-        void set_duration(int profile, int from, int to, int dur);
+        void set_duration(int profile, int from, int to, Measure dur);
 
         /// Build the immutable ProblemData.
         /// @param granular_k  Number of nearest neighbours per client
@@ -98,7 +97,7 @@ public:
             int profile;
             int from;
             int to;
-            int value;
+            Measure value;
         };
         std::vector<MatrixEntry> dist_entries_;
         std::vector<MatrixEntry> dur_entries_;
@@ -150,7 +149,7 @@ public:
 
     /// Distance from node i to node j under the given profile.
     /// Node numbering: depots 0..num_depots-1, clients num_depots..num_nodes-1.
-    [[nodiscard]] int dist(int profile, int from, int to) const {
+    [[nodiscard]] Measure dist(int profile, int from, int to) const {
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
@@ -161,10 +160,10 @@ public:
     }
 
     /// Distance for the default profile (0).
-    [[nodiscard]] int dist(int from, int to) const { return dist(0, from, to); }
+    [[nodiscard]] Measure dist(int from, int to) const { return dist(0, from, to); }
 
     /// Duration from node i to node j under the given profile.
-    [[nodiscard]] int dur(int profile, int from, int to) const {
+    [[nodiscard]] Measure dur(int profile, int from, int to) const {
         assert(profile >= 0 && profile < num_profiles_);
         int n = num_nodes();
         assert(from >= 0 && from < n && to >= 0 && to < n);
@@ -175,7 +174,7 @@ public:
     }
 
     /// Duration for the default profile (0).
-    [[nodiscard]] int dur(int from, int to) const { return dur(0, from, to); }
+    [[nodiscard]] Measure dur(int from, int to) const { return dur(0, from, to); }
 
     /// Granular neighbour list for client c (0-based among clients).
     /// Returns a span of node indices (in full node numbering) sorted by
@@ -222,8 +221,8 @@ private:
     std::vector<Request> requests_;
 
     // Flat row-major matrices: profile * n * n + from * n + to.
-    std::vector<int> dist_matrices_;
-    std::vector<int> dur_matrices_;
+    std::vector<Measure> dist_matrices_;
+    std::vector<Measure> dur_matrices_;
 
     // Flat neighbour lists: client c's neighbours at [c * granular_k_ .. (c+1)*granular_k_).
     std::vector<int> neighbours_;

@@ -115,11 +115,11 @@ std::vector<int> IteratedLocalSearch::ruin_(Solution& sol) {
     // Sort assigned clients by distance to seed node.
     int seed_node = data_->num_depots() + seed_client;
 
-    std::vector<std::pair<int, int>> dists;  // (distance, client)
+    std::vector<std::pair<Measure, int>> dists;  // (distance, client)
     dists.reserve(assigned.size());
     for (int c : assigned) {
         int node = data_->num_depots() + c;
-        int d = data_->dist(seed_node, node);
+        Measure d = data_->dist(seed_node, node);
         dists.push_back({d, c});
     }
 

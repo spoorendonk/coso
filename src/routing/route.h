@@ -81,7 +81,7 @@ public:
     [[nodiscard]] bool load_feasible() const noexcept { return load_excess_ == 0; }
 
     /// Total distance of this route (depot -> clients -> depot).
-    [[nodiscard]] int distance() const noexcept { return distance_; }
+    [[nodiscard]] Measure distance() const noexcept { return distance_; }
 
     /// Distance resource prefix state at position pos.
     /// prefix(i) is the merged state for depot -> clients [0..i].
@@ -100,13 +100,13 @@ public:
     }
 
     /// Total distance/duration excess for this route.
-    [[nodiscard]] int dist_excess() const noexcept { return dist_excess_; }
+    [[nodiscard]] Measure dist_excess() const noexcept { return dist_excess_; }
 
     /// Whether the route satisfies max_distance and max_duration constraints.
     [[nodiscard]] bool dist_feasible() const noexcept { return dist_excess_ == 0; }
 
     /// Cumulative duration of this route (travel + service, depot->clients->depot).
-    [[nodiscard]] int duration() const noexcept { return duration_; }
+    [[nodiscard]] Measure duration() const noexcept { return duration_; }
 
     /// Duration resource prefix state at position pos.
     /// prefix(i) is the merged state for depot -> clients [0..i].
@@ -125,7 +125,7 @@ public:
     }
 
     /// Total time warp (TW violation) for this route.
-    [[nodiscard]] int time_warp() const noexcept { return time_warp_; }
+    [[nodiscard]] Measure time_warp() const noexcept { return time_warp_; }
 
     /// Whether the route satisfies all time window constraints.
     [[nodiscard]] bool tw_feasible() const noexcept { return time_warp_ == 0; }
@@ -167,35 +167,35 @@ public:
 
     /// Evaluate the distance delta for inserting a client at position pos.
     /// Returns the change in total route distance (can be negative).
-    [[nodiscard]] int eval_insert_distance(int pos, int client) const;
+    [[nodiscard]] Measure eval_insert_distance(int pos, int client) const;
 
     /// Evaluate the distance delta for removing the client at position pos.
     /// Returns the change in total route distance (can be negative).
-    [[nodiscard]] int eval_remove_distance(int pos) const;
+    [[nodiscard]] Measure eval_remove_distance(int pos) const;
 
     /// Evaluate distance/duration excess if a client were inserted at pos.
     /// Does NOT modify the route. O(1) using prefix/suffix arrays.
-    [[nodiscard]] int eval_insert_dist_excess(int pos, int client) const;
+    [[nodiscard]] Measure eval_insert_dist_excess(int pos, int client) const;
 
     /// Evaluate distance/duration excess if the client at pos were removed.
     /// Does NOT modify the route. O(1) using prefix/suffix arrays.
-    [[nodiscard]] int eval_remove_dist_excess(int pos) const;
+    [[nodiscard]] Measure eval_remove_dist_excess(int pos) const;
 
     /// Evaluate time warp if a client were inserted at position pos.
     /// Does NOT modify the route. O(1) using prefix/suffix arrays.
-    [[nodiscard]] int eval_insert_time_warp(int pos, int client) const;
+    [[nodiscard]] Measure eval_insert_time_warp(int pos, int client) const;
 
     /// Evaluate time warp if the client at position pos were removed.
     /// Does NOT modify the route. O(1) using prefix/suffix arrays.
-    [[nodiscard]] int eval_remove_time_warp(int pos) const;
+    [[nodiscard]] Measure eval_remove_time_warp(int pos) const;
 
     /// The cached totals a route would have after a splice.
     struct SpliceTotals {
         int size = 0;
-        int distance = 0;
-        int duration = 0;
+        Measure distance = 0;
+        Measure duration = 0;
         int load_excess = 0;
-        int time_warp = 0;
+        Measure time_warp = 0;
     };
 
     /// Evaluate replacing the clients at positions [first, last) with seq.
@@ -228,10 +228,10 @@ private:
     std::vector<DurationResource::State> dur_suffix_;
 
     int load_excess_ = 0;
-    int dist_excess_ = 0;
-    int time_warp_ = 0;
-    int distance_ = 0;
-    int duration_ = 0;
+    Measure dist_excess_ = 0;
+    Measure time_warp_ = 0;
+    Measure distance_ = 0;
+    Measure duration_ = 0;
 
     /// Recompute all prefix/suffix arrays and cached values.
     void update_();

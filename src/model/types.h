@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -11,9 +12,18 @@ struct Coord {
     double x, y;
 };
 
+/// Numeric type of every routing distance, duration, time-window bound, service time and
+/// distance/duration budget, from the schema through the compiled matrices to the engine's route
+/// state. It is `int` today; whether it becomes `double` is #249's open decision, and this alias
+/// is the one place that switch is made.
+using Measure = int;
+
+/// Upper sentinel for an open time window ("no deadline").
+inline constexpr Measure kMeasureMax = std::numeric_limits<Measure>::max();
+
 /// Time window constraint: service must start within [start, end].
 struct TimeWindow {
-    int start, end;
+    Measure start, end;
 };
 
 /// Stop criterion passed to solve().

@@ -23,10 +23,10 @@ namespace coso {
 struct DistanceResource {
     /// State for a subsequence: cumulative distance and duration.
     struct State {
-        int distance = 0;  ///< Total distance in this subsequence.
-        int duration = 0;  ///< Total duration (travel + service) in this subsequence.
-        int first = -1;    ///< First node index in this subsequence (-1 = empty/depot).
-        int last = -1;     ///< Last node index in this subsequence (-1 = empty/depot).
+        Measure distance = 0;  ///< Total distance in this subsequence.
+        Measure duration = 0;  ///< Total duration (travel + service) in this subsequence.
+        int first = -1;        ///< First node index in this subsequence (-1 = empty/depot).
+        int last = -1;         ///< Last node index in this subsequence (-1 = empty/depot).
     };
 
     /// Initialize state for a single client node.
@@ -75,8 +75,8 @@ struct DistanceResource {
         State result;
 
         // Travel from end of left to start of right.
-        int edge_dist = data.dist(profile, left.last, right.first);
-        int edge_dur = data.dur(profile, left.last, right.first);
+        Measure edge_dist = data.dist(profile, left.last, right.first);
+        Measure edge_dur = data.dur(profile, left.last, right.first);
 
         result.distance = left.distance + edge_dist + right.distance;
         result.duration = left.duration + edge_dur + right.duration;
@@ -93,8 +93,9 @@ struct DistanceResource {
     ///
     /// @param state         The merged state for the full route (depot->clients->depot).
     /// @param vehicle_type  The vehicle type to check constraints against.
-    [[nodiscard]] static int excess(State const& state, ProblemData::VehicleTypeData const& vt) {
-        int total_excess = 0;
+    [[nodiscard]] static Measure excess(State const& state,
+                                        ProblemData::VehicleTypeData const& vt) {
+        Measure total_excess = 0;
 
         if (vt.max_distance > 0 && state.distance > vt.max_distance) {
             total_excess += state.distance - vt.max_distance;

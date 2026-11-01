@@ -4,7 +4,6 @@
 
 #include <algorithm>
 #include <cassert>
-#include <climits>
 
 namespace coso {
 
@@ -30,11 +29,11 @@ namespace coso {
 /// the optimizer can evaluate reassignment costs.
 struct DepotResource {
     struct State {
-        int depot = -1;          ///< Depot index (0-based, -1 = unset).
-        int depart = 0;          ///< Departure time from depot.
-        int arrive_back = 0;     ///< Arrival time back at depot.
-        int tw_open = 0;         ///< Depot time window open.
-        int tw_close = INT_MAX;  ///< Depot time window close.
+        int depot = -1;                  ///< Depot index (0-based, -1 = unset).
+        Measure depart = 0;              ///< Departure time from depot.
+        Measure arrive_back = 0;         ///< Arrival time back at depot.
+        Measure tw_open = 0;             ///< Depot time window open.
+        Measure tw_close = kMeasureMax;  ///< Depot time window close.
     };
 
     /// Initialize state for a route starting at the given depot.
@@ -71,7 +70,7 @@ struct DepotResource {
         s.depart = 0;
         s.arrive_back = 0;
         s.tw_open = 0;
-        s.tw_close = INT_MAX;
+        s.tw_close = kMeasureMax;
         return s;
     }
 
@@ -112,7 +111,7 @@ struct DepotResource {
     /// @param state        The depot state to update.
     /// @param return_time  The time the vehicle arrives back at depot.
     /// @return Updated state with arrive_back set.
-    [[nodiscard]] static State with_return_time(State state, int return_time) {
+    [[nodiscard]] static State with_return_time(State state, Measure return_time) {
         state.arrive_back = return_time;
         return state;
     }
@@ -124,8 +123,8 @@ struct DepotResource {
     ///   - Late return:     max(0, arrive_back - tw_close).
     ///
     /// @param state  The merged state for the full route.
-    [[nodiscard]] static int excess(State const& state) {
-        int total = 0;
+    [[nodiscard]] static Measure excess(State const& state) {
+        Measure total = 0;
 
         // Early departure violation (depart before depot opens).
         if (state.depart < state.tw_open) {
@@ -145,8 +144,8 @@ struct DepotResource {
     /// The vehicle type itself doesn't constrain depot time windows — the
     /// depot does.  This overload ignores the vehicle type and delegates to
     /// the simpler excess(State).
-    [[nodiscard]] static int excess(State const& state,
-                                    [[maybe_unused]] ProblemData::VehicleTypeData const& vt) {
+    [[nodiscard]] static Measure excess(State const& state,
+                                        [[maybe_unused]] ProblemData::VehicleTypeData const& vt) {
         return excess(state);
     }
 

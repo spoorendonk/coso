@@ -67,8 +67,8 @@ int64_t Solution::penalty(CostEvaluator const& eval) const {
     return total;
 }
 
-int Solution::total_distance() const noexcept {
-    int total = 0;
+Measure Solution::total_distance() const noexcept {
+    Measure total = 0;
     for (auto const& r : routes_) {
         total += r.distance();
     }

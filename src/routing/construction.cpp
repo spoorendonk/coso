@@ -43,7 +43,7 @@ Solution nearest_neighbour(ProblemData const& data, CostEvaluator const& eval) {
         while (remaining > 0) {
             // Find the nearest unvisited client that fits.
             int best_client = -1;
-            int best_dist = INT_MAX;
+            Measure best_dist = kMeasureMax;
 
             for (int c = 0; c < num_clients; ++c) {
                 if (visited[c]) {
@@ -51,7 +51,7 @@ Solution nearest_neighbour(ProblemData const& data, CostEvaluator const& eval) {
                 }
 
                 int client_node = num_depots + c;
-                int d = data.dist(profile, current_node, client_node);
+                Measure d = data.dist(profile, current_node, client_node);
 
                 if (d < best_dist) {
                     // Check capacity: build tentative route state to verify.
@@ -127,8 +127,8 @@ Solution clarke_wright(ProblemData const& data, CostEvaluator const& eval) {
 
     // Step 2: Compute savings for all client pairs.
     struct Saving {
-        int i, j;   // client indices
-        int value;  // saving amount
+        int i, j;       // client indices
+        Measure value;  // saving amount
     };
 
     std::vector<Saving> savings;
@@ -136,14 +136,14 @@ Solution clarke_wright(ProblemData const& data, CostEvaluator const& eval) {
 
     for (int i = 0; i < num_clients; ++i) {
         int node_i = num_depots + i;
-        int di = data.dist(profile, depot, node_i);
+        Measure di = data.dist(profile, depot, node_i);
 
         for (int j = i + 1; j < num_clients; ++j) {
             int node_j = num_depots + j;
-            int dj = data.dist(profile, depot, node_j);
-            int dij = data.dist(profile, node_i, node_j);
+            Measure dj = data.dist(profile, depot, node_j);
+            Measure dij = data.dist(profile, node_i, node_j);
 
-            int s = di + dj - dij;
+            Measure s = di + dj - dij;
             if (s > 0) {
                 savings.push_back({i, j, s});
             }

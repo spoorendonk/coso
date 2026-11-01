@@ -56,11 +56,11 @@ void RoutingModel::add_pickup_delivery(int pickup, int delivery) {
 //  Distance / duration matrix setters
 // ---------------------------------------------------------------------------
 
-void RoutingModel::set_distance(int from, int to, int dist) {
+void RoutingModel::set_distance(int from, int to, Measure dist) {
     dist_entries_.push_back({from, to, dist});
 }
 
-void RoutingModel::set_duration(int from, int to, int dur) {
+void RoutingModel::set_duration(int from, int to, Measure dur) {
     dur_entries_.push_back({from, to, dur});
 }
 

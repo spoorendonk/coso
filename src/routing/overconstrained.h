@@ -65,7 +65,7 @@ struct OverconstrainedConfig {
 ///
 /// @param sol  The routing solution.
 /// @return Sum of time_warp() across all routes.
-[[nodiscard]] int total_time_warp(Solution const& sol);
+[[nodiscard]] Measure total_time_warp(Solution const& sol);
 
 /// Check whether a solution is overconstrained-feasible.
 ///

@@ -59,7 +59,7 @@ struct VrpInstance {
 
     // -- Time windows (Solomon/VRPTW format) --
     std::vector<TimeWindow> time_windows;  ///< Per-node time windows
-    std::vector<int> service_times;        ///< Per-node service durations
+    std::vector<Measure> service_times;    ///< Per-node service durations
 
     // -- Pickup-delivery pairs (Li-Lim/PDPTW format) --
     /// Each pair is (pickup_index, delivery_index), 0-based.

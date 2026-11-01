@@ -2,7 +2,6 @@
 
 #include "types.h"
 
-#include <climits>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -15,18 +14,18 @@ struct VehicleTypeParams {
     std::vector<int> capacity;  ///< N load dimensions
     /// 0 = unlimited.  Accepted and dropped: never penalised, and a route over
     /// it comes back feasible (#194).
-    int max_duration = 0;
+    Measure max_duration = 0;
     /// 0 = unlimited.  Accepted and dropped, as max_duration (#194).
-    int max_distance = 0;
+    Measure max_distance = 0;
 };
 
 /// Parameters for a client location.
 struct ClientParams {
     std::vector<int> demand;  ///< N load dimensions (matches capacity)
     std::vector<int> pickup;  ///< backhaul pickup quantities
-    TimeWindow tw = {0, INT_MAX};
-    int service = 0;  ///< service duration
-    int prize = 0;    ///< summed into Result::prize when served; see RoutingObjective
+    TimeWindow tw = {0, kMeasureMax};
+    Measure service = 0;  ///< service duration
+    int prize = 0;        ///< summed into Result::prize when served; see RoutingObjective
     /// Accepted and dropped: the native engine's served set ignores it both
     /// ways.  Construction tries to serve every client, false or not, and the
     /// final capacity repair strips clients from an overloaded route without
@@ -38,7 +37,7 @@ struct ClientParams {
 
 /// Parameters for a depot location.
 struct DepotParams {
-    TimeWindow tw = {0, INT_MAX};
+    TimeWindow tw = {0, kMeasureMax};
 };
 
 /// What a routing model optimises.  Result::cost() is lower-is-better under
@@ -103,7 +102,7 @@ public:
     struct MatEntry {
         int from;
         int to;
-        int value;
+        Measure value;
     };
 
     /// Add a depot at the given coordinates.  Only the first depot is used:
@@ -134,10 +133,10 @@ public:
     // -- Distance / duration matrices ----------------------------------------
 
     /// Set the distance between two nodes.
-    void set_distance(int from, int to, int dist);
+    void set_distance(int from, int to, Measure dist);
 
     /// Set the travel duration between two nodes.
-    void set_duration(int from, int to, int dur);
+    void set_duration(int from, int to, Measure dur);
 
     // -- Objective -----------------------------------------------------------
 

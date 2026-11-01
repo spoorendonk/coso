@@ -71,7 +71,7 @@ int Route::eval_remove_load(int pos) const {
     return LoadResource::excess(merged, data_->vehicle_type(vehicle_type_));
 }
 
-int Route::eval_insert_distance(int pos, int client) const {
+Measure Route::eval_insert_distance(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
     int profile = 0;
@@ -84,16 +84,16 @@ int Route::eval_insert_distance(int pos, int client) const {
     int next_node = (pos == size()) ? depot_ : node_(clients_[pos]);
 
     // Old edge: prev -> next.
-    int old_cost = data_->dist(profile, prev_node, next_node);
+    Measure old_cost = data_->dist(profile, prev_node, next_node);
 
     // New edges: prev -> new -> next.
-    int new_cost =
+    Measure new_cost =
         data_->dist(profile, prev_node, new_node) + data_->dist(profile, new_node, next_node);
 
     return new_cost - old_cost;
 }
 
-int Route::eval_remove_distance(int pos) const {
+Measure Route::eval_remove_distance(int pos) const {
     assert(pos >= 0 && pos < size());
 
     int profile = 0;
@@ -106,16 +106,16 @@ int Route::eval_remove_distance(int pos) const {
     int next_node = (pos == size() - 1) ? depot_ : node_(clients_[pos + 1]);
 
     // Old edges: prev -> rem -> next.
-    int old_cost =
+    Measure old_cost =
         data_->dist(profile, prev_node, rem_node) + data_->dist(profile, rem_node, next_node);
 
     // New edge: prev -> next.
-    int new_cost = data_->dist(profile, prev_node, next_node);
+    Measure new_cost = data_->dist(profile, prev_node, next_node);
 
     return new_cost - old_cost;
 }
 
-int Route::eval_insert_time_warp(int pos, int client) const {
+Measure Route::eval_insert_time_warp(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
     // The TW merge is not associative, so we cannot use suffix arrays for O(1)
@@ -141,7 +141,7 @@ int Route::eval_insert_time_warp(int pos, int client) const {
     return DurationResource::time_warp(state);
 }
 
-int Route::eval_remove_time_warp(int pos) const {
+Measure Route::eval_remove_time_warp(int pos) const {
     assert(pos >= 0 && pos < size());
 
     int profile = 0;
@@ -159,7 +159,7 @@ int Route::eval_remove_time_warp(int pos) const {
     return DurationResource::time_warp(state);
 }
 
-int Route::eval_insert_dist_excess(int pos, int client) const {
+Measure Route::eval_insert_dist_excess(int pos, int client) const {
     assert(pos >= 0 && pos <= size());
 
     int profile = 0;
@@ -174,7 +174,7 @@ int Route::eval_insert_dist_excess(int pos, int client) const {
     return DistanceResource::excess(full, data_->vehicle_type(vehicle_type_));
 }
 
-int Route::eval_remove_dist_excess(int pos) const {
+Measure Route::eval_remove_dist_excess(int pos) const {
     assert(pos >= 0 && pos < size());
 
     int profile = 0;

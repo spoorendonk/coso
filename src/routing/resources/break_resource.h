@@ -30,18 +30,18 @@ namespace coso {
 struct BreakResource {
     /// Configuration for the break rule.
     struct Rule {
-        int max_driving = 0;     ///< Max driving time before a break is needed.
-        int break_duration = 0;  ///< Duration of the mandatory break.
+        Measure max_driving = 0;     ///< Max driving time before a break is needed.
+        Measure break_duration = 0;  ///< Duration of the mandatory break.
     };
 
     /// State for a subsequence of the route.
     struct State {
-        int driving = 0;         ///< Driving time since last break (forward).
-        int driving_rev = 0;     ///< Driving time since last break (reversed).
-        int duration = 0;        ///< Total duration of this subsequence (travel + service).
-        int breaks = 0;          ///< Number of breaks taken.
-        int excess = 0;          ///< Accumulated break violation.
-        bool can_break = false;  ///< Whether a break can be taken in this subsequence.
+        Measure driving = 0;      ///< Driving time since last break (forward).
+        Measure driving_rev = 0;  ///< Driving time since last break (reversed).
+        Measure duration = 0;     ///< Total duration of this subsequence (travel + service).
+        int breaks = 0;           ///< Number of breaks taken.
+        Measure excess = 0;       ///< Accumulated break violation.
+        bool can_break = false;   ///< Whether a break can be taken in this subsequence.
     };
 
     /// Initialize state for a single client node.
@@ -91,7 +91,7 @@ struct BreakResource {
     ///    driver resets their driving counter after a break.
     /// 3. Excess accumulates when driving exceeds max_driving without a
     ///    break opportunity.
-    [[nodiscard]] static State merge(State const& left, State const& right, int travel,
+    [[nodiscard]] static State merge(State const& left, State const& right, Measure travel,
                                      Rule const& rule) {
         State result;
         result.duration = left.duration + travel + right.duration;
@@ -108,12 +108,12 @@ struct BreakResource {
 
         // Combined driving from end of left's last break through travel
         // into right's first segment.
-        int bridge = left.driving + travel;
+        Measure bridge = left.driving + travel;
 
         if (right.can_break) {
             // Right subsequence contains at least one break opportunity.
             // Check if the bridge driving exceeds the limit.
-            int bridge_plus_right = bridge + right.driving_rev;
+            Measure bridge_plus_right = bridge + right.driving_rev;
             // driving_rev of right = driving from right's start to its first
             // break point (reversed perspective: from start going forward).
             // Actually for forward merge: right.driving is the driving from
@@ -146,7 +146,7 @@ struct BreakResource {
         }
 
         // Reverse direction (for merge_reverse support).
-        int bridge_rev = right.driving_rev + travel;
+        Measure bridge_rev = right.driving_rev + travel;
         if (left.can_break) {
             if (bridge_rev > rule.max_driving) {
                 // Already accounted in forward direction.
@@ -171,7 +171,7 @@ struct BreakResource {
     [[nodiscard]] static State merge(State const& left, State const& right, int left_last,
                                      int right_first, ProblemData const& data, int profile,
                                      Rule const& rule) {
-        int travel = data.dur(profile, left_last, right_first);
+        Measure travel = data.dur(profile, left_last, right_first);
         return merge(left, right, travel, rule);
     }
 
@@ -179,7 +179,7 @@ struct BreakResource {
     ///
     /// When reversed, the right subsequence's forward driving becomes its
     /// reverse and vice versa.
-    [[nodiscard]] static State merge_reverse(State const& left, State const& right, int travel,
+    [[nodiscard]] static State merge_reverse(State const& left, State const& right, Measure travel,
                                              Rule const& rule) {
         // Swap driving and driving_rev for the reversed right subsequence.
         State right_rev = right;
@@ -194,12 +194,12 @@ struct BreakResource {
     ///
     /// @param state  The merged state for the full route.
     /// @param rule   The break rule configuration.
-    [[nodiscard]] static int excess(State const& state, Rule const& rule) {
+    [[nodiscard]] static Measure excess(State const& state, Rule const& rule) {
         if (rule.max_driving <= 0) {
             return 0;
         }
 
-        int total = state.excess;
+        Measure total = state.excess;
 
         // The final driving segment (from last break to end of route)
         // may also exceed the limit.

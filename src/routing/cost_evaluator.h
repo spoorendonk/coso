@@ -128,10 +128,10 @@ private:
     std::unique_ptr<PiecewiseLinearFunction> duration_cost_func_;
 
     /// Compute distance cost: the piecewise function if set, else distance.
-    [[nodiscard]] int64_t distance_cost_(int distance) const;
+    [[nodiscard]] int64_t distance_cost_(Measure distance) const;
 
     /// Compute duration cost: the piecewise function if set, else zero.
-    [[nodiscard]] int64_t duration_cost_(int duration) const;
+    [[nodiscard]] int64_t duration_cost_(Measure duration) const;
 };
 
 }  // namespace coso
