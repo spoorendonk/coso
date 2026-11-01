@@ -121,8 +121,9 @@ so; without it the build is unchanged. It is what makes the `clean` fence cheap
 cache against 42s without one. 116 of those are Catch2's and nanobind's and
 never change at all; the rest are recompiled only when their own source does.
 The launcher passes ccache `base_dir` set to the checkout (ccache 4.8 or
-newer), so the fresh worktree each `pre-push` builds in hits what another
-checkout cached — measured at 264/264 hits with no user ccache config (#252).
+newer; an older one gets the plain launcher), so the fresh worktree each
+`pre-push` builds in hits what another checkout cached — every compile hit
+with no user ccache config (#252).
 The dependencies are fetched `GIT_SHALLOW`, so re-cloning them costs ~5s of the
 ~6s configure. To build without the cache, or to swap in
 another one:

@@ -51,7 +51,9 @@ option(COSO_INSTALL_GIT_HOOKS "Point core.hooksPath at .githooks/" ON)
 # a fresh worktree (pre-push builds in a new one each time) hits the entries
 # another checkout wrote. Without it every worktree misses (#237). hash_dir stays
 # on: the default build has no -g, and a debug build keeps its own source paths.
-# Passing settings on the command line needs ccache 4.8 (Ubuntu 24.04 has 4.9).
+# Passing settings on the command line needs ccache 4.8 (Ubuntu 24.04 has 4.9);
+# an older one would take base_dir=... for the compiler and fail every compile,
+# so it gets the plain launcher and misses across worktrees instead.
 # Set before the dependencies so the fetched subprojects compile through it too.
 # CMake keeps the launcher out of compile_commands.json, so clang-tidy sees the
 # same compile lines either way.
@@ -59,8 +61,18 @@ option(COSO_USE_CCACHE "Compile through ccache when it is installed" ON)
 if(COSO_USE_CCACHE AND NOT CMAKE_CXX_COMPILER_LAUNCHER)
     find_program(CCACHE_PROGRAM ccache)
     if(CCACHE_PROGRAM)
-        set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM};base_dir=${CMAKE_SOURCE_DIR}")
-        message(STATUS "Compiler cache: ${CCACHE_PROGRAM}")
+        execute_process(COMMAND "${CCACHE_PROGRAM}" --version
+                        OUTPUT_VARIABLE CCACHE_VERSION_OUTPUT ERROR_QUIET)
+        string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CCACHE_VERSION
+                     "${CCACHE_VERSION_OUTPUT}")
+        if(CCACHE_VERSION VERSION_GREATER_EQUAL 4.8)
+            set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM};base_dir=${CMAKE_SOURCE_DIR}")
+        else()
+            set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+            message(STATUS "ccache ${CCACHE_VERSION} predates 4.8: no base_dir, "
+                           "so a fresh worktree will not hit the cache")
+        endif()
+        message(STATUS "Compiler cache: ${CCACHE_PROGRAM} ${CCACHE_VERSION}")
     endif()
 endif()
 
