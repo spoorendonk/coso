@@ -141,7 +141,9 @@ void top_up_min_minutes(RosteringData const& data, RosteringSolution& sol) {
             int64_t best_score = 0;
             for (int d = 0; d < H; ++d) {
                 for (int s = 0; s < ns; ++s) {
-                    if (!is_feasible_assignment(data, sol.schedule(), e, d, s)) {
+                    // A shift adding no minutes cannot close the gap.
+                    if (data.shift_types[s].duration_minutes <= 0 ||
+                        !is_feasible_assignment(data, sol.schedule(), e, d, s)) {
                         continue;
                     }
                     auto const dem = data.get_demand(s, d);
