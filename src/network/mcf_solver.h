@@ -22,7 +22,10 @@ public:
     /// Returns a feasible, cost-minimising flow if one exists.
     /// If no feasible flow exists (supply/demand imbalance, or capacity
     /// constraints prevent routing all flow), the returned solution will
-    /// have excess violations.
+    /// have excess violations.  Both claims assume no negative-cost cycle in
+    /// the zero flow: a reachable one aborts the search and reports a feasible
+    /// instance infeasible, an unreachable one leaves the cost non-minimal
+    /// (#253).
     [[nodiscard]] static NetworkSolution solve(NetworkData const& data);
 
 private:
