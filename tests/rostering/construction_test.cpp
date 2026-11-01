@@ -317,3 +317,27 @@ TEST_CASE("constructions report an unreachable min_total_minutes as infeasible",
         CHECK_FALSE(sol.is_feasible());
     }
 }
+
+TEST_CASE("is_feasible_assignment enforces max_weekends and max_total_minutes",
+          "[rostering][construction]") {
+    // Shared with replanning's construct_unlocked, so this pins both.
+    auto data = make_single_employee(14);
+    data.employees[0].max_weekends = 1;
+    std::vector<std::vector<int>> schedule(1, std::vector<int>(14, -1));
+
+    SECTION("a worked weekend's other day stays open, a second weekend does not") {
+        schedule[0][5] = 0;  // Saturday of weekend 0.
+        CHECK(is_feasible_assignment(data, schedule, 0, 6, 0));
+        CHECK_FALSE(is_feasible_assignment(data, schedule, 0, 12, 0));
+        CHECK_FALSE(is_feasible_assignment(data, schedule, 0, 13, 0));
+        CHECK(is_feasible_assignment(data, schedule, 0, 8, 0));  // A weekday.
+    }
+
+    SECTION("an assignment past max_total_minutes is refused") {
+        data.employees[0].max_total_minutes = 2 * 480;
+        schedule[0][0] = 0;
+        CHECK(is_feasible_assignment(data, schedule, 0, 1, 0));
+        schedule[0][1] = 0;
+        CHECK_FALSE(is_feasible_assignment(data, schedule, 0, 2, 0));
+    }
+}

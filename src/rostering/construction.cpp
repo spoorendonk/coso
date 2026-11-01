@@ -22,10 +22,8 @@ int64_t worked_minutes(RosteringData const& data, std::vector<std::vector<int>> 
     return total;
 }
 
-/// Check whether assigning employee e to shift s on day d would violate
-/// any hard constraint: unavailability, consecutive days, forbidden
-/// sequences, max_weekends and max_total_minutes.  min_total_minutes is a
-/// lower bound no single assignment can break; top_up_min_minutes owns it.
+}  // anonymous namespace
+
 bool is_feasible_assignment(RosteringData const& data,
                             std::vector<std::vector<int>> const& schedule, int e, int d, int s) {
     // Unavailability.
@@ -111,6 +109,8 @@ bool is_feasible_assignment(RosteringData const& data,
 
     return true;
 }
+
+namespace {
 
 /// Check whether employee has a given skill (empty skill = always true).
 bool employee_has_skill(RosteringData const& data, int e, std::string const& skill) {

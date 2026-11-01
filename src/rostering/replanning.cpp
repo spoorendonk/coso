@@ -35,64 +35,6 @@ LockedCells::LockedCells(ReplanConfig const& config, RosteringSolution const& so
 
 namespace {
 
-/// Check whether assigning employee e to shift s on day d would violate
-/// any hard constraint (unavailability, consecutive days, rest time).
-/// Mirrors the logic from construction.cpp.
-bool is_feasible_assignment(RosteringData const& data,
-                            std::vector<std::vector<int>> const& schedule, int e, int d, int s) {
-    // Unavailability.
-    if (data.is_unavailable(e, d)) {
-        return false;
-    }
-
-    // Already assigned on this day.
-    if (schedule[e][d] >= 0) {
-        return false;
-    }
-
-    // Consecutive days limit.
-    int max_consec = data.employees[e].max_consecutive_days;
-    int run_before = 0;
-    for (int dd = d - 1; dd >= 0 && schedule[e][dd] >= 0; --dd) {
-        ++run_before;
-    }
-    int run_after = 0;
-    for (int dd = d + 1; dd < data.horizon && schedule[e][dd] >= 0; ++dd) {
-        ++run_after;
-    }
-    if (run_before + 1 + run_after > max_consec) {
-        return false;
-    }
-
-    // Forbidden sequences.
-    for (auto const& seq : data.forbidden_sequences) {
-        int len = static_cast<int>(seq.size());
-        if (len < 2) {
-            continue;
-        }
-        for (int k = 0; k < len; ++k) {
-            int start_day = d - k;
-            if (start_day < 0 || start_day + len > data.horizon) {
-                continue;
-            }
-            bool match = true;
-            for (int j = 0; j < len; ++j) {
-                int dd = start_day + j;
-                int shift_on_dd = (dd == d) ? s : schedule[e][dd];
-                if (shift_on_dd != seq[j]) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match) {
-                return false;
-            }
-        }
-    }
-
-    return true;
-}
-
 /// Check whether employee has a given skill (empty skill = always true).
 bool employee_has_skill(RosteringData const& data, int e, std::string const& skill) {
     if (skill.empty()) {
@@ -105,7 +47,10 @@ bool employee_has_skill(RosteringData const& data, int e, std::string const& ski
 /// Greedy construction for unlocked cells only.
 ///
 /// Iterates day by day, shift by shift, and assigns employees greedily to
-/// unmet demand slots — but only for unlocked cells.
+/// unmet demand slots — but only for unlocked cells.  Assignments go through
+/// the constructions' is_feasible_assignment, so the upper bounds hold; there
+/// is no min_total_minutes top-up here, so a short employee is left to the
+/// evaluator to report.
 void construct_unlocked(RosteringSolution& sol, RosteringData const& data,
                         LockedCells const& locked) {
     int const ns = data.num_shift_types();
