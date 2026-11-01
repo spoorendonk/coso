@@ -92,6 +92,52 @@ TEST_CASE("parse_vrp rejects a DEPOT_SECTION id outside 1..DIMENSION", "[instanc
     REQUIRE_THROWS_AS(coso::parse_vrp(with_depot("6")), std::runtime_error);
 }
 
+TEST_CASE("parse_vrp rejects a DIMENSION that disagrees with the node sections",
+          "[instance_reader]") {
+    // #258: each section is sized by DIMENSION as it stands when read, so a
+    // later DIMENSION left coords/demands shorter than dimension and solve()
+    // read past their end.
+    using Catch::Matchers::ContainsSubstring;
+    std::string const header = "NAME : t\nTYPE : CVRP\nCAPACITY : 10\nEDGE_WEIGHT_TYPE : EUC_2D\n";
+    std::string const coords = "NODE_COORD_SECTION\n1 0 0\n2 1 0\n3 0 1\n";
+    std::string const demands = "DEMAND_SECTION\n1 0\n2 1\n3 1\n";
+
+    SECTION("a single DIMENSION sizes every array") {
+        auto inst = coso::parse_vrp(header + "DIMENSION : 3\n" + coords + demands +
+                                    "DEPOT_SECTION\n1\n-1\nEOF\n");
+        REQUIRE(inst.dimension == 3);
+        REQUIRE(inst.coords.size() == 3);
+        REQUIRE(inst.demands.size() == 3);
+    }
+    SECTION("a second, larger DIMENSION after the sections") {
+        REQUIRE_THROWS_WITH(
+            coso::parse_vrp(header + "DIMENSION : 3\n" + coords + demands + "DIMENSION : 5\nEOF\n"),
+            ContainsSubstring("DIMENSION declared more than once"));
+    }
+    SECTION("a second, smaller DIMENSION after the sections") {
+        REQUIRE_THROWS_WITH(
+            coso::parse_vrp(header + "DIMENSION : 3\n" + coords + demands + "DIMENSION : 2\nEOF\n"),
+            ContainsSubstring("DIMENSION declared more than once"));
+    }
+    SECTION("the same DIMENSION repeated") {
+        REQUIRE_THROWS_WITH(
+            coso::parse_vrp(header + "DIMENSION : 3\nDIMENSION : 3\n" + coords + demands + "EOF\n"),
+            ContainsSubstring("DIMENSION declared more than once"));
+    }
+    SECTION("a node section before DIMENSION") {
+        REQUIRE_THROWS_WITH(
+            coso::parse_vrp(header + coords + "DIMENSION : 3\n" + demands + "EOF\n"),
+            ContainsSubstring("NODE_COORD_SECTION before DIMENSION"));
+        REQUIRE_THROWS_WITH(
+            coso::parse_vrp(header + demands + "DIMENSION : 3\n" + coords + "EOF\n"),
+            ContainsSubstring("DEMAND_SECTION before DIMENSION"));
+        REQUIRE_THROWS_WITH(coso::parse_vrp("NAME : t\nEDGE_WEIGHT_TYPE : EXPLICIT\n"
+                                            "EDGE_WEIGHT_FORMAT : FULL_MATRIX\n"
+                                            "EDGE_WEIGHT_SECTION\n0 1\n1 0\nDIMENSION : 2\nEOF\n"),
+                            ContainsSubstring("EDGE_WEIGHT_SECTION before DIMENSION"));
+    }
+}
+
 TEST_CASE("EUC_2D distance computation", "[instance_reader]") {
     auto inst = coso::parse_vrp(SMALL_VRP);
     // Distance from (0,0) to (10,0) = 10.

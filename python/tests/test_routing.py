@@ -385,6 +385,20 @@ class TestSolveInstance:
             coso.solve_instance(str(bad), coso.TimeLimit(1.0))
         assert str(bad) in str(exc.value)
 
+    def test_second_dimension_raises(self, tmp_path: Path) -> None:
+        """A second DIMENSION after the node sections raises, not an out-of-bounds read (#258)."""
+        bad = tmp_path / "bad_dimension.vrp"
+        bad.write_text(
+            "NAME : bad\nTYPE : CVRP\nDIMENSION : 3\nCAPACITY : 10\n"
+            "EDGE_WEIGHT_TYPE : EUC_2D\n"
+            "NODE_COORD_SECTION\n1 0 0\n2 1 0\n3 0 1\n"
+            "DEMAND_SECTION\n1 0\n2 1\n3 1\n"
+            "DIMENSION : 5\nEOF\n"
+        )
+        with pytest.raises(RuntimeError, match="DIMENSION declared more than once") as exc:
+            coso.solve_instance(str(bad), coso.TimeLimit(1.0))
+        assert str(bad) in str(exc.value)
+
 
 # =========================================================================
 #  Module-level

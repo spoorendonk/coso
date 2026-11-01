@@ -344,6 +344,14 @@ VrpInstance parse_vrp(const std::string& content) {
     std::istringstream in(content);
     VrpInstance inst;
     std::string line;
+    bool dimension_seen = false;
+    // A node section is sized by DIMENSION as it stands when it is read, so it
+    // must come after the one DIMENSION line (#258).
+    auto require_dimension = [&](const std::string& section) {
+        if (!dimension_seen) {
+            throw std::runtime_error("VRP parse error: " + section + " before DIMENSION");
+        }
+    };
 
     while (std::getline(in, line)) {
         auto trimmed = trim(line);
@@ -352,6 +360,10 @@ VrpInstance parse_vrp(const std::string& content) {
         }
         auto upper = to_upper(trimmed);
 
+        if (upper == "NODE_COORD_SECTION" || upper == "DEMAND_SECTION" ||
+            upper == "EDGE_WEIGHT_SECTION") {
+            require_dimension(upper);
+        }
         if (upper == "NODE_COORD_SECTION") {
             parse_node_coord_section(in, inst);
             continue;
@@ -385,6 +397,10 @@ VrpInstance parse_vrp(const std::string& content) {
         } else if (key == "TYPE") {
             inst.type = to_upper(value);
         } else if (key == "DIMENSION") {
+            if (dimension_seen) {
+                throw std::runtime_error("VRP parse error: DIMENSION declared more than once");
+            }
+            dimension_seen = true;
             inst.dimension = std::stoi(value);
         } else if (key == "CAPACITY") {
             inst.capacity = std::stoi(value);
