@@ -38,7 +38,9 @@ public:
     /// Add an arc between nodes.
     int add_arc(int tail, int head, int cost = 0, int upper_cap = INT_MAX);
 
-    /// Solve the network flow problem within the given limits.
+    /// Solve the network flow problem within the given limits.  Throws
+    /// std::invalid_argument when a negative-cost cycle of arcs is
+    /// uncapacitated (upper_cap INT_MAX), since the cost is unbounded (#253).
     Result solve(TimeLimit tl);
 
     // -- Accessors -----------------------------------------------------------

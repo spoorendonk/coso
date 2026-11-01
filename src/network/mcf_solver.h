@@ -7,9 +7,10 @@ namespace coso {
 
 /// Minimum cost flow solver using successive shortest paths (SSP).
 ///
-/// Computes an optimal or near-optimal MCF solution by repeatedly finding
-/// shortest augmenting paths from supply nodes to demand nodes in the
-/// residual graph using Bellman-Ford (handles negative costs).
+/// Computes a minimum-cost flow: first cancels every negative-cost cycle of
+/// the zero flow, then repeatedly augments along shortest paths from supply
+/// nodes to demand nodes in the residual graph using Bellman-Ford (handles
+/// negative costs).
 ///
 /// The solver handles basic MCF. No search component in src/network/ produces
 /// resource-feasible flows for the aggregate resource budgets NetworkData can
@@ -22,10 +23,9 @@ public:
     /// Returns a feasible, cost-minimising flow if one exists.
     /// If no feasible flow exists (supply/demand imbalance, or capacity
     /// constraints prevent routing all flow), the returned solution will
-    /// have excess violations.  Both claims assume no negative-cost cycle in
-    /// the zero flow: a reachable one aborts the search and reports a feasible
-    /// instance infeasible, an unreachable one leaves the cost non-minimal
-    /// (#253).
+    /// have excess violations.  Negative-cost cycles are saturated before the
+    /// search (#253); throws std::invalid_argument when one has no finite
+    /// capacity on it, since the cost is then unbounded below.
     [[nodiscard]] static NetworkSolution solve(NetworkData const& data);
 
 private:

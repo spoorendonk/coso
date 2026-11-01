@@ -6,6 +6,8 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <stdexcept>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
@@ -262,6 +264,64 @@ TEST_CASE("MCF solver reports an instance with no route as infeasible", "[networ
     REQUIRE(sol.flow(0) == 1);
     REQUIRE(sol.flow(1) == 0);
     REQUIRE(sol.excess(1) == -1);
+}
+
+TEST_CASE("MCF solver handles negative-cost cycles", "[network]") {
+    // #253: SSP assumed no negative cycle in the zero flow.
+    SECTION("a cycle reachable from the supply no longer reads as infeasible") {
+        NetworkData::Builder b;
+        b.add_node(1, "s");
+        b.add_node(-1, "t");
+        b.add_node(0, "x");
+        b.add_node(0, "y");
+        b.add_arc(0, 2, 0, 1);   // s->x
+        b.add_arc(2, 3, -1, 1);  // x->y
+        b.add_arc(3, 2, 0, 1);   // y->x
+        b.add_arc(2, 1, 0, 1);   // x->t
+        auto data = b.build();
+        auto sol = McfSolver::solve(data);
+        REQUIRE(sol.feasible());
+        REQUIRE(sol.cost() == -1);  // s->x->t, plus the saturated cycle
+        REQUIRE(sol.flow(1) == 1);
+        REQUIRE(sol.flow(2) == 1);
+    }
+    SECTION("a cycle the supply cannot reach is still saturated") {
+        NetworkData::Builder b;
+        b.add_node(1, "s");
+        b.add_node(-1, "t");
+        b.add_node(0, "u");
+        b.add_node(0, "v");
+        b.add_arc(0, 1, 1, 1);   // s->t
+        b.add_arc(2, 3, -2, 1);  // u->v
+        b.add_arc(3, 2, 0, 1);   // v->u
+        auto data = b.build();
+        auto sol = McfSolver::solve(data);
+        REQUIRE(sol.feasible());
+        REQUIRE(sol.cost() == -1);
+    }
+    SECTION("an uncapacitated negative cycle is unbounded and rejected") {
+        NetworkData::Builder b;
+        b.add_node(1, "s");
+        b.add_node(-1, "t");
+        b.add_node(0, "u");
+        b.add_node(0, "v");
+        b.add_arc(0, 1, 1, 1);  // s->t
+        b.add_arc(2, 3, -2);    // u->v, uncapacitated
+        b.add_arc(3, 2, 0);     // v->u, uncapacitated
+        auto data = b.build();
+        REQUIRE_THROWS_AS(McfSolver::solve(data), std::invalid_argument);
+    }
+    SECTION("a negative cycle bounded by one capacitated arc is saturated to it") {
+        NetworkData::Builder b;
+        b.add_node(0, "u");
+        b.add_node(0, "v");
+        b.add_arc(0, 1, -2);    // u->v, uncapacitated
+        b.add_arc(1, 0, 0, 5);  // v->u, capacity 5
+        auto data = b.build();
+        auto sol = McfSolver::solve(data);
+        REQUIRE(sol.feasible());
+        REQUIRE(sol.cost() == -10);
+    }
 }
 
 // ===========================================================================

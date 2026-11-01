@@ -1,8 +1,11 @@
 #include "network/mcf_solver.h"
 
+#include "network/network_operators.h"
+
 #include <algorithm>
 #include <climits>
 #include <queue>
+#include <stdexcept>
 #include <vector>
 
 namespace coso {
@@ -129,6 +132,25 @@ McfSolver::PathResult McfSolver::find_augmenting_path(NetworkData const& data,
 NetworkSolution McfSolver::solve(NetworkData const& data) {
     NetworkSolution sol(data);
     int const na = data.num_arcs();
+
+    // SSP needs a residual graph with no negative-cost cycle, and augmenting
+    // along shortest paths keeps it so.  Cancel every negative cycle of the
+    // zero flow first; this leaves each node's excess unchanged (#253).  A
+    // cycle with no finite capacity on it can carry unbounded flow, so the
+    // cost has no minimum.  No iteration cap: each cancellation lowers the
+    // cost by at least 1, and it is bounded below once no such cycle exists.
+    while (true) {
+        auto move = CycleCancel::find_negative_cycle(data, sol);
+        if (move.amount <= 0) {
+            break;
+        }
+        if (move.amount == INT_MAX) {
+            throw std::invalid_argument(
+                "McfSolver::solve: a negative-cost cycle has no finite capacity, so the cost "
+                "is unbounded below");
+        }
+        CycleCancel::apply(data, sol, move);
+    }
 
     // Successive shortest paths: repeatedly augment along a cheapest path from
     // any surplus node to any deficit node.  Stops when supply is all routed,
