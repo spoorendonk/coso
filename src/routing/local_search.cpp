@@ -12,6 +12,7 @@ LocalSearch::LocalSearch(ProblemData const& data) : data_(&data) {}
 void LocalSearch::run(Solution& sol, CostEvaluator const& eval, StopCriterion* stop) {
     last_num_moves_ = 0;
     last_num_iters_ = 0;
+    last_num_swap_star_moves_ = 0;
 
     // First-improvement descent: try operators in order.  When any finds
     // an improving move, apply it and restart from the first operator.
@@ -72,11 +73,11 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval, StopCriterion* s
             continue;
         }
 
-        // SWAP* is significantly more expensive than the other operators.
-        // Under a stop criterion, skip it to avoid consuming the remaining
-        // budget in a single neighbourhood scan.
-        if (!stop && op_ss.find_best_move(sol, eval, *data_)) {
+        // SWAP* is the most expensive scan, so it runs last and checks the
+        // stop criterion between route pairs (#250).
+        if (op_ss.find_best_move(sol, eval, *data_, stop)) {
             apply(op_ss, "SwapStar");
+            ++last_num_swap_star_moves_;
             improved = true;
             continue;
         }

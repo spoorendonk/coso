@@ -12,7 +12,7 @@ class StopCriterion;
 ///
 /// Iteratively applies improving moves until a local optimum is reached.
 /// Uses first-improvement descent by default: operators are tried in a fixed
-/// order (Exchange10, Exchange11, Exchange20, SwapTails); as soon as any
+/// order (Exchange10, Exchange11, Exchange20, SwapTails, SWAP*); as soon as any
 /// operator finds an improving move, it is applied and the search restarts
 /// from the first operator.
 ///
@@ -29,7 +29,8 @@ public:
     /// Run local search on the solution until a local optimum is reached.
     ///
     /// Modifies sol in place.  On return, no single Exchange10, Exchange11,
-    /// Exchange20, or SwapTails move can improve the penalized cost.
+    /// Exchange20, SwapTails or SWAP* move can improve the penalized cost,
+    /// unless `stop` fired first.  SWAP* checks `stop` inside its scan.
     void run(Solution& sol, CostEvaluator const& eval, StopCriterion* stop = nullptr);
 
     /// Number of improving moves applied in the last run() call.
@@ -38,10 +39,16 @@ public:
     /// Number of iterations (operator scans) in the last run() call.
     [[nodiscard]] int last_num_iters() const noexcept { return last_num_iters_; }
 
+    /// Number of SWAP* moves among last_num_moves().
+    [[nodiscard]] int last_num_swap_star_moves() const noexcept {
+        return last_num_swap_star_moves_;
+    }
+
 private:
     ProblemData const* data_;
     int last_num_moves_ = 0;
     int last_num_iters_ = 0;
+    int last_num_swap_star_moves_ = 0;
 };
 
 }  // namespace coso

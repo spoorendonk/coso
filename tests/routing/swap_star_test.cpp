@@ -1,11 +1,15 @@
 #include "routing/operators/swap_star.h"
 
 #include "routing/cost_evaluator.h"
+#include "routing/local_search.h"
+#include "routing/operators/exchange.h"
 #include "routing/problem_data.h"
 #include "routing/solution.h"
+#include "search/stop_criterion.h"
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <random>
 #include <vector>
 
 using namespace coso;
@@ -203,4 +207,101 @@ TEST_CASE("SwapStar: empty routes handled correctly", "[swapstar]") {
         op.apply(sol);
         CHECK(sol.num_unassigned() == 0);
     }
+}
+
+// ===========================================================================
+//  SWAP* under a stop criterion (#250)
+// ===========================================================================
+
+// Two routes of three clients at capacity, a local optimum of Exchange10,
+// Exchange11, Exchange20 and SwapTails that a SWAP* move improves (found by a
+// random search over small instances).
+static ProblemData make_swap_star_only_instance() {
+    ProblemData::Builder b;
+    b.add_depot({0.0, 0.0});
+    b.add_vehicle_type(2, {.capacity = {15}});
+    b.add_client({-16.0, 4.0}, {.demand = {5}});   // 0
+    b.add_client({-3.0, 7.0}, {.demand = {5}});    // 1
+    b.add_client({19.0, -4.0}, {.demand = {5}});   // 2
+    b.add_client({1.0, -12.0}, {.demand = {5}});   // 3
+    b.add_client({8.0, -9.0}, {.demand = {5}});    // 4
+    b.add_client({-8.0, -15.0}, {.demand = {5}});  // 5
+    return b.build(0);
+}
+
+TEST_CASE("SwapStar: instance is a local optimum of the other operators", "[swapstar][stop]") {
+    auto data = make_swap_star_only_instance();
+    CostEvaluator eval(1000);
+    auto sol = make_solution(data, {{0, 1, 2}, {4, 3, 5}});
+
+    Exchange10 op10;
+    Exchange11 op11;
+    Exchange20 op20;
+    SwapTails op_st;
+    CHECK_FALSE(op10.find_best_move(sol, eval, data));
+    CHECK_FALSE(op11.find_best_move(sol, eval, data));
+    CHECK_FALSE(op20.find_best_move(sol, eval, data));
+    CHECK_FALSE(op_st.find_best_move(sol, eval, data));
+
+    SwapStar op;
+    REQUIRE(op.find_best_move(sol, eval, data));
+    CHECK(op.best_delta() < 0);
+}
+
+TEST_CASE("LocalSearch: SWAP* is applied in a stop-bounded run", "[swapstar][stop]") {
+    auto data = make_swap_star_only_instance();
+    CostEvaluator eval(1000);
+    auto sol = make_solution(data, {{0, 1, 2}, {4, 3, 5}});
+    int64_t old_cost = sol.cost(eval);
+
+    StopCriterion stop(60.0, 0, 0);
+    LocalSearch ls(data);
+    ls.run(sol, eval, &stop);
+
+    CHECK(ls.last_num_swap_star_moves() >= 1);
+    CHECK(sol.cost(eval) < old_cost);
+    CHECK(sol.num_unassigned() == 0);
+}
+
+TEST_CASE("SwapStar: a stop that has fired ends the scan", "[swapstar][stop]") {
+    auto data = make_swap_star_only_instance();
+    CostEvaluator eval(1000);
+    auto sol = make_solution(data, {{0, 1, 2}, {4, 3, 5}});
+
+    StopCriterion stop(0.0, 1, 0);
+    stop.iteration();
+    REQUIRE(stop.should_stop());
+
+    SwapStar op;
+    CHECK_FALSE(op.find_best_move(sol, eval, data, &stop));
+}
+
+TEST_CASE("SwapStar: delta is exact on random instances", "[swapstar][random]") {
+    std::mt19937 rng(7);
+    std::uniform_int_distribution<int> coord(-30, 30);
+    std::uniform_int_distribution<int> demand(1, 8);
+
+    int moves = 0;
+    for (int trial = 0; trial < 200; ++trial) {
+        ProblemData::Builder b;
+        b.add_depot({0.0, 0.0});
+        b.add_vehicle_type(3, {.capacity = {20}});
+        for (int i = 0; i < 9; ++i) {
+            b.add_client({double(coord(rng)), double(coord(rng))}, {.demand = {demand(rng)}});
+        }
+        auto data = b.build(0);
+        CostEvaluator eval(50);
+        auto sol = make_solution(data, {{0, 1, 2}, {3, 4, 5, 6}, {7, 8}});
+
+        SwapStar op;
+        for (int it = 0; it < 20 && op.find_best_move(sol, eval, data); ++it) {
+            int64_t before = sol.cost(eval);
+            int64_t predicted = op.best_delta();
+            op.apply(sol);
+            REQUIRE(sol.cost(eval) - before == predicted);
+            REQUIRE(sol.num_unassigned() == 0);
+            ++moves;
+        }
+    }
+    CHECK(moves > 0);
 }

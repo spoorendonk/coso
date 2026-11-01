@@ -1,12 +1,20 @@
 #include "routing/operators/swap_star.h"
 
+#include "routing/resources/load_resource.h"
+#include "search/stop_criterion.h"
+
+#include <array>
 #include <cassert>
 #include <limits>
+#include <span>
+#include <utility>
 #include <vector>
 
 namespace coso {
 
 namespace {
+
+constexpr int64_t kInf = std::numeric_limits<int64_t>::max();
 
 /// Location of a client in the solution: (route index, position in route).
 struct ClientLocation {
@@ -15,7 +23,7 @@ struct ClientLocation {
 };
 
 /// Build a lookup table: client -> (route, position).
-inline std::vector<ClientLocation> build_client_locations(Solution const& sol) {
+std::vector<ClientLocation> build_client_locations(Solution const& sol) {
     int nc = sol.data().num_clients();
     std::vector<ClientLocation> loc(nc, {-1, -1});
     for (int r = 0; r < sol.num_routes(); ++r) {
@@ -27,96 +35,129 @@ inline std::vector<ClientLocation> build_client_locations(Solution const& sol) {
     return loc;
 }
 
-/// Evaluate the cost of a route after removing client at remove_pos and
-/// inserting insert_client at insert_pos (in the reduced sequence).
-inline int64_t eval_route_with_swap(Route const& route, CostEvaluator const& eval,
-                                    ProblemData const& data, int remove_pos, int insert_client,
-                                    int insert_pos) {
-    std::vector<int> clients;
-    clients.reserve(route.size());
-    for (int i = 0; i < route.size(); ++i) {
-        if (i != remove_pos) {
-            clients.push_back(route.client(i));
+/// The three cheapest insertion positions of one client in one route
+/// (Vidal 2022, §4).  `delta` is the full penalised insertion delta;
+/// `free` leaves out its load-penalty part, which SWAP* prices separately.
+struct Top3 {
+    struct Entry {
+        int pos = -1;
+        int64_t delta = kInf;
+        int64_t free = kInf;
+    };
+    std::array<Entry, 3> e;
+
+    void add(int pos, int64_t delta, int64_t free) {
+        if (free >= e[2].free) {
+            return;
+        }
+        e[2] = {pos, delta, free};
+        if (e[2].free < e[1].free) {
+            std::swap(e[2], e[1]);
+            if (e[1].free < e[0].free) {
+                std::swap(e[1], e[0]);
+            }
         }
     }
-    clients.insert(clients.begin() + insert_pos, insert_client);
-
-    Route temp(data, route.vehicle_type());
-    temp.set_clients(std::move(clients));
-    return eval.route_cost(temp);
-}
-
-/// Evaluate the cost of a route after removing the client at the given pos.
-inline int64_t eval_route_after_remove(Route const& route, CostEvaluator const& eval,
-                                       ProblemData const& data, int remove_pos) {
-    std::vector<int> clients;
-    clients.reserve(route.size() - 1);
-    for (int i = 0; i < route.size(); ++i) {
-        if (i != remove_pos) {
-            clients.push_back(route.client(i));
-        }
-    }
-
-    Route temp(data, route.vehicle_type());
-    temp.set_clients(std::move(clients));
-    return eval.route_cost(temp);
-}
-
-/// Find the best insertion position for client in a route that has already
-/// had one client removed at remove_pos.
-struct BestInsertResult {
-    int pos;
-    int64_t cost;  // total route cost after insertion
 };
 
-inline BestInsertResult best_insert_after_remove(Route const& route, CostEvaluator const& eval,
-                                                 ProblemData const& data, int remove_pos,
-                                                 int insert_client) {
-    int reduced_size = route.size() - 1;
-    BestInsertResult best{0, std::numeric_limits<int64_t>::max()};
+/// Load-penalty delta of a route after replacing the client at pos with
+/// `client` in place.  For delivery-only loads this is the load-penalty delta
+/// of removing that client and inserting `client` anywhere.
+int64_t replace_load_penalty(Route const& route, int pos, int client, int64_t lp) {
+    auto const& data = route.data();
+    auto merged = LoadResource::merge(route.load_prefix(pos - 1), LoadResource::init(data, client));
+    merged = LoadResource::merge(merged, route.load_suffix(pos + 1));
+    int excess = LoadResource::excess(merged, data.vehicle_type(route.vehicle_type()));
+    return static_cast<int64_t>(excess - route.load_excess()) * lp;
+}
 
-    for (int p = 0; p <= reduced_size; ++p) {
-        int64_t cost = eval_route_with_swap(route, eval, data, remove_pos, insert_client, p);
-        if (cost < best.cost) {
-            best.cost = cost;
-            best.pos = p;
-        }
+/// Exact penalised delta of a route after removing the client at remove_pos
+/// and inserting `client` at position `insert_pos` of the reduced sequence.
+int64_t exact_swap_delta(Route const& route, CostEvaluator const& eval, int remove_pos, int client,
+                         int insert_pos, std::vector<int>& seq) {
+    seq.clear();
+    auto clients = route.clients();
+    if (insert_pos <= remove_pos) {
+        // [.. q-1] client [q .. pa-1] [pa+1 ..]
+        seq.push_back(client);
+        seq.insert(seq.end(), clients.begin() + insert_pos, clients.begin() + remove_pos);
+        return eval.eval_splice_cost(route, insert_pos, remove_pos + 1, seq);
     }
-    return best;
+    // [.. pa-1] [pa+1 .. q] client [q+1 ..]
+    seq.insert(seq.end(), clients.begin() + remove_pos + 1, clients.begin() + insert_pos + 1);
+    seq.push_back(client);
+    return eval.eval_splice_cost(route, remove_pos, insert_pos + 1, seq);
+}
+
+/// Cheapest load-free insertion of a client into a route that has lost the
+/// client at remove_pos, choosing among the cached top-3 positions not
+/// adjacent to the removed client and the removed client's own place.
+/// Returns (free delta, position in the reduced sequence).
+std::pair<int64_t, int> best_insert_without(Top3 const& top, int64_t inplace_free, int remove_pos) {
+    int64_t best = inplace_free;
+    int best_pos = remove_pos;
+    for (auto const& entry : top.e) {
+        if (entry.pos < 0) {
+            break;
+        }
+        if (entry.pos == remove_pos || entry.pos == remove_pos + 1) {
+            continue;  // this insertion point has the removed client as a neighbour
+        }
+        if (entry.free < best) {
+            best = entry.free;
+            best_pos = entry.pos < remove_pos ? entry.pos : entry.pos - 1;
+        }
+        break;  // entries are sorted: the first valid one is the best of them
+    }
+    return {best, best_pos};
 }
 
 }  // anonymous namespace
-
-// ---------------------------------------------------------------------------
-//  SwapStar::best_insert
-// ---------------------------------------------------------------------------
-
-SwapStar::InsertPos SwapStar::best_insert(Route const& route, CostEvaluator const& eval,
-                                          int client) {
-    InsertPos best;
-    best.delta = std::numeric_limits<int64_t>::max();
-
-    for (int p = 0; p <= route.size(); ++p) {
-        int64_t d = eval.eval_insert_cost(route, p, client);
-        if (d < best.delta) {
-            best.delta = d;
-            best.pos = p;
-        }
-    }
-    return best;
-}
 
 // ---------------------------------------------------------------------------
 //  SwapStar::find_best_move
 // ---------------------------------------------------------------------------
 
 bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
-                              ProblemData const& data) {
+                              ProblemData const& data, StopCriterion const* stop) {
     best_delta_ = 0;
     route_a_ = -1;
 
     auto locations = build_client_locations(sol);
     int num_routes = sol.num_routes();
+    int64_t lp = eval.load_penalty();
+
+    std::vector<bool> route_seen(num_routes);
+    std::vector<int> candidate_routes;
+    std::vector<int64_t> rem_a, rem_b, rem_free_a, rem_free_b;
+    std::vector<Top3> top_u_in_b, top_v_in_a;
+    std::vector<int> seq;
+
+    // Removal deltas of every client of a route: full, and load-free.
+    auto removal_costs = [&](Route const& route, std::vector<int64_t>& full,
+                             std::vector<int64_t>& free) {
+        full.resize(route.size());
+        free.resize(route.size());
+        for (int p = 0; p < route.size(); ++p) {
+            full[p] = eval.eval_remove_cost(route, p);
+            free[p] = full[p] -
+                      static_cast<int64_t>(route.eval_remove_load(p) - route.load_excess()) * lp;
+        }
+    };
+
+    // Top-3 insertion positions in `target` of every client of `source`.
+    auto insertion_costs = [&](Route const& source, Route const& target, std::vector<Top3>& tops) {
+        tops.assign(source.size(), Top3{});
+        for (int i = 0; i < source.size(); ++i) {
+            int c = source.client(i);
+            for (int p = 0; p <= target.size(); ++p) {
+                int64_t d = eval.eval_insert_cost(target, p, c);
+                int64_t load =
+                    static_cast<int64_t>(target.eval_insert_load(p, c) - target.load_excess()) * lp;
+                tops[i].add(p, d, d - load);
+            }
+        }
+    };
 
     for (int ra = 0; ra < num_routes; ++ra) {
         auto const& route_a = sol.route(ra);
@@ -125,26 +166,19 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
 
         // Determine candidate routes via granular neighbours.
-        std::vector<bool> route_seen(num_routes, false);
+        std::fill(route_seen.begin(), route_seen.end(), false);
         route_seen[ra] = true;
-
-        std::vector<int> candidate_routes;
+        candidate_routes.clear();
 
         if (data.granular_k() > 0) {
             for (int pa = 0; pa < route_a.size(); ++pa) {
                 int u = route_a.client(pa);
-                auto nbrs = data.neighbours(u);
-                for (int nb_node : nbrs) {
+                for (int nb_node : data.neighbours(u)) {
                     if (nb_node < data.num_depots()) {
                         continue;
                     }
-                    int nb_client = nb_node - data.num_depots();
-                    auto const& loc = locations[nb_client];
-                    if (loc.route < 0) {
-                        continue;
-                    }
-                    int rb = loc.route;
-                    if (route_seen[rb]) {
+                    int rb = locations[nb_node - data.num_depots()].route;
+                    if (rb < 0 || route_seen[rb]) {
                         continue;
                     }
                     route_seen[rb] = true;
@@ -159,90 +193,126 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
             }
         }
 
+        bool removal_a_done = false;
+
         for (int rb : candidate_routes) {
             if (rb <= ra) {
                 continue;  // avoid double-counting
             }
-
             auto const& route_b = sol.route(rb);
             if (route_b.empty()) {
                 continue;
             }
 
-            int64_t old_cost_a = eval.route_cost(route_a);
-            int64_t old_cost_b = eval.route_cost(route_b);
-            int64_t old_total = old_cost_a + old_cost_b;
+            // A pair costs O(|A||B|(|A|+|B|)); stop between pairs, keeping the
+            // best exact move found so far, which is still a valid one.
+            if (stop && stop->should_stop()) {
+                return best_delta_ < 0;
+            }
 
-            // --- SWAP*: for each (u in ra, v in rb), remove u and v,
-            //     insert u at best pos in rb and v at best pos in ra.
+            if (!removal_a_done) {
+                removal_costs(route_a, rem_a, rem_free_a);
+                removal_a_done = true;
+            }
+            removal_costs(route_b, rem_b, rem_free_b);
+            insertion_costs(route_a, route_b, top_u_in_b);
+            insertion_costs(route_b, route_a, top_v_in_a);
+
+            // --- SWAP*: for each (u in A, v in B), estimate the delta of
+            //     removing both and inserting each at its best position in the
+            //     other route, from the cached removal and top-3 insertion
+            //     costs plus the exact load penalty of the exchange.
+            int64_t best_est = 0;
+            int best_pa = -1;
+            int best_pb = -1;
+            int best_ins_u = -1;
+            int best_ins_v = -1;
+
             for (int pa = 0; pa < route_a.size(); ++pa) {
                 int u = route_a.client(pa);
-
                 for (int pb = 0; pb < route_b.size(); ++pb) {
                     int v = route_b.client(pb);
 
-                    auto best_v = best_insert_after_remove(route_a, eval, data, pa, v);
-                    auto best_u = best_insert_after_remove(route_b, eval, data, pb, u);
+                    int64_t load_a = replace_load_penalty(route_a, pa, v, lp);
+                    int64_t load_b = replace_load_penalty(route_b, pb, u, lp);
 
-                    int64_t new_total = best_v.cost + best_u.cost;
-                    int64_t delta = new_total - old_total;
+                    // Cost of putting v exactly where u was, without load.
+                    int64_t inplace_v =
+                        eval.eval_splice_cost(route_a, pa, pa + 1, std::span<int const>(&v, 1)) -
+                        load_a - rem_free_a[pa];
+                    int64_t inplace_u =
+                        eval.eval_splice_cost(route_b, pb, pb + 1, std::span<int const>(&u, 1)) -
+                        load_b - rem_free_b[pb];
 
-                    if (delta < best_delta_) {
-                        best_delta_ = delta;
-                        move_type_ = Swap;
-                        route_a_ = ra;
-                        route_b_ = rb;
-                        client_u_ = u;
-                        client_v_ = v;
-                        pos_u_ = pa;
-                        pos_v_ = pb;
-                        insert_u_ = best_u.pos;
-                        insert_v_ = best_v.pos;
+                    auto [ins_v, pos_v] = best_insert_without(top_v_in_a[pb], inplace_v, pa);
+                    auto [ins_u, pos_u] = best_insert_without(top_u_in_b[pa], inplace_u, pb);
+
+                    int64_t est = rem_free_a[pa] + ins_v + load_a + rem_free_b[pb] + ins_u + load_b;
+                    if (est < best_est) {
+                        best_est = est;
+                        best_pa = pa;
+                        best_pb = pb;
+                        best_ins_u = pos_u;
+                        best_ins_v = pos_v;
                     }
                 }
             }
 
-            // --- Degenerate case 1: relocate u from ra to rb.
-            for (int pa = 0; pa < route_a.size(); ++pa) {
-                int u = route_a.client(pa);
-                int64_t cost_a_after = eval_route_after_remove(route_a, eval, data, pa);
-                auto ins = best_insert(route_b, eval, u);
-                int64_t new_total = cost_a_after + old_cost_b + ins.delta;
-                int64_t delta = new_total - old_total;
+            // The estimate approximates the interaction of the two changes in
+            // one route; price the chosen swap exactly before keeping it.
+            if (best_pa >= 0) {
+                int u = route_a.client(best_pa);
+                int v = route_b.client(best_pb);
+                int64_t delta = exact_swap_delta(route_a, eval, best_pa, v, best_ins_v, seq) +
+                                exact_swap_delta(route_b, eval, best_pb, u, best_ins_u, seq);
+                if (delta < best_delta_) {
+                    best_delta_ = delta;
+                    move_type_ = Swap;
+                    route_a_ = ra;
+                    route_b_ = rb;
+                    client_u_ = u;
+                    client_v_ = v;
+                    pos_u_ = best_pa;
+                    pos_v_ = best_pb;
+                    insert_u_ = best_ins_u;
+                    insert_v_ = best_ins_v;
+                }
+            }
 
+            // --- Degenerate case 1: relocate u from A to its best place in B.
+            //     The two routes change independently, so this delta is exact.
+            for (int pa = 0; pa < route_a.size(); ++pa) {
+                auto const& best = top_u_in_b[pa].e[0];
+                int64_t delta = rem_a[pa] + best.delta;
                 if (delta < best_delta_) {
                     best_delta_ = delta;
                     move_type_ = RelocateAtoB;
                     route_a_ = ra;
                     route_b_ = rb;
-                    client_u_ = u;
+                    client_u_ = route_a.client(pa);
                     client_v_ = -1;
                     pos_u_ = pa;
                     pos_v_ = -1;
-                    insert_u_ = ins.pos;
+                    insert_u_ = best.pos;
                     insert_v_ = -1;
                 }
             }
 
-            // --- Degenerate case 2: relocate v from rb to ra.
+            // --- Degenerate case 2: relocate v from B to its best place in A.
             for (int pb = 0; pb < route_b.size(); ++pb) {
-                int v = route_b.client(pb);
-                int64_t cost_b_after = eval_route_after_remove(route_b, eval, data, pb);
-                auto ins = best_insert(route_a, eval, v);
-                int64_t new_total = old_cost_a + ins.delta + cost_b_after;
-                int64_t delta = new_total - old_total;
-
+                auto const& best = top_v_in_a[pb].e[0];
+                int64_t delta = rem_b[pb] + best.delta;
                 if (delta < best_delta_) {
                     best_delta_ = delta;
                     move_type_ = RelocateBtoA;
                     route_a_ = ra;
                     route_b_ = rb;
                     client_u_ = -1;
-                    client_v_ = v;
+                    client_v_ = route_b.client(pb);
                     pos_u_ = -1;
                     pos_v_ = pb;
                     insert_u_ = -1;
-                    insert_v_ = ins.pos;
+                    insert_v_ = best.pos;
                 }
             }
         }
