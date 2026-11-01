@@ -499,6 +499,8 @@ TEST_CASE("Empty network", "[network]") {
     REQUIRE(data.num_nodes() == 0);
     REQUIRE(data.num_arcs() == 0);
     REQUIRE(data.total_supply() == 0);
+    // The unboundedness check must not read an empty graph as a cycle (#253).
+    REQUIRE(McfSolver::solve(data).feasible());
 }
 
 TEST_CASE("Single node no arcs", "[network]") {

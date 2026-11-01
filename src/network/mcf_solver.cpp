@@ -18,6 +18,9 @@ namespace {
 bool has_uncapacitated_negative_cycle(NetworkData const& data) {
     int const nn = data.num_nodes();
     int const na = data.num_arcs();
+    if (nn == 0) {
+        return false;
+    }
     std::vector<long long> dist(nn, 0);
     for (int round = 0; round < nn; ++round) {
         bool relaxed = false;
