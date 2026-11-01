@@ -40,9 +40,8 @@ namespace {
 ///
 /// Iterates day by day, shift by shift, and assigns employees greedily to
 /// unmet demand slots — but only for unlocked cells.  Assignments go through
-/// the constructions' is_feasible_assignment, so the upper bounds hold; there
-/// is no min_total_minutes top-up here, so a short employee is left to the
-/// evaluator to report.
+/// the constructions' is_feasible_assignment, so the upper bounds hold.
+/// replan() then tops unlocked cells up toward min_total_minutes.
 void construct_unlocked(RosteringSolution& sol, RosteringData const& data,
                         LockedCells const& locked) {
     int const ns = data.num_shift_types();
@@ -287,6 +286,7 @@ void replan(RosteringSolution& sol, ReplanConfig const& config, RosteringData& d
 
     // 5. Re-run greedy construction for unassigned, unlocked slots.
     construct_unlocked(sol, data, locked);
+    top_up_min_minutes(data, sol, [&locked](int e, int d) { return !locked.is_locked(e, d); });
 
     // 6. Run local search, skipping moves that affect locked cells.
     local_search_with_locks(sol, locked);

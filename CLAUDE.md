@@ -47,7 +47,7 @@ not the thing being built.
 (#188), routing returns time-window violations as feasible (#194) and searches for minimum
 distance whatever objective is declared (#238), and rostering accepts a shift duration nothing
 reads (#233). (Rostering's constructions now never exceed its hard weekend and maximum
-working-time bounds; a minimum their greedy top-up misses is reported infeasible, #246.)
+working-time bounds; a minimum their top-up misses — greedy, then a budgeted search, #260 — is reported infeasible, #246.)
 These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
 over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a
 reason an audit or a spec decision cannot proceed. File it, cite it, and carry on.

@@ -318,6 +318,25 @@ TEST_CASE("constructions report an unreachable min_total_minutes as infeasible",
     }
 }
 
+TEST_CASE("constructions reach a minimum the greedy top-up misses (#260)",
+          "[rostering][construction]") {
+    // No demand.  Greedy takes the 480-minute shift first, after which every
+    // shift overshoots max_total_minutes; two 300-minute shifts hit 600 exactly.
+    RosteringData data;
+    data.shift_types = {{.name = "A", .duration_minutes = 480},
+                        {.name = "B", .duration_minutes = 300}};
+    data.employees = {{.name = "Alice", .min_total_minutes = 600, .max_total_minutes = 600}};
+    data.horizon = 7;
+    RosteringCostEvaluator evaluator(data);
+
+    for (Construction construct : {&construct_ffd, &construct_greedy}) {
+        auto sol = construct(data, evaluator);
+        CHECK(worked_minutes(data, sol, 0) == 600);
+        CHECK(evaluator.working_time_violation_cost(sol.schedule()) == 0);
+        CHECK(sol.is_feasible());
+    }
+}
+
 TEST_CASE("is_feasible_assignment enforces max_weekends and max_total_minutes",
           "[rostering][construction]") {
     // Shared with replanning's construct_unlocked, so this pins both.

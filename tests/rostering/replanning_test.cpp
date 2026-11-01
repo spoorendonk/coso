@@ -273,3 +273,35 @@ TEST_CASE("replan: empty config produces valid solution", "[rostering][replannin
     REQUIRE(sol.demand_cost() == 0);
     REQUIRE(sol.is_feasible());
 }
+
+TEST_CASE("replan: tops unlocked cells up to min_total_minutes (#260)", "[rostering][replanning]") {
+    // One employee, no demand, so nothing but the top-up assigns a shift.
+    // Days 0-2 are locked by horizon_start (day 1 worked, days 0 and 2 off)
+    // and day 4 is locked off; the minimum needs two more shifts, which only
+    // days 3, 5 and 6 may take.
+    RosteringData data;
+    data.shift_types = {{.name = "Day", .duration_minutes = 480}};
+    data.employees = {{.name = "Alice", .min_total_minutes = 3 * 480}};
+    data.horizon = 7;
+    RosteringCostEvaluator evaluator(data);
+    RosteringSolution sol(data, evaluator);
+    sol.assign(0, 1, 0);
+
+    ReplanConfig config;
+    config.horizon_start = 3;
+    config.locked_assignments = {{0, 4, -1}};
+
+    replan(sol, config, data, evaluator);
+
+    CHECK(sol.get(0, 0) == -1);
+    CHECK(sol.get(0, 1) == 0);
+    CHECK(sol.get(0, 2) == -1);
+    CHECK(sol.get(0, 4) == -1);
+    int worked = 0;
+    for (int d = 0; d < data.horizon; ++d) {
+        worked += sol.get(0, d) >= 0 ? 1 : 0;
+    }
+    CHECK(worked == 3);
+    CHECK(evaluator.working_time_violation_cost(sol.schedule()) == 0);
+    CHECK(sol.is_feasible());
+}

@@ -114,58 +114,142 @@ bool is_feasible_assignment(RosteringData const& data,
 
 namespace {
 
-/// Bring every employee up to min_total_minutes, which the demand-driven
-/// passes never aim at.  Each step adds the feasible (day, shift) whose cover
-/// effect is cheapest: filling a shortfall first, then an assignment within
-/// max_employees, then a soft over-cover; never a hard over-cover.  An
-/// employee the step cannot bring up to the minimum is left short, so the
-/// evaluator reports the roster infeasible rather than the construction
-/// hiding it.
-void top_up_min_minutes(RosteringData const& data, RosteringSolution& sol) {
-    int const ns = data.num_shift_types();
-    int const H = data.horizon;
-    int const ne = data.num_employees();
+/// A top-up step: assign shift s on day d, at cover cost `score`.
+struct TopUpCandidate {
+    int d;
+    int s;
+    int64_t score;
+};
 
-    for (int e = 0; e < ne; ++e) {
-        int64_t const min_minutes = data.employees[e].min_total_minutes;
-        while (worked_minutes(data, sol.schedule(), e) < min_minutes) {
-            int best_d = -1;
-            int best_s = -1;
-            int64_t best_score = 0;
-            for (int d = 0; d < H; ++d) {
-                for (int s = 0; s < ns; ++s) {
-                    // A shift adding no minutes cannot close the gap.
-                    if (data.shift_types[s].duration_minutes <= 0 ||
-                        !is_feasible_assignment(data, sol.schedule(), e, d, s)) {
-                        continue;
-                    }
-                    // The change in the cell's cover cost, with workers
-                    // credited as rostering/cover.h describes.
-                    auto workers = cell_workers(sol.schedule(), s, d);
-                    auto const [soft_before, hard_before] = cell_cover_cost(data, s, d, workers);
-                    workers.push_back(e);
-                    auto const [soft_after, hard_after] = cell_cover_cost(data, s, d, workers);
-                    if (hard_after > hard_before) {
-                        continue;  // Never a hard over-cover.
-                    }
-                    int64_t const score = static_cast<int64_t>(soft_after - soft_before) +
-                                          static_cast<int64_t>(hard_after - hard_before);
-                    if (best_d < 0 || score < best_score) {
-                        best_d = d;
-                        best_s = s;
-                        best_score = score;
-                    }
-                }
+/// Every (day, shift) from `from_day` on that a top-up may give employee e:
+/// feasible, open to it, adding minutes, and never a hard over-cover.  Each
+/// carries the change in its cell's cover cost, with workers credited as
+/// rostering/cover.h describes, so a shortfall fill scores lowest, then an
+/// assignment within max_employees, then a soft over-cover.  Sorted by score,
+/// then day, then shift.
+std::vector<TopUpCandidate> top_up_candidates(RosteringData const& data,
+                                              RosteringSolution const& sol, int e, int from_day,
+                                              CellFilter const& may_assign) {
+    std::vector<TopUpCandidate> out;
+    for (int d = from_day; d < data.horizon; ++d) {
+        if (may_assign && !may_assign(e, d)) {
+            continue;
+        }
+        for (int s = 0; s < data.num_shift_types(); ++s) {
+            // A shift adding no minutes cannot close the gap.
+            if (data.shift_types[s].duration_minutes <= 0 ||
+                !is_feasible_assignment(data, sol.schedule(), e, d, s)) {
+                continue;
             }
-            if (best_d < 0) {
-                break;  // Cannot reach the minimum; the roster stays infeasible.
+            auto workers = cell_workers(sol.schedule(), s, d);
+            auto const [soft_before, hard_before] = cell_cover_cost(data, s, d, workers);
+            workers.push_back(e);
+            auto const [soft_after, hard_after] = cell_cover_cost(data, s, d, workers);
+            if (hard_after > hard_before) {
+                continue;  // Never a hard over-cover.
             }
-            sol.assign(e, best_d, best_s);
+            out.push_back({d, s,
+                           static_cast<int64_t>(soft_after - soft_before) +
+                               static_cast<int64_t>(hard_after - hard_before)});
         }
     }
+    std::stable_sort(out.begin(), out.end(), [](TopUpCandidate const& a, TopUpCandidate const& b) {
+        return a.score < b.score;
+    });
+    return out;
+}
+
+/// Nodes the backtracking top-up may expand per employee before it gives up.
+constexpr int kTopUpNodeBudget = 20000;
+
+/// Depth-first search for a set of extra shifts that brings employee e from
+/// `worked` up to `min_minutes`, adding them in day order from `from_day`.
+/// Every hard bound is_feasible_assignment checks only tightens as shifts are
+/// added, so a set passes it in day order if it passes in any order, and
+/// day order loses no solution.  On success the shifts stay assigned; on
+/// failure every shift it added is undone.
+bool top_up_search(RosteringData const& data, RosteringSolution& sol, int e, int from_day,
+                   int64_t worked, int64_t min_minutes, int max_duration,
+                   CellFilter const& may_assign, int& budget) {
+    if (worked >= min_minutes) {
+        return true;
+    }
+    if (--budget < 0) {
+        return false;
+    }
+    // Prune: even a longest shift on every remaining open day falls short.
+    int64_t open_days = 0;
+    for (int d = from_day; d < data.horizon; ++d) {
+        if (sol.get(e, d) < 0 && !data.is_unavailable(e, d) && (!may_assign || may_assign(e, d))) {
+            ++open_days;
+        }
+    }
+    if (worked + open_days * max_duration < min_minutes) {
+        return false;
+    }
+    for (auto const& c : top_up_candidates(data, sol, e, from_day, may_assign)) {
+        sol.assign(e, c.d, c.s);
+        if (top_up_search(data, sol, e, c.d + 1, worked + data.shift_types[c.s].duration_minutes,
+                          min_minutes, max_duration, may_assign, budget)) {
+            return true;
+        }
+        sol.unassign(e, c.d);
+        if (budget < 0) {
+            return false;
+        }
+    }
+    return false;
 }
 
 }  // anonymous namespace
+
+void top_up_min_minutes(RosteringData const& data, RosteringSolution& sol,
+                        CellFilter const& may_assign) {
+    int max_duration = 0;
+    for (auto const& st : data.shift_types) {
+        max_duration = std::max(max_duration, st.duration_minutes);
+    }
+
+    for (int e = 0; e < data.num_employees(); ++e) {
+        int64_t const min_minutes = data.employees[e].min_total_minutes;
+        int64_t const start = worked_minutes(data, sol.schedule(), e);
+        if (start >= min_minutes) {
+            continue;
+        }
+
+        // Greedy first: each step adds the cheapest candidate.
+        std::vector<TopUpCandidate> added;
+        int64_t worked = start;
+        while (worked < min_minutes) {
+            auto const candidates = top_up_candidates(data, sol, e, 0, may_assign);
+            if (candidates.empty()) {
+                break;
+            }
+            auto const& c = candidates.front();
+            sol.assign(e, c.d, c.s);
+            added.push_back(c);
+            worked += data.shift_types[c.s].duration_minutes;
+        }
+        if (worked >= min_minutes) {
+            continue;
+        }
+
+        // Greedy fell short, which does not mean the minimum is unreachable:
+        // undo it and search.
+        for (auto const& c : added) {
+            sol.unassign(e, c.d);
+        }
+        int budget = kTopUpNodeBudget;
+        if (!top_up_search(data, sol, e, 0, start, min_minutes, max_duration, may_assign, budget)) {
+            // None found within the budget (or none exists): restore greedy's
+            // partial top-up, which the search left undone.  The employee
+            // stays short and the evaluator reports the roster infeasible.
+            for (auto const& c : added) {
+                sol.assign(e, c.d, c.s);
+            }
+        }
+    }
+}
 
 // ---------------------------------------------------------------------------
 //  First-Fit-Decreasing
