@@ -218,6 +218,102 @@ TEST_CASE("RosteringModel: a negative cover weight is rejected", "[rostering]") 
     CHECK(model.demands().empty());
 }
 
+TEST_CASE("RosteringModel: a repeated (shift, day, skill) demand is rejected", "[rostering]") {
+    // #243: the last demand for a cell used to overwrite the earlier one.
+    RosteringModel model;
+    model.add_shift_type({.name = "Day"});
+    model.add_demand(0, 3, {.min_employees = 2});
+    CHECK_THROWS_AS(model.add_demand(0, 3, {.min_employees = 1}), std::invalid_argument);
+    model.add_demand(0, 3, {.min_employees = 1, .required_skill = "Nurse"});
+    CHECK_THROWS_AS(model.add_demand(0, 3, {.min_employees = 4, .required_skill = "Nurse"}),
+                    std::invalid_argument);
+    REQUIRE(model.demands().size() == 2);
+    CHECK(model.demands()[0].params.min_employees == 2);
+    CHECK(model.demands()[1].params.min_employees == 1);
+}
+
+TEST_CASE("RosteringModel: two skill demands on one cell are declared, not dropped",
+          "[rostering]") {
+    // INRC-II states cover per (shift, skill, day), so both demands are a
+    // valid declaration and round-trip.  The native engine holds one demand
+    // per (shift, day), so solve() rejects the cell rather than price only
+    // one of them (#255).
+    RosteringModel model;
+    int night = model.add_shift_type({.name = "N"});
+    model.add_employee({.name = "Ann", .skills = {"HeadNurse"}});
+    model.add_employee({.name = "Ben", .skills = {"Nurse"}});
+    model.set_horizon(7);
+    model.add_demand(night, 3, {.min_employees = 2, .required_skill = "HeadNurse"});
+    model.add_demand(night, 3, {.min_employees = 1, .required_skill = "Nurse"});
+
+    REQUIRE(model.demands().size() == 2);
+    CHECK(model.demands()[0].params.required_skill == "HeadNurse");
+    CHECK(model.demands()[1].params.required_skill == "Nurse");
+
+    // When #255 lands, assert instead that both shortfalls are priced.
+    CHECK_THROWS_AS(model.solve(TimeLimit(0.1)), std::invalid_argument);
+}
+
+TEST_CASE("RosteringModel: an out-of-range demand is rejected by solve", "[rostering]") {
+    // #243: a demand past the horizon was walked by no one and dropped.
+    auto model_with = [](int shift_type, int day) {
+        RosteringModel model;
+        model.add_shift_type({.name = "Day"});
+        model.add_employee({.name = "Alice"});
+        model.set_horizon(7);
+        model.add_demand(shift_type, day, {.min_employees = 1});
+        return model;
+    };
+    CHECK_NOTHROW(model_with(0, 6).solve(TimeLimit(0.1)));
+    CHECK_THROWS_AS(model_with(0, 7).solve(TimeLimit(0.1)), std::invalid_argument);
+    CHECK_THROWS_AS(model_with(0, -1).solve(TimeLimit(0.1)), std::invalid_argument);
+    CHECK_THROWS_AS(model_with(1, 0).solve(TimeLimit(0.1)), std::invalid_argument);
+}
+
+TEST_CASE("RosteringModel: an out-of-range preference is rejected by solve", "[rostering]") {
+    // #243: preference_cost indexed schedule[employee][day] unchecked.
+    auto model_with = [](int employee, int day, int shift_type) {
+        RosteringModel model;
+        model.add_shift_type({.name = "Day"});
+        model.add_employee({.name = "Alice"});
+        model.set_horizon(7);
+        model.add_preference(employee, day, shift_type, 1);
+        return model;
+    };
+    CHECK_NOTHROW(model_with(0, 6, 0).solve(TimeLimit(0.1)));
+    CHECK_THROWS_AS(model_with(0, 9, 0).solve(TimeLimit(0.1)), std::invalid_argument);
+    CHECK_THROWS_AS(model_with(1, 0, 0).solve(TimeLimit(0.1)), std::invalid_argument);
+    CHECK_THROWS_AS(model_with(0, 0, 1).solve(TimeLimit(0.1)), std::invalid_argument);
+    CHECK_THROWS_AS(model_with(-1, 0, 0).solve(TimeLimit(0.1)), std::invalid_argument);
+}
+
+TEST_CASE("RosteringModel: an out-of-range unavailability is rejected by solve", "[rostering]") {
+    auto model_with = [](int employee, int day) {
+        RosteringModel model;
+        model.add_shift_type({.name = "Day"});
+        model.add_employee({.name = "Alice"});
+        model.set_horizon(7);
+        model.add_unavailability(employee, day);
+        return model;
+    };
+    CHECK_NOTHROW(model_with(0, 6).solve(TimeLimit(0.1)));
+    CHECK_THROWS_AS(model_with(0, 7).solve(TimeLimit(0.1)), std::invalid_argument);
+    CHECK_THROWS_AS(model_with(1, 0).solve(TimeLimit(0.1)), std::invalid_argument);
+}
+
+TEST_CASE("RosteringModel: indices are checked whatever the declaration order", "[rostering]") {
+    // The check runs in solve(), so declaring the demand before its shift
+    // type and horizon is fine.
+    RosteringModel model;
+    model.add_demand(0, 2, {.min_employees = 1});
+    model.add_preference(0, 2, 0, 1);
+    model.add_unavailability(0, 1);
+    model.add_shift_type({.name = "Day"});
+    model.add_employee({.name = "Alice"});
+    model.set_horizon(3);
+    CHECK_NOTHROW(model.solve(TimeLimit(0.1)));
+}
+
 TEST_CASE("RosteringModel: a positive preference weight is a reward", "[rostering]") {
     // Cover asks for exactly one, so working is free on cover; the +5
     // preference then takes 5 off cost() (add_preference's sign convention).

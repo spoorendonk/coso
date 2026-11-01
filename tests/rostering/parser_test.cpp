@@ -266,3 +266,35 @@ TEST_CASE("parse_nrp - a COVER line with an empty or non-integer field is reject
     CHECK_THROWS_AS(parse_nrp(with_cover("0,D,2x,100,1")), std::runtime_error);
     CHECK_THROWS_AS(parse_nrp(with_cover("0,D,2,100,1,7")), std::runtime_error);
 }
+
+TEST_CASE("parse_nrp - a day outside the horizon is rejected", "[rostering][parser]") {
+    // #243: request, day-off and cover days were never checked against the
+    // horizon, so a day past it was dropped or read out of bounds.  The
+    // horizon is checked after the whole file, so section order does not
+    // matter.
+    auto with = [](std::string const& section, std::string const& line) {
+        return "SECTION_SHIFTS\nD,480\n\nSECTION_STAFF\nA\n\n" + section + "\n" + line +
+               "\n\nSECTION_HORIZON\n7\n";
+    };
+    SECTION("in range is accepted") {
+        CHECK_NOTHROW(parse_nrp(with("SECTION_DAYS_OFF", "A,6")));
+        CHECK_NOTHROW(parse_nrp(with("SECTION_SHIFT_ON_REQUESTS", "A,6,D,1")));
+        CHECK_NOTHROW(parse_nrp(with("SECTION_SHIFT_OFF_REQUESTS", "A,0,D,1")));
+        CHECK_NOTHROW(parse_nrp(with("SECTION_COVER", "6,D,1,100,1")));
+    }
+    SECTION("DAYS_OFF") {
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_DAYS_OFF", "A,2,7")), std::runtime_error);
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_DAYS_OFF", "A,-1")), std::runtime_error);
+    }
+    SECTION("SHIFT_ON_REQUESTS") {
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_ON_REQUESTS", "A,9,D,1")),
+                        std::runtime_error);
+    }
+    SECTION("SHIFT_OFF_REQUESTS") {
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_SHIFT_OFF_REQUESTS", "A,7,D,1")),
+                        std::runtime_error);
+    }
+    SECTION("COVER") {
+        CHECK_THROWS_AS(parse_nrp(with("SECTION_COVER", "7,D,1,100,1")), std::runtime_error);
+    }
+}

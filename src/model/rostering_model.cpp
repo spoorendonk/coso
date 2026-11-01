@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <format>
 #include <stdexcept>
 
 namespace coso {
@@ -51,6 +52,17 @@ void RosteringModel::add_demand(int shift_type, int day, DemandParams p) {
             "RosteringModel::add_demand: cover weights must be non-negative; a negative weight "
             "would reward the shortfall or excess it prices");
     }
+    for (auto const& d : demands_) {
+        if (d.shift_type == shift_type && d.day == day &&
+            d.params.required_skill == p.required_skill) {
+            throw std::invalid_argument(std::format(
+                "RosteringModel::add_demand: shift type {} on day {} already has a demand{}; cover "
+                "is keyed by (shift type, day, required skill)",
+                shift_type, day,
+                p.required_skill.empty() ? std::string(" with no required skill")
+                                         : " for skill '" + p.required_skill + "'"));
+        }
+    }
     demands_.push_back({shift_type, day, std::move(p)});
 }
 
@@ -78,7 +90,33 @@ void RosteringModel::add_unavailability(int employee, int day) {
 //  solve()
 // ---------------------------------------------------------------------------
 
+void RosteringModel::check_indices_() const {
+    auto check = [](char const* adder, char const* what, int value, int bound) {
+        if (value < 0 || value >= bound) {
+            throw std::invalid_argument(std::format(
+                "RosteringModel::{}: {} {} is out of range [0, {})", adder, what, value, bound));
+        }
+    };
+    int const n_shifts = num_shift_types();
+    int const n_employees = num_employees();
+    for (auto const& d : demands_) {
+        check("add_demand", "shift type", d.shift_type, n_shifts);
+        check("add_demand", "day", d.day, horizon_);
+    }
+    for (auto const& p : preferences_) {
+        check("add_preference", "employee", p.employee, n_employees);
+        check("add_preference", "day", p.day, horizon_);
+        check("add_preference", "shift type", p.shift_type, n_shifts);
+    }
+    for (auto const& u : unavailabilities_) {
+        check("add_unavailability", "employee", u.employee, n_employees);
+        check("add_unavailability", "day", u.day, horizon_);
+    }
+}
+
 Result RosteringModel::solve(TimeLimit tl) {
+    check_indices_();
+
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
     StopCriterion stop(tl.seconds);
@@ -129,14 +167,24 @@ Result RosteringModel::solve(TimeLimit tl) {
     // Demand entries (specific day).
     for (auto const& d : demands_) {
         auto key = RosteringData::demand_key(d.shift_type, d.day);
-        data.demand[key] = {
-            .min_employees = d.params.min_employees,
-            .max_employees = d.params.max_employees,
-            .required_skill = d.params.required_skill,
-            .under_weight = d.params.under_weight,
-            .over_weight = d.params.over_weight,
-            .hard = d.params.hard,
-        };
+        bool const inserted = data.demand
+                                  .emplace(key,
+                                           RosteringData::Demand{
+                                               .min_employees = d.params.min_employees,
+                                               .max_employees = d.params.max_employees,
+                                               .required_skill = d.params.required_skill,
+                                               .under_weight = d.params.under_weight,
+                                               .over_weight = d.params.over_weight,
+                                               .hard = d.params.hard,
+                                           })
+                                  .second;
+        if (!inserted) {
+            throw std::invalid_argument(std::format(
+                "RosteringModel::solve: shift type {} on day {} carries more than one demand (one "
+                "per required skill); the native engine holds one demand per (shift type, day) "
+                "and cannot honour them all (#255)",
+                d.shift_type, d.day));
+        }
     }
 
     // Hard constraints.

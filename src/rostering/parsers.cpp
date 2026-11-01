@@ -123,6 +123,9 @@ RosteringData parse_nrp(const std::string& content) {
     // Stored as indices after all shifts are parsed.
     std::vector<std::pair<std::string, std::vector<std::string>>> forbidden_after;
 
+    // Every day index read, with its line, for the horizon check after the loop.
+    std::vector<std::pair<int, std::string>> days_read;
+
     enum class Section {
         None,
         Horizon,
@@ -315,6 +318,7 @@ RosteringData parse_nrp(const std::string& content) {
                 int emp = it->second;
                 for (size_t i = 1; i < tokens.size(); ++i) {
                     int day = std::stoi(tokens[i]);
+                    days_read.emplace_back(day, trimmed);
                     data.unavailabilities.insert(RosteringData::unavail_key(emp, day));
                 }
                 break;
@@ -340,6 +344,7 @@ RosteringData parse_nrp(const std::string& content) {
                 RosteringData::Preference pref;
                 pref.employee = emp_it->second;
                 pref.day = std::stoi(tokens[1]);
+                days_read.emplace_back(pref.day, trimmed);
                 pref.shift_type = shift_it->second;
                 pref.weight = std::stoi(tokens[3]);  // positive = preferred
                 data.preferences.push_back(pref);
@@ -366,6 +371,7 @@ RosteringData parse_nrp(const std::string& content) {
                 RosteringData::Preference pref;
                 pref.employee = emp_it->second;
                 pref.day = std::stoi(tokens[1]);
+                days_read.emplace_back(pref.day, trimmed);
                 pref.shift_type = shift_it->second;
                 pref.weight = -std::stoi(tokens[3]);  // negative = penalised
                 data.preferences.push_back(pref);
@@ -390,6 +396,7 @@ RosteringData parse_nrp(const std::string& content) {
                 }
 
                 int day = parse_int(tokens[0], bad);
+                days_read.emplace_back(day, trimmed);
                 int shift_type = shift_it->second;
                 int required = parse_int(tokens[2], bad);
 
@@ -412,6 +419,16 @@ RosteringData parse_nrp(const std::string& content) {
 
             case Section::None:
                 break;
+        }
+    }
+
+    // SECTION_HORIZON need not precede the sections that name days, so the
+    // days are checked once the whole file is read (#243).
+    for (auto const& [day, line] : days_read) {
+        if (day < 0 || day >= data.horizon) {
+            throw std::runtime_error(
+                std::format("NRP parse error: day {} is outside the horizon [0, {}): {}", day,
+                            data.horizon, line));
         }
     }
 

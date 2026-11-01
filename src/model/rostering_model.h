@@ -117,8 +117,16 @@ public:
 
     // -- Demand --------------------------------------------------------------
 
-    /// Add a demand for a specific shift type on a specific day.  Throws
-    /// std::invalid_argument on a negative under_weight or over_weight.
+    /// Add a demand for a specific shift type on a specific day.
+    ///
+    /// Cover is keyed by (shift_type, day, required_skill): INRC-II states
+    /// its requirements per (shift, skill, day), so one cell may carry one
+    /// demand per skill (see the v1 scope ruling on #203).  Throws
+    /// std::invalid_argument on a negative under_weight or over_weight, and
+    /// on a second demand for the same (shift_type, day, required_skill).
+    ///
+    /// The native engine holds one demand per (shift_type, day), so solve()
+    /// rejects a cell carrying more than one (#255) rather than drop one.
     void add_demand(int shift_type, int day, DemandParams p);
 
     // -- Constraints (hard) --------------------------------------------------
@@ -145,6 +153,11 @@ public:
     // -- Solve ---------------------------------------------------------------
 
     /// Solve the rostering problem within the given time limit.
+    ///
+    /// Throws std::invalid_argument when a demand, preference or
+    /// unavailability names a day outside [0, horizon), or a shift type or
+    /// employee that was never added.  The check runs here, not in the adders,
+    /// so the order of declaration does not matter.
     ///
     /// `Result::feasible()` reports the hard constraints, hard cover included;
     /// soft cover shortfall and excess are priced into `Result::cost` at each
@@ -174,20 +187,27 @@ public:
     [[nodiscard]] int horizon() const noexcept { return horizon_; }
 
     /// Per-day demands from add_demand(shift_type, day, p), in declaration
-    /// order: no dedup, no range check.
+    /// order.  Unique per (shift_type, day, required_skill); ranges are
+    /// checked by solve(), not here.
     [[nodiscard]] auto const& demands() const noexcept { return demands_; }
 
     /// Forbidden (first, second) shift-type pairs, as add_forbidden_sequence()
     /// recorded them: no dedup, no range check.
     [[nodiscard]] auto const& forbidden_sequences() const noexcept { return forbidden_sequences_; }
 
-    /// Preferences in declaration order: no dedup, no range check.
+    /// Preferences in declaration order: no dedup; ranges are checked by
+    /// solve(), not here.
     [[nodiscard]] auto const& preferences() const noexcept { return preferences_; }
 
-    /// Unavailabilities in declaration order: no dedup, no range check.
+    /// Unavailabilities in declaration order: no dedup; ranges are checked by
+    /// solve(), not here.
     [[nodiscard]] auto const& unavailabilities() const noexcept { return unavailabilities_; }
 
 private:
+    /// Throws std::invalid_argument on an out-of-range day, shift type or
+    /// employee in a declared demand, preference or unavailability.
+    void check_indices_() const;
+
     // -- Shift types & employees ---------------------------------------------
     std::vector<ShiftTypeParams> shift_types_;
     std::vector<EmployeeParams> employees_;
