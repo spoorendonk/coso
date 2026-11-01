@@ -422,7 +422,8 @@ VrpInstance read_vrp(const std::string& path) {
     ss << file.rdbuf();
     try {
         return parse_vrp(ss.str());
-    } catch (std::runtime_error const& e) {
+    } catch (std::exception const& e) {
+        // Includes std::stoi/std::stod failures on a malformed numeric field.
         throw std::runtime_error(path + ": " + e.what());
     }
 }

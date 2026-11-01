@@ -215,7 +215,8 @@ NB_MODULE(_coso, m) {
     // -- Free function: solve instance file -----------------------------------
 
     m.def("solve_instance", &coso::solve, "instance_path"_a, "time_limit"_a,
-          "Solve a CVRPLIB/VRPLIB instance file directly.");
+          "Solve a CVRPLIB/VRPLIB instance file directly. Raises RuntimeError, naming "
+          "the path, if the file cannot be opened or parsed.");
 
     // -- NetworkModel stored entries ------------------------------------------
 

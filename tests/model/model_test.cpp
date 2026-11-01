@@ -206,6 +206,19 @@ TEST_CASE("RoutingModel deterministic work units with work limit", "[routing][wo
     REQUIRE(r1.work_units() == r2.work_units());
 }
 
+TEST_CASE("Free function solve(instance_path, tl) names the file on a bad number", "[routing]") {
+    // std::stoi throws std::invalid_argument, which must still be wrapped with the path.
+    auto path = std::filesystem::temp_directory_path() / "coso_issue251_bad_number.vrp";
+    {
+        std::ofstream out(path);
+        out << "NAME : bad\nDIMENSION : abc\n";
+    }
+    REQUIRE_THROWS_MATCHES(
+        coso::solve(path.string(), coso::TimeLimit(1.0)), std::runtime_error,
+        Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring(path.string())));
+    std::filesystem::remove(path);
+}
+
 TEST_CASE("RoutingModel no depot is rejected", "[routing]") {
     coso::RoutingModel m;
     m.add_vehicle_type(1, {.capacity = {10}});

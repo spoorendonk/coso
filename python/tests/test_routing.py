@@ -363,6 +363,14 @@ class TestSolveInstance:
             coso.solve_instance(str(bad), coso.TimeLimit(1.0))
         assert str(bad) in str(exc.value)
 
+    def test_bad_number_raises(self, tmp_path: Path) -> None:
+        """A non-numeric field raises RuntimeError naming the path, not a bare stoi error."""
+        bad = tmp_path / "bad_number.vrp"
+        bad.write_text("NAME : bad\nDIMENSION : abc\n")
+        with pytest.raises(RuntimeError) as exc:
+            coso.solve_instance(str(bad), coso.TimeLimit(1.0))
+        assert str(bad) in str(exc.value)
+
 
 # =========================================================================
 #  Module-level
