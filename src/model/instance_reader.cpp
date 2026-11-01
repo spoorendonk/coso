@@ -420,7 +420,11 @@ VrpInstance read_vrp(const std::string& path) {
     }
     std::ostringstream ss;
     ss << file.rdbuf();
-    return parse_vrp(ss.str());
+    try {
+        return parse_vrp(ss.str());
+    } catch (std::runtime_error const& e) {
+        throw std::runtime_error(path + ": " + e.what());
+    }
 }
 
 // -- Solomon VRPTW parser ----------------------------------------------------

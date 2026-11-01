@@ -1,6 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_exception.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <climits>
+#include <filesystem>
+#include <fstream>
 #include <model/lotsizing_model.h>
 #include <model/network_model.h>
 #include <model/packing_model.h>
@@ -109,11 +113,22 @@ TEST_CASE("RoutingModel solve returns a Result", "[routing]") {
     REQUIRE(r.work_units() > 0.0);
 }
 
-TEST_CASE("Free function solve(instance_path, tl) links", "[routing]") {
-    // Nonexistent file should return empty/infeasible result (no crash).
-    coso::Result r = coso::solve("nonexistent.vrp", coso::TimeLimit(1.0));
-    REQUIRE(r.cost() >= 0.0);
-    REQUIRE_FALSE(r.feasible());
+TEST_CASE("Free function solve(instance_path, tl) rejects a missing file", "[routing]") {
+    // An infeasible Result here would read as "no feasible solution found" (#251).
+    REQUIRE_THROWS_WITH(coso::solve("nonexistent.vrp", coso::TimeLimit(1.0)),
+                        Catch::Matchers::ContainsSubstring("nonexistent.vrp"));
+}
+
+TEST_CASE("Free function solve(instance_path, tl) rejects a parse error", "[routing]") {
+    auto path = std::filesystem::temp_directory_path() / "coso_issue251_bad.vrp";
+    {
+        std::ofstream out(path);
+        out << "NAME : bad\nTYPE : CVRP\n";  // no DIMENSION
+    }
+    REQUIRE_THROWS_WITH(coso::solve(path.string(), coso::TimeLimit(1.0)),
+                        Catch::Matchers::ContainsSubstring(path.string()) &&
+                            Catch::Matchers::ContainsSubstring("DIMENSION"));
+    std::filesystem::remove(path);
 }
 
 TEST_CASE("RoutingModel solves small CVRP", "[routing][integration]") {
@@ -191,22 +206,22 @@ TEST_CASE("RoutingModel deterministic work units with work limit", "[routing][wo
     REQUIRE(r1.work_units() == r2.work_units());
 }
 
-TEST_CASE("RoutingModel no depot returns empty result", "[routing]") {
+TEST_CASE("RoutingModel no depot is rejected", "[routing]") {
     coso::RoutingModel m;
     m.add_vehicle_type(1, {.capacity = {10}});
     m.add_client(1.0, 0.0, {.demand = {1}});
-    coso::Result r = m.solve(coso::TimeLimit(1.0));
-    // No depot: cannot solve.
-    REQUIRE_FALSE(r.feasible());
+    REQUIRE_THROWS_MATCHES(
+        m.solve(coso::TimeLimit(1.0)), std::invalid_argument,
+        Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring("no depot")));
 }
 
-TEST_CASE("RoutingModel no vehicle type returns empty result", "[routing]") {
+TEST_CASE("RoutingModel no vehicle type is rejected", "[routing]") {
     coso::RoutingModel m;
     m.add_depot(0.0, 0.0);
     m.add_client(1.0, 0.0, {.demand = {1}});
-    coso::Result r = m.solve(coso::TimeLimit(1.0));
-    // No vehicles: cannot solve.
-    REQUIRE_FALSE(r.feasible());
+    REQUIRE_THROWS_MATCHES(
+        m.solve(coso::TimeLimit(1.0)), std::invalid_argument,
+        Catch::Matchers::MessageMatches(Catch::Matchers::ContainsSubstring("no vehicle type")));
 }
 
 // --------------------------------------------------------------------------

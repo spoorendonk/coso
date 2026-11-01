@@ -148,6 +148,7 @@ public:
     // -- Solve ---------------------------------------------------------------
 
     /// Solve the routing problem within the given time limit.
+    /// Throws std::invalid_argument if no depot or no vehicle type is declared.
     Result solve(TimeLimit tl);
 
     // -- Accessors -----------------------------------------------------------
@@ -205,6 +206,7 @@ private:
 };
 
 /// Convenience: solve a CVRPLIB / VRPLIB instance file directly.
+/// Throws std::runtime_error, naming the path, if the file cannot be opened or parsed.
 Result solve(const std::string& instance_path, TimeLimit tl);
 
 }  // namespace coso

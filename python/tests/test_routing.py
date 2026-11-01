@@ -1,6 +1,9 @@
 """Tests for the COSO Python bindings (RoutingModel and shared types)."""
 
+from pathlib import Path
+
 import coso
+import pytest
 
 # =========================================================================
 #  Shared types
@@ -318,8 +321,8 @@ class TestSolveDistanceMatrix:
 
 
 class TestSolveEdgeCases:
-    def test_no_depot_infeasible(self):
-        """Without a depot, solve should return infeasible."""
+    def test_no_depot_raises(self):
+        """Without a depot, solve raises rather than reporting infeasible (#251)."""
         m = coso.RoutingModel()
 
         vt = coso.VehicleTypeParams()
@@ -330,11 +333,11 @@ class TestSolveEdgeCases:
         cp.demand = [1]
         m.add_client(1.0, 0.0, cp)
 
-        r = m.solve(coso.TimeLimit(1.0))
-        assert not r.feasible
+        with pytest.raises(ValueError, match="no depot"):
+            m.solve(coso.TimeLimit(1.0))
 
-    def test_no_vehicles_infeasible(self):
-        """Without vehicles, solve should return infeasible."""
+    def test_no_vehicles_raises(self):
+        """Without vehicles, solve raises rather than reporting infeasible (#251)."""
         m = coso.RoutingModel()
         m.add_depot(0.0, 0.0)
 
@@ -342,16 +345,23 @@ class TestSolveEdgeCases:
         cp.demand = [1]
         m.add_client(1.0, 0.0, cp)
 
-        r = m.solve(coso.TimeLimit(1.0))
-        assert not r.feasible
+        with pytest.raises(ValueError, match="no vehicle type"):
+            m.solve(coso.TimeLimit(1.0))
 
 
 class TestSolveInstance:
-    def test_nonexistent_file(self):
-        """solve_instance with a nonexistent file should return infeasible."""
-        r = coso.solve_instance("nonexistent.vrp", coso.TimeLimit(1.0))
-        assert not r.feasible
-        assert r.cost >= 0.0
+    def test_nonexistent_file_raises(self):
+        """A missing instance file raises, naming the path (#251)."""
+        with pytest.raises(RuntimeError, match="nonexistent.vrp"):
+            coso.solve_instance("nonexistent.vrp", coso.TimeLimit(1.0))
+
+    def test_parse_error_raises(self, tmp_path: Path) -> None:
+        """A malformed instance file raises, naming the path (#251)."""
+        bad = tmp_path / "bad.vrp"
+        bad.write_text("NAME : bad\nTYPE : CVRP\n")  # no DIMENSION
+        with pytest.raises(RuntimeError, match="DIMENSION") as exc:
+            coso.solve_instance(str(bad), coso.TimeLimit(1.0))
+        assert str(bad) in str(exc.value)
 
 
 # =========================================================================

@@ -66,9 +66,11 @@ TEST_CASE("CLI: unknown option prints error", "[cli]") {
 
 TEST_CASE("CLI: missing file produces error output", "[cli]") {
     auto r = run_cmd(coso_solve_path() + " nonexistent_file.vrp --time-limit 1");
-    // The solve function returns an empty (infeasible) result for missing files,
-    // so the CLI should still run but report infeasible.
-    CHECK(r.output.find("Feasible: no") != std::string::npos);
+    // A missing file is an error, not an infeasible solve (#251).
+    CHECK(r.exit_code == 1);
+    CHECK(r.output.find("Error:") != std::string::npos);
+    CHECK(r.output.find("Cannot open VRP file: nonexistent_file.vrp") != std::string::npos);
+    CHECK(r.output.find("Feasible:") == std::string::npos);
 }
 
 TEST_CASE("CLI: invalid time limit", "[cli]") {

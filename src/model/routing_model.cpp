@@ -72,9 +72,14 @@ Result RoutingModel::solve(TimeLimit tl) {
     auto wall_start = std::chrono::steady_clock::now();
     WorkUnits work;
 
-    // Validate: need at least one depot and one vehicle type.
-    if (depots_.empty() || vehicle_types_.empty()) {
-        return {};  // cannot solve without depot/vehicles
+    // An empty Result would read as "searched and found nothing feasible",
+    // which is not what happened: the model cannot be solved at all (#251).
+    if (depots_.empty()) {
+        throw std::invalid_argument("RoutingModel::solve: no depot declared (call add_depot)");
+    }
+    if (vehicle_types_.empty()) {
+        throw std::invalid_argument(
+            "RoutingModel::solve: no vehicle type declared (call add_vehicle_type)");
     }
 
     // -----------------------------------------------------------------------
@@ -211,14 +216,9 @@ Result RoutingModel::solve(TimeLimit tl) {
 // ---------------------------------------------------------------------------
 
 Result solve(const std::string& instance_path, TimeLimit tl) {
-    // Try to read the VRP instance file.
-    VrpInstance inst;
-    try {
-        inst = read_vrp(instance_path);
-    } catch (std::runtime_error const&) {
-        // File not found or parse error -- return empty result.
-        return {};
-    }
+    // A missing file or parse error propagates: swallowing it would report a
+    // bad path as an instance with no feasible solution (#251).
+    VrpInstance inst = read_vrp(instance_path);
 
     RoutingModel model;
 
