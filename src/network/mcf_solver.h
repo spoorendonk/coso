@@ -26,24 +26,27 @@ public:
     [[nodiscard]] static NetworkSolution solve(NetworkData const& data);
 
 private:
-    /// Find a shortest path from src to dst in the residual graph
-    /// using Bellman-Ford. Returns true if a path exists, and fills
-    /// pred_arc with the predecessor arc indices (in the residual graph).
-    /// dist[n] contains the shortest distance to node n.
+    /// Find a shortest path in the residual graph from any node with positive
+    /// excess to the nearest node with negative excess, using Bellman-Ford
+    /// from a super-source joined to every surplus node.  found is false when
+    /// no surplus node reaches any deficit node (or a negative cycle aborts
+    /// the search).  pred_arc holds the predecessor arc of each node in the
+    /// residual graph, and dist[n] the shortest distance to node n.
     ///
     /// The residual graph has:
     ///   - Forward arcs (a) with residual = upper_cap - flow, cost = cost
     ///   - Backward arcs (a + num_arcs) with residual = flow, cost = -cost
     struct PathResult {
         bool found = false;
+        int src = -1;               ///< surplus node the path starts at
+        int dst = -1;               ///< deficit node the path ends at
         int bottleneck = 0;         ///< max flow that can be sent
         std::vector<int> pred_arc;  ///< predecessor arc (-1 = none)
         std::vector<long long> dist;
     };
 
-    [[nodiscard]] static PathResult find_shortest_path(NetworkData const& data,
-                                                       NetworkSolution const& sol, int src,
-                                                       int dst);
+    [[nodiscard]] static PathResult find_augmenting_path(NetworkData const& data,
+                                                         NetworkSolution const& sol);
 };
 
 }  // namespace coso

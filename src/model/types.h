@@ -135,6 +135,11 @@ struct Result {
     /// supply and capacity the model declared.  No path view is returned — a
     /// node sequence cannot tell parallel arcs apart, and decomposing flow
     /// into paths belongs with #176's accessors (#206).
+    ///
+    /// The flows are a solution only when feasible().  On an infeasible result
+    /// they are whatever partial flow the solver had routed when it stopped:
+    /// they respect arc capacities but not flow conservation, so some supply
+    /// is left unrouted and some demand unmet.
     std::vector<std::vector<double>> arc_flows_;
 
     [[nodiscard]] auto const& arc_flows() const noexcept { return arc_flows_; }

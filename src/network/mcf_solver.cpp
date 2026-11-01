@@ -7,21 +7,29 @@
 
 namespace coso {
 
-McfSolver::PathResult McfSolver::find_shortest_path(NetworkData const& data,
-                                                    NetworkSolution const& sol, int src, int dst) {
+McfSolver::PathResult McfSolver::find_augmenting_path(NetworkData const& data,
+                                                      NetworkSolution const& sol) {
     int const nn = data.num_nodes();
     int const na = data.num_arcs();
 
     PathResult result;
     result.dist.assign(nn, LLONG_MAX);
     result.pred_arc.assign(nn, -1);
-    result.dist[src] = 0;
 
-    // Bellman-Ford with SPFA (Shortest Path Faster Algorithm) queue.
+    // Bellman-Ford with SPFA (Shortest Path Faster Algorithm) queue, seeded
+    // with every surplus node at distance 0 -- a super-source joined to each
+    // of them by a zero-cost arc.  Searching from one surplus node to one
+    // fixed deficit node misses every other pair, and reports a feasible
+    // instance infeasible when that one pair is disconnected (#248).
     std::vector<bool> in_queue(nn, false);
     std::queue<int> queue;
-    queue.push(src);
-    in_queue[src] = true;
+    for (int n = 0; n < nn; ++n) {
+        if (sol.excess(n) > 0) {
+            result.dist[n] = 0;
+            queue.push(n);
+            in_queue[n] = true;
+        }
+    }
 
     // Iteration count for early termination (negative cycle detection).
     std::vector<int> iter_count(nn, 0);
@@ -80,17 +88,25 @@ McfSolver::PathResult McfSolver::find_shortest_path(NetworkData const& data,
         }
     }
 
-    if (result.dist[dst] == LLONG_MAX) {
+    // The nearest reachable deficit node; ties go to the lowest index.
+    for (int n = 0; n < nn; ++n) {
+        if (sol.excess(n) < 0 && result.dist[n] != LLONG_MAX &&
+            (result.dst < 0 || result.dist[n] < result.dist[result.dst])) {
+            result.dst = n;
+        }
+    }
+    if (result.dst < 0) {
         result.found = false;
         return result;
     }
 
-    // Trace back path and compute bottleneck.
+    // Trace back to the surplus node the path starts from (the root of the
+    // shortest-path tree, which has no predecessor) and compute the bottleneck.
     result.found = true;
     result.bottleneck = INT_MAX;
 
-    int cur = dst;
-    while (cur != src) {
+    int cur = result.dst;
+    while (result.pred_arc[cur] >= 0) {
         int pa = result.pred_arc[cur];
         if (pa >= na) {
             // Backward arc.
@@ -105,6 +121,7 @@ McfSolver::PathResult McfSolver::find_shortest_path(NetworkData const& data,
             cur = data.arc(pa).tail;
         }
     }
+    result.src = cur;
 
     return result;
 }
@@ -113,45 +130,22 @@ NetworkSolution McfSolver::solve(NetworkData const& data) {
     NetworkSolution sol(data);
     int const na = data.num_arcs();
 
-    // Successive shortest paths: repeatedly find cheapest augmenting paths.
-    bool progress = true;
-    while (progress) {
-        progress = false;
-
-        // Find a node with positive excess (supply not yet routed).
-        int src = -1;
-        for (int n = 0; n < data.num_nodes(); ++n) {
-            if (sol.excess(n) > 0) {
-                src = n;
-                break;
-            }
-        }
-        if (src < 0) {
-            break;  // no more supply to route
-        }
-
-        // Find a node with negative excess (unmet demand).
-        int dst = -1;
-        for (int n = 0; n < data.num_nodes(); ++n) {
-            if (sol.excess(n) < 0) {
-                dst = n;
-                break;
-            }
-        }
-        if (dst < 0) {
-            break;  // no more demand
-        }
-
-        // Find shortest path in residual graph.
-        auto path = find_shortest_path(data, sol, src, dst);
+    // Successive shortest paths: repeatedly augment along a cheapest path from
+    // any surplus node to any deficit node.  Stops when supply is all routed,
+    // or when no surplus node can reach any deficit node in the residual graph,
+    // which is when the instance is infeasible.
+    while (true) {
+        auto path = find_augmenting_path(data, sol);
         if (!path.found || path.bottleneck <= 0) {
-            continue;
+            break;
         }
+        int const src = path.src;
+        int const dst = path.dst;
 
         // Limit flow to the min of supply at src and demand at dst.
         int send = std::min({path.bottleneck, sol.excess(src), -sol.excess(dst)});
         if (send <= 0) {
-            continue;
+            break;
         }
 
         // Augment along the path.
@@ -169,8 +163,6 @@ NetworkSolution McfSolver::solve(NetworkData const& data) {
                 cur = data.arc(pa).tail;
             }
         }
-
-        progress = true;
     }
 
     return sol;

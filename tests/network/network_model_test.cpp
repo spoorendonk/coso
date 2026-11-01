@@ -45,6 +45,25 @@ TEST_CASE("NetworkModel respects arc upper capacity", "[network][model]") {
     REQUIRE(result.arc_flows()[0][wide] == 2.0);
 }
 
+TEST_CASE("NetworkModel routes supply to any reachable demand node", "[network][model]") {
+    // #248: the first supply node (a) cannot reach the first demand node (b),
+    // which used to make solve() call this feasible instance infeasible.
+    NetworkModel model;
+    int a = model.add_node(1, "a");
+    int b = model.add_node(-1, "b");
+    int c = model.add_node(1, "c");
+    int d = model.add_node(-1, "d");
+    int ad = model.add_arc(a, d, 2, 1);
+    int cb = model.add_arc(c, b, 3, 1);
+
+    Result result = model.solve(TimeLimit(1.0));
+
+    REQUIRE(result.feasible());
+    REQUIRE(result.cost() == 5.0);
+    REQUIRE(result.arc_flows()[0][ad] == 1.0);
+    REQUIRE(result.arc_flows()[0][cb] == 1.0);
+}
+
 TEST_CASE("NetworkModel invalid arc indices throw", "[network][model]") {
     NetworkModel model;
     model.add_node(1, "s");

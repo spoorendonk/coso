@@ -222,6 +222,48 @@ TEST_CASE("MCF solver with capacity constraints", "[network]") {
     REQUIRE(sol.flow(2) == 2);
 }
 
+TEST_CASE("MCF solver routes when the first surplus/deficit pair is disconnected", "[network]") {
+    // #248: A and B come first, but no path joins them.  Pairing only the
+    // first surplus node with the first deficit node stopped here and called
+    // the instance infeasible; A->D and C->B route everything.
+    NetworkData::Builder b;
+    b.add_node(1, "A");
+    b.add_node(-1, "B");
+    b.add_node(1, "C");
+    b.add_node(-1, "D");
+    b.add_arc(0, 3, 2, 1);  // A->D
+    b.add_arc(2, 1, 3, 1);  // C->B
+
+    auto data = b.build();
+    auto sol = McfSolver::solve(data);
+
+    REQUIRE(sol.feasible());
+    REQUIRE(sol.flow(0) == 1);
+    REQUIRE(sol.flow(1) == 1);
+    REQUIRE(sol.cost() == 5);
+}
+
+TEST_CASE("MCF solver reports an instance with no route as infeasible", "[network]") {
+    // A reaches D, but nothing reaches B, so C's unit cannot be routed.
+    NetworkData::Builder b;
+    b.add_node(1, "A");
+    b.add_node(-1, "B");
+    b.add_node(1, "C");
+    b.add_node(-1, "D");
+    b.add_arc(0, 3, 2, 1);  // A->D
+    b.add_arc(2, 3, 3, 1);  // C->D
+
+    auto data = b.build();
+    auto sol = McfSolver::solve(data);
+
+    REQUIRE_FALSE(sol.feasible());
+    REQUIRE(sol.capacity_feasible());
+    // One unit reaches D, by the cheaper arc; B stays short.
+    REQUIRE(sol.flow(0) == 1);
+    REQUIRE(sol.flow(1) == 0);
+    REQUIRE(sol.excess(1) == -1);
+}
+
 // ===========================================================================
 //  Flow conservation tests
 // ===========================================================================
