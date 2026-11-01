@@ -4,8 +4,11 @@
 
 #include <algorithm>
 #include <climits>
+#include <compare>
+#include <cstdint>
 #include <span>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -16,7 +19,8 @@ namespace coso {
 /// INRC-II assigns a nurse to a (shift, skill) pair, so an employee counts
 /// toward one skill demand on a cell, not toward every one they qualify for.
 /// The schedule stores only the shift, so the cell's workers are credited to
-/// its demands in whichever way prices the cell's cover cheapest.  Since the
+/// its demands in whichever way prices the cell's cover cheapest -- hard
+/// cover units first, then soft cost (see CoverCost).  Since the
 /// skill of an assignment affects nothing but cover, that is the same as
 /// optimising over the skill of every assignment.
 ///
@@ -52,24 +56,51 @@ namespace cover_detail {
     return {under, over};
 }
 
-/// Cost of the k-th worker (k >= 1) credited to `dem`, at the demand's
-/// declared weights and `hard_weight` per employee when the demand is hard.
-/// Non-decreasing in k, since the weights are non-negative.
-[[nodiscard]] inline int cover_marginal(RosteringData::Demand const& dem, int k, int hard_weight) {
-    if (k <= dem.min_employees) {
-        return -(dem.hard ? hard_weight : dem.under_weight);
+/// A cover cost, compared lexicographically: hard units first, so no soft
+/// weight, however large, buys a hard violation; then soft cost; then plain
+/// shortfall units, so a demand with under_weight 0 still draws a worker
+/// that is free to cover it.
+struct CoverCost {
+    int64_t hard = 0;
+    int64_t soft = 0;
+    int64_t under = 0;
+
+    friend CoverCost operator+(CoverCost a, CoverCost b) noexcept {
+        return {a.hard + b.hard, a.soft + b.soft, a.under + b.under};
     }
-    if (k <= dem.max_employees) {
-        return 0;
+    friend CoverCost operator-(CoverCost a, CoverCost b) noexcept {
+        return {a.hard - b.hard, a.soft - b.soft, a.under - b.under};
     }
-    return dem.hard ? hard_weight : dem.over_weight;
+    friend auto operator<=>(CoverCost const&, CoverCost const&) = default;
+};
+
+/// Cost of `dem` credited `count` workers, at its declared weights; a hard
+/// demand's units go to `hard`.
+[[nodiscard]] inline CoverCost demand_cover_cost(RosteringData::Demand const& dem, int count) {
+    auto const [under, over] = cover_units(dem, count);
+    if (dem.hard) {
+        return {.hard = under + over, .soft = 0, .under = under};
+    }
+    return {.hard = 0,
+            .soft = static_cast<int64_t>(under) * dem.under_weight +
+                    static_cast<int64_t>(over) * dem.over_weight,
+            .under = under};
+}
+
+/// Cost of the k-th worker (k >= 1) credited to `dem`: the difference of
+/// demand_cover_cost at k and k - 1.  Each component is a sum of
+/// max(0, linear) terms with non-negative weights, so convex in k whatever
+/// min_employees and max_employees are, and the marginal non-decreasing.
+[[nodiscard]] inline CoverCost cover_marginal(RosteringData::Demand const& dem, int k) {
+    return demand_cover_cost(dem, k) - demand_cover_cost(dem, k - 1);
 }
 
 /// Workers credited to each of `demands` (counts[j] for demands[j]) under the
 /// rule above, minimising the sum over j of the costs marginal(j, 1..counts[j]).
 ///
-/// `marginal(j, k)` is the cost of the k-th worker credited to demands[j]
-/// and must be non-decreasing in k: the per-demand cost is then convex and
+/// `marginal(j, k)` is the cost of the k-th worker credited to demands[j],
+/// of any totally ordered additive type whose value-initialised object is
+/// zero, and must be non-decreasing in k: the per-demand cost is then convex and
 /// the crediting is a min-cost flow, solved by successive shortest paths.
 /// Every residual arc between demands costs 0 (moving a credited worker to
 /// another demand they qualify for), so each worker's shortest augmenting
@@ -82,6 +113,7 @@ template <class Marginal>
     int const m = static_cast<int>(demands.size());
     int const nw = static_cast<int>(workers.size());
     int const none = m;  // Node: credited to no demand.
+    using Cost = std::invoke_result_t<Marginal&, int, int>;
     std::vector<int> counts(static_cast<size_t>(m), 0);
 
     // Eligible skilled demands per worker, and whether they may go uncredited.
@@ -152,12 +184,12 @@ template <class Marginal>
 
         // Cheapest end: the next unit of a reachable demand, or no credit.
         int best = -1;
-        int best_cost = 0;
+        Cost best_cost{};
         for (int j = 0; j <= m; ++j) {
             if (!seen[j]) {
                 continue;
             }
-            int const cost = j == none ? 0 : marginal(j, counts[j] + 1);
+            Cost const cost = j == none ? Cost{} : marginal(j, counts[j] + 1);
             if (best < 0 || cost < best_cost) {
                 best = j;
                 best_cost = cost;
@@ -176,14 +208,13 @@ template <class Marginal>
     return counts;
 }
 
-/// credit_cover at the demands' declared weights, hard demands at
-/// `hard_weight` per employee -- the pricing RosteringCostEvaluator uses.
+/// credit_cover at the demands' declared weights, hard units first (see
+/// CoverCost) -- the crediting every engine component uses.
 [[nodiscard]] inline std::vector<int> credit_cover(RosteringData const& data,
                                                    std::span<RosteringData::Demand const> demands,
-                                                   std::span<int const> workers,
-                                                   int hard_weight = 10000) {
+                                                   std::span<int const> workers) {
     return credit_cover(data, demands, workers,
-                        [&](int j, int k) { return cover_marginal(demands[j], k, hard_weight); });
+                        [&](int j, int k) { return cover_marginal(demands[j], k); });
 }
 
 /// (soft, hard) cover cost of cell (s, d) worked by `workers`: soft demands
@@ -196,7 +227,7 @@ template <class Marginal>
     if (demands.empty()) {
         return {0, 0};
     }
-    auto const counts = credit_cover(data, demands, workers, hard_weight);
+    auto const counts = credit_cover(data, demands, workers);
     int soft = 0;
     int hard = 0;
     for (size_t j = 0; j < demands.size(); ++j) {

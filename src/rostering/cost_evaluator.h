@@ -282,7 +282,7 @@ private:
             int64_t const key = entry.first;
             int const s = static_cast<int>(key >> 32);
             int const d = static_cast<int>(static_cast<uint32_t>(key));
-            if (s >= data_.num_shift_types() || d >= data_.horizon) {
+            if (s < 0 || d < 0 || s >= data_.num_shift_types() || d >= data_.horizon) {
                 continue;  // Indexes no schedule column; parsers and solve() reject it.
             }
             auto const workers = cell_workers(schedule, s, d);

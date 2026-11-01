@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <climits>
+#include <cstdint>
 #include <random>
 #include <string>
 #include <vector>
@@ -16,19 +17,20 @@ using namespace coso;
 
 namespace {
 
-int cell_cost(std::vector<RosteringData::Demand> const& demands, std::vector<int> const& counts) {
-    int cost = 0;
+CoverCost cell_cost(std::vector<RosteringData::Demand> const& demands,
+                    std::vector<int> const& counts) {
+    CoverCost cost;
     for (size_t j = 0; j < demands.size(); ++j) {
-        auto [under, over] = cover_units(demands[j], counts[j]);
-        cost += under * demands[j].under_weight + over * demands[j].over_weight;
+        cost = cost + demand_cover_cost(demands[j], counts[j]);
     }
     return cost;
 }
 
 /// The cheapest cover over every crediting the rule in rostering/cover.h
 /// allows, by enumeration.
-int brute_force_cost(RosteringData const& data, std::vector<RosteringData::Demand> const& demands,
-                     std::vector<int> const& workers) {
+CoverCost brute_force_cost(RosteringData const& data,
+                           std::vector<RosteringData::Demand> const& demands,
+                           std::vector<int> const& workers) {
     int const m = static_cast<int>(demands.size());
     std::vector<std::vector<int>> options;  // Demand index, or -1 for none.
     std::vector<int> base(static_cast<size_t>(m), 0);
@@ -54,7 +56,7 @@ int brute_force_cost(RosteringData const& data, std::vector<RosteringData::Deman
         }
         options.push_back(opts);
     }
-    int best = INT_MAX;
+    CoverCost best{.hard = INT64_MAX};
     std::vector<size_t> pick(options.size(), 0);
     while (true) {
         auto counts = base;
@@ -104,7 +106,8 @@ TEST_CASE("credit_cover matches enumeration on random cells", "[rostering][cover
                                    .max_employees = hi,
                                    .required_skill = s,
                                    .under_weight = std::uniform_int_distribution<int>(0, 9)(rng),
-                                   .over_weight = std::uniform_int_distribution<int>(0, 9)(rng)});
+                                   .over_weight = std::uniform_int_distribution<int>(0, 9)(rng),
+                                   .hard = rng() % 4 == 0});
             }
         }
         if (rng() % 3 == 0) {
@@ -176,4 +179,44 @@ TEST_CASE("cover cost prices every demand on a multi-skill cell", "[rostering][c
     RosteringMove const move{.employee = 2, .day = 0, .old_shift = -1, .new_shift = 0};
     CHECK(dc.evaluate_delta(data, without, move) ==
           dc.evaluate(data, schedule) - dc.evaluate(data, without));
+}
+
+TEST_CASE("credit_cover never trades a hard unit for soft cost", "[rostering][cover]") {
+    // Review of #255: summing soft and hard at 10000 per hard unit let a
+    // soft weight above that buy a hard violation.
+    RosteringData data;
+    data.employees = {{.name = "Cat", .skills = {"a", "b"}}};
+    std::vector<RosteringData::Demand> const demands = {
+        {.min_employees = 1, .required_skill = "a", .hard = true},
+        {.min_employees = 1, .required_skill = "b", .under_weight = 20000},
+    };
+    std::vector<int> const workers = {0};
+    CHECK(credit_cover(data, demands, workers) == std::vector<int>{1, 0});
+}
+
+TEST_CASE("credit_cover prices a demand whose max is below its min", "[rostering][cover]") {
+    // Review of #255: the k-th unit of a hard demand with min 2, max 1 was
+    // taken as a shortfall filled, though it also overfills it.
+    RosteringData data;
+    data.employees = {{.name = "Y", .skills = {"a"}}, {.name = "X", .skills = {"a", "b"}}};
+    std::vector<RosteringData::Demand> const demands = {
+        {.min_employees = 2, .max_employees = 1, .required_skill = "a", .hard = true},
+        {.min_employees = 1, .required_skill = "b", .under_weight = 5},
+    };
+    std::vector<int> const workers = {0, 1};
+    CHECK(credit_cover(data, demands, workers) == std::vector<int>{1, 1});
+}
+
+TEST_CASE("credit_cover credits a shortfall priced at zero", "[rostering][cover]") {
+    // Review of #255: with under_weight 0 every crediting tied, the lower
+    // index won, and the constructions kept adding workers to a cell whose
+    // demand an equally cheap crediting already met.
+    RosteringData data;
+    data.employees = {{.name = "Ann", .skills = {"a", "b"}}};
+    std::vector<RosteringData::Demand> const demands = {
+        {.min_employees = 0, .required_skill = "b"},
+        {.min_employees = 1, .required_skill = "a", .under_weight = 0},
+    };
+    std::vector<int> const workers = {0};
+    CHECK(credit_cover(data, demands, workers) == std::vector<int>{0, 1});
 }

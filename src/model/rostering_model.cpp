@@ -307,8 +307,7 @@ Result RosteringModel::solve(TimeLimit tl) {
             if (demands.empty()) {
                 continue;
             }
-            auto const counts = credit_cover(data, demands, cell_workers(best.schedule(), s, d),
-                                             evaluator.weights().hard_violation);
+            auto const counts = credit_cover(data, demands, cell_workers(best.schedule(), s, d));
             for (size_t j = 0; j < demands.size(); ++j) {
                 if (counts[j] < demands[j].min_employees) {
                     result.understaffed_.push_back(

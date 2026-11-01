@@ -86,12 +86,15 @@ int DemandConstraint::cell_cost(RosteringData const& data, int shift_type, int d
     }
     // Workers are credited as rostering/cover.h describes, at this
     // constraint's own penalties rather than the demands' declared weights.
+    auto const priced = [&](RosteringData::Demand const& dem, int count) {
+        auto const [under, over] = cover_units(dem, count);
+        return CoverCost{.hard = 0,
+                         .soft = static_cast<int64_t>(under) * under_penalty_ +
+                                 static_cast<int64_t>(over) * over_penalty_,
+                         .under = under};
+    };
     auto const counts = credit_cover(data, demands, workers, [&](int j, int k) {
-        auto const& dem = demands[j];
-        if (k <= dem.min_employees) {
-            return -under_penalty_;
-        }
-        return k <= dem.max_employees ? 0 : over_penalty_;
+        return priced(demands[j], k) - priced(demands[j], k - 1);
     });
     int cost = 0;
     for (size_t j = 0; j < demands.size(); ++j) {
