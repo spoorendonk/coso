@@ -45,8 +45,7 @@ not the thing being built.
 
 **The engine is broken in places, and that is intentional.** Scheduling aborts on real input
 (#188), routing returns time-window violations as feasible (#194) and searches for minimum
-distance whatever objective is declared (#238), and rostering accepts a shift duration nothing
-reads (#233). (Rostering's constructions now never exceed its hard weekend and maximum
+distance whatever objective is declared (#238). (Rostering's constructions now never exceed its hard weekend and maximum
 working-time bounds; a minimum their top-up misses — greedy, then a budgeted search, #260 — is reported infeasible, #246.)
 These are known, filed, and *not* blockers. Do not stop work to fix an engine defect you trip
 over, do not gate a modelling change on an engine fix, and do not treat a broken engine as a
@@ -121,6 +120,9 @@ so; without it the build is unchanged. It is what makes the `clean` fence cheap
 — rebuilding all 263 translation units after `rm -rf build` takes 5s from a warm
 cache against 42s without one. 116 of those are Catch2's and nanobind's and
 never change at all; the rest are recompiled only when their own source does.
+The launcher passes ccache `base_dir` set to the checkout (ccache 4.8 or
+newer), so the fresh worktree each `pre-push` builds in hits what another
+checkout cached — measured at 264/264 hits with no user ccache config (#252).
 The dependencies are fetched `GIT_SHALLOW`, so re-cloning them costs ~5s of the
 ~6s configure. To build without the cache, or to swap in
 another one:

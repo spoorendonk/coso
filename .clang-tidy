@@ -1,6 +1,6 @@
 ---
-# The four families stay on: of the 205 checks they enable, 166 are already
-# clean across the tree. The 39 that are not are switched off below so the
+# The four families stay on: of the 205 checks they enable, 170 are already
+# clean across the tree. The 35 that are not are switched off below so the
 # pre-push list is short enough to act on, and every one of them is tracked
 # with its finding count in coso#190 — re-enable them from there, cheapest
 # first, rather than as one unbounded sweep.

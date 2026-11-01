@@ -128,16 +128,16 @@ static void run_nrp_benchmark(const std::string& file, int expected_employees,
     CHECK(final_cost <= initial_cost);
 
     // Cost should be within a reasonable range of the BKS.
-    // NRP BKS values are soft-cost only; our cost includes demand penalties,
-    // so we use a generous gap.
+    // SB-NRP's published objective includes the cover penalties, as our cost
+    // does, but the two still differ (see the SKIP below), so the gap is generous.
     if (bks > 0 && final_cost > 0) {
         double gap = static_cast<double>(final_cost - bks) / bks;
         std::cout << "  Gap to BKS: " << (gap * 100.0) << "%\n" << std::endl;
 
         // Not yet a gap in either direction.  The cover weights are now the
-        // instance's own (coso#229), but the constructions ignore the hard
-        // MaxWeekends and working-time bounds, so a run starts with hard cost
-        // the published optimum does not pay, and SB shift-on requests are
+        // instance's own (coso#229), but a working-time minimum the
+        // constructions' top-up misses leaves hard cost the published optimum
+        // does not pay (coso#246, coso#260), and SB shift-on requests are
         // +w rewards, so the benchmark value is cost plus the sum of their
         // weights.  Re-deriving the bound needs a benchmark run.
         SKIP("NRP BKS grading needs a re-derived bound — coso#239");

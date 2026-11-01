@@ -47,7 +47,7 @@
 #                  Ikegami, ...)
 #                INRC-II (mobiz.vives.be/inrc2)
 #                NSPLib (projectmanagement.ugent.be)
-#    Scheduling  SchedulingLab/fjsp-instances -- FJSP, 204 instances
+#    Scheduling  SchedulingLab/fjsp-instances -- FJSP, 336 instances
 #                OR-Library wt40/wt50 -- weighted tardiness, optima published
 #                  (there is no wtopt100; four spellings probed, all 404)
 #
@@ -108,8 +108,9 @@ CVRP_INSTANCES=(
 # Solomon VRPTW instances, via the VROOM-Project GitHub mirror.
 # Carries time windows, service times and the depot window. Canonical host is
 # sintef.no/projectweb/top/vrptw/solomon-benchmark, which publishes best-knowns
-# as a LEXICOGRAPHIC (vehicles, then distance) pair -- an objective RoutingModel
-# cannot yet declare, so these instances can be read but not scored (#228).
+# as a LEXICOGRAPHIC (vehicles, then distance) pair. RoutingModel can declare it
+# (#228), but the engine still minimises distance alone, so these instances can
+# be read but not scored (#238).
 # Solomon truncates distances to one decimal; CVRPLIB above rounds. Different
 # conventions, same script.
 SOLOMON_BASE_URL="https://raw.githubusercontent.com/VROOM-Project/vroom-scripts/master/benchmarks/VRPTW/solomon"
