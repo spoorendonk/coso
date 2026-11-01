@@ -158,6 +158,30 @@ TEST_CASE("CPFilter: demand limit prunes when at max", "[rostering][cp_filter]")
     REQUIRE(filter.is_feasible(2, 0, 0) == true);
 }
 
+TEST_CASE("CPFilter: demand limit keeps a worker who can cover an uncapped demand",
+          "[rostering][cp_filter]") {
+    // Skill a is capped at 0 by a soft demand that prices over-cover at 0,
+    // so crediting Dana to it costs the same as crediting her to the uncapped
+    // skill-b demand.  She can work the cell without over-cover, so the
+    // shift must stay open, whatever order the demands were declared in.
+    for (bool const capped_first : {true, false}) {
+        RosteringData data;
+        data.shift_types = {{.name = "Day", .duration_minutes = 480}};
+        data.employees = {{.name = "Dana", .skills = {"a", "b"}, .max_consecutive_days = 5}};
+        data.horizon = 1;
+        RosteringData::Demand const capped{
+            .min_employees = 0, .max_employees = 0, .required_skill = "a", .over_weight = 0};
+        RosteringData::Demand const open{.min_employees = 0, .required_skill = "b"};
+        REQUIRE(data.add_demand(0, 0, capped_first ? capped : open));
+        REQUIRE(data.add_demand(0, 0, capped_first ? open : capped));
+
+        CPFilter filter(data);
+        filter.propagate(std::vector<std::vector<int>>(1, std::vector<int>(1, -1)));
+
+        REQUIRE(filter.is_feasible(0, 0, 0));
+    }
+}
+
 // ===========================================================================
 //  Unavailability pruning
 // ===========================================================================

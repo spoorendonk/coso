@@ -233,10 +233,18 @@ private:
         }
     }
 
-    /// Employees over max_employees, summed over a cell's demands.
+    /// Employees over max_employees, summed over a cell's demands.  Workers
+    /// are credited cheapest first, as everywhere, with over-cover breaking
+    /// ties: a soft cap at over_weight 0 prices an extra worker the same as
+    /// an uncapped demand, and the index order alone would then prune a
+    /// worker who could cover the uncapped one at no over-cover.
     [[nodiscard]] int over_cover(std::span<RosteringData::Demand const> demands,
                                  std::vector<int> const& workers) const {
-        auto const counts = credit_cover(data_, demands, workers);
+        auto const counts = credit_cover(data_, demands, workers, [&](int j, int k) {
+            return std::pair{
+                cover_marginal(demands[j], k),
+                cover_units(demands[j], k).second - cover_units(demands[j], k - 1).second};
+        });
         int over = 0;
         for (size_t j = 0; j < demands.size(); ++j) {
             over += cover_units(demands[j], counts[j]).second;
