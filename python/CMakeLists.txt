@@ -31,9 +31,13 @@ if(TARGET Python::Module)
 endif()
 
 # Place the compiled extension module inside the coso/ package directory
-# so that `from coso._coso import ...` works at build time.
-set_target_properties(_coso PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/coso"
-)
+# so that `from coso._coso import ...` works at build time. Only the default
+# measure build does: the local CI also builds COSO_MEASURE=double, and a second
+# build writing there would silently replace the module the checkout imports.
+if(COSO_MEASURE STREQUAL "int")
+    set_target_properties(_coso PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/coso"
+    )
+endif()
 
 install(TARGETS _coso DESTINATION coso)
