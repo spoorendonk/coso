@@ -145,8 +145,8 @@ TEST_CASE("CostEvaluator: route_cost = objective + penalty", "[cost_evaluator]")
     CostEvaluator eval(100);
 
     route.set_clients({0, 1, 2});  // excess=2
-    int64_t obj = eval.route_objective(route);
-    int64_t pen = eval.route_penalty(route);
+    auto obj = eval.route_objective(route);
+    auto pen = eval.route_penalty(route);
     CHECK(eval.route_cost(route) == obj + pen);
 }
 
@@ -160,19 +160,19 @@ TEST_CASE("CostEvaluator: eval_insert_cost matches actual cost change", "[cost_e
 
     Route route(data, 0);
     route.set_clients({0, 1});
-    int64_t old_cost = eval.route_cost(route);
+    auto old_cost = eval.route_cost(route);
 
     // Test inserting client 2 at every position.
     for (int pos = 0; pos <= route.size(); ++pos) {
-        int64_t delta = eval.eval_insert_cost(route, pos, 2);
+        auto delta = eval.eval_insert_cost(route, pos, 2);
 
         // Actually insert and compare.
         Route copy(data, 0);
         copy.set_clients({0, 1});
         copy.insert(pos, 2);
-        int64_t new_cost = eval.route_cost(copy);
+        auto new_cost = eval.route_cost(copy);
 
-        CHECK(delta == new_cost - old_cost);
+        CHECK(coso::costs_match(delta, new_cost - old_cost));
     }
 }
 
@@ -181,7 +181,7 @@ TEST_CASE("CostEvaluator: eval_insert_cost accounts for prizes", "[cost_evaluato
     CostEvaluator eval(100);
 
     Route route(data, 0);
-    int64_t delta = eval.eval_insert_cost(route, 0, 0);
+    auto delta = eval.eval_insert_cost(route, 0, 0);
 
     // Inserting client 0 (prize=50): distance=20, prize=-50.
     // Delta = 20 - 50 = -30.
@@ -198,17 +198,17 @@ TEST_CASE("CostEvaluator: eval_remove_cost matches actual cost change", "[cost_e
 
     Route route(data, 0);
     route.set_clients({0, 1, 2});
-    int64_t old_cost = eval.route_cost(route);
+    auto old_cost = eval.route_cost(route);
 
     for (int pos = 0; pos < route.size(); ++pos) {
-        int64_t delta = eval.eval_remove_cost(route, pos);
+        auto delta = eval.eval_remove_cost(route, pos);
 
         Route copy(data, 0);
         copy.set_clients({0, 1, 2});
         copy.remove(pos);
-        int64_t new_cost = eval.route_cost(copy);
+        auto new_cost = eval.route_cost(copy);
 
-        CHECK(delta == new_cost - old_cost);
+        CHECK(coso::costs_match(delta, new_cost - old_cost));
     }
 }
 
@@ -218,16 +218,16 @@ TEST_CASE("CostEvaluator: eval_remove_cost accounts for prizes", "[cost_evaluato
 
     Route route(data, 0);
     route.set_clients({0, 1});
-    int64_t old_cost = eval.route_cost(route);
+    auto old_cost = eval.route_cost(route);
 
     // Remove client 0 (prize=50).
-    int64_t delta = eval.eval_remove_cost(route, 0);
+    auto delta = eval.eval_remove_cost(route, 0);
 
     Route copy(data, 0);
     copy.set_clients({1});
-    int64_t new_cost = eval.route_cost(copy);
+    auto new_cost = eval.route_cost(copy);
 
-    CHECK(delta == new_cost - old_cost);
+    CHECK(coso::costs_match(delta, new_cost - old_cost));
 }
 
 // ===========================================================================
@@ -242,13 +242,13 @@ TEST_CASE("CostEvaluator: insert + remove delta sums to zero", "[cost_evaluator]
     route.set_clients({0, 1});
 
     // Insert client 3 at position 1.
-    int64_t insert_delta = eval.eval_insert_cost(route, 1, 3);
+    auto insert_delta = eval.eval_insert_cost(route, 1, 3);
 
     // Actually insert.
     route.insert(1, 3);
 
     // Remove client 3 (now at position 1).
-    int64_t remove_delta = eval.eval_remove_cost(route, 1);
+    auto remove_delta = eval.eval_remove_cost(route, 1);
 
     // Net delta should be zero.
     CHECK(insert_delta + remove_delta == 0);
@@ -302,8 +302,8 @@ TEST_CASE("CostEvaluator: eval_splice_cost equals the change in route_cost",
 
                     INFO("first=" << first << " last=" << last << " |seq|=" << seq.size()
                                   << " piecewise=" << (eval == &piecewise));
-                    CHECK(eval->eval_splice_cost(route, first, last, seq) ==
-                          eval->route_cost(spliced) - eval->route_cost(route));
+                    CHECK(coso::costs_match(eval->eval_splice_cost(route, first, last, seq),
+                                            eval->route_cost(spliced) - eval->route_cost(route)));
                 }
             }
         }
@@ -311,7 +311,7 @@ TEST_CASE("CostEvaluator: eval_splice_cost equals the change in route_cost",
         // Removing every client prices the route back to zero.
         Route whole(data, 0);
         whole.set_clients(base);
-        CHECK(eval->eval_splice_cost(whole, 0, n, {}) == -eval->route_cost(whole));
+        CHECK(coso::costs_match(eval->eval_splice_cost(whole, 0, n, {}), -eval->route_cost(whole)));
     }
 }
 
@@ -327,12 +327,13 @@ TEST_CASE("CostEvaluator: insert and remove deltas price time warp and duration 
     for (int pos = 0; pos <= route.size(); ++pos) {
         Route after = route;
         after.insert(pos, 4);
-        CHECK(eval.eval_insert_cost(route, pos, 4) ==
-              eval.route_cost(after) - eval.route_cost(route));
+        CHECK(coso::costs_match(eval.eval_insert_cost(route, pos, 4),
+                                eval.route_cost(after) - eval.route_cost(route)));
     }
     for (int pos = 0; pos < route.size(); ++pos) {
         Route after = route;
         after.remove(pos);
-        CHECK(eval.eval_remove_cost(route, pos) == eval.route_cost(after) - eval.route_cost(route));
+        CHECK(coso::costs_match(eval.eval_remove_cost(route, pos),
+                                eval.route_cost(after) - eval.route_cost(route)));
     }
 }

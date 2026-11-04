@@ -46,8 +46,7 @@ Solution GeneticAlgorithm::run(CostEvaluator const& eval, StopCriterion& stop) {
     }
 
     // Track the best feasible cost found so far.
-    int64_t best_cost =
-        pop.has_feasible() ? pop.best_feasible().cost(eval) : std::numeric_limits<int64_t>::max();
+    Cost best_cost = pop.has_feasible() ? pop.best_feasible().cost(eval) : kCostMax;
 
     // Main HGS loop.
     while (!stop.should_stop()) {

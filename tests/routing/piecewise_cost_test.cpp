@@ -119,7 +119,7 @@ TEST_CASE("PiecewiseLinearFunction: delta across segments equals evaluate diff",
           "[piecewise_cost]") {
     PiecewiseLinearFunction f({{0, 0}, {100, 100}, {200, 300}});
 
-    int64_t d = f.delta(50, 150);
+    auto d = f.delta(50, 150);
     CHECK(d == f.evaluate(150) - f.evaluate(50));
 }
 
@@ -241,16 +241,16 @@ TEST_CASE("CostEvaluator: piecewise delta evaluation for insert",
 
     Route route(data, 0);
     route.set_clients({0, 1});
-    int64_t old_cost = eval.route_cost(route);
+    auto old_cost = eval.route_cost(route);
 
     // Test inserting client 2 at every position.
     for (int pos = 0; pos <= route.size(); ++pos) {
-        int64_t delta = eval.eval_insert_cost(route, pos, 2);
+        auto delta = eval.eval_insert_cost(route, pos, 2);
 
         Route copy(data, 0);
         copy.set_clients({0, 1});
         copy.insert(pos, 2);
-        int64_t new_cost = eval.route_cost(copy);
+        auto new_cost = eval.route_cost(copy);
 
         CHECK(delta == new_cost - old_cost);
     }
@@ -264,15 +264,15 @@ TEST_CASE("CostEvaluator: piecewise delta evaluation for remove",
 
     Route route(data, 0);
     route.set_clients({0, 1, 2});
-    int64_t old_cost = eval.route_cost(route);
+    auto old_cost = eval.route_cost(route);
 
     for (int pos = 0; pos < route.size(); ++pos) {
-        int64_t delta = eval.eval_remove_cost(route, pos);
+        auto delta = eval.eval_remove_cost(route, pos);
 
         Route copy(data, 0);
         copy.set_clients({0, 1, 2});
         copy.remove(pos);
-        int64_t new_cost = eval.route_cost(copy);
+        auto new_cost = eval.route_cost(copy);
 
         CHECK(delta == new_cost - old_cost);
     }

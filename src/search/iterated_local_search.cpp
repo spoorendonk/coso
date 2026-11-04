@@ -31,10 +31,10 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval, StopCriterion& stop
 
     // Track the best solution found.
     Solution best = current;
-    int64_t best_cost = best.cost(eval);
+    Cost best_cost = best.cost(eval);
 
     // Initialize acceptance criterion (default: LAHC with list length 5000).
-    int64_t current_cost = current.cost(eval);
+    Cost current_cost = current.cost(eval);
     AcceptanceCriterion acceptance =
         acceptance_.value_or(AcceptanceCriterion(LateAcceptance(5000)));
     acceptance.init(current_cost);
@@ -48,7 +48,7 @@ Solution IteratedLocalSearch::run(CostEvaluator const& eval, StopCriterion& stop
         // Step 4: Local search.
         ls.run(candidate, eval, &stop);
 
-        int64_t candidate_cost = candidate.cost(eval);
+        Cost candidate_cost = candidate.cost(eval);
 
         // Step 5: Acceptance criterion.
         if (acceptance.accept(candidate_cost, current_cost)) {
@@ -169,14 +169,14 @@ void IteratedLocalSearch::recreate_(Solution& sol, std::vector<int> const& remov
     for (int client : order) {
         int best_vehicle = -1;
         int best_pos = -1;
-        int64_t best_delta = std::numeric_limits<int64_t>::max();
+        Cost best_delta = kCostMax;
 
         for (int v = 0; v < sol.num_routes(); ++v) {
             auto const& route = sol.route(v);
             int route_size = route.size();
 
             for (int pos = 0; pos <= route_size; ++pos) {
-                int64_t delta = eval.eval_insert_cost(route, pos, client);
+                Cost delta = eval.eval_insert_cost(route, pos, client);
                 if (delta < best_delta) {
                     best_delta = delta;
                     best_vehicle = v;

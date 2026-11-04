@@ -28,7 +28,7 @@ PiecewiseLinearFunction::PiecewiseLinearFunction(std::vector<Breakpoint> breakpo
 //  Segment lookup
 // ---------------------------------------------------------------------------
 
-int PiecewiseLinearFunction::find_segment_(int x) const {
+int PiecewiseLinearFunction::find_segment_(Measure x) const {
     int n = static_cast<int>(breakpoints_.size());
 
     // Clamp to valid segment range.
@@ -58,7 +58,7 @@ int PiecewiseLinearFunction::find_segment_(int x) const {
 //  Evaluation
 // ---------------------------------------------------------------------------
 
-int64_t PiecewiseLinearFunction::evaluate(int x) const {
+Cost PiecewiseLinearFunction::evaluate(Measure x) const {
     int seg = find_segment_(x);
     auto const& p0 = breakpoints_[seg];
     auto const& p1 = breakpoints_[seg + 1];
@@ -66,15 +66,15 @@ int64_t PiecewiseLinearFunction::evaluate(int x) const {
     // Linear interpolation/extrapolation:
     //   y = p0.y + (x - p0.x) * (p1.y - p0.y) / (p1.x - p0.x)
     //
-    // Use 64-bit arithmetic to avoid overflow in the numerator.
-    int64_t dx = p1.x - p0.x;
-    int64_t dy = p1.y - p0.y;
-    int64_t offset = static_cast<int64_t>(x) - p0.x;
+    // Cost arithmetic: 64-bit in the integer builds, to avoid overflow in the numerator.
+    Cost dx = p1.x - p0.x;
+    Cost dy = p1.y - p0.y;
+    Cost offset = static_cast<Cost>(x) - p0.x;
 
     return p0.y + (offset * dy) / dx;
 }
 
-int64_t PiecewiseLinearFunction::delta(int x_old, int x_new) const {
+Cost PiecewiseLinearFunction::delta(Measure x_old, Measure x_new) const {
     if (x_old == x_new) {
         return 0;
     }
@@ -87,9 +87,9 @@ int64_t PiecewiseLinearFunction::delta(int x_old, int x_new) const {
         auto const& p0 = breakpoints_[seg_old];
         auto const& p1 = breakpoints_[seg_old + 1];
 
-        int64_t dx = p1.x - p0.x;
-        int64_t dy = p1.y - p0.y;
-        int64_t x_delta = static_cast<int64_t>(x_new) - x_old;
+        Cost dx = p1.x - p0.x;
+        Cost dy = p1.y - p0.y;
+        Cost x_delta = static_cast<Cost>(x_new) - x_old;
 
         return (x_delta * dy) / dx;
     }
@@ -114,12 +114,12 @@ PiecewiseLinearFunction PiecewiseLinearFunction::tiered(std::vector<int> const& 
 
     bps.push_back({0, 0});
 
-    int64_t cumulative_y = 0;
+    Cost cumulative_y = 0;
     int prev_x = 0;
 
     for (size_t i = 0; i < thresholds.size(); ++i) {
         int x = thresholds[i];
-        cumulative_y += static_cast<int64_t>(x - prev_x) * rates[i];
+        cumulative_y += static_cast<Cost>(x - prev_x) * rates[i];
         bps.push_back({x, static_cast<int>(cumulative_y)});
         prev_x = x;
     }

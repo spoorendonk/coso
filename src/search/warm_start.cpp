@@ -134,7 +134,7 @@ bool cheapest_insert(Solution& sol, int client, ProblemData const& data,
 
     int best_route = -1;
     int best_pos = -1;
-    int64_t best_delta = INT64_MAX;
+    Cost best_delta = kCostMax;
 
     for (int r = 0; r < sol.num_routes(); ++r) {
         Route const& route = sol.route(r);
@@ -142,7 +142,7 @@ bool cheapest_insert(Solution& sol, int client, ProblemData const& data,
 
         // Evaluate inserting at every position 0..n.
         for (int pos = 0; pos <= n; ++pos) {
-            int64_t delta = eval.eval_insert_cost(route, pos, client);
+            Cost delta = eval.eval_insert_cost(route, pos, client);
             if (delta < best_delta) {
                 best_delta = delta;
                 best_route = r;
@@ -179,7 +179,7 @@ bool segment_has_pinned(Route const& route, int start, int count, PinSet const& 
 /// was found and applied.  Uses exact cost computation to prevent cycling.
 bool try_relocate_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData const& data,
                             PinSet const& pins) {
-    int64_t best_delta = 0;
+    Cost best_delta = 0;
     int best_from_route = -1, best_from_pos = -1;
     int best_to_route = -1, best_to_pos = -1;
     int best_client = -1;
@@ -203,10 +203,10 @@ bool try_relocate_with_pins(Solution& sol, CostEvaluator const& eval, ProblemDat
                         continue;
                     }
 
-                    int64_t delta;
+                    Cost delta;
                     if (ra == rb) {
                         // Intra-route: build modified route and compare.
-                        int64_t cost_before = eval.route_cost(route_a);
+                        Cost cost_before = eval.route_cost(route_a);
                         auto clients =
                             std::vector<int>(route_a.clients().begin(), route_a.clients().end());
                         // Remove from pa, insert at adjusted position.
@@ -235,7 +235,7 @@ bool try_relocate_with_pins(Solution& sol, CostEvaluator const& eval, ProblemDat
         }
     }
 
-    if (best_delta >= 0) {
+    if (!is_improving(best_delta)) {
         return false;
     }
 
@@ -255,7 +255,7 @@ bool try_relocate_with_pins(Solution& sol, CostEvaluator const& eval, ProblemDat
 /// avoid approximate delta errors that could cause cycling.
 bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData const& data,
                         PinSet const& pins) {
-    int64_t best_delta = 0;
+    Cost best_delta = 0;
     int best_ra = -1, best_pa = -1;
     int best_rb = -1, best_pb = -1;
 
@@ -280,7 +280,7 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
 
                     // Compute exact delta by building modified client lists
                     // and evaluating the cost difference.
-                    int64_t cost_before = eval.route_cost(route_a);
+                    Cost cost_before = eval.route_cost(route_a);
                     if (ra != rb) {
                         cost_before += eval.route_cost(route_b);
                     }
@@ -296,8 +296,8 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
                         // Temporarily set and evaluate.
                         Route tmp_a(data, route_a.vehicle_type());
                         tmp_a.set_clients(std::move(clients_a));
-                        int64_t cost_after = eval.route_cost(tmp_a);
-                        int64_t delta = cost_after - cost_before;
+                        Cost cost_after = eval.route_cost(tmp_a);
+                        Cost delta = cost_after - cost_before;
                         if (delta < best_delta) {
                             best_delta = delta;
                             best_ra = ra;
@@ -312,8 +312,8 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
                         Route tmp_b(data, route_b.vehicle_type());
                         tmp_a.set_clients(std::move(clients_a));
                         tmp_b.set_clients(std::move(clients_b));
-                        int64_t cost_after = eval.route_cost(tmp_a) + eval.route_cost(tmp_b);
-                        int64_t delta = cost_after - cost_before;
+                        Cost cost_after = eval.route_cost(tmp_a) + eval.route_cost(tmp_b);
+                        Cost delta = cost_after - cost_before;
                         if (delta < best_delta) {
                             best_delta = delta;
                             best_ra = ra;
@@ -327,7 +327,7 @@ bool try_swap_with_pins(Solution& sol, CostEvaluator const& eval, ProblemData co
         }
     }
 
-    if (best_delta >= 0) {
+    if (!is_improving(best_delta)) {
         return false;
     }
 

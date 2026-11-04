@@ -377,13 +377,13 @@ TEST_CASE("Route: eval_insert_distance matches actual insert", "[route]") {
     route.set_clients({0, 1});
 
     for (int pos = 0; pos <= route.size(); ++pos) {
-        int delta = route.eval_insert_distance(pos, 2);
+        auto delta = route.eval_insert_distance(pos, 2);
 
         Route copy(data, 0);
         copy.set_clients({0, 1});
-        int old_dist = copy.distance();
+        auto old_dist = copy.distance();
         copy.insert(pos, 2);
-        int new_dist = copy.distance();
+        auto new_dist = copy.distance();
 
         CHECK(delta == new_dist - old_dist);
     }
@@ -396,13 +396,13 @@ TEST_CASE("Route: eval_remove_distance matches actual remove", "[route]") {
     route.set_clients({0, 1, 2});
 
     for (int pos = 0; pos < route.size(); ++pos) {
-        int delta = route.eval_remove_distance(pos);
+        auto delta = route.eval_remove_distance(pos);
 
         Route copy(data, 0);
         copy.set_clients({0, 1, 2});
-        int old_dist = copy.distance();
+        auto old_dist = copy.distance();
         copy.remove(pos);
-        int new_dist = copy.distance();
+        auto new_dist = copy.distance();
 
         CHECK(delta == new_dist - old_dist);
     }
@@ -461,7 +461,7 @@ TEST_CASE("Route: eval on empty route", "[route]") {
     int excess = route.eval_insert_load(0, 0);
     CHECK(excess == 0);  // demand=3, capacity=10
 
-    int dist_delta = route.eval_insert_distance(0, 0);
+    auto dist_delta = route.eval_insert_distance(0, 0);
     // depot -> c0 -> depot = 20, was 0.
     CHECK(dist_delta == 20);
 }

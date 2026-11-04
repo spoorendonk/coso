@@ -96,12 +96,12 @@ TEST_CASE("LocalSearch: improves a badly ordered solution", "[localsearch]") {
 
     // All 6 clients in one route, badly ordered.
     auto sol = make_solution(data, {{2, 4, 0, 5, 1, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
 
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost <= old_cost);
     CHECK(ls.last_num_moves() > 0);
     check_all_clients_assigned(sol, data);
@@ -117,11 +117,11 @@ TEST_CASE("LocalSearch: reaches a local optimum (no further improvement)", "[loc
     LocalSearch ls(data);
     ls.run(sol, eval);
 
-    int64_t cost_after_first = sol.cost(eval);
+    auto cost_after_first = sol.cost(eval);
 
     // Running again should find no improvement (already at local optimum).
     ls.run(sol, eval);
-    int64_t cost_after_second = sol.cost(eval);
+    auto cost_after_second = sol.cost(eval);
 
     CHECK(cost_after_second == cost_after_first);
     CHECK(ls.last_num_moves() == 0);
@@ -147,7 +147,7 @@ TEST_CASE("LocalSearch: handles single-client routes", "[localsearch]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0}, {1}, {2}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
@@ -170,12 +170,12 @@ TEST_CASE("LocalSearch: separates inter-mixed clusters", "[localsearch][clustere
                                        {1, 7, 3, 9},    // mixed A+B
                                        {4, 10, 5, 11},  // mixed A+B
                                    });
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
 
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost < old_cost);
     CHECK(ls.last_num_moves() > 0);
     check_all_clients_assigned(sol, data);
@@ -190,7 +190,7 @@ TEST_CASE("LocalSearch: works with granular neighbours", "[localsearch][granular
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{2, 4, 0, 5, 1, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
@@ -208,7 +208,7 @@ TEST_CASE("LocalSearch: granular clustered instance", "[localsearch][granular][c
                                        {1, 7, 3, 9},
                                        {4, 10, 5, 11},
                                    });
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
@@ -226,12 +226,12 @@ TEST_CASE("LocalSearch: improves nearest-neighbour solution", "[localsearch][con
     CostEvaluator eval(100);
 
     auto sol = construction::nearest_neighbour(data, eval);
-    int64_t nn_cost = sol.cost(eval);
+    auto nn_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
 
-    int64_t ls_cost = sol.cost(eval);
+    auto ls_cost = sol.cost(eval);
     // Local search should not worsen the solution.
     CHECK(ls_cost <= nn_cost);
     check_all_clients_assigned(sol, data);
@@ -242,12 +242,12 @@ TEST_CASE("LocalSearch: improves Clarke-Wright solution", "[localsearch][constru
     CostEvaluator eval(100);
 
     auto sol = construction::clarke_wright(data, eval);
-    int64_t cw_cost = sol.cost(eval);
+    auto cw_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
 
-    int64_t ls_cost = sol.cost(eval);
+    auto ls_cost = sol.cost(eval);
     CHECK(ls_cost <= cw_cost);
     check_all_clients_assigned(sol, data);
 }
@@ -272,12 +272,12 @@ TEST_CASE("LocalSearch: reduces capacity violations", "[localsearch][capacity]")
 
     // Route 0 = [0, 1, 4] demand=16 > cap=10 (overloaded).
     auto sol = make_solution(data, {{0, 1, 4}, {2, 3, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);
 
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost < old_cost);
     check_all_clients_assigned(sol, data);
 }
@@ -366,7 +366,7 @@ TEST_CASE("LocalSearch: on time-windowed routes every accepted move lowers route
     Solution sol(data);
     sol.set_route_clients(0, {4, 0, 3});
     sol.set_route_clients(1, {1, 5, 2});
-    int64_t before = sol.cost(eval);
+    auto before = sol.cost(eval);
 
     LocalSearch ls(data);
     ls.run(sol, eval);

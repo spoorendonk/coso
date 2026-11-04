@@ -61,8 +61,8 @@ inline std::vector<int> remove_clients_at(Route const& route, std::vector<int> c
 }
 
 /// Evaluate the cost of a route with a given client sequence.
-inline int64_t eval_route_cost(ProblemData const& data, CostEvaluator const& eval, int vehicle_type,
-                               std::vector<int> const& clients) {
+inline Cost eval_route_cost(ProblemData const& data, CostEvaluator const& eval, int vehicle_type,
+                            std::vector<int> const& clients) {
     Route temp(data, vehicle_type);
     temp.set_clients(clients);
     return eval.route_cost(temp);
@@ -82,12 +82,11 @@ inline int64_t eval_route_cost(ProblemData const& data, CostEvaluator const& eva
 /// @param[out] best_d   Best delivery insertion position (in the sequence
 ///                       after pickup insertion, so always >= best_p + 1).
 /// @return The total route cost with the pair inserted at the best positions.
-inline int64_t find_best_pair_insertion(std::vector<int> const& base_clients,
-                                        ProblemData const& data, CostEvaluator const& eval,
-                                        int vehicle_type, int pickup, int delivery, int& best_p,
-                                        int& best_d) {
+inline Cost find_best_pair_insertion(std::vector<int> const& base_clients, ProblemData const& data,
+                                     CostEvaluator const& eval, int vehicle_type, int pickup,
+                                     int delivery, int& best_p, int& best_d) {
     int n = static_cast<int>(base_clients.size());
-    int64_t best_cost = std::numeric_limits<int64_t>::max();
+    Cost best_cost = kCostMax;
     best_p = 0;
     best_d = 1;
 
@@ -109,7 +108,7 @@ inline int64_t find_best_pair_insertion(std::vector<int> const& base_clients,
                 }
             }
 
-            int64_t cost = eval_route_cost(data, eval, vehicle_type, candidate);
+            Cost cost = eval_route_cost(data, eval, vehicle_type, candidate);
             if (cost < best_cost) {
                 best_cost = cost;
                 best_p = pp;
@@ -150,7 +149,7 @@ bool RelocatePair::find_best_move(Solution const& sol, CostEvaluator const& eval
         int delivery = requests[r].delivery;
 
         auto const& route_a = sol.route(ra);
-        int64_t old_cost_a = eval.route_cost(route_a);
+        Cost old_cost_a = eval.route_cost(route_a);
 
         // Positions of pickup and delivery in the source route.
         int pos_p = locations[pickup].pos;
@@ -160,13 +159,13 @@ bool RelocatePair::find_best_move(Solution const& sol, CostEvaluator const& eval
         std::vector<int> sorted_pos = {pos_p, pos_d};
         std::sort(sorted_pos.begin(), sorted_pos.end());
         auto reduced_a = remove_clients_at(route_a, sorted_pos);
-        int64_t cost_a_without = eval_route_cost(data, eval, route_a.vehicle_type(), reduced_a);
-        int64_t remove_delta = cost_a_without - old_cost_a;
+        Cost cost_a_without = eval_route_cost(data, eval, route_a.vehicle_type(), reduced_a);
+        Cost remove_delta = cost_a_without - old_cost_a;
 
         // Try inserting into each candidate target route.
         auto try_route = [&](int rb) {
             auto const& route_b = sol.route(rb);
-            int64_t old_cost_b = eval.route_cost(route_b);
+            Cost old_cost_b = eval.route_cost(route_b);
 
             std::vector<int> base;
             if (rb == ra) {
@@ -183,10 +182,10 @@ bool RelocatePair::find_best_move(Solution const& sol, CostEvaluator const& eval
             int vt = (rb == ra) ? route_a.vehicle_type() : route_b.vehicle_type();
 
             int bp, bd;
-            int64_t new_cost_b =
+            Cost new_cost_b =
                 find_best_pair_insertion(base, data, eval, vt, pickup, delivery, bp, bd);
 
-            int64_t delta;
+            Cost delta;
             if (rb == ra) {
                 // Intra-route: delta = new_cost - old_cost.
                 delta = new_cost_b - old_cost_a;
@@ -246,7 +245,7 @@ bool RelocatePair::find_best_move(Solution const& sol, CostEvaluator const& eval
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void RelocatePair::apply(Solution& sol) const {
@@ -366,7 +365,7 @@ bool SwapPair::find_best_move(Solution const& sol, CostEvaluator const& eval,
         int da = requests[ra_req].delivery;
 
         auto const& route_a = sol.route(ra);
-        int64_t old_cost_a = eval.route_cost(route_a);
+        Cost old_cost_a = eval.route_cost(route_a);
 
         // Build route A without pair A.
         int pos_pa = locations[pa].pos;
@@ -390,8 +389,8 @@ bool SwapPair::find_best_move(Solution const& sol, CostEvaluator const& eval,
             int db = requests[rb_req].delivery;
 
             auto const& route_b = sol.route(rb);
-            int64_t old_cost_b = eval.route_cost(route_b);
-            int64_t old_total = old_cost_a + old_cost_b;
+            Cost old_cost_b = eval.route_cost(route_b);
+            Cost old_total = old_cost_a + old_cost_b;
 
             // Build route B without pair B.
             int pos_pb = locations[pb].pos;
@@ -402,15 +401,15 @@ bool SwapPair::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
             // Insert pair B into reduced route A at best positions.
             int bp_b, bd_b;
-            int64_t new_cost_a = find_best_pair_insertion(
-                reduced_a, data, eval, route_a.vehicle_type(), pb, db, bp_b, bd_b);
+            Cost new_cost_a = find_best_pair_insertion(reduced_a, data, eval,
+                                                       route_a.vehicle_type(), pb, db, bp_b, bd_b);
 
             // Insert pair A into reduced route B at best positions.
             int bp_a, bd_a;
-            int64_t new_cost_b = find_best_pair_insertion(
-                reduced_b, data, eval, route_b.vehicle_type(), pa, da, bp_a, bd_a);
+            Cost new_cost_b = find_best_pair_insertion(reduced_b, data, eval,
+                                                       route_b.vehicle_type(), pa, da, bp_a, bd_a);
 
-            int64_t delta = (new_cost_a + new_cost_b) - old_total;
+            Cost delta = (new_cost_a + new_cost_b) - old_total;
 
             if (delta < best_delta_) {
                 best_delta_ = delta;
@@ -465,7 +464,7 @@ bool SwapPair::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void SwapPair::apply(Solution& sol) const {

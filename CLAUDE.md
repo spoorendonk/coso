@@ -65,15 +65,15 @@ What this changes in practice:
 ## Build & Test
 
 ```clean
-rm -rf build
+rm -rf build build-double
 ```
 
 ```build
-cmake -B build && cmake --build build -j$(nproc)
+cmake -B build && cmake --build build -j$(nproc) && cmake -B build-double -DCOSO_MEASURE=double && cmake --build build-double -j$(nproc)
 ```
 
 ```test
-ctest --test-dir build --output-on-failure -j$(nproc)
+ctest --test-dir build --output-on-failure -j$(nproc) && ctest --test-dir build-double --output-on-failure -j$(nproc)
 ```
 
 `pre-push` runs the blocks above, so they must not depend on anything that is
@@ -109,6 +109,22 @@ either way:
 ```bash
 cmake -B build -DCOSO_BUILD_PYTHON=OFF && cmake --build build -j$(nproc)
 ```
+
+**Both measure builds are gated.** `COSO_MEASURE` picks the type of routing distances, durations,
+time windows, budgets and search costs (`coso::Measure` and `coso::Cost`): `int`, the default and
+the fastest; `int64` for scaled data that would overflow it, not gated; or `double`, the build that
+reproduces double-precision published values (#249). Benchmarks say which build their values need:
+
+| Set | Published values | Build |
+|---|---|---|
+| CVRPLIB `EUC_2D` | nint arcs, whatever the build: the rounding belongs to the format | any |
+| Solomon, exact-method optima (C101 = 827.3) | `floor(10 * d)`, times scaled by 10 | any |
+| Solomon, SINTEF best-known (C101 = 828.94) | double precision, totals to two decimals | `double` |
+| Gehring & Homberger, SINTEF best-known | double precision, totals to two decimals | `double` |
+| Chao TOP | three-decimal coordinates against `tmax` | `double` |
+
+In the double build, compare measures and costs through `is_zero_excess`, `measures_match`,
+`costs_match` and `is_improving` in `src/model/types.h`, never with `==` or `< 0`.
 
 Build with TBB (parallel solving):
 ```bash

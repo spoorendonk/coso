@@ -40,8 +40,8 @@ inline std::vector<ClientLocation> build_client_locations(Solution const& sol) {
 /// Evaluate intra-route relocate: remove client at from_pos, insert at
 /// to_pos (in the reduced sequence after removal).  Uses a temporary Route
 /// to get exact cost.
-inline int64_t eval_intra_relocate(Route const& route, CostEvaluator const& eval,
-                                   ProblemData const& data, int from_pos, int to_pos) {
+inline Cost eval_intra_relocate(Route const& route, CostEvaluator const& eval,
+                                ProblemData const& data, int from_pos, int to_pos) {
     int client = route.client(from_pos);
     std::vector<int> clients;
     clients.reserve(route.size());
@@ -75,7 +75,7 @@ bool Exchange10::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
         for (int pa = 0; pa < route_a.size(); ++pa) {
             int u = route_a.client(pa);
-            int64_t remove_delta = eval.eval_remove_cost(route_a, pa);
+            Cost remove_delta = eval.eval_remove_cost(route_a, pa);
 
             // Lambda to evaluate inserting into route rb.
             auto try_route = [&](int rb) {
@@ -94,7 +94,7 @@ bool Exchange10::find_best_move(Solution const& sol, CostEvaluator const& eval,
                             continue;
                         }
 
-                        int64_t delta = eval_intra_relocate(route_a, eval, data, pa, pb);
+                        Cost delta = eval_intra_relocate(route_a, eval, data, pa, pb);
 
                         if (delta < best_delta_) {
                             best_delta_ = delta;
@@ -108,8 +108,8 @@ bool Exchange10::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 } else {
                     // Inter-route: remove from A + insert into B.
                     for (int pb = 0; pb <= route_b.size(); ++pb) {
-                        int64_t insert_delta = eval.eval_insert_cost(route_b, pb, u);
-                        int64_t delta = remove_delta + insert_delta;
+                        Cost insert_delta = eval.eval_insert_cost(route_b, pb, u);
+                        Cost delta = remove_delta + insert_delta;
 
                         if (delta < best_delta_) {
                             best_delta_ = delta;
@@ -150,7 +150,7 @@ bool Exchange10::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange10::apply(Solution& sol) const {
@@ -200,7 +200,7 @@ bool Exchange11::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 auto const& route_b = sol.route(rb);
                 int v = route_b.client(pb);
 
-                int64_t delta;
+                Cost delta;
                 if (ra == rb) {
                     // Intra-route swap: build temporary route.
                     std::vector<int> new_clients;
@@ -257,7 +257,7 @@ bool Exchange11::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange11::apply(Solution& sol) const {
@@ -327,7 +327,7 @@ bool Exchange20::find_best_move(Solution const& sol, CostEvaluator const& eval,
             int c1 = route_a.client(pa);
             int c2 = route_a.client(pa + 1);
             std::array<int, 2> const pair{c1, c2};
-            int64_t remove_delta = eval.eval_splice_cost(route_a, pa, pa + 2, {});
+            Cost remove_delta = eval.eval_splice_cost(route_a, pa, pa + 2, {});
 
             auto try_route = [&](int rb) {
                 if (rb == ra) {
@@ -335,8 +335,8 @@ bool Exchange20::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 }
                 auto const& route_b = sol.route(rb);
                 for (int pb = 0; pb <= route_b.size(); ++pb) {
-                    int64_t insert_delta = eval.eval_splice_cost(route_b, pb, pb, pair);
-                    int64_t delta = remove_delta + insert_delta;
+                    Cost insert_delta = eval.eval_splice_cost(route_b, pb, pb, pair);
+                    Cost delta = remove_delta + insert_delta;
                     if (delta < best_delta_) {
                         best_delta_ = delta;
                         from_route_ = ra;
@@ -377,7 +377,7 @@ bool Exchange20::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange20::apply(Solution& sol) const {
@@ -454,8 +454,8 @@ bool Exchange21::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 Route temp_b(data, route_b.vehicle_type());
                 temp_b.set_clients(std::move(new_b));
 
-                int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
-                                eval.route_cost(route_a) - eval.route_cost(route_b);
+                Cost delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
+                             eval.route_cost(route_a) - eval.route_cost(route_b);
 
                 if (delta < best_delta_) {
                     best_delta_ = delta;
@@ -501,7 +501,7 @@ bool Exchange21::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange21::apply(Solution& sol) const {
@@ -598,7 +598,7 @@ bool Exchange22::find_best_move(Solution const& sol, CostEvaluator const& eval,
                     }
                     Route temp(data, route_a.vehicle_type());
                     temp.set_clients(std::move(new_clients));
-                    int64_t delta = eval.route_cost(temp) - eval.route_cost(route_a);
+                    Cost delta = eval.route_cost(temp) - eval.route_cost(route_a);
 
                     if (delta < best_delta_) {
                         best_delta_ = delta;
@@ -637,8 +637,8 @@ bool Exchange22::find_best_move(Solution const& sol, CostEvaluator const& eval,
                     Route temp_b(data, route_b.vehicle_type());
                     temp_b.set_clients(std::move(new_b));
 
-                    int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
-                                    eval.route_cost(route_a) - eval.route_cost(route_b);
+                    Cost delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
+                                 eval.route_cost(route_a) - eval.route_cost(route_b);
 
                     if (delta < best_delta_) {
                         best_delta_ = delta;
@@ -682,7 +682,7 @@ bool Exchange22::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange22::apply(Solution& sol) const {
@@ -774,7 +774,7 @@ bool Exchange30::find_best_move(Solution const& sol, CostEvaluator const& eval,
             }
             Route temp_reduced(data, route_a.vehicle_type());
             temp_reduced.set_clients(std::move(reduced));
-            int64_t remove_delta = eval.route_cost(temp_reduced) - eval.route_cost(route_a);
+            Cost remove_delta = eval.route_cost(temp_reduced) - eval.route_cost(route_a);
 
             auto try_route = [&](int rb) {
                 if (rb == ra) {
@@ -796,8 +796,8 @@ bool Exchange30::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
                     Route temp_b(data, route_b.vehicle_type());
                     temp_b.set_clients(std::move(new_b));
-                    int64_t insert_delta = eval.route_cost(temp_b) - eval.route_cost(route_b);
-                    int64_t delta = remove_delta + insert_delta;
+                    Cost insert_delta = eval.route_cost(temp_b) - eval.route_cost(route_b);
+                    Cost delta = remove_delta + insert_delta;
 
                     if (delta < best_delta_) {
                         best_delta_ = delta;
@@ -835,7 +835,7 @@ bool Exchange30::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange30::apply(Solution& sol) const {
@@ -913,8 +913,8 @@ bool Exchange31::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 Route temp_b(data, route_b.vehicle_type());
                 temp_b.set_clients(std::move(new_b));
 
-                int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
-                                eval.route_cost(route_a) - eval.route_cost(route_b);
+                Cost delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
+                             eval.route_cost(route_a) - eval.route_cost(route_b);
 
                 if (delta < best_delta_) {
                     best_delta_ = delta;
@@ -960,7 +960,7 @@ bool Exchange31::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange31::apply(Solution& sol) const {
@@ -1071,8 +1071,8 @@ bool Exchange32::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 Route temp_b(data, route_b.vehicle_type());
                 temp_b.set_clients(std::move(new_b));
 
-                int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
-                                eval.route_cost(route_a) - eval.route_cost(route_b);
+                Cost delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
+                             eval.route_cost(route_a) - eval.route_cost(route_b);
 
                 if (delta < best_delta_) {
                     best_delta_ = delta;
@@ -1118,7 +1118,7 @@ bool Exchange32::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange32::apply(Solution& sol) const {
@@ -1225,7 +1225,7 @@ bool Exchange33::find_best_move(Solution const& sol, CostEvaluator const& eval,
                     }
                     Route temp(data, route_a.vehicle_type());
                     temp.set_clients(std::move(new_clients));
-                    int64_t delta = eval.route_cost(temp) - eval.route_cost(route_a);
+                    Cost delta = eval.route_cost(temp) - eval.route_cost(route_a);
 
                     if (delta < best_delta_) {
                         best_delta_ = delta;
@@ -1266,8 +1266,8 @@ bool Exchange33::find_best_move(Solution const& sol, CostEvaluator const& eval,
                     Route temp_b(data, route_b.vehicle_type());
                     temp_b.set_clients(std::move(new_b));
 
-                    int64_t delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
-                                    eval.route_cost(route_a) - eval.route_cost(route_b);
+                    Cost delta = eval.route_cost(temp_a) + eval.route_cost(temp_b) -
+                                 eval.route_cost(route_a) - eval.route_cost(route_b);
 
                     if (delta < best_delta_) {
                         best_delta_ = delta;
@@ -1311,7 +1311,7 @@ bool Exchange33::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void Exchange33::apply(Solution& sol) const {
@@ -1430,9 +1430,9 @@ bool SwapTails::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 Route temp_b(data, route_b.vehicle_type());
                 temp_b.set_clients(std::move(new_b));
 
-                int64_t new_cost = eval.route_cost(temp_a) + eval.route_cost(temp_b);
-                int64_t old_cost = eval.route_cost(route_a) + eval.route_cost(route_b);
-                int64_t delta = new_cost - old_cost;
+                Cost new_cost = eval.route_cost(temp_a) + eval.route_cost(temp_b);
+                Cost old_cost = eval.route_cost(route_a) + eval.route_cost(route_b);
+                Cost delta = new_cost - old_cost;
 
                 if (delta < best_delta_) {
                     best_delta_ = delta;
@@ -1495,7 +1495,7 @@ bool SwapTails::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void SwapTails::apply(Solution& sol) const {

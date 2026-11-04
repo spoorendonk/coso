@@ -40,7 +40,7 @@ void GuidedLocalSearch::penalize(Solution const& sol) {
     }
 }
 
-int64_t GuidedLocalSearch::augmented_cost(Solution const& sol) const {
+Cost GuidedLocalSearch::augmented_cost(Solution const& sol) const {
     auto sol_edges = edges_(sol);
 
     // Augmented cost = lambda * sum_{(i,j) in sol} d(i,j) * p(i,j)
@@ -55,7 +55,11 @@ int64_t GuidedLocalSearch::augmented_cost(Solution const& sol) const {
         }
     }
 
-    return static_cast<int64_t>(std::llround(lambda_ * total));
+    if constexpr (std::is_floating_point_v<Cost>) {
+        return lambda_ * total;
+    } else {
+        return static_cast<Cost>(std::llround(lambda_ * total));
+    }
 }
 
 void GuidedLocalSearch::reset() {

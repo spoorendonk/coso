@@ -31,10 +31,10 @@ public:
     void apply(Solution& sol) const;
 
     /// The cost delta of the best move found (negative = improving).
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     int client_ = -1;  ///< Client to insert.
     int route_ = -1;   ///< Target route index.
@@ -64,10 +64,10 @@ public:
     void apply(Solution& sol) const;
 
     /// The cost delta of the best move found (negative = improving).
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     int route_ = -1;  ///< Route containing the client to remove.
     int pos_ = -1;    ///< Position of the client in the route.

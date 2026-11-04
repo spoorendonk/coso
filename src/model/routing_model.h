@@ -71,6 +71,10 @@ enum class RoutingObjective {
 /// ClientParams::required, add_request and every depot after the first (#196), and any objective
 /// but MinDistance (#238) -- the search minimises distance minus prizes whatever is declared, while
 /// Result is still computed under the declared objective.
+///
+/// Distances the model computes from coordinates are rounded to the nearest integer while Measure
+/// is integral and exact when it is floating point (COSO_MEASURE, #249).  A benchmark with its own
+/// rounding convention declares its arcs through set_distance and set_duration.
 class RoutingModel {
 public:
     // -- Stored entry types --------------------------------------------------

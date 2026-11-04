@@ -60,10 +60,10 @@ public:
     void apply(Solution& sol) const;
 
     /// The cost delta of the best move found (negative = improving).
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     // Stored move description.
     enum MoveType { Swap, RelocateAtoB, RelocateBtoA };

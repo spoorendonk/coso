@@ -18,14 +18,14 @@ static void cheapest_insert(Solution& sol, int client, ProblemData const& data,
                             CostEvaluator const& eval) {
     int best_vehicle = -1;
     int best_pos = -1;
-    int64_t best_cost = INT64_MAX;
+    Cost best_cost = kCostMax;
 
     for (int v = 0; v < sol.num_routes(); ++v) {
         auto const& route = sol.route(v);
         int n = route.size();
 
         for (int pos = 0; pos <= n; ++pos) {
-            int64_t delta = eval.eval_insert_cost(route, pos, client);
+            Cost delta = eval.eval_insert_cost(route, pos, client);
             if (delta < best_cost) {
                 best_cost = delta;
                 best_vehicle = v;

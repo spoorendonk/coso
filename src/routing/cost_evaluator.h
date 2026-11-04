@@ -83,15 +83,15 @@ public:
     /// Compute the objective cost of a single route (no penalties).
     ///
     /// objective = distance - sum of prizes for served clients
-    [[nodiscard]] int64_t route_objective(Route const& route) const;
+    [[nodiscard]] Cost route_objective(Route const& route) const;
 
     /// Compute the penalty cost of a single route.
     ///
     /// penalty = load_excess * load_penalty
-    [[nodiscard]] int64_t route_penalty(Route const& route) const;
+    [[nodiscard]] Cost route_penalty(Route const& route) const;
 
     /// Penalized cost = objective + penalty.
-    [[nodiscard]] int64_t route_cost(Route const& route) const;
+    [[nodiscard]] Cost route_cost(Route const& route) const;
 
     // -------------------------------------------------------------------
     //  Delta evaluation helpers
@@ -104,19 +104,19 @@ public:
     /// @param pos     Position to insert at (0..route.size()).
     /// @param client  Client index to insert.
     /// @return Delta cost (positive = more expensive).
-    [[nodiscard]] int64_t eval_insert_cost(Route const& route, int pos, int client) const;
+    [[nodiscard]] Cost eval_insert_cost(Route const& route, int pos, int client) const;
 
     /// Cost change from removing a client from a route at the given position.
     ///
     /// @param route   The current route (before removal).
     /// @param pos     Position to remove (0..route.size()-1).
     /// @return Delta cost (negative = cheaper).
-    [[nodiscard]] int64_t eval_remove_cost(Route const& route, int pos) const;
+    [[nodiscard]] Cost eval_remove_cost(Route const& route, int pos) const;
 
     /// Cost change from replacing the clients at [first, last) with seq.
     /// Equal to route_cost of the spliced route minus route_cost(route).
-    [[nodiscard]] int64_t eval_splice_cost(Route const& route, int first, int last,
-                                           std::span<int const> seq) const;
+    [[nodiscard]] Cost eval_splice_cost(Route const& route, int first, int last,
+                                        std::span<int const> seq) const;
 
 private:
     int load_penalty_;
@@ -128,10 +128,10 @@ private:
     std::unique_ptr<PiecewiseLinearFunction> duration_cost_func_;
 
     /// Compute distance cost: the piecewise function if set, else distance.
-    [[nodiscard]] int64_t distance_cost_(Measure distance) const;
+    [[nodiscard]] Cost distance_cost_(Measure distance) const;
 
     /// Compute duration cost: the piecewise function if set, else zero.
-    [[nodiscard]] int64_t duration_cost_(Measure duration) const;
+    [[nodiscard]] Cost duration_cost_(Measure duration) const;
 };
 
 }  // namespace coso

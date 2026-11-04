@@ -227,7 +227,7 @@ TEST_CASE("overconstrained: cost includes objective and penalties", "[overconstr
 
     // Feasible solution: overconstrained cost = pure objective.
     CostEvaluator zero_eval(0, 0, 0);
-    int64_t obj = sol.objective(zero_eval);
+    auto obj = sol.objective(zero_eval);
 
     CHECK(overconstrained_cost(sol, config) == obj);
 }
@@ -244,8 +244,8 @@ TEST_CASE("overconstrained: cost with penalties exceeds base objective",
     config.capacity_violation_penalty = 500;
 
     CostEvaluator zero_eval(0, 0, 0);
-    int64_t obj = sol.objective(zero_eval);
-    int64_t oc_cost = overconstrained_cost(sol, config);
+    auto obj = sol.objective(zero_eval);
+    auto oc_cost = overconstrained_cost(sol, config);
 
     CHECK(oc_cost > obj);
     CHECK(oc_cost == obj + overconstrained_penalty(sol, config));

@@ -288,13 +288,13 @@ Solution PartitionedSearch::merge_sub_solutions_(
         auto unassigned = std::vector<int>(merged.unassigned().begin(), merged.unassigned().end());
         for (int c : unassigned) {
             // Find cheapest insertion across all routes.
-            int64_t best_delta = std::numeric_limits<int64_t>::max();
+            Cost best_delta = kCostMax;
             int best_route = -1;
             int best_pos = -1;
             for (int r = 0; r < num_routes; ++r) {
                 auto const& route = merged.route(r);
                 for (int p = 0; p <= route.size(); ++p) {
-                    int64_t delta = eval.eval_insert_cost(route, p, c);
+                    Cost delta = eval.eval_insert_cost(route, p, c);
                     if (delta < best_delta) {
                         best_delta = delta;
                         best_route = r;
@@ -318,7 +318,7 @@ Solution PartitionedSearch::merge_sub_solutions_(
 Solution PartitionedSearch::run(Solution const& initial, CostEvaluator const& eval,
                                 LocalSearchFn const& local_search, PartitionConfig const& config) {
     Solution best = initial;
-    int64_t best_cost = best.cost(eval);
+    Cost best_cost = best.cost(eval);
 
     for (int iter = 0; iter < config.max_iterations; ++iter) {
         // 1. Partition clients.
@@ -349,7 +349,7 @@ Solution PartitionedSearch::run(Solution const& initial, CostEvaluator const& ev
         local_search(merged, eval);
 
         // 6. Update best.
-        int64_t merged_cost = merged.cost(eval);
+        Cost merged_cost = merged.cost(eval);
         if (merged_cost < best_cost) {
             best = std::move(merged);
             best_cost = merged_cost;

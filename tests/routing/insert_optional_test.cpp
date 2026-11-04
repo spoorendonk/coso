@@ -61,7 +61,7 @@ TEST_CASE("InsertOptional: inserts high-prize optional client", "[insert_optiona
     auto sol = make_solution(data, {{0, 1}, {2, 3}});
     CHECK(sol.num_unassigned() == 2);
 
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     InsertOptional op;
     bool found = op.find_best_move(sol, eval, data);
@@ -71,7 +71,7 @@ TEST_CASE("InsertOptional: inserts high-prize optional client", "[insert_optiona
     CHECK(op.best_delta() < 0);
 
     op.apply(sol);
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost < old_cost);
     CHECK(new_cost - old_cost == op.best_delta());
 
@@ -133,14 +133,14 @@ TEST_CASE("InsertOptional: delta matches actual cost change", "[insert_optional]
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1}, {2, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     InsertOptional op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -167,13 +167,13 @@ TEST_CASE("InsertOptional: chooses best position across routes", "[insert_option
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1}, {2, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     InsertOptional op;
     REQUIRE(op.find_best_move(sol, eval, data));
 
     // Verify this is indeed the best possible insertion by trying all.
-    int64_t best_delta = 0;
+    coso::Cost best_delta = 0;
     for (int c : sol.unassigned()) {
         if (data.client(c).required) {
             continue;
@@ -181,14 +181,14 @@ TEST_CASE("InsertOptional: chooses best position across routes", "[insert_option
         for (int r = 0; r < sol.num_routes(); ++r) {
             auto const& route = sol.route(r);
             for (int p = 0; p <= route.size(); ++p) {
-                int64_t d = eval.eval_insert_cost(route, p, c);
+                auto d = eval.eval_insert_cost(route, p, c);
                 if (d < best_delta) {
                     best_delta = d;
                 }
             }
         }
     }
-    CHECK(op.best_delta() == best_delta);
+    CHECK(coso::costs_match(op.best_delta(), best_delta));
 }
 
 // ===========================================================================
@@ -202,7 +202,7 @@ TEST_CASE("RemoveOptional: removes low-prize optional client", "[remove_optional
     // Serve all clients including both optional ones.
     // C5(15,15) with prize=5 is probably not worth the detour.
     auto sol = make_solution(data, {{0, 1}, {2, 5, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RemoveOptional op;
     bool found = op.find_best_move(sol, eval, data);
@@ -211,7 +211,7 @@ TEST_CASE("RemoveOptional: removes low-prize optional client", "[remove_optional
     CHECK(op.best_delta() < 0);
 
     op.apply(sol);
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost < old_cost);
     CHECK(new_cost - old_cost == op.best_delta());
 }
@@ -223,7 +223,7 @@ TEST_CASE("RemoveOptional: does not remove high-prize client", "[remove_optional
     // Only the high-prize optional client 4 is served.
     // It is close to the route and has prize=100, so removal is costly.
     auto sol = make_solution(data, {{0, 4, 1}, {2, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RemoveOptional op;
     bool found = op.find_best_move(sol, eval, data);
@@ -265,14 +265,14 @@ TEST_CASE("RemoveOptional: delta matches actual cost change", "[remove_optional]
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1}, {2, 5, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RemoveOptional op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 

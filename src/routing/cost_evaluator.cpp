@@ -37,14 +37,14 @@ bool CostEvaluator::has_duration_cost_function() const noexcept {
 //  Private helpers: piecewise or plain cost computation
 // ---------------------------------------------------------------------------
 
-int64_t CostEvaluator::distance_cost_(Measure distance) const {
+Cost CostEvaluator::distance_cost_(Measure distance) const {
     if (distance_cost_func_) {
         return distance_cost_func_->evaluate(distance);
     }
     return distance;
 }
 
-int64_t CostEvaluator::duration_cost_(Measure duration) const {
+Cost CostEvaluator::duration_cost_(Measure duration) const {
     if (duration_cost_func_) {
         return duration_cost_func_->evaluate(duration);
     }
@@ -55,12 +55,12 @@ int64_t CostEvaluator::duration_cost_(Measure duration) const {
 //  Route-level cost
 // ---------------------------------------------------------------------------
 
-int64_t CostEvaluator::route_objective(Route const& route) const {
+Cost CostEvaluator::route_objective(Route const& route) const {
     if (route.empty()) {
         return 0;
     }
 
-    int64_t obj = 0;
+    Cost obj = 0;
 
     // Distance cost (piecewise or plain).
     obj += distance_cost_(route.distance());
@@ -77,19 +77,19 @@ int64_t CostEvaluator::route_objective(Route const& route) const {
     return obj;
 }
 
-int64_t CostEvaluator::route_penalty(Route const& route) const {
-    int64_t pen = 0;
+Cost CostEvaluator::route_penalty(Route const& route) const {
+    Cost pen = 0;
 
     // Load excess penalty.
-    pen += static_cast<int64_t>(route.load_excess()) * load_penalty_;
+    pen += static_cast<Cost>(route.load_excess()) * load_penalty_;
 
     // Time warp penalty.
-    pen += static_cast<int64_t>(route.time_warp()) * tw_penalty_;
+    pen += static_cast<Cost>(route.time_warp()) * tw_penalty_;
 
     return pen;
 }
 
-int64_t CostEvaluator::route_cost(Route const& route) const {
+Cost CostEvaluator::route_cost(Route const& route) const {
     return route_objective(route) + route_penalty(route);
 }
 
@@ -97,21 +97,21 @@ int64_t CostEvaluator::route_cost(Route const& route) const {
 //  Delta evaluation
 // ---------------------------------------------------------------------------
 
-int64_t CostEvaluator::eval_insert_cost(Route const& route, int pos, int client) const {
+Cost CostEvaluator::eval_insert_cost(Route const& route, int pos, int client) const {
     return eval_splice_cost(route, pos, pos, std::span<int const>(&client, 1));
 }
 
-int64_t CostEvaluator::eval_remove_cost(Route const& route, int pos) const {
+Cost CostEvaluator::eval_remove_cost(Route const& route, int pos) const {
     return eval_splice_cost(route, pos, pos + 1, {});
 }
 
-int64_t CostEvaluator::eval_splice_cost(Route const& route, int first, int last,
-                                        std::span<int const> seq) const {
+Cost CostEvaluator::eval_splice_cost(Route const& route, int first, int last,
+                                     std::span<int const> seq) const {
     auto after = route.eval_splice(first, last, seq);
 
     // Distance and duration terms, which route_objective charges only on a
     // non-empty route.
-    int64_t delta = 0;
+    Cost delta = 0;
     if (after.size > 0) {
         delta += distance_cost_(after.distance) + duration_cost_(after.duration);
     }
@@ -127,8 +127,8 @@ int64_t CostEvaluator::eval_splice_cost(Route const& route, int first, int last,
         delta -= route.data().client(client).prize;
     }
 
-    delta += static_cast<int64_t>(after.load_excess - route.load_excess()) * load_penalty_;
-    delta += static_cast<int64_t>(after.time_warp - route.time_warp()) * tw_penalty_;
+    delta += static_cast<Cost>(after.load_excess - route.load_excess()) * load_penalty_;
+    delta += static_cast<Cost>(after.time_warp - route.time_warp()) * tw_penalty_;
 
     return delta;
 }

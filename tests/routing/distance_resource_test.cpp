@@ -4,6 +4,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cmath>
+#include <type_traits>
+
 using namespace coso;
 
 // ---------------------------------------------------------------------------
@@ -261,7 +264,7 @@ TEST_CASE("Route: eval_insert_dist_excess matches actual insert", "[route][dista
 
     // Evaluate inserting client 2 at every position.
     for (int pos = 0; pos <= route.size(); ++pos) {
-        int predicted = route.eval_insert_dist_excess(pos, 2);
+        auto predicted = route.eval_insert_dist_excess(pos, 2);
 
         Route copy(data, 0);
         copy.set_clients({0, 1});
@@ -278,7 +281,7 @@ TEST_CASE("Route: eval_remove_dist_excess matches actual remove", "[route][dista
     route.set_clients({0, 1, 2});
 
     for (int pos = 0; pos < route.size(); ++pos) {
-        int predicted = route.eval_remove_dist_excess(pos);
+        auto predicted = route.eval_remove_dist_excess(pos);
 
         Route copy(data, 0);
         copy.set_clients({0, 1, 2});
@@ -292,7 +295,7 @@ TEST_CASE("Route: eval_insert_dist_excess on empty route", "[route][distance_res
     auto data = make_constrained_instance();
     Route route(data, 0);
 
-    int predicted = route.eval_insert_dist_excess(0, 0);
+    auto predicted = route.eval_insert_dist_excess(0, 0);
 
     Route verify(data, 0);
     verify.insert(0, 0);
@@ -316,7 +319,7 @@ TEST_CASE("Route: eval_insert_dist_excess with all clients and positions",
 
         // Try inserting client 3 at every position.
         for (int pos = 0; pos <= route.size(); ++pos) {
-            int predicted = route.eval_insert_dist_excess(pos, 3);
+            auto predicted = route.eval_insert_dist_excess(pos, 3);
 
             Route copy(data, 0);
             copy.set_clients(base_clients);
@@ -344,7 +347,11 @@ TEST_CASE("Route: distance unchanged from original computation", "[route][distan
     CHECK(route.distance() == 20);
 
     // Route: depot(0,0) -> c0(10,0) -> c3(0,10) -> depot(0,0)
-    // Distance: 10 + round(sqrt(100+100)) + 10 = 10 + 14 + 10 = 34
+    // Distance: 10 + sqrt(100+100) + 10, the diagonal rounded to 14 while Measure is integral.
     route.set_clients({0, 3});
-    CHECK(route.distance() == 34);
+    double diagonal = std::sqrt(200.0);
+    if constexpr (std::is_integral_v<coso::Measure>) {
+        diagonal = std::round(diagonal);
+    }
+    CHECK(coso::measures_match(route.distance(), static_cast<coso::Measure>(20.0 + diagonal)));
 }

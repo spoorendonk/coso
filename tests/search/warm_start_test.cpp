@@ -219,7 +219,7 @@ TEST_CASE("warm_start — cost is positive and consistent", "[warm_start]") {
 
     Solution sol = warm_start(routes, data, eval);
 
-    int64_t cost = sol.cost(eval);
+    auto cost = sol.cost(eval);
     CHECK(cost > 0);
 
     // Distance should be positive.

@@ -14,7 +14,7 @@ namespace coso {
 
 namespace {
 
-constexpr int64_t kInf = std::numeric_limits<int64_t>::max();
+constexpr Cost kInf = kCostMax;
 
 /// Location of a client in the solution: (route index, position in route).
 struct ClientLocation {
@@ -44,13 +44,13 @@ std::vector<ClientLocation> build_client_locations(Solution const& sol) {
 struct Top3 {
     struct Entry {
         int pos = -1;
-        int64_t delta = kInf;
-        int64_t free = kInf;
+        Cost delta = kInf;
+        Cost free = kInf;
     };
     std::array<Entry, 3> e;
     Entry best_full;
 
-    void add(int pos, int64_t delta, int64_t free) {
+    void add(int pos, Cost delta, Cost free) {
         if (delta < best_full.delta) {
             best_full = {pos, delta, free};
         }
@@ -70,18 +70,18 @@ struct Top3 {
 /// Load-penalty delta of a route after replacing the client at pos with
 /// `client` in place.  For delivery-only loads this is the load-penalty delta
 /// of removing that client and inserting `client` anywhere.
-int64_t replace_load_penalty(Route const& route, int pos, int client, int64_t lp) {
+Cost replace_load_penalty(Route const& route, int pos, int client, Cost lp) {
     auto const& data = route.data();
     auto merged = LoadResource::merge(route.load_prefix(pos - 1), LoadResource::init(data, client));
     merged = LoadResource::merge(merged, route.load_suffix(pos + 1));
     int excess = LoadResource::excess(merged, data.vehicle_type(route.vehicle_type()));
-    return static_cast<int64_t>(excess - route.load_excess()) * lp;
+    return static_cast<Cost>(excess - route.load_excess()) * lp;
 }
 
 /// Exact penalised delta of a route after removing the client at remove_pos
 /// and inserting `client` at position `insert_pos` of the reduced sequence.
-int64_t exact_swap_delta(Route const& route, CostEvaluator const& eval, int remove_pos, int client,
-                         int insert_pos, std::vector<int>& seq) {
+Cost exact_swap_delta(Route const& route, CostEvaluator const& eval, int remove_pos, int client,
+                      int insert_pos, std::vector<int>& seq) {
     seq.clear();
     auto clients = route.clients();
     if (insert_pos <= remove_pos) {
@@ -100,8 +100,8 @@ int64_t exact_swap_delta(Route const& route, CostEvaluator const& eval, int remo
 /// client at remove_pos, choosing among the cached top-3 positions not
 /// adjacent to the removed client and the removed client's own place.
 /// Returns (free delta, position in the reduced sequence).
-std::pair<int64_t, int> best_insert_without(Top3 const& top, int64_t inplace_free, int remove_pos) {
-    int64_t best = inplace_free;
+std::pair<Cost, int> best_insert_without(Top3 const& top, Cost inplace_free, int remove_pos) {
+    Cost best = inplace_free;
     int best_pos = remove_pos;
     for (auto const& entry : top.e) {
         if (entry.pos < 0) {
@@ -132,23 +132,22 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
 
     auto locations = build_client_locations(sol);
     int num_routes = sol.num_routes();
-    int64_t lp = eval.load_penalty();
+    Cost lp = eval.load_penalty();
 
     std::vector<bool> route_seen(num_routes);
     std::vector<int> candidate_routes;
-    std::vector<int64_t> rem_a, rem_b, rem_free_a, rem_free_b;
+    std::vector<Cost> rem_a, rem_b, rem_free_a, rem_free_b;
     std::vector<Top3> top_u_in_b, top_v_in_a;
     std::vector<int> seq;
 
     // Removal deltas of every client of a route: full, and load-free.
-    auto removal_costs = [&](Route const& route, std::vector<int64_t>& full,
-                             std::vector<int64_t>& free) {
+    auto removal_costs = [&](Route const& route, std::vector<Cost>& full, std::vector<Cost>& free) {
         full.resize(route.size());
         free.resize(route.size());
         for (int p = 0; p < route.size(); ++p) {
             full[p] = eval.eval_remove_cost(route, p);
-            free[p] = full[p] -
-                      static_cast<int64_t>(route.eval_remove_load(p) - route.load_excess()) * lp;
+            free[p] =
+                full[p] - static_cast<Cost>(route.eval_remove_load(p) - route.load_excess()) * lp;
         }
     };
 
@@ -158,9 +157,9 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
         for (int i = 0; i < source.size(); ++i) {
             int c = source.client(i);
             for (int p = 0; p <= target.size(); ++p) {
-                int64_t d = eval.eval_insert_cost(target, p, c);
-                int64_t load =
-                    static_cast<int64_t>(target.eval_insert_load(p, c) - target.load_excess()) * lp;
+                Cost d = eval.eval_insert_cost(target, p, c);
+                Cost load =
+                    static_cast<Cost>(target.eval_insert_load(p, c) - target.load_excess()) * lp;
                 tops[i].add(p, d, d - load);
             }
         }
@@ -214,7 +213,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
             // A pair costs O(|A||B|(|A|+|B|)); stop between pairs, keeping the
             // best exact move found so far, which is still a valid one.
             if (stop && stop->should_stop()) {
-                return best_delta_ < 0;
+                return is_improving(best_delta_);
             }
 
             if (!removal_a_done) {
@@ -229,7 +228,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
             //     removing both and inserting each at its best position in the
             //     other route, from the cached removal and top-3 insertion
             //     costs plus the exact load penalty of the exchange.
-            int64_t best_est = 0;
+            Cost best_est = 0;
             int best_pa = -1;
             int best_pb = -1;
             int best_ins_u = -1;
@@ -240,21 +239,21 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
                 for (int pb = 0; pb < route_b.size(); ++pb) {
                     int v = route_b.client(pb);
 
-                    int64_t load_a = replace_load_penalty(route_a, pa, v, lp);
-                    int64_t load_b = replace_load_penalty(route_b, pb, u, lp);
+                    Cost load_a = replace_load_penalty(route_a, pa, v, lp);
+                    Cost load_b = replace_load_penalty(route_b, pb, u, lp);
 
                     // Cost of putting v exactly where u was, without load.
-                    int64_t inplace_v =
+                    Cost inplace_v =
                         eval.eval_splice_cost(route_a, pa, pa + 1, std::span<int const>(&v, 1)) -
                         load_a - rem_free_a[pa];
-                    int64_t inplace_u =
+                    Cost inplace_u =
                         eval.eval_splice_cost(route_b, pb, pb + 1, std::span<int const>(&u, 1)) -
                         load_b - rem_free_b[pb];
 
                     auto [ins_v, pos_v] = best_insert_without(top_v_in_a[pb], inplace_v, pa);
                     auto [ins_u, pos_u] = best_insert_without(top_u_in_b[pa], inplace_u, pb);
 
-                    int64_t est = rem_free_a[pa] + ins_v + load_a + rem_free_b[pb] + ins_u + load_b;
+                    Cost est = rem_free_a[pa] + ins_v + load_a + rem_free_b[pb] + ins_u + load_b;
                     if (est < best_est) {
                         best_est = est;
                         best_pa = pa;
@@ -270,8 +269,8 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
             if (best_pa >= 0) {
                 int u = route_a.client(best_pa);
                 int v = route_b.client(best_pb);
-                int64_t delta = exact_swap_delta(route_a, eval, best_pa, v, best_ins_v, seq) +
-                                exact_swap_delta(route_b, eval, best_pb, u, best_ins_u, seq);
+                Cost delta = exact_swap_delta(route_a, eval, best_pa, v, best_ins_v, seq) +
+                             exact_swap_delta(route_b, eval, best_pb, u, best_ins_u, seq);
                 if (delta < best_delta_) {
                     best_delta_ = delta;
                     move_type_ = Swap;
@@ -290,7 +289,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
             //     The two routes change independently, so this delta is exact.
             for (int pa = 0; pa < route_a.size(); ++pa) {
                 auto const& best = top_u_in_b[pa].best_full;
-                int64_t delta = rem_a[pa] + best.delta;
+                Cost delta = rem_a[pa] + best.delta;
                 if (delta < best_delta_) {
                     best_delta_ = delta;
                     move_type_ = RelocateAtoB;
@@ -308,7 +307,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
             // --- Degenerate case 2: relocate v from B to its best place in A.
             for (int pb = 0; pb < route_b.size(); ++pb) {
                 auto const& best = top_v_in_a[pb].best_full;
-                int64_t delta = rem_b[pb] + best.delta;
+                Cost delta = rem_b[pb] + best.delta;
                 if (delta < best_delta_) {
                     best_delta_ = delta;
                     move_type_ = RelocateBtoA;
@@ -325,7 +324,7 @@ bool SwapStar::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 // ---------------------------------------------------------------------------

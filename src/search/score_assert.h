@@ -24,6 +24,6 @@ void assert_solution_consistency(Solution const& sol, CostEvaluator const& eval,
 
 /// Verify that a predicted cost delta matches the actual cost change.
 /// Asserts |predicted - actual| == 0.
-void assert_cost_delta(int64_t predicted, int64_t actual, std::string_view context = "");
+void assert_cost_delta(Cost predicted, Cost actual, std::string_view context = "");
 
 }  // namespace coso::debug

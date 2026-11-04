@@ -306,11 +306,13 @@ Result solve(const std::string& instance_path, TimeLimit tl) {
     // The ProblemData::Builder computes Euclidean distances from coordinates
     // by default. For EXPLICIT instances, we need to set distances manually.
     // For other distance types (GEO, ATT), we also need to set them since
-    // the builder only computes EUC_2D.
+    // the builder only computes EUC_2D. And the builder rounds only while Measure
+    // is integral, whereas the format defines EUC_2D as rounded to the nearest
+    // integer (#249), so a non-integral build sets those from the format as well.
     if (inst.edge_weight_type == EdgeWeightType::EXPLICIT ||
         inst.edge_weight_type == EdgeWeightType::GEO ||
         inst.edge_weight_type == EdgeWeightType::ATT ||
-        inst.edge_weight_type == EdgeWeightType::CEIL_2D) {
+        inst.edge_weight_type == EdgeWeightType::CEIL_2D || !std::is_integral_v<Measure>) {
         int n = num_depots + client_idx;  // total model nodes
         for (int i = 0; i < inst.dimension; ++i) {
             int mi = node_to_model[i];

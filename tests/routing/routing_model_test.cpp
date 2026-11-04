@@ -52,21 +52,25 @@ bool serves_every_client(Result const& r, int n) {
     return true;
 }
 
-/// Rounded Euclidean distance, matching ProblemData::Builder::build.
-int euclid(double ax, double ay, double bx, double by) {
+/// Euclidean distance, matching ProblemData::Builder::build: rounded while Measure is integral.
+Measure euclid(double ax, double ay, double bx, double by) {
     double dx = ax - bx;
     double dy = ay - by;
-    return static_cast<int>(std::lround(std::sqrt(dx * dx + dy * dy)));
+    double d = std::sqrt(dx * dx + dy * dy);
+    if constexpr (std::is_integral_v<Measure>) {
+        d = std::round(d);
+    }
+    return static_cast<Measure>(d);
 }
 
 /// Length of a returned route over the given coordinates, depot first.
-int tour_length(std::vector<int> const& route, std::vector<Coord> const& client_coords,
-                Coord depot) {
+Measure tour_length(std::vector<int> const& route, std::vector<Coord> const& client_coords,
+                    Coord depot) {
     if (route.empty()) {
         return 0;
     }
     Coord prev = depot;
-    int total = 0;
+    Measure total = 0;
     for (int c : route) {
         Coord cur = client_coords[static_cast<size_t>(c)];
         total += euclid(prev.x, prev.y, cur.x, cur.y);
@@ -222,7 +226,7 @@ TEST_CASE("RoutingModel: client time windows are respected by the returned route
     std::vector<Coord> coords = {{10.0, 0.0}, {20.0, 0.0}, {30.0, 0.0}};
     std::vector<TimeWindow> windows = {{60, 70}, {30, 40}, {0, 30}};
     Coord prev = {0.0, 0.0};
-    int t = 0;
+    Measure t = 0;
     for (int c : r.routes()[0]) {
         Coord cur = coords[static_cast<size_t>(c)];
         t += euclid(prev.x, prev.y, cur.x, cur.y);

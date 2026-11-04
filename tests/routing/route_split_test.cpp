@@ -56,7 +56,7 @@ TEST_CASE("RouteSplit: finds improving split on bad single route", "[route_split
 
     // All clients in one route, two empty vehicles available.
     auto sol = make_solution(data, {{0, 1, 2, 3, 4, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RouteSplit op;
     bool found = op.find_best_move(sol, eval, data);
@@ -65,7 +65,7 @@ TEST_CASE("RouteSplit: finds improving split on bad single route", "[route_split
     CHECK(op.best_delta() < 0);
 
     op.apply(sol);
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost < old_cost);
 }
 
@@ -74,14 +74,14 @@ TEST_CASE("RouteSplit: delta matches actual cost change", "[route_split]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 2, 3, 4, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RouteSplit op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -157,7 +157,7 @@ TEST_CASE("RouteSplit: split reduces capacity violation", "[route_split]") {
     // Both on one route: 6 units of excess.
     auto sol = make_solution(data, {{0, 1}});
     CHECK_FALSE(sol.route(0).load_feasible());
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RouteSplit op;
     bool found = op.find_best_move(sol, eval, data);
@@ -182,7 +182,7 @@ TEST_CASE("RouteSplit: two-client route splits into two singletons", "[route_spl
     CostEvaluator eval(1000);
 
     auto sol = make_solution(data, {{0, 1}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RouteSplit op;
     bool found = op.find_best_move(sol, eval, data);

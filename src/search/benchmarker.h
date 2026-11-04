@@ -13,7 +13,7 @@ namespace coso {
 struct BenchmarkResult {
     std::string instance;     ///< Instance filename (without path).
     int bks = 0;              ///< Best known solution cost.
-    int64_t cost = 0;         ///< Solver cost.
+    Cost cost = 0;            ///< Solver cost.
     double gap_pct = 0.0;     ///< Gap to BKS as percentage: (cost - bks) / bks * 100.
     double elapsed_s = 0.0;   ///< Wall-clock time in seconds.
     double work_units = 0.0;  ///< Deterministic work consumed.

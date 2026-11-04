@@ -1,5 +1,7 @@
 #pragma once
 
+#include "model/types.h"
+
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -17,7 +19,8 @@ namespace coso {
 ///   - **Tiered pricing**: first 100km at rate A, next 200km at rate B.
 ///   - **Overtime penalties**: normal hours free, overtime at increasing rates.
 ///
-/// All arithmetic uses integers to match the routing engine's cost model.
+/// Breakpoints are integers. Evaluation uses Measure and Cost, so it is integer arithmetic in the
+/// integer builds and exact interpolation in the double build.
 class PiecewiseLinearFunction {
 public:
     /// A single breakpoint (x, y) on the piecewise linear function.
@@ -42,7 +45,7 @@ public:
     ///
     /// @param x  Input value.
     /// @return   Interpolated (or extrapolated) y-value.
-    [[nodiscard]] int64_t evaluate(int x) const;
+    [[nodiscard]] Cost evaluate(Measure x) const;
 
     /// Compute the cost change when x changes from x_old to x_new.
     ///
@@ -52,7 +55,7 @@ public:
     /// @param x_old  Previous x-value.
     /// @param x_new  New x-value.
     /// @return       Change in function value (positive = more costly).
-    [[nodiscard]] int64_t delta(int x_old, int x_new) const;
+    [[nodiscard]] Cost delta(Measure x_old, Measure x_new) const;
 
     /// Number of breakpoints.
     [[nodiscard]] int num_breakpoints() const noexcept {
@@ -102,7 +105,7 @@ private:
     /// Find the segment index for a given x-value.
     /// Returns the index i such that breakpoints_[i].x <= x < breakpoints_[i+1].x,
     /// or 0 if x < breakpoints_[0].x, or n-2 if x >= breakpoints_[n-1].x.
-    [[nodiscard]] int find_segment_(int x) const;
+    [[nodiscard]] int find_segment_(Measure x) const;
 };
 
 }  // namespace coso

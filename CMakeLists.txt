@@ -39,6 +39,16 @@ if(NOT COSO_BUILD_PYTHON)
 endif()
 option(COSO_INSTALL_GIT_HOOKS "Point core.hooksPath at .githooks/" ON)
 
+# The numeric type of routing distances, durations, time windows, budgets and
+# search costs (coso::Measure, coso::Cost in src/model/types.h). int is the
+# fastest and exact on integer data; double reproduces double-precision published
+# values (#249).
+set(COSO_MEASURE "int" CACHE STRING "Routing measure type: int, int64 or double")
+set_property(CACHE COSO_MEASURE PROPERTY STRINGS int int64 double)
+if(NOT COSO_MEASURE MATCHES "^(int|int64|double)$")
+    message(FATAL_ERROR "COSO_MEASURE must be int, int64 or double, not '${COSO_MEASURE}'")
+endif()
+
 # --------------------------------------------------------------------------- #
 #  Compiler cache                                                              #
 # --------------------------------------------------------------------------- #
@@ -219,6 +229,13 @@ target_include_directories(coso PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 target_compile_features(coso PUBLIC cxx_std_23)
+
+# PUBLIC, so every target that includes the headers agrees on the type.
+if(COSO_MEASURE STREQUAL "double")
+    target_compile_definitions(coso PUBLIC COSO_MEASURE_DOUBLE)
+elseif(COSO_MEASURE STREQUAL "int64")
+    target_compile_definitions(coso PUBLIC COSO_MEASURE_INT64)
+endif()
 
 # When building Python bindings, the static lib must be PIC-compatible.
 if(COSO_BUILD_PYTHON)

@@ -80,7 +80,7 @@ void assert_route_consistency(Route const& route, ProblemData const& data) {
         }
         expected_dist += data.dist(profile, last_node, depot);
     }
-    assert(route.distance() == expected_dist);
+    assert(measures_match(route.distance(), expected_dist));
 }
 
 // ---------------------------------------------------------------------------
@@ -129,29 +129,29 @@ void assert_solution_consistency(Solution const& sol, CostEvaluator const& eval,
     assert(sol.num_unassigned() == expected_unassigned);
 
     // Recompute total cost from scratch and compare.
-    int64_t recomputed_cost = 0;
+    Cost recomputed_cost = 0;
     for (int v = 0; v < sol.num_routes(); ++v) {
         recomputed_cost += eval.route_cost(sol.route(v));
     }
-    assert(sol.cost(eval) == recomputed_cost);
+    assert(costs_match(sol.cost(eval), recomputed_cost));
 
     // Recompute objective and penalty separately.
-    int64_t recomputed_obj = 0;
-    int64_t recomputed_pen = 0;
+    Cost recomputed_obj = 0;
+    Cost recomputed_pen = 0;
     for (int v = 0; v < sol.num_routes(); ++v) {
         recomputed_obj += eval.route_objective(sol.route(v));
         recomputed_pen += eval.route_penalty(sol.route(v));
     }
-    assert(sol.objective(eval) == recomputed_obj);
-    assert(sol.penalty(eval) == recomputed_pen);
+    assert(costs_match(sol.objective(eval), recomputed_obj));
+    assert(costs_match(sol.penalty(eval), recomputed_pen));
 }
 
 // ---------------------------------------------------------------------------
 //  Cost delta
 // ---------------------------------------------------------------------------
 
-void assert_cost_delta(int64_t predicted, int64_t actual, std::string_view context) {
-    if (predicted != actual) {
+void assert_cost_delta(Cost predicted, Cost actual, std::string_view context) {
+    if (!costs_match(predicted, actual)) {
         std::ostringstream oss;
         oss << "Score corruption: predicted delta = " << predicted << ", actual delta = " << actual
             << ", difference = " << (predicted - actual);

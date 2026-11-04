@@ -1,8 +1,10 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 namespace coso {
@@ -14,12 +16,74 @@ struct Coord {
 
 /// Numeric type of every routing distance, duration, time-window bound, service time and
 /// distance/duration budget, from the schema through the compiled matrices to the engine's route
-/// state. It is `int` today; whether it becomes `double` is #249's open decision, and this alias
-/// is the one place that switch is made.
+/// state, and of the search costs built from them. Chosen when compiling, with the CMake option
+/// COSO_MEASURE (#249): `int` is the default, exact on integer data and the fastest; `int64` is for
+/// scaled data that would overflow it; `double` is the build that reproduces double-precision
+/// published values (Solomon's and Gehring & Homberger's SINTEF tables, Chao's TOP budgets).
+#if defined(COSO_MEASURE_DOUBLE)
+using Measure = double;
+using Cost = double;
+#elif defined(COSO_MEASURE_INT64)
+using Measure = std::int64_t;
+using Cost = std::int64_t;
+#else
 using Measure = int;
+using Cost = std::int64_t;
+#endif
 
 /// Upper sentinel for an open time window ("no deadline").
 inline constexpr Measure kMeasureMax = std::numeric_limits<Measure>::max();
+
+/// Sentinel for "no cost seen yet" in a minimisation.
+inline constexpr Cost kCostMax = std::numeric_limits<Cost>::max();
+
+/// How far a double-build excess or cost may be from its exact value through accumulated rounding.
+/// A prefix/suffix merge and a recomputed sum differ by a few ulps of the largest route total, and
+/// a Gehring & Homberger total is about 1e5, whose ulp is about 1e-11. Penalty weights multiply a
+/// measure, so the cost tolerance is the wider one. Both are far below the two decimals published
+/// values carry. Integer builds compare exactly.
+inline constexpr double kMeasureTolerance = 1e-7;
+inline constexpr double kCostTolerance = 1e-6;
+
+/// Whether a non-negative excess (time warp, distance excess) counts as no violation.
+[[nodiscard]] constexpr bool is_zero_excess(Measure excess) noexcept {
+    if constexpr (std::is_floating_point_v<Measure>) {
+        return excess <= kMeasureTolerance;
+    } else {
+        return excess == 0;
+    }
+}
+
+/// Whether two measures are the same value up to accumulated rounding.
+[[nodiscard]] constexpr bool measures_match(Measure a, Measure b) noexcept {
+    if constexpr (std::is_floating_point_v<Measure>) {
+        return a - b <= kMeasureTolerance && b - a <= kMeasureTolerance;
+    } else {
+        return a == b;
+    }
+}
+
+/// Whether two costs are the same value up to accumulated rounding.  A penalised cost can reach
+/// 1e8, so past the absolute tolerance the allowance grows with the magnitude.
+[[nodiscard]] constexpr bool costs_match(Cost a, Cost b) noexcept {
+    if constexpr (std::is_floating_point_v<Cost>) {
+        Cost const magnitude = std::max(a < 0 ? -a : a, b < 0 ? -b : b);
+        Cost const allowed = std::max(kCostTolerance, 1e-9 * magnitude);
+        return a - b <= allowed && b - a <= allowed;
+    } else {
+        return a == b;
+    }
+}
+
+/// Whether a move's cost delta is a real improvement.  In the double build a delta inside the
+/// tolerance is rounding, and accepting it could make a descent cycle forever.
+[[nodiscard]] constexpr bool is_improving(Cost delta) noexcept {
+    if constexpr (std::is_floating_point_v<Cost>) {
+        return delta < -kCostTolerance;
+    } else {
+        return delta < 0;
+    }
+}
 
 /// Time window constraint: service must start within [start, end].
 struct TimeWindow {

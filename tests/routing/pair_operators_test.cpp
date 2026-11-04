@@ -114,7 +114,7 @@ TEST_CASE("RelocatePair: finds improving inter-route relocate", "[pair_operators
     // Spreading pairs across routes should reduce total distance.
     auto sol = make_solution(data, {{0, 1, 2, 3, 4, 5}});
 
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RelocatePair op;
     bool found = op.find_best_move(sol, eval, data);
@@ -123,7 +123,7 @@ TEST_CASE("RelocatePair: finds improving inter-route relocate", "[pair_operators
     CHECK(op.best_delta() < 0);
 
     op.apply(sol);
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost < old_cost);
     CHECK(new_cost - old_cost == op.best_delta());
 }
@@ -136,7 +136,7 @@ TEST_CASE("RelocatePair: maintains pickup-before-delivery precedence",
     // Put pairs on different routes.
     auto sol = make_solution(data, {{0, 1, 4, 5}, {2, 3}});
 
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RelocatePair op;
     bool found = op.find_best_move(sol, eval, data);
@@ -170,7 +170,7 @@ TEST_CASE("RelocatePair: maintains pickup-before-delivery precedence",
             }
         }
 
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
     }
 }
@@ -188,7 +188,7 @@ TEST_CASE("RelocatePair: no improving move when already optimal",
 
     // May or may not find improvement, but if it does, cost must decrease.
     if (found) {
-        int64_t old_cost = sol.cost(eval);
+        auto old_cost = sol.cost(eval);
         op.apply(sol);
         CHECK(sol.cost(eval) < old_cost);
     }
@@ -219,7 +219,7 @@ TEST_CASE("RelocatePair: intra-route improvement", "[pair_operators][relocate_pa
     // Reordering within the route should help.
     auto sol = make_solution(data, {{0, 2, 4, 1, 3, 5}});
 
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RelocatePair op;
     bool found = op.find_best_move(sol, eval, data);
@@ -227,7 +227,7 @@ TEST_CASE("RelocatePair: intra-route improvement", "[pair_operators][relocate_pa
     if (found) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         CHECK(new_cost - old_cost == op.best_delta());
     }
@@ -240,16 +240,16 @@ TEST_CASE("RelocatePair: delta prediction matches actual cost change",
 
     // Deliberate bad arrangement.
     auto sol = make_solution(data, {{4, 5, 2, 3}, {0, 1}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RelocatePair op;
     bool found = op.find_best_move(sol, eval, data);
 
     if (found) {
-        int64_t predicted_delta = op.best_delta();
+        auto predicted_delta = op.best_delta();
         op.apply(sol);
-        int64_t actual_delta = sol.cost(eval) - old_cost;
-        CHECK(predicted_delta == actual_delta);
+        auto actual_delta = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted_delta, actual_delta));
     }
 }
 
@@ -258,7 +258,7 @@ TEST_CASE("RelocatePair: works with granular neighbours", "[pair_operators][relo
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 2, 3, 4, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     RelocatePair op;
     bool found = op.find_best_move(sol, eval, data);
@@ -283,7 +283,7 @@ TEST_CASE("SwapPair: finds improving inter-route swap", "[pair_operators][swap_p
     // Swapping pairs 1 and 3 should be improving.
     auto sol = make_solution(data, {{0, 1, 6, 7}, {2, 3, 4, 5}});
 
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapPair op;
     bool found = op.find_best_move(sol, eval, data);
@@ -292,7 +292,7 @@ TEST_CASE("SwapPair: finds improving inter-route swap", "[pair_operators][swap_p
     CHECK(op.best_delta() < 0);
 
     op.apply(sol);
-    int64_t new_cost = sol.cost(eval);
+    auto new_cost = sol.cost(eval);
     CHECK(new_cost < old_cost);
     CHECK(new_cost - old_cost == op.best_delta());
 }
@@ -361,7 +361,7 @@ TEST_CASE("SwapPair: no move when pairs already on optimal routes", "[pair_opera
     bool found = op.find_best_move(sol, eval, data);
 
     if (found) {
-        int64_t old_cost = sol.cost(eval);
+        auto old_cost = sol.cost(eval);
         op.apply(sol);
         CHECK(sol.cost(eval) < old_cost);
     }
@@ -372,16 +372,16 @@ TEST_CASE("SwapPair: delta prediction matches actual cost change", "[pair_operat
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 6, 7}, {2, 3, 4, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapPair op;
     bool found = op.find_best_move(sol, eval, data);
 
     if (found) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -429,7 +429,7 @@ TEST_CASE("SwapPair: works with granular neighbours", "[pair_operators][swap_pai
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 6, 7}, {2, 3, 4, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapPair op;
     bool found = op.find_best_move(sol, eval, data);
@@ -467,7 +467,7 @@ TEST_CASE("SwapPair + RelocatePair combined improvement", "[pair_operators]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 6, 7}, {2, 3, 4, 5}});
-    int64_t initial_cost = sol.cost(eval);
+    auto initial_cost = sol.cost(eval);
 
     // Alternate between the two operators until no improvement.
     bool improved = true;

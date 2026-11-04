@@ -28,7 +28,7 @@ Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop) {
     StopCriterion ils_stop(kIlsTimeLimitS, kIlsIterations, 0);
 
     Solution best = ils.run(eval, ils_stop, &stop);
-    int64_t best_cost = best.cost(eval);
+    Cost best_cost = best.cost(eval);
 
     // Phase 2: Run GA (HGS) for the remaining budget.
     //
@@ -42,7 +42,7 @@ Solution PortfolioSolver::run(CostEvaluator const& eval, StopCriterion& stop) {
         ga.set_seed(seed_);
 
         Solution ga_sol = ga.run(eval, stop);
-        int64_t ga_cost = ga_sol.cost(eval);
+        Cost ga_cost = ga_sol.cost(eval);
 
         if (ga_cost < best_cost) {
             best = std::move(ga_sol);

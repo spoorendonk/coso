@@ -44,10 +44,10 @@ public:
     void apply(Solution& sol) const;
 
     /// The cost delta of the best move found (negative = improving).
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     // Stored move: remove client at from_pos_ in from_route_,
     //              insert at to_pos_ in to_route_.
@@ -77,10 +77,10 @@ public:
 
     void apply(Solution& sol) const;
 
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     int route_a_ = -1;
     int pos_a_ = -1;  // position in route A
@@ -104,10 +104,10 @@ public:
 
     void apply(Solution& sol) const;
 
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     int from_route_ = -1;
     int from_pos_ = -1;  // position of first client in the pair
@@ -125,10 +125,10 @@ public:
     [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
     int route_a_ = -1;
     int pos_a_ = -1;
     int route_b_ = -1;
@@ -145,10 +145,10 @@ public:
     [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
     int route_a_ = -1;
     int pos_a_ = -1;
     int route_b_ = -1;
@@ -165,10 +165,10 @@ public:
     [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
     int from_route_ = -1;
     int from_pos_ = -1;
     int to_route_ = -1;
@@ -185,10 +185,10 @@ public:
     [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
     int route_a_ = -1;
     int pos_a_ = -1;
     int route_b_ = -1;
@@ -205,10 +205,10 @@ public:
     [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
     int route_a_ = -1;
     int pos_a_ = -1;
     int route_b_ = -1;
@@ -225,10 +225,10 @@ public:
     [[nodiscard]] bool find_best_move(Solution const& sol, CostEvaluator const& eval,
                                       ProblemData const& data);
     void apply(Solution& sol) const;
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
     int route_a_ = -1;
     int pos_a_ = -1;
     int route_b_ = -1;
@@ -257,10 +257,10 @@ public:
 
     void apply(Solution& sol) const;
 
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     int route_a_ = -1;
     int pos_a_ = -1;  // cut after this position in route A (-1 = before first)

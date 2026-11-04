@@ -75,7 +75,7 @@ TEST_CASE("Exchange10: finds improving inter-route relocate", "[exchange][exchan
     // C2(30,0) is far from others; moving it might help.
     auto sol = make_solution(data, {{0, 1, 2}, {3, 4, 5}});
 
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange10 op;
     bool found = op.find_best_move(sol, eval, data);
@@ -83,7 +83,7 @@ TEST_CASE("Exchange10: finds improving inter-route relocate", "[exchange][exchan
     if (found) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
 
         // Verify delta prediction.
@@ -118,14 +118,14 @@ TEST_CASE("Exchange10: apply correctness -- inter-route", "[exchange][exchange10
     // Route 0 = [0, 5, 1], route 1 = [3, 4], route 2 = [2].
     // Client 5 at (15,15) is awkwardly placed in route 0 (the line route).
     auto sol = make_solution(data, {{0, 5, 1}, {3, 4}, {2}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange10 op;
     bool found = op.find_best_move(sol, eval, data);
 
     if (found) {
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
 
         // Cost improved.
         CHECK(new_cost < old_cost);
@@ -149,14 +149,14 @@ TEST_CASE("Exchange10: intra-route relocate", "[exchange][exchange10]") {
     // Route 0 = [2, 0, 1]: C2(30,0) is at front, but depot is at (0,0).
     // Moving C2 to the end should reduce distance.
     auto sol = make_solution(data, {{2, 0, 1}, {3, 4, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange10 op;
     bool found = op.find_best_move(sol, eval, data);
 
     if (found) {
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         CHECK(sol.num_unassigned() == 0);
     }
@@ -167,14 +167,14 @@ TEST_CASE("Exchange10: delta matches actual cost change", "[exchange][exchange10
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 5, 1}, {3, 4}, {2}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange10 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted_delta = op.best_delta();
+        auto predicted_delta = op.best_delta();
         op.apply(sol);
-        int64_t actual_delta = sol.cost(eval) - old_cost;
-        CHECK(predicted_delta == actual_delta);
+        auto actual_delta = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted_delta, actual_delta));
     }
 }
 
@@ -189,7 +189,7 @@ TEST_CASE("Exchange11: finds improving inter-route swap", "[exchange][exchange11
     // All 6 clients assigned.
     // C5(15,15) is awkward in route 0 (line); C2(30,0) is awkward in route 1 (vertical).
     auto sol = make_solution(data, {{0, 1, 5}, {3, 2, 4}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange11 op;
     bool found = op.find_best_move(sol, eval, data);
@@ -197,7 +197,7 @@ TEST_CASE("Exchange11: finds improving inter-route swap", "[exchange][exchange11
     if (found) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         CHECK(sol.num_unassigned() == 0);
     }
@@ -208,14 +208,14 @@ TEST_CASE("Exchange11: delta matches actual cost change", "[exchange][exchange11
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 5}, {3, 2, 4}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange11 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -249,14 +249,14 @@ TEST_CASE("Exchange11: intra-route swap", "[exchange][exchange11]") {
 
     // All clients in one route, badly ordered.
     auto sol = make_solution(data, {{2, 4, 0, 5, 1, 3}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange11 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
         CHECK(sol.num_unassigned() == 0);
     }
 }
@@ -272,7 +272,7 @@ TEST_CASE("Exchange20: finds improving pair relocate", "[exchange][exchange20]")
     // Route 0 = [0, 3, 4, 1, 2], route 1 = [5].
     // C3(0,10) and C4(0,20) are together but misplaced among the line clients.
     auto sol = make_solution(data, {{0, 3, 4, 1, 2}, {5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange20 op;
     bool found = op.find_best_move(sol, eval, data);
@@ -280,7 +280,7 @@ TEST_CASE("Exchange20: finds improving pair relocate", "[exchange][exchange20]")
     if (found) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         CHECK(sol.num_unassigned() == 0);
     }
@@ -291,14 +291,14 @@ TEST_CASE("Exchange20: delta matches actual cost change", "[exchange][exchange20
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 3, 4, 1, 2}, {5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange20 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -353,7 +353,7 @@ TEST_CASE("SwapTails: finds improving tail swap", "[exchange][swaptails]") {
     // so route 0 gets the line suffix and route 1 gets the vertical suffix
     // should help.
     auto sol = make_solution(data, {{0, 1, 3, 4}, {5, 2}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapTails op;
     bool found = op.find_best_move(sol, eval, data);
@@ -361,7 +361,7 @@ TEST_CASE("SwapTails: finds improving tail swap", "[exchange][swaptails]") {
     if (found) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         CHECK(sol.num_unassigned() == 0);
     }
@@ -372,14 +372,14 @@ TEST_CASE("SwapTails: delta matches actual cost change", "[exchange][swaptails]"
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 3, 4}, {5, 2}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapTails op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -415,14 +415,14 @@ TEST_CASE("Exchange10: works with granular neighbours", "[exchange][exchange10][
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 5, 1}, {3, 4}, {2}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange10 op;
     bool found = op.find_best_move(sol, eval, data);
 
     if (found) {
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         CHECK(sol.num_unassigned() == 0);
     }
@@ -433,7 +433,7 @@ TEST_CASE("Exchange11: works with granular neighbours", "[exchange][exchange11][
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 5}, {3, 2, 4}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange11 op;
     if (op.find_best_move(sol, eval, data)) {
@@ -561,13 +561,13 @@ TEST_CASE("Exchange21: finds improving move", "[exchange][exchange21]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 4, 5}, {2, 3, 8}, {6, 7, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange21 op;
     if (op.find_best_move(sol, eval, data)) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         check_all_clients(sol, data.num_clients());
     }
@@ -578,14 +578,14 @@ TEST_CASE("Exchange21: delta matches actual cost change", "[exchange][exchange21
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 4, 5}, {2, 3, 8}, {6, 7, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange21 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -627,13 +627,13 @@ TEST_CASE("Exchange22: finds improving move", "[exchange][exchange22]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 1}, {2, 6, 7, 3}, {8, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange22 op;
     if (op.find_best_move(sol, eval, data)) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         check_all_clients(sol, data.num_clients());
     }
@@ -644,14 +644,14 @@ TEST_CASE("Exchange22: delta matches actual cost change", "[exchange][exchange22
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 1}, {2, 6, 7, 3}, {8, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange22 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -687,13 +687,13 @@ TEST_CASE("Exchange30: finds improving triple relocate", "[exchange][exchange30]
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1, 2, 3}, {7, 8, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange30 op;
     if (op.find_best_move(sol, eval, data)) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         check_all_clients(sol, data.num_clients());
     }
@@ -704,14 +704,14 @@ TEST_CASE("Exchange30: delta matches actual cost change", "[exchange][exchange30
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1, 2, 3}, {7, 8, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange30 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -763,13 +763,13 @@ TEST_CASE("Exchange31: finds improving move", "[exchange][exchange31]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {2, 3, 8}, {7, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange31 op;
     if (op.find_best_move(sol, eval, data)) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         check_all_clients(sol, data.num_clients());
     }
@@ -780,14 +780,14 @@ TEST_CASE("Exchange31: delta matches actual cost change", "[exchange][exchange31
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {2, 3, 8}, {7, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange31 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -813,13 +813,13 @@ TEST_CASE("Exchange32: finds improving move", "[exchange][exchange32]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8}, {9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange32 op;
     if (op.find_best_move(sol, eval, data)) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         check_all_clients(sol, data.num_clients());
     }
@@ -830,14 +830,14 @@ TEST_CASE("Exchange32: delta matches actual cost change", "[exchange][exchange32
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8}, {9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange32 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -850,13 +850,13 @@ TEST_CASE("Exchange33: finds improving move", "[exchange][exchange33]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange33 op;
     if (op.find_best_move(sol, eval, data)) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
         check_all_clients(sol, data.num_clients());
     }
@@ -867,14 +867,14 @@ TEST_CASE("Exchange33: delta matches actual cost change", "[exchange][exchange33
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 4, 5, 6, 1}, {7, 2, 3, 8, 9}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     Exchange33 op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -928,9 +928,9 @@ static void check_tw_deltas() {
         if (!op.find_best_move(sol, eval, data)) {
             continue;
         }
-        int64_t before = sol.cost(eval);
+        auto before = sol.cost(eval);
         op.apply(sol);
-        CHECK(op.best_delta() == sol.cost(eval) - before);
+        CHECK(coso::costs_match(op.best_delta(), sol.cost(eval) - before));
         ++moves;
     }
     CHECK(moves > 0);

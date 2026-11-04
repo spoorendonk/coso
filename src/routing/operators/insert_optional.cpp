@@ -31,7 +31,7 @@ bool InsertOptional::find_best_move(Solution const& sol, CostEvaluator const& ev
             auto const& route = sol.route(r);
 
             for (int p = 0; p <= route.size(); ++p) {
-                int64_t delta = eval.eval_insert_cost(route, p, c);
+                Cost delta = eval.eval_insert_cost(route, p, c);
 
                 if (delta < best_delta_) {
                     best_delta_ = delta;
@@ -43,7 +43,7 @@ bool InsertOptional::find_best_move(Solution const& sol, CostEvaluator const& ev
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void InsertOptional::apply(Solution& sol) const {
@@ -72,7 +72,7 @@ bool RemoveOptional::find_best_move(Solution const& sol, CostEvaluator const& ev
                 continue;
             }
 
-            int64_t delta = eval.eval_remove_cost(route, p);
+            Cost delta = eval.eval_remove_cost(route, p);
 
             if (delta < best_delta_) {
                 best_delta_ = delta;
@@ -82,7 +82,7 @@ bool RemoveOptional::find_best_move(Solution const& sol, CostEvaluator const& ev
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void RemoveOptional::apply(Solution& sol) const {

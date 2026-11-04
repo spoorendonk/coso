@@ -40,7 +40,7 @@ bool RouteSplit::find_best_move(Solution const& sol, CostEvaluator const& eval,
             continue;  // no available vehicle slot
         }
 
-        int64_t old_cost = eval.route_cost(route);
+        Cost old_cost = eval.route_cost(route);
         // The empty route has zero cost, so old total is just old_cost.
 
         // Try every split position: split after position p means
@@ -66,8 +66,8 @@ bool RouteSplit::find_best_move(Solution const& sol, CostEvaluator const& eval,
             Route temp_b(data, vtype);
             temp_b.set_clients(std::move(second_half));
 
-            int64_t new_cost = eval.route_cost(temp_a) + eval.route_cost(temp_b);
-            int64_t delta = new_cost - old_cost;
+            Cost new_cost = eval.route_cost(temp_a) + eval.route_cost(temp_b);
+            Cost delta = new_cost - old_cost;
 
             if (delta < best_delta_) {
                 best_delta_ = delta;
@@ -78,7 +78,7 @@ bool RouteSplit::find_best_move(Solution const& sol, CostEvaluator const& eval,
         }
     }
 
-    return best_delta_ < 0;
+    return is_improving(best_delta_);
 }
 
 void RouteSplit::apply(Solution& sol) const {

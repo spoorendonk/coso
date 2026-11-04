@@ -101,7 +101,7 @@ TEST_CASE("GLS — augmented cost is positive after penalizing", "[gls]") {
     gls.penalize(sol);
 
     // The augmented cost should be positive (lambda * 1 penalty on a used edge).
-    int64_t aug = gls.augmented_cost(sol);
+    auto aug = gls.augmented_cost(sol);
     CHECK(aug > 0);
 }
 
@@ -203,10 +203,10 @@ TEST_CASE("GLS — set_lambda changes penalty weight", "[gls]") {
     GuidedLocalSearch gls(data, 0.1);
 
     gls.penalize(sol);
-    int64_t cost_low = gls.augmented_cost(sol);
+    auto cost_low = gls.augmented_cost(sol);
 
     gls.set_lambda(1.0);
-    int64_t cost_high = gls.augmented_cost(sol);
+    auto cost_high = gls.augmented_cost(sol);
 
     CHECK(cost_high >= cost_low);
     CHECK(gls.lambda() == 1.0);
@@ -247,7 +247,7 @@ TEST_CASE("GLS — medium instance repeated penalization", "[gls]") {
     }
 
     // Augmented cost should grow with repeated penalization.
-    int64_t aug = gls.augmented_cost(sol);
+    auto aug = gls.augmented_cost(sol);
     CHECK(aug > 0);
 
     // Reset and verify it goes back to zero.

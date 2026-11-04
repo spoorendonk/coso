@@ -154,7 +154,7 @@ struct DepotResource {
 
     /// Check whether the route departs and returns within the depot TW.
     [[nodiscard]] static bool is_feasible(State const& state) noexcept {
-        return excess(state) == 0;
+        return is_zero_excess(excess(state));
     }
 };
 

@@ -15,10 +15,10 @@ struct RouteAnalysis {
     int route_idx;
     int vehicle_type;
     std::vector<int> clients;
-    int64_t distance;
-    int64_t load_excess;
-    int64_t objective;
-    int64_t penalty;
+    Cost distance;
+    Cost load_excess;
+    Cost objective;
+    Cost penalty;
     std::vector<int> total_demand;  // per dimension
     std::vector<int> capacity;      // per dimension
 };
@@ -26,9 +26,9 @@ struct RouteAnalysis {
 /// Full solution cost breakdown.
 struct SolutionAnalysis {
     std::vector<RouteAnalysis> routes;
-    int64_t total_objective;
-    int64_t total_penalty;
-    int64_t penalized_cost;
+    Cost total_objective;
+    Cost total_penalty;
+    Cost penalized_cost;
     int num_routes_used;
     int num_unserved;
     bool feasible;

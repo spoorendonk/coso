@@ -284,7 +284,7 @@ TEST_CASE("Partitioned search — single partition is identity-like", "[partitio
     CostEvaluator eval;
 
     auto initial = construction::clarke_wright(data, eval);
-    int64_t initial_cost = initial.cost(eval);
+    auto initial_cost = initial.cost(eval);
 
     PartitionedSearch ps(data);
     LocalSearch ls(data);

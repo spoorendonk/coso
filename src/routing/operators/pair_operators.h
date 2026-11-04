@@ -48,10 +48,10 @@ public:
     void apply(Solution& sol) const;
 
     /// The cost delta of the best move found (negative = improving).
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     int request_ = -1;     ///< Request index being moved.
     int from_route_ = -1;  ///< Source route.
@@ -84,10 +84,10 @@ public:
     void apply(Solution& sol) const;
 
     /// The cost delta of the best move found (negative = improving).
-    [[nodiscard]] int64_t best_delta() const noexcept { return best_delta_; }
+    [[nodiscard]] Cost best_delta() const noexcept { return best_delta_; }
 
 private:
-    int64_t best_delta_ = 0;
+    Cost best_delta_ = 0;
 
     int request_a_ = -1;  ///< First request (from route A).
     int request_b_ = -1;  ///< Second request (from route B).

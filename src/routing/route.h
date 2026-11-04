@@ -103,7 +103,7 @@ public:
     [[nodiscard]] Measure dist_excess() const noexcept { return dist_excess_; }
 
     /// Whether the route satisfies max_distance and max_duration constraints.
-    [[nodiscard]] bool dist_feasible() const noexcept { return dist_excess_ == 0; }
+    [[nodiscard]] bool dist_feasible() const noexcept { return is_zero_excess(dist_excess_); }
 
     /// Cumulative duration of this route (travel + service, depot->clients->depot).
     [[nodiscard]] Measure duration() const noexcept { return duration_; }
@@ -128,7 +128,7 @@ public:
     [[nodiscard]] Measure time_warp() const noexcept { return time_warp_; }
 
     /// Whether the route satisfies all time window constraints.
-    [[nodiscard]] bool tw_feasible() const noexcept { return time_warp_ == 0; }
+    [[nodiscard]] bool tw_feasible() const noexcept { return is_zero_excess(time_warp_); }
 
     // -------------------------------------------------------------------
     //  Modification + resource update

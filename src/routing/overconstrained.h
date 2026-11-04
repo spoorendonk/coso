@@ -14,10 +14,10 @@ namespace coso {
 /// costs.  This struct controls which relaxations are allowed and their
 /// penalty weights.
 struct OverconstrainedConfig {
-    bool allow_unserved = false;                ///< Allow clients to be left unserved.
-    int64_t unserved_penalty = 10000;           ///< Cost per unserved client.
-    int64_t tw_violation_penalty = 1000;        ///< Cost per unit of time window violation.
-    int64_t capacity_violation_penalty = 1000;  ///< Cost per unit of capacity excess.
+    bool allow_unserved = false;             ///< Allow clients to be left unserved.
+    Cost unserved_penalty = 10000;           ///< Cost per unserved client.
+    Cost tw_violation_penalty = 1000;        ///< Cost per unit of time window violation.
+    Cost capacity_violation_penalty = 1000;  ///< Cost per unit of capacity excess.
 };
 
 /// Compute the overconstrained penalty cost for a routing solution.
@@ -30,8 +30,8 @@ struct OverconstrainedConfig {
 /// @param sol     The routing solution to evaluate.
 /// @param config  Overconstrained configuration with penalty weights.
 /// @return The total overconstrained penalty cost (non-negative).
-[[nodiscard]] int64_t overconstrained_penalty(Solution const& sol,
-                                              OverconstrainedConfig const& config);
+[[nodiscard]] Cost overconstrained_penalty(Solution const& sol,
+                                           OverconstrainedConfig const& config);
 
 /// Compute the total overconstrained cost: regular objective + overconstrained
 /// penalties.
@@ -43,8 +43,7 @@ struct OverconstrainedConfig {
 /// @param sol     The routing solution to evaluate.
 /// @param config  Overconstrained configuration with penalty weights.
 /// @return Total overconstrained cost = objective + overconstrained penalties.
-[[nodiscard]] int64_t overconstrained_cost(Solution const& sol,
-                                           OverconstrainedConfig const& config);
+[[nodiscard]] Cost overconstrained_cost(Solution const& sol, OverconstrainedConfig const& config);
 
 /// Compute the number of unserved required clients.
 ///

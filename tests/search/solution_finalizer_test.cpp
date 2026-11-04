@@ -69,7 +69,7 @@ TEST_CASE("SolutionFinalizer: feasible solution stays feasible", "[finalizer]") 
     auto sol = make_solution(data, {{0, 1}, {2, 3}, {4, 5}});
     // d0=3+4=7, d1=5+2=7, d2=3+6=9  -- all <= 10.
     REQUIRE(sol.feasible());
-    int old_dist = sol.total_distance();
+    auto old_dist = sol.total_distance();
 
     SolutionFinalizer fin(data);
     fin.finalize(sol);
@@ -84,7 +84,7 @@ TEST_CASE("SolutionFinalizer: improves distance on feasible solution", "[finaliz
     // directions, route 1 has mixed clients.
     auto sol = make_solution(data, {{2, 3}, {0, 4}, {1, 5}});
     REQUIRE(sol.feasible());
-    int old_dist = sol.total_distance();
+    auto old_dist = sol.total_distance();
 
     SolutionFinalizer fin(data);
     fin.finalize(sol);
@@ -139,7 +139,7 @@ TEST_CASE("SolutionFinalizer: result is locally optimal under high penalty", "[f
 
     // Running finalize again should not change anything — already at local
     // optimum.
-    int dist_before = sol.total_distance();
+    auto dist_before = sol.total_distance();
     fin.finalize(sol);
     CHECK(sol.total_distance() == dist_before);
     CHECK(sol.feasible());
@@ -152,7 +152,7 @@ TEST_CASE("SolutionFinalizer: result is locally optimal under high penalty", "[f
 TEST_CASE("SolutionFinalizer: respects stop criterion", "[finalizer][stop]") {
     auto data = make_small_instance();
     auto sol = make_solution(data, {{2, 3}, {0, 4}, {1, 5}});
-    int dist_before = sol.total_distance();
+    auto dist_before = sol.total_distance();
 
     // Create an already-expired stop criterion (max 1 iteration, already used).
     StopCriterion stop(0.0, 1, 0);

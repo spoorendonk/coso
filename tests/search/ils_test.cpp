@@ -66,7 +66,7 @@ TEST_CASE("ILS — basic run with iteration limit", "[ils]") {
     CHECK(best.num_unassigned() == 0);
 
     // Cost should be finite and positive.
-    int64_t cost = best.cost(eval);
+    auto cost = best.cost(eval);
     CHECK(cost > 0);
 }
 
@@ -76,14 +76,14 @@ TEST_CASE("ILS — improves over construction heuristic", "[ils]") {
 
     // Get baseline cost from construction heuristic.
     Solution cw = construction::clarke_wright(data, eval);
-    int64_t cw_cost = cw.cost(eval);
+    auto cw_cost = cw.cost(eval);
 
     // Run ILS.
     IteratedLocalSearch ils(data, 123);
     StopCriterion stop(0.0, 200, 50);
 
     Solution best = ils.run(eval, stop);
-    int64_t ils_cost = best.cost(eval);
+    auto ils_cost = best.cost(eval);
 
     // ILS should produce a solution no worse than construction alone.
     CHECK(ils_cost <= cw_cost);

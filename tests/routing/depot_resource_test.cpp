@@ -270,13 +270,13 @@ TEST_CASE("DepotResource: unassigned state is feasible (no depot TW to violate)"
 
 TEST_CASE("DepotResource: unconstrained depot (INT_MAX close)", "[depot_resource]") {
     ProblemData::Builder b;
-    b.add_depot({0.0, 0.0});  // default TW: [0, INT_MAX]
+    b.add_depot({0.0, 0.0});  // default TW: [0, kMeasureMax]
     b.add_client({1.0, 0.0});
     b.add_vehicle_type(1);
     auto data = b.build(0);
 
     auto s = DepotResource::init_depot(data, 0);
-    REQUIRE(s.tw_close == INT_MAX);
+    REQUIRE(s.tw_close == coso::kMeasureMax);
 
     auto updated = DepotResource::with_return_time(s, 999999);
     REQUIRE(DepotResource::excess(updated) == 0);

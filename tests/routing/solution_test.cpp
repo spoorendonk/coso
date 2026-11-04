@@ -144,8 +144,8 @@ TEST_CASE("Solution: cost sums across all routes", "[solution]") {
 
     // Route 0 objective: 40 * 1 + 0 (fixed) = 40.
     // Route 2 objective: distance + 20 fixed.
-    int64_t r0_obj = eval.route_objective(sol.route(0));
-    int64_t r2_obj = eval.route_objective(sol.route(2));
+    auto r0_obj = eval.route_objective(sol.route(0));
+    auto r2_obj = eval.route_objective(sol.route(2));
 
     CHECK(r0_obj == 40);
     CHECK(sol.objective(eval) == r0_obj + r2_obj);
@@ -172,7 +172,7 @@ TEST_CASE("Solution: total_distance across routes", "[solution]") {
     sol.set_route_clients(0, {0, 1});
     sol.set_route_clients(1, {2});
 
-    int expected = sol.route(0).distance() + sol.route(1).distance();
+    auto expected = sol.route(0).distance() + sol.route(1).distance();
     CHECK(sol.total_distance() == expected);
 }
 
@@ -209,7 +209,7 @@ TEST_CASE("Solution: prizes reduce objective cost", "[solution]") {
 
     // Serve client 0 (prize=50).
     sol.set_route_clients(0, {0});
-    int64_t obj_with_prize = sol.objective(eval);
+    auto obj_with_prize = sol.objective(eval);
 
     // The distance cost is depot->c0->depot = 20.
     // Objective = 20 - 50 = -30 (prize exceeds travel cost).

@@ -141,12 +141,12 @@ TEST_CASE("assert_cost_delta: validates insert delta evaluation", "[score_assert
     sol.set_route_clients(0, {0, 1});
 
     // Predict cost delta for inserting client 2 at position 1.
-    int64_t cost_before = sol.cost(eval);
-    int64_t predicted = eval.eval_insert_cost(sol.route(0), 1, 2);
+    auto cost_before = sol.cost(eval);
+    auto predicted = eval.eval_insert_cost(sol.route(0), 1, 2);
 
     sol.insert_client(0, 1, 2);
-    int64_t cost_after = sol.cost(eval);
-    int64_t actual = cost_after - cost_before;
+    auto cost_after = sol.cost(eval);
+    auto actual = cost_after - cost_before;
 
     REQUIRE_NOTHROW(debug::assert_cost_delta(predicted, actual, "insert client 2 at pos 1"));
 }
@@ -159,12 +159,12 @@ TEST_CASE("assert_cost_delta: validates remove delta evaluation", "[score_assert
     sol.set_route_clients(0, {0, 1, 2});
 
     // Predict cost delta for removing client at position 1.
-    int64_t cost_before = sol.cost(eval);
-    int64_t predicted = eval.eval_remove_cost(sol.route(0), 1);
+    auto cost_before = sol.cost(eval);
+    auto predicted = eval.eval_remove_cost(sol.route(0), 1);
 
     sol.remove_client(0, 1);
-    int64_t cost_after = sol.cost(eval);
-    int64_t actual = cost_after - cost_before;
+    auto cost_after = sol.cost(eval);
+    auto actual = cost_after - cost_before;
 
     REQUIRE_NOTHROW(debug::assert_cost_delta(predicted, actual, "remove client at pos 1"));
 }

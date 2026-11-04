@@ -58,8 +58,10 @@ void ProblemData::Builder::set_duration(int profile, int from, int to, Measure d
 }
 
 // ---------------------------------------------------------------------------
-//  Euclidean distance helper: rounded to the nearest integer while Measure is
-//  integral, as is standard in VRP; exact once it is floating point (#249).
+//  Euclidean distance helper for a model that declares coordinates and no
+//  matrix: rounded to the nearest integer while Measure is integral, exact when
+//  it is floating point (#249). A format that defines its own rounding sets it
+//  through the explicit matrix, in every build.
 // ---------------------------------------------------------------------------
 
 namespace {

@@ -27,7 +27,7 @@ void LocalSearch::run(Solution& sol, CostEvaluator const& eval, StopCriterion* s
     // it accepted the move on is the change in penalised cost (#221).
     auto apply = [&](auto const& op, char const* name) {
 #ifndef NDEBUG
-        int64_t before = sol.cost(eval);
+        Cost before = sol.cost(eval);
         op.apply(sol);
         debug::assert_cost_delta(op.best_delta(), sol.cost(eval) - before, name);
 #else

@@ -43,24 +43,24 @@ int Solution::num_used_vehicles() const noexcept {
 //  Cost evaluation
 // ---------------------------------------------------------------------------
 
-int64_t Solution::cost(CostEvaluator const& eval) const {
-    int64_t total = 0;
+Cost Solution::cost(CostEvaluator const& eval) const {
+    Cost total = 0;
     for (auto const& r : routes_) {
         total += eval.route_cost(r);
     }
     return total;
 }
 
-int64_t Solution::objective(CostEvaluator const& eval) const {
-    int64_t total = 0;
+Cost Solution::objective(CostEvaluator const& eval) const {
+    Cost total = 0;
     for (auto const& r : routes_) {
         total += eval.route_objective(r);
     }
     return total;
 }
 
-int64_t Solution::penalty(CostEvaluator const& eval) const {
-    int64_t total = 0;
+Cost Solution::penalty(CostEvaluator const& eval) const {
+    Cost total = 0;
     for (auto const& r : routes_) {
         total += eval.route_penalty(r);
     }

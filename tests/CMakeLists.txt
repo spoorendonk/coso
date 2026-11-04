@@ -58,6 +58,15 @@ endif()
 #  Route + LoadResource tests                                                  #
 # --------------------------------------------------------------------------- #
 
+add_executable(solomon_reprice_test routing/solomon_reprice_test.cpp)
+target_link_libraries(solomon_reprice_test PRIVATE coso Catch2::Catch2WithMain)
+
+if(COMMAND catch_discover_tests)
+    catch_discover_tests(solomon_reprice_test)
+else()
+    add_test(NAME solomon_reprice_test COMMAND solomon_reprice_test)
+endif()
+
 add_executable(route_test routing/route_test.cpp)
 target_link_libraries(route_test PRIVATE coso Catch2::Catch2WithMain)
 

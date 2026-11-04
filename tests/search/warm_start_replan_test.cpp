@@ -198,14 +198,14 @@ TEST_CASE("replan -- solution quality improves or stays same for free clients",
     // Route 2: depot -> 6 -> 1
     std::vector<std::vector<int>> routes = {{0, 4, 2}, {3, 7, 5}, {6, 1}, {}};
     Solution sol = warm_start(routes, data, eval);
-    int64_t cost_before = sol.cost(eval);
+    auto cost_before = sol.cost(eval);
 
     // Pin nothing -- full freedom to optimize.
     ReplanConfig config;
 
     replan(sol, config, data, eval);
 
-    int64_t cost_after = sol.cost(eval);
+    auto cost_after = sol.cost(eval);
     CHECK(cost_after <= cost_before);
 }
 

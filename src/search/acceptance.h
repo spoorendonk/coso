@@ -1,5 +1,7 @@
 #pragma once
 
+#include "model/types.h"
+
 #include <cmath>
 #include <cstdint>
 #include <random>
@@ -19,19 +21,19 @@ public:
     explicit LateAcceptance(int list_length = 5000);
 
     /// Initialize the fitness list to the given starting cost.
-    void init(int64_t cost);
+    void init(Cost cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
+    [[nodiscard]] bool accept(Cost candidate_cost, Cost current_cost);
 
     /// Advance one iteration (updates the fitness list with current cost).
-    void iteration(int64_t current_cost);
+    void iteration(Cost current_cost);
 
     [[nodiscard]] int list_length() const noexcept { return list_length_; }
 
 private:
     int list_length_;
-    std::vector<int64_t> list_;
+    std::vector<Cost> list_;
     int index_ = 0;
 };
 
@@ -48,13 +50,13 @@ public:
     SimulatedAnnealing(double initial_temp, double alpha, unsigned int seed = 42);
 
     /// Initialize (resets temperature to initial value).
-    void init(int64_t cost);
+    void init(Cost cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
+    [[nodiscard]] bool accept(Cost candidate_cost, Cost current_cost);
 
     /// Advance one iteration (cools temperature).
-    void iteration(int64_t current_cost);
+    void iteration(Cost current_cost);
 
     [[nodiscard]] double temperature() const noexcept { return temp_; }
 
@@ -78,13 +80,13 @@ public:
     RecordToRecord(double initial_threshold, double decay);
 
     /// Initialize (resets threshold and records starting cost as best).
-    void init(int64_t cost);
+    void init(Cost cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
+    [[nodiscard]] bool accept(Cost candidate_cost, Cost current_cost);
 
     /// Advance one iteration (decays threshold).
-    void iteration(int64_t current_cost);
+    void iteration(Cost current_cost);
 
     [[nodiscard]] double threshold() const noexcept { return threshold_; }
 
@@ -92,7 +94,7 @@ private:
     double initial_threshold_;
     double decay_;
     double threshold_;
-    int64_t best_cost_;
+    Cost best_cost_;
 };
 
 /// A composable acceptance criterion.
@@ -108,13 +110,13 @@ public:
     AcceptanceCriterion(RecordToRecord rtr);
 
     /// Initialize the criterion with the starting solution cost.
-    void init(int64_t cost);
+    void init(Cost cost);
 
     /// Whether to accept the candidate solution.
-    [[nodiscard]] bool accept(int64_t candidate_cost, int64_t current_cost);
+    [[nodiscard]] bool accept(Cost candidate_cost, Cost current_cost);
 
     /// Advance one iteration.
-    void iteration(int64_t current_cost);
+    void iteration(Cost current_cost);
 
 private:
     std::variant<LateAcceptance, SimulatedAnnealing, RecordToRecord> impl_;

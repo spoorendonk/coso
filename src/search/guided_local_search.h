@@ -48,7 +48,7 @@ public:
     ///   lambda * sum_{(i,j) in sol} d(i,j) * p(i,j)
     /// where d(i,j) is the edge distance and p(i,j) is the penalty counter.
     /// This should be added to the base cost from CostEvaluator.
-    [[nodiscard]] int64_t augmented_cost(Solution const& sol) const;
+    [[nodiscard]] Cost augmented_cost(Solution const& sol) const;
 
     /// Reset all penalty counters to zero.
     void reset();

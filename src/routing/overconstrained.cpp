@@ -36,27 +36,27 @@ Measure total_time_warp(Solution const& sol) {
 //  Overconstrained cost evaluation
 // ---------------------------------------------------------------------------
 
-int64_t overconstrained_penalty(Solution const& sol, OverconstrainedConfig const& config) {
-    int64_t penalty = 0;
+Cost overconstrained_penalty(Solution const& sol, OverconstrainedConfig const& config) {
+    Cost penalty = 0;
 
     // Unserved client penalties.
     if (config.allow_unserved) {
-        penalty += static_cast<int64_t>(num_unserved_required(sol)) * config.unserved_penalty;
+        penalty += static_cast<Cost>(num_unserved_required(sol)) * config.unserved_penalty;
     }
 
     // Capacity violation penalties.
-    penalty += static_cast<int64_t>(total_load_excess(sol)) * config.capacity_violation_penalty;
+    penalty += static_cast<Cost>(total_load_excess(sol)) * config.capacity_violation_penalty;
 
     // Time window violation penalties.
-    penalty += static_cast<int64_t>(total_time_warp(sol)) * config.tw_violation_penalty;
+    penalty += static_cast<Cost>(total_time_warp(sol)) * config.tw_violation_penalty;
 
     return penalty;
 }
 
-int64_t overconstrained_cost(Solution const& sol, OverconstrainedConfig const& config) {
+Cost overconstrained_cost(Solution const& sol, OverconstrainedConfig const& config) {
     // Base objective: distance + fixed costs - prizes, no search penalties.
     CostEvaluator zero_eval(0, 0, 0);
-    int64_t obj = sol.objective(zero_eval);
+    Cost obj = sol.objective(zero_eval);
 
     return obj + overconstrained_penalty(sol, config);
 }
@@ -72,7 +72,7 @@ bool overconstrained_feasible(Solution const& sol, OverconstrainedConfig const& 
         if (r.load_excess() > 0) {
             return false;
         }
-        if (r.time_warp() > 0) {
+        if (!r.tw_feasible()) {
             return false;
         }
     }

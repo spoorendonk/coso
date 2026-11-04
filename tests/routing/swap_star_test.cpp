@@ -68,7 +68,7 @@ TEST_CASE("SwapStar: finds improving move on suboptimal solution", "[swapstar]")
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 5}, {3, 2, 4}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapStar op;
     bool found = op.find_best_move(sol, eval, data);
@@ -76,7 +76,7 @@ TEST_CASE("SwapStar: finds improving move on suboptimal solution", "[swapstar]")
     if (found) {
         CHECK(op.best_delta() < 0);
         op.apply(sol);
-        int64_t new_cost = sol.cost(eval);
+        auto new_cost = sol.cost(eval);
         CHECK(new_cost < old_cost);
     }
 }
@@ -86,14 +86,14 @@ TEST_CASE("SwapStar: delta matches actual cost change", "[swapstar]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 5}, {3, 2, 4}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapStar op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
     }
 }
 
@@ -140,14 +140,14 @@ TEST_CASE("SwapStar: works with granular neighbours", "[swapstar][granular]") {
     CostEvaluator eval(100);
 
     auto sol = make_solution(data, {{0, 1, 5}, {3, 2, 4}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapStar op;
     if (op.find_best_move(sol, eval, data)) {
-        int64_t predicted = op.best_delta();
+        auto predicted = op.best_delta();
         op.apply(sol);
-        int64_t actual = sol.cost(eval) - old_cost;
-        CHECK(predicted == actual);
+        auto actual = sol.cost(eval) - old_cost;
+        CHECK(coso::costs_match(predicted, actual));
         CHECK(sol.num_unassigned() == 0);
     }
 }
@@ -183,7 +183,7 @@ TEST_CASE("SwapStar: capacity violation reduction", "[swapstar][capacity]") {
 
     auto sol = make_solution(data, {{0, 1}, {2, 3}});
     CHECK_FALSE(sol.route(0).load_feasible());
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     SwapStar op;
     bool found = op.find_best_move(sol, eval, data);
@@ -252,7 +252,7 @@ TEST_CASE("LocalSearch: SWAP* is applied in a stop-bounded run", "[swapstar][sto
     auto data = make_swap_star_only_instance();
     CostEvaluator eval(1000);
     auto sol = make_solution(data, {{0, 1, 2}, {4, 3, 5}});
-    int64_t old_cost = sol.cost(eval);
+    auto old_cost = sol.cost(eval);
 
     StopCriterion stop(60.0, 0, 0);
     LocalSearch ls(data);
@@ -295,10 +295,10 @@ TEST_CASE("SwapStar: delta is exact on random instances", "[swapstar][random]") 
 
         SwapStar op;
         for (int it = 0; it < 20 && op.find_best_move(sol, eval, data); ++it) {
-            int64_t before = sol.cost(eval);
-            int64_t predicted = op.best_delta();
+            auto before = sol.cost(eval);
+            auto predicted = op.best_delta();
             op.apply(sol);
-            REQUIRE(sol.cost(eval) - before == predicted);
+            REQUIRE(coso::costs_match(sol.cost(eval) - before, predicted));
             REQUIRE(sol.num_unassigned() == 0);
             ++moves;
         }

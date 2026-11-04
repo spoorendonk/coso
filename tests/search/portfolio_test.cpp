@@ -118,14 +118,14 @@ TEST_CASE("PortfolioSolver: finds solution at least as good as ILS alone", "[sea
     StopCriterion ils_stop(0.0, 500, 0);
     IteratedLocalSearch ils(data, 42);
     auto ils_sol = ils.run(eval, ils_stop);
-    int64_t ils_cost = ils_sol.cost(eval);
+    auto ils_cost = ils_sol.cost(eval);
 
     // Run portfolio (ILS + GA + finalizer).
     StopCriterion port_stop(0.0, 500, 0);
     PortfolioSolver solver(data);
     solver.set_seed(42);
     auto port_sol = solver.run(eval, port_stop);
-    int64_t port_cost = port_sol.cost(eval);
+    auto port_cost = port_sol.cost(eval);
 
     // Portfolio should find a solution at least as good (the finalizer
     // alone should improve or maintain the ILS result).

@@ -76,7 +76,7 @@ public:
 private:
     struct Individual {
         Solution sol;
-        int64_t cost;                            ///< Penalized cost.
+        Cost cost;                               ///< Penalized cost.
         std::vector<std::pair<int, int>> edges;  ///< Sorted edge set for diversity.
     };
 

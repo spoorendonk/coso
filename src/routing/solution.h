@@ -77,13 +77,13 @@ public:
     // -------------------------------------------------------------------
 
     /// Total penalized cost across all routes.
-    [[nodiscard]] int64_t cost(CostEvaluator const& eval) const;
+    [[nodiscard]] Cost cost(CostEvaluator const& eval) const;
 
     /// Total objective (no penalties) across all routes.
-    [[nodiscard]] int64_t objective(CostEvaluator const& eval) const;
+    [[nodiscard]] Cost objective(CostEvaluator const& eval) const;
 
     /// Total penalty across all routes.
-    [[nodiscard]] int64_t penalty(CostEvaluator const& eval) const;
+    [[nodiscard]] Cost penalty(CostEvaluator const& eval) const;
 
     /// Total distance across all routes.
     [[nodiscard]] Measure total_distance() const noexcept;

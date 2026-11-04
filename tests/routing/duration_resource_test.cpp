@@ -234,7 +234,7 @@ TEST_CASE("Route: eval_insert_time_warp matches actual insert", "[route][duratio
 
     // Evaluate inserting client 2 at every position.
     for (int pos = 0; pos <= route.size(); ++pos) {
-        int predicted_tw = route.eval_insert_time_warp(pos, 2);
+        auto predicted_tw = route.eval_insert_time_warp(pos, 2);
 
         Route copy(data, 0);
         copy.set_clients({0, 1});
@@ -251,7 +251,7 @@ TEST_CASE("Route: eval_remove_time_warp matches actual remove", "[route][duratio
     route.set_clients({0, 1, 2});
 
     for (int pos = 0; pos < route.size(); ++pos) {
-        int predicted_tw = route.eval_remove_time_warp(pos);
+        auto predicted_tw = route.eval_remove_time_warp(pos);
 
         Route copy(data, 0);
         copy.set_clients({0, 1, 2});
@@ -268,7 +268,7 @@ TEST_CASE("Route: eval_insert_time_warp on infeasible instance", "[route][durati
     route.set_clients({0});
 
     // Insert client 1 after client 0.
-    int predicted_tw = route.eval_insert_time_warp(1, 1);
+    auto predicted_tw = route.eval_insert_time_warp(1, 1);
 
     Route verify(data, 0);
     verify.set_clients({0, 1});
@@ -284,7 +284,7 @@ TEST_CASE("Route: eval_remove_time_warp reduces time warp", "[route][duration]")
     CHECK(route.time_warp() > 0);
 
     // Removing client 1 should eliminate the time warp.
-    int predicted_tw = route.eval_remove_time_warp(1);
+    auto predicted_tw = route.eval_remove_time_warp(1);
 
     Route verify(data, 0);
     verify.set_clients({0});
@@ -297,7 +297,7 @@ TEST_CASE("Route: eval_insert_time_warp into empty route", "[route][duration]") 
     auto data = make_vrptw_instance();
     Route route(data, 0);
 
-    int tw = route.eval_insert_time_warp(0, 0);
+    auto tw = route.eval_insert_time_warp(0, 0);
     CHECK(tw == 0);  // Single feasible client from depot.
 }
 
@@ -311,7 +311,7 @@ TEST_CASE("Route: eval_insert_time_warp with tight TW client into empty route",
     // Depart at max(10, 0) + 3 = 13.
     // c3 -> depot: travel = 10. Arrive at depot at 23.
     // Depot TW [0, 1000]: 23 <= 1000, feasible.
-    int tw = route.eval_insert_time_warp(0, 3);
+    auto tw = route.eval_insert_time_warp(0, 3);
     CHECK(tw == 0);
 }
 

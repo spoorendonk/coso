@@ -111,8 +111,12 @@ CVRP_INSTANCES=(
 # as a LEXICOGRAPHIC (vehicles, then distance) pair. RoutingModel can declare it
 # (#228), but the engine still minimises distance alone, so these instances can
 # be read but not scored (#238).
-# Solomon truncates distances to one decimal; CVRPLIB above rounds. Different
-# conventions, same script.
+# Two conventions, and neither is CVRPLIB's nearest-integer rounding above (#249):
+# SINTEF's best-known table uses double precision with totals rounded to two
+# decimals (C101 = 828.94), which needs a COSO_MEASURE=double build. Exact-method
+# optima, as in Solomon's own tables, use distances truncated to one decimal
+# (C101 = 827.3): floor(10 * d) with times scaled by 10, in any build.
+# SINTEF says the two are not directly comparable.
 SOLOMON_BASE_URL="https://raw.githubusercontent.com/VROOM-Project/vroom-scripts/master/benchmarks/VRPTW/solomon"
 SOLOMON_INSTANCES=(
 	"C101.txt"
