@@ -1,5 +1,6 @@
 #include "network/network_solution.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace coso {

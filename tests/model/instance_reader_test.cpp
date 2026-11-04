@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <model/instance_reader.h>
+#include <stdexcept>
 #include <string>
 
 // =========================================================================

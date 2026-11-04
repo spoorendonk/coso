@@ -1,6 +1,7 @@
 #include "scheduling/parsers.h"
 
 #include <fstream>
+#include <istream>
 #include <sstream>
 #include <stdexcept>
 #include <string>

@@ -1,7 +1,9 @@
 #include "model/instance_reader.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
+#include <exception>
 #include <fstream>
 #include <sstream>
 #include <stdexcept>
